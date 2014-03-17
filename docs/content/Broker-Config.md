@@ -26,6 +26,11 @@ druid.service=broker
 druid.port=8080
 
 druid.zk.service.host=localhost
+
+# Change these to make Druid faster
+druid.processing.buffer.sizeBytes=100000000
+druid.processing.numThreads=1
+
 ```
 
 Production Configs

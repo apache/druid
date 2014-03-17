@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
+import io.druid.query.TableDataSource;
 import io.druid.query.spec.QuerySegmentSpec;
 
 import java.util.Map;
@@ -42,7 +43,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("context") Map<String, String> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(new TableDataSource(dataSource), querySegmentSpec, context);
 
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
@@ -76,13 +77,40 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public Query<SegmentAnalysis> withOverriddenContext(Map<String, String> contextOverride)
   {
     return new SegmentMetadataQuery(
-        getDataSource(), getQuerySegmentSpec(), toInclude, merge, computeOverridenContext(contextOverride)
+        ((TableDataSource)getDataSource()).getName(),
+        getQuerySegmentSpec(), toInclude, merge, computeOverridenContext(contextOverride)
     );
   }
 
   @Override
   public Query<SegmentAnalysis> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new SegmentMetadataQuery(getDataSource(), spec, toInclude, merge, getContext());
+    return new SegmentMetadataQuery(
+        ((TableDataSource)getDataSource()).getName(),
+        spec, toInclude, merge, getContext());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+
+    SegmentMetadataQuery that = (SegmentMetadataQuery) o;
+
+    if (merge != that.merge) return false;
+    if (toInclude != null ? !toInclude.equals(that.toInclude) : that.toInclude != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + (toInclude != null ? toInclude.hashCode() : 0);
+    result = 31 * result + (merge ? 1 : 0);
+    return result;
   }
 }

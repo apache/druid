@@ -152,10 +152,7 @@ The indexing service can also run real-time tasks. These tasks effectively trans
     "intermediatePersistPeriod": "PT10m"
   },
   "windowPeriod": "PT10m",
-  "segmentGranularity": "hour",
-  "rejectionPolicy": {
-    "type": "messageTime"
-  }
+  "segmentGranularity": "hour"
 }
 ```
 

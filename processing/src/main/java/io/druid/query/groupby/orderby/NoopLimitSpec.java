@@ -46,4 +46,15 @@ public class NoopLimitSpec implements LimitSpec
   {
     return "NoopLimitSpec";
   }
+
+  @Override
+  public boolean equals(Object other)
+  {
+    return (other instanceof NoopLimitSpec);
+  }
+
+  @Override
+  public int hashCode() {
+    return 0;
+  }
 }

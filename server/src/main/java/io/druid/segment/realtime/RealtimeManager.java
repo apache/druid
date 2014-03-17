@@ -30,6 +30,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
+import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -39,6 +40,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.TableDataSource;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeDriverConfig;
 import io.druid.segment.realtime.plumber.Plumber;
@@ -98,6 +100,7 @@ public class RealtimeManager implements QuerySegmentWalker
       Closeables.closeQuietly(chief);
     }
   }
+
   public FireDepartmentMetrics getMetrics(String datasource)
   {
     FireChief chief = chiefs.get(datasource);
@@ -110,7 +113,7 @@ public class RealtimeManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final FireChief chief = chiefs.get(query.getDataSource());
+    final FireChief chief = chiefs.get(getDataSourceName(query));
 
     return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
   }
@@ -118,10 +121,28 @@ public class RealtimeManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    final FireChief chief = chiefs.get(query.getDataSource());
+    final FireChief chief = chiefs.get(getDataSourceName(query));
 
     return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
   }
+
+  private <T> String getDataSourceName(Query<T> query)
+  {
+    DataSource dataSource = query.getDataSource();
+    if (!(dataSource instanceof TableDataSource)) {
+      throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
+    }
+
+    String dataSourceName;
+    try {
+      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
+    }
+    catch (ClassCastException e) {
+      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
+    }
+    return dataSourceName;
+  }
+
 
   private class FireChief extends Thread implements Closeable
   {
@@ -215,12 +236,19 @@ public class RealtimeManager implements QuerySegmentWalker
             continue;
           }
         }
-      } catch (RuntimeException e) {
-        log.makeAlert(e, "RuntimeException aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
+      }
+      catch (RuntimeException e) {
+
+        log.makeAlert(
+            e,
+            "RuntimeException aborted realtime processing[%s]",
+            fireDepartment.getDataSchema().getDataSource()
+        )
            .emit();
         normalExit = false;
         throw e;
-      } catch (Error e) {
+      }
+      catch (Error e) {
         log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
            .emit();
         normalExit = false;

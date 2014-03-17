@@ -42,7 +42,7 @@ public class RealtimeDriverConfig implements DriverConfig
   private static final File defaultBasePersistDirectory = Files.createTempDir();
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-  private static final int defaultMaxPendingPersists = 2;
+  private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
 
   // Might make sense for this to be a builder

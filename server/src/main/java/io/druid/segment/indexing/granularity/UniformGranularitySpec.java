@@ -53,7 +53,9 @@ public class UniformGranularitySpec implements GranularitySpec
 
   )
   {
-    if (segmentGranularity == null && granularity != null) { // backwards compatibility
+    if (segmentGranularity != null) {
+      this.segmentGranularity = segmentGranularity;
+    } else if (granularity != null) { // backwards compatibility
       this.segmentGranularity = granularity;
     } else {
       this.segmentGranularity = defaultSegmentGranularity;

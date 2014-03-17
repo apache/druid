@@ -22,6 +22,7 @@ package io.druid.jackson;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.hash.Hashing;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -31,10 +32,14 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.aggregation.post.JavaScriptPostAggregator;
+import io.druid.segment.serde.ComplexMetrics;
 
 /**
  */
@@ -44,28 +49,38 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
+    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
+      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
+    }
+
     setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
     setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
   }
 
-  @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type")
-  @JsonSubTypes(value={
-      @JsonSubTypes.Type(name="count", value=CountAggregatorFactory.class),
-      @JsonSubTypes.Type(name="longSum", value=LongSumAggregatorFactory.class),
-      @JsonSubTypes.Type(name="doubleSum", value=DoubleSumAggregatorFactory.class),
-      @JsonSubTypes.Type(name="max", value=MaxAggregatorFactory.class),
-      @JsonSubTypes.Type(name="min", value=MinAggregatorFactory.class),
-      @JsonSubTypes.Type(name="javascript", value=JavaScriptAggregatorFactory.class),
-      @JsonSubTypes.Type(name="histogram", value=HistogramAggregatorFactory.class)
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+  @JsonSubTypes(value = {
+      @JsonSubTypes.Type(name = "count", value = CountAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "longSum", value = LongSumAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "doubleSum", value = DoubleSumAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "max", value = MaxAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "min", value = MinAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "javascript", value = JavaScriptAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "histogram", value = HistogramAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "hyperUnique", value = HyperUniquesAggregatorFactory.class)
   })
-  public static interface AggregatorFactoryMixin {}
+  public static interface AggregatorFactoryMixin
+  {
+  }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = "arithmetic", value = ArithmeticPostAggregator.class),
       @JsonSubTypes.Type(name = "fieldAccess", value = FieldAccessPostAggregator.class),
       @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class),
-      @JsonSubTypes.Type(name = "javascript", value = JavaScriptPostAggregator.class)
+      @JsonSubTypes.Type(name = "javascript", value = JavaScriptPostAggregator.class),
+      @JsonSubTypes.Type(name = "hyperUniqueCardinality", value = HyperUniqueFinalizingPostAggregator.class)
   })
-  public static interface PostAggregatorMixin {}
+  public static interface PostAggregatorMixin
+  {
+  }
 }

@@ -124,6 +124,35 @@ public class DatasourcesResource
     ).build();
   }
 
+  @GET
+  @Path("/{dataSourceName}")
+  @Produces("application/json")
+  public Response getTheDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.ok(dataSource).build();
+  }
+
+  @POST
+  @Path("/{dataSourceName}")
+  @Consumes("application/json")
+  public Response enableDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.status(Response.Status.OK).build();
+  }
+
   @DELETE
   @Path("/{dataSourceName}")
   @Produces("application/json")
@@ -154,20 +183,6 @@ public class DatasourcesResource
       if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-    }
-
-    return Response.status(Response.Status.OK).build();
-  }
-
-  @POST
-  @Path("/{dataSourceName}")
-  @Consumes("application/json")
-  public Response enableDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
-  )
-  {
-    if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
-      return Response.status(Response.Status.NOT_FOUND).build();
     }
 
     return Response.status(Response.Status.OK).build();

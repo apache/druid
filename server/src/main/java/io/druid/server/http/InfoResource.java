@@ -461,6 +461,22 @@ public class InfoResource
     ).build();
   }
 
+  @GET
+  @Path("/datasources/{dataSourceName}")
+  @Produces("application/json")
+  public Response getTheDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.ok(dataSource).build();
+  }
+
+
   @DELETE
   @Path("/datasources/{dataSourceName}")
   public Response deleteDataSource(

@@ -64,4 +64,23 @@ public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
            "intervals=" + intervals +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    MultipleIntervalSegmentSpec that = (MultipleIntervalSegmentSpec) o;
+
+    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return intervals != null ? intervals.hashCode() : 0;
+  }
 }

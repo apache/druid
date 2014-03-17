@@ -82,3 +82,13 @@ All JavaScript functions must return numerical values.
   "fnReset"     : "function()                   { return 10; }"
 }
 ```
+
+### Complex aggregators
+
+#### `hyperUnique` aggregator
+
+`hyperUnique` uses [Hyperloglog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension.
+
+```json
+{ "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
+```

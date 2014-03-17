@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.segment.indexing.DriverConfig;
@@ -37,7 +36,6 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopDriverConfig implements DriverConfig
 {
-  private static final String defaultWorkingPath = Files.createTempDir().getPath();
   private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
   private static final int defaultRowFlushBoundary = 80000;
@@ -45,7 +43,7 @@ public class HadoopDriverConfig implements DriverConfig
   public static HadoopDriverConfig makeDefaultDriverConfig()
   {
     return new HadoopDriverConfig(
-        defaultWorkingPath,
+        null,
         new DateTime().toString(),
         defaultPartitionsSpec,
         defaultShardSpecs,
@@ -80,7 +78,7 @@ public class HadoopDriverConfig implements DriverConfig
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows
   )
   {
-    this.workingPath = workingPath == null ? defaultWorkingPath : workingPath;
+    this.workingPath = workingPath == null ? null : workingPath;
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? defaultPartitionsSpec : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? defaultShardSpecs : shardSpecs;

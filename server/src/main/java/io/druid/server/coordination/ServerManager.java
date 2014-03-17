@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.CountingMap;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.BySegmentQueryRunner;
+import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
@@ -42,6 +43,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.TableDataSource;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -118,6 +120,7 @@ public class ServerManager implements QuerySegmentWalker
 
   /**
    * Load a single segment.
+   *
    * @param segment segment to load
    * @return true if the segment was newly loaded, false if it was already loaded
    * @throws SegmentLoadingException if the segment cannot be loaded
@@ -127,12 +130,10 @@ public class ServerManager implements QuerySegmentWalker
     final Segment adapter;
     try {
       adapter = segmentLoader.getSegment(segment);
-    }
-    catch (SegmentLoadingException e) {
+    } catch (SegmentLoadingException e) {
       try {
         segmentLoader.cleanup(segment);
-      }
-      catch (SegmentLoadingException e1) {
+      } catch (SegmentLoadingException e1) {
         // ignore
       }
       throw e;
@@ -204,12 +205,11 @@ public class ServerManager implements QuerySegmentWalker
         try {
           log.info("Attempting to close segment %s", segment.getIdentifier());
           oldQueryable.close();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
           log.makeAlert(e, "Exception closing segment")
-             .addData("dataSource", dataSource)
-             .addData("segmentId", segment.getIdentifier())
-             .emit();
+              .addData("dataSource", dataSource)
+              .addData("segmentId", segment.getIdentifier())
+              .emit();
         }
       } else {
         log.info(
@@ -233,7 +233,19 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(query.getDataSource());
+    DataSource dataSource = query.getDataSource();
+    if (!(dataSource instanceof TableDataSource)) {
+      throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
+    }
+
+    String dataSourceName;
+    try {
+      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
+    }
+
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -294,6 +306,7 @@ public class ServerManager implements QuerySegmentWalker
             Predicates.<QueryRunner<T>>notNull()
         );
 
+
     return new FinalizeResultsQueryRunner<T>(toolChest.mergeResults(factory.mergeRunners(exec, adapters)), toolChest);
   }
 
@@ -303,14 +316,21 @@ public class ServerManager implements QuerySegmentWalker
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       log.makeAlert("Unknown query type, [%s]", query.getClass())
-         .addData("dataSource", query.getDataSource())
-         .emit();
+          .addData("dataSource", query.getDataSource())
+          .emit();
       return new NoopQueryRunner<T>();
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(query.getDataSource());
+    String dataSourceName;
+    try {
+      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
+    }
+
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
