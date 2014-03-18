@@ -21,6 +21,7 @@ package io.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -38,11 +39,13 @@ public class ConstantPostAggregator implements PostAggregator
   @JsonCreator
   public ConstantPostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("value") Number constantValue
+      @JsonProperty("value") Number constantValue,
+      @JsonProperty("constantValue") Number backwardsCompatibleValue
   )
   {
     this.name = name;
-    this.constantValue = constantValue;
+    this.constantValue = constantValue == null ? backwardsCompatibleValue : constantValue;
+    Preconditions.checkNotNull(this.constantValue);
   }
 
   @Override
@@ -126,4 +129,5 @@ public class ConstantPostAggregator implements PostAggregator
     result = 31 * result + (constantValue != null ? constantValue.hashCode() : 0);
     return result;
   }
+
 }
