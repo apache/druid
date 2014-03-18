@@ -106,7 +106,7 @@ The broker module uses several of the default modules in [Configuration](Configu
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.cache.sizeInBytes`|Maximum size of the cache. If this is zero, cache is disabled.|0|
+|`druid.broker.cache.sizeInBytes`|Maximum size of the cache. If this is zero, cache is disabled.|10485760 (10MB)|
 |`druid.broker.cache.initialSize`|The initial size of the cache in bytes.|500000|
 |`druid.broker.cache.logEvictionCount`|If this is non-zero, there will be an eviction of entries.|0|
 
