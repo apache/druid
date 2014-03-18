@@ -19,18 +19,31 @@
 
 package io.druid.segment.realtime.plumber;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "serverTime", value = ServerTimeRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "messageTime", value = MessageTimeRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "none", value = NoopRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "test", value = TestRejectionPolicyFactory.class)
-})
-public interface RejectionPolicyFactory
+/**
+ */
+public class TestRejectionPolicyFactory implements RejectionPolicyFactory
 {
-  public RejectionPolicy create(Period windowPeriod);
+  @Override
+  public RejectionPolicy create(Period windowPeriod)
+  {
+    return new RejectionPolicy()
+    {
+      private final DateTime max = new DateTime(Long.MAX_VALUE);
+
+      @Override
+      public DateTime getCurrMaxTime()
+      {
+        return max;
+      }
+
+      @Override
+      public boolean accept(long timestamp)
+      {
+        return true;
+      }
+    };
+  }
 }

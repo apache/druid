@@ -212,12 +212,12 @@ unaryExpression returns [PostAggregator p]
         if($e.p instanceof ConstantPostAggregator) {
             ConstantPostAggregator c = (ConstantPostAggregator)$e.p;
             double v = c.getConstantValue().doubleValue() * -1;
-            $p = new ConstantPostAggregator(Double.toString(v), v);
+            $p = new ConstantPostAggregator(Double.toString(v), v, null);
         } else {
             $p = new ArithmeticPostAggregator(
                 "-"+$e.p.getName(),
                 "*",
-                Lists.newArrayList($e.p, new ConstantPostAggregator("-1", -1.0))
+                Lists.newArrayList($e.p, new ConstantPostAggregator("-1", -1.0, null))
             );
         }
     }
@@ -240,7 +240,7 @@ aggregate returns [AggregatorFactory agg]
     ;
 
 constant returns [ConstantPostAggregator c]
-    : value=NUMBER  { double v = Double.parseDouble($value.text); $c = new ConstantPostAggregator(Double.toString(v), v); }
+    : value=NUMBER  { double v = Double.parseDouble($value.text); $c = new ConstantPostAggregator(Double.toString(v), v, null); }
     ;
 
 /* time filters must be top level filters */

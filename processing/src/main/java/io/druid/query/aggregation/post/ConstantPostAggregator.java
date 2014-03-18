@@ -39,13 +39,13 @@ public class ConstantPostAggregator implements PostAggregator
   @JsonCreator
   public ConstantPostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("value") Number constantValue
+      @JsonProperty("value") Number constantValue,
+      @JsonProperty("constantValue") Number backwardsCompatibleValue
   )
   {
-    // only value should be required for constants
-    Preconditions.checkNotNull(constantValue, "Constant value must not be null");
     this.name = name;
-    this.constantValue = constantValue;
+    this.constantValue = constantValue == null ? backwardsCompatibleValue : constantValue;
+    Preconditions.checkNotNull(this.constantValue);
   }
 
   @Override
@@ -98,20 +98,26 @@ public class ConstantPostAggregator implements PostAggregator
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     ConstantPostAggregator that = (ConstantPostAggregator) o;
 
     if (constantValue != null && that.constantValue != null) {
-      if (constantValue.doubleValue() != that.constantValue.doubleValue())
+      if (constantValue.doubleValue() != that.constantValue.doubleValue()) {
         return false;
-    }
-    else if (constantValue != that.constantValue) {
+      }
+    } else if (constantValue != that.constantValue) {
       return false;
     }
 
-    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+    if (name != null ? !name.equals(that.name) : that.name != null) {
+      return false;
+    }
 
     return true;
   }
@@ -123,4 +129,5 @@ public class ConstantPostAggregator implements PostAggregator
     result = 31 * result + (constantValue != null ? constantValue.hashCode() : 0);
     return result;
   }
+
 }

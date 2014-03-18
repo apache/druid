@@ -76,7 +76,7 @@ came to the conclusion that there was nothing in the open source world that
 could be fully leveraged for our requirements.
 
 We ended up creating Druid, an open-source, distributed, column-oriented,
-realtime analytical data store.  In many ways, Druid shares similarities with
+real-time analytical data store.  In many ways, Druid shares similarities with
 other OLAP systems \cite{oehler2012ibm, schrader2009oracle, lachev2005applied},
 interactive query systems \cite{melnik2010dremel}, main-memory databases
 \cite{farber2012sap}, and widely-known distributed data stores
@@ -122,7 +122,6 @@ edit.
 
 \begin{table*}
   \centering
-  \label{tab:sample_data}
   \begin{tabular}{| l | l | l | l | l | l | l | l |}
     \hline
     \textbf{Timestamp} & \textbf{Page} & \textbf{Username} & \textbf{Gender} & \textbf{City} & \textbf{Characters Added} & \textbf{Characters Removed} \\ \hline
@@ -132,6 +131,7 @@ edit.
     2011-01-01T02:00:00Z & Ke\$ha & Xeno & Male & Taiyuan & 3194 & 170 \\ \hline
   \end{tabular}
   \caption{Sample Druid data for edits that have occurred on Wikipedia.}
+  \label{tab:sample_data}
 \end{table*}
 
 Our goal is to rapidly compute drill-downs and aggregates over this data. We
@@ -160,7 +160,7 @@ determine business success or failure.
 
 Finally, another key problem that Metamarkets faced in its early days was to
 allow users and alerting systems to be able to make business decisions in
-"real-time". The time from when an event is created to when that
+``real-time". The time from when an event is created to when that
 event is queryable determines how fast users and systems are able to react to
 potentially catastrophic occurrences in their systems. Popular open source data
 warehousing systems such as Hadoop were unable to provide the sub-second data ingestion
@@ -177,7 +177,7 @@ A Druid cluster consists of different types of nodes and each node type is
 designed to perform a specific set of things. We believe this design separates
 concerns and simplifies the complexity of the system. The different node types
 operate fairly independent of each other and there is minimal interaction
-between them. Hence, intra-cluster communication failures have minimal impact
+among them. Hence, intra-cluster communication failures have minimal impact
 on data availability.  To solve complex data analysis problems, the different
 node types come together to form a fully working system.  The name Druid comes
 from the Druid class in many role-playing games: it is a shape-shifter, capable
@@ -231,10 +231,10 @@ On a periodic basis, each real-time node will schedule a background task that
 searches for all locally persisted indexes. The task merges these indexes
 together and builds an immutable block of data that contains all the events
 that have ingested by a real-time node for some span of time. We refer to this
-block of data as a "segment". During the handoff stage, a real-time node
+block of data as a ``segment". During the handoff stage, a real-time node
 uploads this segment to a permanent backup storage, typically a distributed
 file system such as S3 \cite{decandia2007dynamo} or HDFS
-\cite{shvachko2010hadoop}, which Druid refers to as "deep storage". The ingest,
+\cite{shvachko2010hadoop}, which Druid refers to as ``deep storage". The ingest,
 persist, merge, and handoff steps are fluid; there is no data loss during any
 of the processes.
 
@@ -260,7 +260,7 @@ collected for 13:00 to 14:00 and unannounces it is serving this data.
 \centering
 \includegraphics[width = 4.5in]{realtime_timeline}
 \caption{The node starts, ingests data, persists, and periodically hands data
-off. This process repeats indefinitely. The time intervals between different
+off. This process repeats indefinitely. The time periods between different
 real-time node operations are configurable.}
 \label{fig:realtime_timeline}
 \end{figure*}
@@ -413,7 +413,7 @@ distribution on historical nodes. The coordinator nodes tell historical nodes
 to load new data, drop outdated data, replicate data, and move data to load
 balance. Druid uses a multi-version concurrency control swapping protocol for
 managing immutable segments in order to maintain stable views.  If any
-immutable segment contains data that is wholly obseleted by newer segments, the
+immutable segment contains data that is wholly obsoleted by newer segments, the
 outdated segment is dropped from the cluster. Coordinator nodes undergo a
 leader-election process that determines a single node that runs the coordinator
 functionality. The remaining coordinator nodes act as redundant backups.
@@ -436,8 +436,8 @@ Rules indicate how segments should be assigned to different historical node
 tiers and how many replicates of a segment should exist in each tier. Rules may
 also indicate when segments should be dropped entirely from the cluster. Rules
 are usually set for a period of time.  For example, a user may use rules to
-load the most recent one month's worth of segments into a "hot" cluster, the
-most recent one year's worth of segments into a "cold" cluster, and drop any
+load the most recent one month's worth of segments into a ``hot" cluster, the
+most recent one year's worth of segments into a ``cold" cluster, and drop any
 segments that are older.
 
 The coordinator nodes load a set of rules from a rule table in the MySQL
@@ -569,7 +569,7 @@ representations.
 \subsection{Indices for Filtering Data}
 In many real world OLAP workflows, queries are issued for the aggregated
 results of some set of metrics where some set of dimension specifications are
-met. An example query is: "How many Wikipedia edits were done by users in
+met. An example query is: ``How many Wikipedia edits were done by users in
 San Francisco who are also male?". This query is filtering the Wikipedia data
 set in Table~\ref{tab:sample_data} based on a Boolean expression of dimension
 values. In many real world data sets, dimension columns contain strings and
@@ -609,12 +609,11 @@ used in search engines. Bitmap indices for OLAP workloads is described in
 detail in \cite{o1997improved}. Bitmap compression algorithms are a
 well-defined area of research \cite{antoshenkov1995byte, wu2006optimizing,
 van2011memory} and often utilize run-length encoding. Druid opted to use the
-Concise algorithm \cite{colantonio2010concise} as it can outperform WAH by
-reducing compressed bitmap size by up to 50\%.  Figure~\ref{fig:concise_plot}
+Concise algorithm \cite{colantonio2010concise}. Figure~\ref{fig:concise_plot}
 illustrates the number of bytes using Concise compression versus using an
-integer array. The results were generated on a \texttt{cc2.8xlarge} system with a single
-thread, 2G heap, 512m young gen, and a forced GC between each run. The data set
-is a single day’s worth of data collected from the Twitter garden hose
+integer array. The results were generated on a \texttt{cc2.8xlarge} system with
+a single thread, 2G heap, 512m young gen, and a forced GC between each run. The
+data set is a single day’s worth of data collected from the Twitter garden hose
 \cite{twitter2013} data stream. The data set contains 2,272,295 rows and 12
 dimensions of varying cardinality. As an additional comparison, we also
 resorted the data set rows to maximize compression.
@@ -679,9 +678,9 @@ A sample count query over a week of data is as follows:
   "aggregations" : [{"type":"count", "name":"rows"}]
 }
 \end{verbatim}}
-The query shown above will return a count of the number of rows in the Wikipedia datasource
-from 2013-01-01 to 2013-01-08, filtered for only those rows where the value of the "page" dimension is 
-equal to "Ke\$ha". The results will be bucketed by day and will be a JSON array of the following form:
+The query shown above will return a count of the number of rows in the Wikipedia data source
+from 2013-01-01 to 2013-01-08, filtered for only those rows where the value of the ``page" dimension is 
+equal to ``Ke\$ha". The results will be bucketed by day and will be a JSON array of the following form:
 {\scriptsize\begin{verbatim}
 [ {
     "timestamp": "2012-01-01T00:00:00.000Z",
@@ -706,7 +705,7 @@ of this paper to fully describe the query API but more information can be found
 online\footnote{\href{http://druid.io/docs/latest/Querying.html}{http://druid.io/docs/latest/Querying.html}}.
 
 As of this writing, a join query for Druid is not yet implemented.  This has
-been a function of engineering resource allocation decisions and use case more
+been a function of engineering resource allocation and use case decisions more
 than a decision driven by technical merit.  Indeed, Druid's storage format
 would allow for the implementation of joins (there is no loss of fidelity for
 columns included as dimensions) and the implementation of them has been a
@@ -724,7 +723,7 @@ a shared set of keys.  The primary high-level strategies for join queries the
 authors are aware of are a hash-based strategy or a sorted-merge strategy.  The
 hash-based strategy requires that all but one data set be available as
 something that looks like a hash table, a lookup operation is then performed on
-this hash table for every row in the "primary" stream.  The sorted-merge
+this hash table for every row in the ``primary" stream.  The sorted-merge
 strategy assumes that each stream is sorted by the join key and thus allows for
 the incremental joining of the streams.  Each of these strategies, however,
 requires the materialization of some number of the streams either in sorted
@@ -751,8 +750,7 @@ Druid query performance can vary signficantly depending on the query
 being issued. For example, sorting the values of a high cardinality dimension
 based on a given metric is much more expensive than a simple count over a time
 range. To showcase the average query latencies in a production Druid cluster,
-we selected 8 of our most queried data sources, described in
-Table~\ref{tab:datasources}.
+we selected 8 of our most queried data sources, described in Table~\ref{tab:datasources}.
 
 Approximately 30\% of the queries are standard
 aggregates involving different types of metrics and filters, 60\% of queries
@@ -764,7 +762,6 @@ involving all columns are very rare.
 
 \begin{table}
   \centering
-  \label{tab:datasources}
   \begin{tabular}{| l | l | l |}
     \hline
     \textbf{Data Source} & \textbf{Dimensions} & \textbf{Metrics} \\ \hline
@@ -778,15 +775,17 @@ involving all columns are very rare.
     \texttt{h} & 78 & 14 \\ \hline
   \end{tabular}
   \caption{Characteristics of production data sources.}
+  \label{tab:datasources}
 \end{table}
 
 A few notes about our results:
 \begin{itemize}[leftmargin=*,beginpenalty=5000,topsep=0pt]
-\item The results are from a "hot" tier in our production cluster. We run
-several tiers of varying performance in production.
+\item The results are from a ``hot" tier in our production cluster. There were
+approximately 50 data sources in the tier and several hundred users issuing
+queries.
 
-\item There is approximately 10.5TB of RAM available in the "hot" tier and
-approximately 10TB of segments loaded (including replication). Collectively,
+\item There was approximately 10.5TB of RAM available in the ``hot" tier and
+approximately 10TB of segments loaded. Collectively,
 there are about 50 billion Druid rows in this tier. Results for
 every data source are not shown.
 
@@ -798,13 +797,13 @@ threads and 672 total cores (hyperthreaded).
 \end{itemize}
 
 Query latencies are shown in Figure~\ref{fig:query_latency} and the queries per
-minute is shown in Figure~\ref{fig:queries_per_min}.  Across all the various
+minute are shown in Figure~\ref{fig:queries_per_min}. Across all the various
 data sources, average query latency is approximately 550 milliseconds, with
 90\% of queries returning in less than 1 second, 95\% in under 2 seconds, and
-99\% of queries taking less than 10 seconds to complete.
-Occasionally we observe spikes in latency, as observed on February 19,
-in which case network issues on the cache nodes were compounded by very high
-query load on one of our largest datasources.
+99\% of queries returning in less than 10 seconds.  Occasionally we observe
+spikes in latency, as observed on February 19, in which case network issues on
+the Memcached instances were compounded by very high query load on one of our
+largest datasources.
 
 \begin{figure}
 \centering 
@@ -883,7 +882,7 @@ ingestion setup consists of 6 nodes, totalling 360GB of RAM and 96 cores
 (12 x Intel Xeon E5-2670).
 
 Note that in this setup, several other data sources were being ingested and
-many other Druid related ingestion tasks were running concurrently on those machines.
+many other Druid related ingestion tasks were running concurrently on the machines.
 
 Druid's data ingestion latency is heavily dependent on the complexity of the
 data set being ingested. The data complexity is determined by the number of
@@ -893,11 +892,10 @@ aggregations we want to perform on those metrics. With the most basic data set
 800,000 events/second/core, which is really just a measurement of how fast we can
 deserialize events. Real world data sets are never this simple.
 Table~\ref{tab:ingest_datasources} shows a selection of data sources and their
-chracteristics. 
+characteristics. 
 
 \begin{table}
   \centering
-  \label{tab:ingest_datasources}
   \begin{tabular}{| l | l | l | l |}
     \hline
     \scriptsize\textbf{Data Source} & \scriptsize\textbf{Dimensions} & \scriptsize\textbf{Metrics} & \scriptsize\textbf{Peak events/s} \\ \hline
@@ -911,6 +909,7 @@ chracteristics.
     \texttt{z} & 33 & 24 & 95747.74 \\ \hline
   \end{tabular}
   \caption{Ingestion characteristics of various data sources.}
+  \label{tab:ingest_datasources}
 \end{table}
 
 We can see that, based on the descriptions in
@@ -938,7 +937,7 @@ The latency measurements we presented are sufficient to address the our stated
 problems of interactivity. We would prefer the variability in the latencies to
 be less. It is still very possible to possible to decrease latencies by adding
 additional hardware, but we have not chosen to do so because infrastructure
-cost is still a consideration to us.
+costs are still a consideration to us.
 
 \section{Druid in Production}\label{sec:production}
 Over the last few years, we have gained tremendous knowledge about handling
@@ -950,19 +949,19 @@ explore use case, the number of queries issued by a single user is much higher
 than in the reporting use case. Exploratory queries often involve progressively
 adding filters for the same time range to narrow down results. Users tend to
 explore short time intervals of recent data. In the generate report use case,
-users query for much longer data intervals, but users also already have the
-queries they want to issue in mind.
+users query for much longer data intervals, but users also already know the
+queries they want to issue.
 
 \paragraph{Multitenancy}
 Expensive concurrent queries can be problematic in a multitenant
-environment. Queries for large datasources may end up hitting every historical
+environment. Queries for large data sources may end up hitting every historical
 node in a cluster and consume all cluster resources. Smaller, cheaper queries
 may be blocked from executing in such cases. We introduced query prioritization
 to address these issues. Each historical node is able to prioritize which
 segments it needs to scan. Proper query planning is critical for production
 workloads. Thankfully, queries for a significant amount of data tend to be for
-reporting use cases, and users are not expecting the same level of
-interactivity as when they are querying to explore data. 
+reporting use cases and can be deprioritized. Users do not expect the same level of
+interactivity in this use case as when they are exploring data. 
 
 \paragraph{Node failures}
 Single node failures are common in distributed environments, but many nodes
@@ -976,12 +975,12 @@ historical nodes.
 
 \paragraph{Data Center Outages}
 Complete cluster failures are possible, but extremely rare. If Druid is
-deployed only in a single data center, it is possible for the entire data
+only deployed in a single data center, it is possible for the entire data
 center to fail. In such cases, new machines need to be provisioned. As long as
 deep storage is still available, cluster recovery time is network bound as
 historical nodes simply need to redownload every segment from deep storage. We
 have experienced such failures in the past, and the recovery time was around
-several hours in the AWS ecosystem on several TBs of data.
+several hours in the AWS ecosystem for several TBs of data.
 
 \subsection{Operational Monitoring}
 Proper monitoring is critical to run a large scale distributed cluster.
@@ -1076,7 +1075,7 @@ stores \cite{macnicol2004sybase}.
 In this paper, we presented Druid, a distributed, column-oriented, real-time
 analytical data store. Druid is designed to power high performance applications
 and is optimized for low query latencies. Druid supports streaming data
-ingestion and is fault-tolerant. We discussed how Druid benchmarks and
+ingestion and is fault-tolerant. We discussed Druid benchmarks and
 summarized key architecture aspects such
 as the storage format, query language, and general execution.
 
