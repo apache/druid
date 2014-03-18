@@ -44,7 +44,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class RealtimePlumberSchool implements PlumberSchool
 {
-  public static final int DEFAULT_MAX_PENDING_PERSISTS = 2;
+  public static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
 
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumberSchool.class);
 

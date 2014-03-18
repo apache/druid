@@ -56,7 +56,7 @@ public interface Query<T>
   public static final String SELECT = "select";
   public static final String TOPN = "topN";
 
-  public String getDataSource();
+  public DataSource getDataSource();
 
   public boolean hasFilters();
 
@@ -77,4 +77,8 @@ public interface Query<T>
   public Query<T> withOverriddenContext(Map<String, String> contextOverride);
 
   public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
+
+  public Query<T> withId(String id);
+
+  public String getId();
 }

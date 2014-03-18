@@ -79,7 +79,17 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   )
   {
     final TopNResultBuilder singleMetricResultBuilder = makeResultBuilder(params);
-    final String metric = ((NumericTopNMetricSpec) query.getTopNMetricSpec()).getMetric();
+    final String metric;
+    // ugly
+    TopNMetricSpec spec = query.getTopNMetricSpec();
+    if (spec instanceof InvertedTopNMetricSpec
+        && ((InvertedTopNMetricSpec) spec).getDelegate() instanceof NumericTopNMetricSpec) {
+      metric = ((NumericTopNMetricSpec) ((InvertedTopNMetricSpec) spec).getDelegate()).getMetric();
+    } else if (spec instanceof NumericTopNMetricSpec) {
+      metric = ((NumericTopNMetricSpec) query.getTopNMetricSpec()).getMetric();
+    } else {
+      throw new ISE("WTF?! We are in AggregateTopNMetricFirstAlgorithm with a [%s] spec", spec.getClass().getName());
+    }
 
     // Find either the aggregator or post aggregator to do the topN over
     List<AggregatorFactory> condensedAggs = Lists.newArrayList();

@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.53-SNAPSHOT</version>
+    <version>0.6.73-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>${project.artifactId}-${project.version}</tag>
+        <tag>druid-0.6.72-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
@@ -39,9 +39,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.25.2</metamx.java-util.version>
-        <apache.curator.version>2.3.0</apache.curator.version>
-        <druid.api.version>0.1.8</druid.api.version>
+        <metamx.java-util.version>0.25.3</metamx.java-util.version>
+        <apache.curator.version>2.4.0</apache.curator.version>
+        <druid.api.version>0.1.11</druid.api.version>
     </properties>
 
     <modules>
@@ -513,6 +513,8 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.12.2</version>
                     <configuration>
+                        <!-- locale settings must be set on the command line before startup -->
+                        <argLine>-Duser.language=en -Duser.country=US</argLine>
                         <systemPropertyVariables>
                             <user.timezone>UTC</user.timezone>
                         </systemPropertyVariables>
@@ -533,8 +535,21 @@
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>2.4</version>
                 </plugin>
-            </plugins>
-        </pluginManagement>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.4.2</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.maven.scm</groupId>
+                            <artifactId>maven-scm-provider-gitexe</artifactId>
+                            <!-- This version is necessary for use with git version 1.8.5 and above -->
+                            <version>1.8.1</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+              </plugins>
+            </pluginManagement>
     </build>
 
     <repositories>

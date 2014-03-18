@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Aggregations
 Aggregations are specifications of processing over metrics available in Druid.
 Available aggregations are:
 
@@ -80,4 +81,14 @@ All JavaScript functions must return numerical values.
   "fnCombine"   : "function(partialA, partialB) { return partialA + partialB; }",
   "fnReset"     : "function()                   { return 10; }"
 }
+```
+
+### Complex aggregators
+
+#### `hyperUnique` aggregator
+
+`hyperUnique` uses [Hyperloglog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension.
+
+```json
+{ "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
 ```

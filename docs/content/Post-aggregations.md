@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Post-Aggregations
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
 There are several post-aggregators available.
@@ -62,6 +63,31 @@ Example JavaScript aggregator:
   "fieldNames": ["delta", "total"],
   "function": "function(delta, total) { return 100 * Math.abs(delta) / total; }"
 }
+```
+### `hyperUniqueCardinality` post-aggregator
+
+The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object such that it can be used in post aggregations.
+
+```json
+{ "type"  : "hyperUniqueCardinality", "fieldName"  : <the name field value of the hyperUnique aggregator>}
+```
+
+It can be used in a sample calculation as so:
+
+```json
+  "aggregations" : [{
+    {"type" : "count", "name" : "rows"},
+    {"type" : "hyperUnique", "name" : "unique_users", "fieldName" : "uniques"}
+  }],
+  "postAggregations" : {
+    "type"   : "arithmetic",
+    "name"   : "average_users_per_row",
+    "fn"     : "/",
+    "fields" : [
+      { "type" : "hyperUniqueCardinality", "fieldName" : "unique_users" },
+      { "type" : "fieldAccess", "name" : "rows", "fieldName" : "rows" }
+    ]
+  }
 ```
 
 

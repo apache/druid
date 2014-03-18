@@ -25,13 +25,16 @@ import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
-import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.QueryableDruidServer;
+import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
+import io.druid.query.DataSource;
+import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.TableDataSource;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -54,7 +57,7 @@ public class BrokerServerView implements TimelineServerView
   private final Map<String, ServerSelector> selectors;
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
 
-  private final QueryToolChestWarehouse warehose;
+  private final QueryToolChestWarehouse warehouse;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final ServerView baseView;
@@ -62,14 +65,14 @@ public class BrokerServerView implements TimelineServerView
 
   @Inject
   public BrokerServerView(
-      QueryToolChestWarehouse warehose,
+      QueryToolChestWarehouse warehouse,
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
       ServerView baseView,
       ServerSelectorStrategy serverSelectorStrategy
   )
   {
-    this.warehose = warehose;
+    this.warehouse = warehouse;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.baseView = baseView;
@@ -149,7 +152,7 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehose, smileMapper, httpClient, server.getHost());
+    return new DirectDruidClient(warehouse, smileMapper, httpClient, server.getHost());
   }
 
   private QueryableDruidServer removeServer(DruidServer server)
@@ -232,10 +235,21 @@ public class BrokerServerView implements TimelineServerView
 
 
   @Override
-  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource)
+  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
+    String table;
+    while (dataSource instanceof QueryDataSource) {
+      dataSource = ((QueryDataSource) dataSource).getQuery().getDataSource();
+    }
+
+    if (dataSource instanceof TableDataSource) {
+      table = ((TableDataSource) dataSource).getName();
+    } else {
+      throw new UnsupportedOperationException("Unsupported data source type: " + dataSource.getClass().getSimpleName());
+    }
+
     synchronized (lock) {
-      return timelines.get(dataSource);
+      return timelines.get(table);
     }
   }
 

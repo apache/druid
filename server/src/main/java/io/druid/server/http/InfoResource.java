@@ -380,9 +380,9 @@ public class InfoResource
                           }
                           );
                           Set<String> tiers = Sets.newHashSet(((LoadRule) rule).getTieredReplicants().keySet());
+                          tiers.remove(DruidServer.DEFAULT_TIER);
                           String tier = DruidServer.DEFAULT_TIER;
-                          if (tiers.size() > 1) {
-                            tiers.remove(DruidServer.DEFAULT_TIER);
+                          if (!tiers.isEmpty()) {
                             tier = tiers.iterator().next();
                           }
 
@@ -460,6 +460,22 @@ public class InfoResource
         )
     ).build();
   }
+
+  @GET
+  @Path("/datasources/{dataSourceName}")
+  @Produces("application/json")
+  public Response getTheDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.ok(dataSource).build();
+  }
+
 
   @DELETE
   @Path("/datasources/{dataSourceName}")

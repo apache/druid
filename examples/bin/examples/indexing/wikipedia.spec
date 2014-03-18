@@ -53,7 +53,7 @@
       "segmentGranularity": "hour",
       "basePersistDirectory": "\/tmp\/realtime\/basePersist",
       "rejectionPolicy": {
-        "type": "messageTime"
+        "type": "test"
       }
     }
   }

@@ -60,18 +60,15 @@ import java.util.Set;
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
   private static final byte SELECT_QUERY = 0x13;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
       };
-
   private static final TypeReference<Result<SelectResultValue>> TYPE_REFERENCE =
       new TypeReference<Result<SelectResultValue>>()
       {
       };
-
   private final QueryConfig config;
   private final ObjectMapper jsonMapper;
 
@@ -126,7 +123,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4("Select")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))

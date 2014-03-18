@@ -31,7 +31,6 @@ import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.db.DatabaseSegmentManager;
-import io.druid.segment.IndexGranularity;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -84,8 +83,7 @@ public class DatasourcesResource
   @Produces("application/json")
   public Response getQueryableDataSources(
       @QueryParam("full") String full,
-      @QueryParam("simple") String simple,
-      @QueryParam("gran") String gran
+      @QueryParam("simple") String simple
   )
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
@@ -107,9 +105,6 @@ public class DatasourcesResource
               )
           )
       ).build();
-    } else if (gran != null) {
-      IndexGranularity granularity = IndexGranularity.fromString(gran);
-      // TODO
     }
 
     return builder.entity(
@@ -129,26 +124,19 @@ public class DatasourcesResource
     ).build();
   }
 
-  @DELETE
+  @GET
   @Path("/{dataSourceName}")
-  public Response deleteDataSource(
-      @PathParam("dataSourceName") final String dataSourceName,
-      @QueryParam("kill") final String kill,
-      @QueryParam("interval") final String interval
+  @Produces("application/json")
+  public Response getTheDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    if (indexingServiceClient == null) {
-      return Response.status(Response.Status.OK).entity(ImmutableMap.of("error", "no indexing service found")).build();
-    }
-    if (kill != null && Boolean.valueOf(kill)) {
-      indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
-    } else {
-      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      }
+    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
     }
 
-    return Response.status(Response.Status.OK).build();
+    return Response.ok(dataSource).build();
   }
 
   @POST
@@ -160,6 +148,41 @@ public class DatasourcesResource
   {
     if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
       return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.status(Response.Status.OK).build();
+  }
+
+  @DELETE
+  @Path("/{dataSourceName}")
+  @Produces("application/json")
+  public Response deleteDataSource(
+      @PathParam("dataSourceName") final String dataSourceName,
+      @QueryParam("kill") final String kill,
+      @QueryParam("interval") final String interval
+  )
+  {
+    if (indexingServiceClient == null) {
+      return Response.ok().entity(ImmutableMap.of("error", "no indexing service found")).build();
+    }
+    if (kill != null && Boolean.valueOf(kill)) {
+      try {
+        indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
+      }
+      catch (Exception e) {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(
+                           ImmutableMap.of(
+                               "error",
+                               "Exception occurred. Are you sure you have an indexing service?"
+                           )
+                       )
+                       .build();
+      }
+    } else {
+      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
     }
 
     return Response.status(Response.Status.OK).build();

@@ -59,7 +59,7 @@ public class LoadRuleTest
   public void setUp() throws Exception
   {
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
-    throttler = new ReplicationThrottler(1, 1);
+    throttler = new ReplicationThrottler(2, 1);
     for (String tier : Arrays.asList("hot", DruidServer.DEFAULT_TIER)) {
       throttler.updateReplicationState(tier);
       throttler.updateTerminationState(tier);

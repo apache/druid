@@ -57,12 +57,12 @@ public class QueryResource
 {
   private static final Logger log = new Logger(QueryResource.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
-
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final QueryIDProvider idProvider;
 
   @Inject
   public QueryResource(
@@ -70,7 +70,8 @@ public class QueryResource
       @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
-      RequestLogger requestLogger
+      RequestLogger requestLogger,
+      QueryIDProvider idProvider
   )
   {
     this.jsonMapper = jsonMapper;
@@ -78,6 +79,7 @@ public class QueryResource
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.idProvider = idProvider;
   }
 
   @POST
@@ -88,9 +90,9 @@ public class QueryResource
   ) throws ServletException, IOException
   {
     final long start = System.currentTimeMillis();
-
     Query query = null;
     byte[] requestQuery = null;
+    String queryId;
 
     final boolean isSmile = "application/smile".equals(req.getContentType());
 
@@ -103,6 +105,11 @@ public class QueryResource
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
       query = objectMapper.readValue(requestQuery, Query.class);
+      queryId = query.getId();
+      if (queryId == null) {
+        queryId = idProvider.next(query);
+        query = query.withId(queryId);
+      }
 
       requestLogger.log(
           new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
@@ -124,12 +131,13 @@ public class QueryResource
 
       emitter.emit(
           new ServiceMetricEvent.Builder()
-              .setUser2(query.getDataSource())
+              .setUser2(query.getDataSource().toString())
               .setUser4(query.getType())
               .setUser5(query.getIntervals().get(0).toString())
               .setUser6(String.valueOf(query.hasFilters()))
               .setUser7(req.getRemoteAddr())
               .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
+              .setUser10(queryId)
               .build("request/time", requestTime)
       );
     }

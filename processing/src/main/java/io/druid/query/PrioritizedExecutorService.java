@@ -68,6 +68,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService
 
     return service;
   }
+
   private static final int DEFAULT_PRIORITY = 0;
 
 
@@ -131,6 +132,11 @@ public class PrioritizedExecutorService extends AbstractExecutorService
       };
     }
     return new PrioritizedFuture<T>((PrioritizedCallable) theCallable);
+  }
+
+  public int getQueueSize()
+  {
+    return threadPoolExecutor.getQueue().size();
   }
 
   private static class PrioritizedFuture<V> extends FutureTask<V> implements Comparable<PrioritizedFuture>

@@ -1,47 +1,11 @@
 ---
 layout: doc_page
 ---
-Historical
-=======
+Historical Node
+===============
+For Historical Node Configuration, see [Historial Configuration](Historical-Config.html).
 
 Historical nodes load up historical segments and expose them for querying.
-
-Quick Start
------------
-Run:
-
-```
-io.druid.cli.Main server historical
-```
-
-With the following JVM configuration:
-
-```
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
-
-druid.host=localhost
-druid.service=historical
-druid.port=8081
-
-druid.zk.service.host=localhost
-
-druid.server.maxSize=10000000000
-
-# Change these to make Druid faster
-druid.processing.buffer.sizeBytes=100000000
-druid.processing.numThreads=1
-
-druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
-```
-
-Note: This will spin up a Historical node with the local filesystem as deep storage.
-
-JVM Configuration
------------------
-The historical module uses several of the default modules in [Configuration](Configuration.html) and has no uniques configs of its own.
 
 Running
 -------

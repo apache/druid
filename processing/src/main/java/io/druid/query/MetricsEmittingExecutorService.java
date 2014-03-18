@@ -22,7 +22,9 @@ package io.druid.query;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class MetricsEmittingExecutorService extends DelegatingExecutorService
@@ -45,6 +47,13 @@ public class MetricsEmittingExecutorService extends DelegatingExecutorService
   }
 
   @Override
+  public <T> Future<T> submit(Callable<T> tCallable)
+  {
+    emitMetrics();
+    return base.submit(tCallable);
+  }
+
+  @Override
   public void execute(Runnable runnable)
   {
     emitMetrics();
@@ -53,8 +62,8 @@ public class MetricsEmittingExecutorService extends DelegatingExecutorService
 
   private void emitMetrics()
   {
-    if (base instanceof ThreadPoolExecutor) {
-      emitter.emit(metricBuilder.build("exec/backlog", ((ThreadPoolExecutor) base).getQueue().size()));
+    if (base instanceof PrioritizedExecutorService) {
+      emitter.emit(metricBuilder.build("exec/backlog", ((PrioritizedExecutorService) base).getQueueSize()));
     }
   }
 }

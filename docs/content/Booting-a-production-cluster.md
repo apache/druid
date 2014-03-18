@@ -67,7 +67,7 @@ You can then use the EC2 dashboard to locate the instance and confirm that it ha
 If both the instance and the Druid cluster launch successfully, a few minutes later other messages to STDOUT should follow with information returned from EC2, including the instance ID:
 
     Started cluster of 1 instances
-    Cluster{instances=[Instance{roles=[zookeeper, druid-mysql, druid-master, druid-broker, druid-compute, druid-realtime], publicIp= ...
+    Cluster{instances=[Instance{roles=[zookeeper, druid-mysql, druid-coordinator, druid-broker, druid-historical, druid-realtime], publicIp= ...
     
 The final message will contain login information for the instance.
 

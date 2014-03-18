@@ -2,21 +2,14 @@
 layout: doc_page
 ---
 Realtime Data Ingestion
-========
+=======================
+For general Real-time Node information, see [here](Realtime.html).
 
-Realtime data ingestion uses [Realtime nodes](Realtime.html) to index data and make it immediately available for querying. This data is periodically handed off (in the form of data segments) to  [Historical](Historical.html) nodes, after which that data is forgotten by the Realtime nodes. This handoff, or "segment propagation," involves a series of interactions between various members of the Druid cluster. It is illustrated below.
+For Real-time Node Configuration, see [Realtime Configuration](Realtime-Config.html).
+
+For writing your own plugins to the real-time node, see [Firehose](Firehose.html).
 
 Much of the configuration governing Realtime nodes and the ingestion of data is set in the Realtime spec file, discussed on this page.
-
-
-Segment Propagation
--------------------
-
-The segment propagation diagram for real-time data ingestion can be seen below:
-
-![Segment Propagation](../img/segmentPropagation.png "Segment Propagation")
-
-You can read about the various components shown in this diagram under the Architecture section (see the menu on the left).
 
 <a id="realtime-specfile"></a>
 ## Realtime "specFile"
@@ -108,14 +101,6 @@ This provides configuration for the data processing portion of the realtime stre
 |intermediatePersistPeriod|ISO8601 Period String|The period that determines the rate at which intermediate persists occur. These persists determine how often commits happen against the incoming realtime stream. If the realtime data loading process is interrupted at time T, it should be restarted to re-read data that arrived at T minus this period.|yes|
 |maxRowsInMemory|Number|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size.|yes|
 
-### Firehose
-
-See [Firehose](Firehose.html).
-
-### Plumber
-
-See [Plumber](Plumber.html)
-
 Constraints
 -----------
 
@@ -131,18 +116,4 @@ The following table summarizes constraints between settings in the spec file for
 
 The normal, expected use cases have the following overall constraints: `indexGranularity < intermediatePersistPeriod =< windowPeriod  < segmentGranularity`
 
-If the RealtimeNode process runs out of heap, try adjusting druid.computation.buffer.size property which specifies a size in bytes that must fit into the heap.
-
-
-
-Extending the code
-------------------
-
-Realtime integration is intended to be extended in two ways:
-
-1.  Connect to data streams from varied systems ([Firehose](https://github.com/druid-io/druid-api/blob/master/src/main/java/io/druid/data/input/FirehoseFactory.java))
-2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/master/server/src/main/java/io/druid/segment/realtime/plumber/PlumberSchool.java))
-
-The expectations are that the former will be very common and something that users of Druid will do on a fairly regular basis. Most users will probably never have to deal with the latter form of customization. Indeed, we hope that all potential use cases can be packaged up as part of Druid proper without requiring proprietary customization.
-
-Given those expectations, adding a firehose is straightforward and completely encapsulated inside of the interface. Adding a plumber is more involved and requires understanding of how the system works to get right, it’s not impossible, but it’s not intended that individuals new to Druid will be able to do it immediately.
+If the Realtime Node process runs out of heap, try adjusting druid.computation.buffer.size property which specifies a size in bytes that must fit into the heap.

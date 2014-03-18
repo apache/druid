@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# MySQL Database
 MySQL is an external dependency of Druid. We use it to store various metadata about the system, but not to store the actual data. There are a number of tables used for various purposes described below.
 
 Segments Table

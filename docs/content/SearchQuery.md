@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Search Queries
 A search query returns dimension values that match the search specification.
 
 ```json

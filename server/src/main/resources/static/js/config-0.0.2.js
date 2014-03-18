@@ -20,7 +20,7 @@ function domToConfig(configDiv) {
 }
 
 function getConfigs() {
-  $.getJSON("/coordinator/config", function(data) {
+  $.getJSON("/druid/coordinator/v1/config", function(data) {
     $('#config_list').empty();
 
     $.each(data, function (key, value) {
@@ -72,10 +72,10 @@ $(document).ready(function() {
 
         $.ajax({
           type: 'POST',
-          url:'/coordinator/config',
+          url:'/druid/coordinator/v1/config',
           data: JSON.stringify(configs),
           contentType:"application/json; charset=utf-8",
-          dataType:"json",
+          dataType:"text",
           error: function(xhr, status, error) {
             $("#update_dialog").dialog("close");
             $("#error_dialog").html(xhr.responseText);

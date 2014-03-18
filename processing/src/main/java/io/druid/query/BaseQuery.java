@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -34,14 +35,14 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T> implements Query<T>
 {
-  private final String dataSource;
+  public static String QUERYID = "queryId";
+  private final DataSource dataSource;
   private final Map<String, String> context;
   private final QuerySegmentSpec querySegmentSpec;
-
   private volatile Duration duration;
 
   public BaseQuery(
-      String dataSource,
+      DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
       Map<String, String> context
   )
@@ -49,14 +50,14 @@ public abstract class BaseQuery<T> implements Query<T>
     Preconditions.checkNotNull(dataSource, "dataSource can't be null");
     Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
 
-    this.dataSource = dataSource.toLowerCase();
+    this.dataSource = dataSource;
     this.context = context;
     this.querySegmentSpec = querySegmentSpec;
   }
 
   @JsonProperty
   @Override
-  public String getDataSource()
+  public DataSource getDataSource()
   {
     return dataSource;
   }
@@ -129,5 +130,44 @@ public abstract class BaseQuery<T> implements Query<T>
     overridden.putAll(overrides);
 
     return overridden;
+  }
+
+  @Override
+  public String getId()
+  {
+    return getContextValue(QUERYID);
+  }
+
+  @Override
+  public Query withId(String id)
+  {
+    return withOverriddenContext(ImmutableMap.of(QUERYID, id));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    BaseQuery baseQuery = (BaseQuery) o;
+
+    if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) return false;
+    if (dataSource != null ? !dataSource.equals(baseQuery.dataSource) : baseQuery.dataSource != null) return false;
+    if (duration != null ? !duration.equals(baseQuery.duration) : baseQuery.duration != null) return false;
+    if (querySegmentSpec != null ? !querySegmentSpec.equals(baseQuery.querySegmentSpec) : baseQuery.querySegmentSpec != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dataSource != null ? dataSource.hashCode() : 0;
+    result = 31 * result + (context != null ? context.hashCode() : 0);
+    result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
+    result = 31 * result + (duration != null ? duration.hashCode() : 0);
+    return result;
   }
 }

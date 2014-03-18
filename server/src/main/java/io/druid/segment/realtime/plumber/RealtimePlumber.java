@@ -257,7 +257,7 @@ public class RealtimePlumber implements Plumber
                                         }
                                     )
                                 )
-                            ),
+                            ).withWaitMeasuredFromNow(),
                             new SpecificSegmentSpec(
                                 new SegmentDescriptor(
                                     holder.getInterval(),
@@ -578,9 +578,12 @@ public class RealtimePlumber implements Plumber
 
                 log.info("Starting merge and push.");
 
-                long minTimestamp = segmentGranularity.truncate(
+                DateTime minTimestampAsDate = segmentGranularity.truncate(
                     rejectionPolicy.getCurrMaxTime().minus(windowMillis)
-                ).getMillis();
+                );
+                long minTimestamp = minTimestampAsDate.getMillis();
+
+                log.info("Found [%,d] sinks. minTimestamp [%s]", sinks.size(), minTimestampAsDate);
 
                 List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
                 for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
@@ -588,8 +591,12 @@ public class RealtimePlumber implements Plumber
                   if (intervalStart < minTimestamp) {
                     log.info("Adding entry[%s] for merge and push.", entry);
                     sinksToPush.add(entry);
+                  } else {
+                    log.warn("[%s] < [%s] Skipping persist and merge.", new DateTime(intervalStart), minTimestampAsDate);
                   }
                 }
+
+                log.info("Found [%,d] sinks to persist and merge", sinksToPush.size());
 
                 for (final Map.Entry<Long, Sink> entry : sinksToPush) {
                   persistAndMerge(entry.getKey(), entry.getValue());
@@ -704,7 +711,7 @@ public class RealtimePlumber implements Plumber
               return ServerView.CallbackAction.UNREGISTER;
             }
 
-            if (server.isRealtime()) {
+            if (!server.isAssignable()) {
               return ServerView.CallbackAction.CONTINUE;
             }
 

@@ -7,13 +7,13 @@ Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), w
 
 This tutorial will hopefully answer these questions!
 
-In this tutorial, we will set up other types of Druid nodes as well as and external dependencies for a fully functional Druid cluster. The architecture of Druid is very much like the [Megazord](http://www.youtube.com/watch?v=7mQuHh1X4H4) from the popular 90s show Mighty Morphin' Power Rangers. Each Druid node has a specific purpose and the nodes come together to form a fully functional system.
+In this tutorial, we will set up other types of Druid nodes and external dependencies for a fully functional Druid cluster. The architecture of Druid is very much like the [Megazord](http://www.youtube.com/watch?v=7mQuHh1X4H4) from the popular 90s show Mighty Morphin' Power Rangers. Each Druid node has a specific purpose and the nodes come together to form a fully functional system.
 
 ## Downloading Druid
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.52-bin.tar.gz)
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.72-bin.tar.gz)
 
 and untar the contents within by issuing:
 
@@ -32,9 +32,9 @@ For deep storage, we have made a public S3 bucket (static.druid.io) available wh
 
 #### Setting up MySQL
 
-1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
-2. Install MySQL
-3. Create a druid user and database
+1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
+2. Install MySQL.
+3. Create a druid user and database.
 
 ```bash
 mysql -u root
@@ -88,7 +88,7 @@ Metrics (things to aggregate over):
 
 ## The Cluster
 
-Let's start up a few nodes and download our data. First things though, let's make sure we have config directory where we will store configs for our various nodes:
+Let's start up a few nodes and download our data. First, let's make sure we have configs in the config directory for our various nodes. Issue the following from the Druid home directory:
 
 ```
 ls config
@@ -149,7 +149,7 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.52"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.72"]
 
 # Dummy read only AWS account (used to download example data)
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
@@ -240,7 +240,7 @@ druid.port=8083
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.52","io.druid.extensions:druid-kafka-seven:0.6.52"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.72","io.druid.extensions:druid-kafka-seven:0.6.72"]
 
 # Change this config to db to hand off to the rest of the Druid cluster
 druid.publish.type=noop
@@ -251,6 +251,9 @@ druid.publish.type=noop
 # druid.db.connector.password=diurd
 
 druid.processing.buffer.sizeBytes=100000000
+druid.processing.numThreads=1
+
+druid.monitoring.monitors=["io.druid.segment.realtime.RealtimeMetricsMonitor"]
 ```
 
 Next Steps
