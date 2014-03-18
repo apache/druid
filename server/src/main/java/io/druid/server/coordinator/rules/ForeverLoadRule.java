@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.Map;
 
@@ -63,6 +64,12 @@ public class ForeverLoadRule extends LoadRule
 
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
+  {
+    return true;
+  }
+
+  @Override
+  public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return true;
   }
