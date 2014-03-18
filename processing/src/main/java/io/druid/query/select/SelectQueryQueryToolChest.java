@@ -127,8 +127,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         .setUser4("Select")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(query.getId());
+        .setUser9(Minutes.minutes(numMinutes).toString());
   }
 
   @Override

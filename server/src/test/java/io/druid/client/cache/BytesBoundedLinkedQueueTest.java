@@ -24,6 +24,8 @@ import com.metamx.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class BytesBoundedLinkedQueueTest
@@ -171,11 +174,86 @@ public class BytesBoundedLinkedQueueTest
     }
   }
 
-  @Test public void testAddedObjectExceedsCapacity() throws Exception {
+  @Test
+  public void testAddedObjectExceedsCapacity() throws Exception
+  {
     BlockingQueue<TestObject> q = getQueue(4);
     Assert.assertTrue(q.offer(new TestObject(3)));
     Assert.assertFalse(q.offer(new TestObject(2)));
-    Assert.assertFalse(q.offer(new TestObject(2),delayMS, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(q.offer(new TestObject(2), delayMS, TimeUnit.MILLISECONDS));
+  }
+
+ // @Test
+  public void testConcurrentOperations() throws Exception
+  {
+    final BlockingQueue<TestObject> q = getQueue(Integer.MAX_VALUE);
+    long duration = TimeUnit.SECONDS.toMillis(10);
+    ExecutorService executor = Executors.newCachedThreadPool();
+    final AtomicBoolean stopTest = new AtomicBoolean(false);
+    List<Future> futures = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      futures.add(
+          executor.submit(
+              new Callable<Boolean>()
+              {
+                @Override
+                public Boolean call()
+                {
+                  while (!stopTest.get()) {
+                    q.add(new TestObject(1));
+                    q.add(new TestObject(2));
+                  }
+                  return true;
+
+                }
+              }
+          )
+      );
+    }
+
+    for (int i = 0; i < 10; i++) {
+      futures.add(
+          executor.submit(
+              new Callable<Boolean>()
+              {
+                @Override
+                public Boolean call() throws InterruptedException
+                {
+                  while (!stopTest.get()) {
+                    q.poll(100,TimeUnit.MILLISECONDS);
+                    q.offer(new TestObject(2));
+                  }
+                  return true;
+
+                }
+              }
+          )
+      );
+    }
+
+    for (int i = 0; i < 5; i++) {
+      futures.add(
+          executor.submit(
+              new Callable<Boolean>()
+              {
+                @Override
+                public Boolean call()
+                {
+                  while (!stopTest.get()) {
+                    System.out
+                          .println("drained elements : " + q.drainTo(new ArrayList<TestObject>(), Integer.MAX_VALUE));
+                  }
+                  return true;
+                }
+              }
+          )
+      );
+    }
+    Thread.sleep(duration);
+    stopTest.set(true);
+    for (Future<Boolean> future : futures) {
+      Assert.assertTrue(future.get());
+    }
   }
 
   public static class TestObject

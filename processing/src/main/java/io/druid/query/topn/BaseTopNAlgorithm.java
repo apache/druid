@@ -78,8 +78,6 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     while (numProcessed < cardinality) {
       final int numToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
 
-      params.getCursor().reset();
-
       DimValSelector theDimValSelector;
       if (!hasDimValSelector) {
         theDimValSelector = makeDimValSelector(params, numProcessed, numToProcess);
@@ -96,6 +94,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       closeAggregators(aggregatesStore);
 
       numProcessed += numToProcess;
+      params.getCursor().reset();
     }
   }
 

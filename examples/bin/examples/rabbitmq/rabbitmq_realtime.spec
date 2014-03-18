@@ -43,6 +43,6 @@
         "windowPeriod" : "PT5m",
         "segmentGranularity":"hour",
         "basePersistDirectory" : "/tmp/realtime/basePersist",
-        "rejectionPolicy": { "type": "messageTime" }
+        "rejectionPolicy": { "type": "test" }
     }
 }]

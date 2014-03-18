@@ -25,7 +25,9 @@ import org.joda.time.Interval;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "intervalStart", value = IntervalStartVersioningPolicy.class)
+    @JsonSubTypes.Type(name = "intervalStart", value = IntervalStartVersioningPolicy.class),
+    @JsonSubTypes.Type(name = "custom", value = CustomVersioningPolicy.class)
+
 })
 public interface VersioningPolicy
 {

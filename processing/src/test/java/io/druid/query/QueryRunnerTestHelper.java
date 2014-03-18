@@ -67,7 +67,7 @@ public class QueryRunnerTestHelper
       "uniques",
       "quality_uniques"
   );
-  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
+  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator addRowsIndexConstant =

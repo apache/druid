@@ -193,7 +193,7 @@ This module is required by nodes that can serve queries.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.chunkPeriod`|Long interval queries may be broken into shorter interval queries.|P1M|
+|`druid.query.chunkPeriod`|Long interval queries may be broken into shorter interval queries.|0|
 
 #### GroupBy Query Config
 

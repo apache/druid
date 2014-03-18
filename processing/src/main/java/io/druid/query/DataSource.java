@@ -29,9 +29,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
               property = "type",
               defaultImpl = LegacyDataSource.class)
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
-    @JsonSubTypes.Type(value = QueryDataSource.class, name = "query")
-})
+                  @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
+                  @JsonSubTypes.Type(value = QueryDataSource.class, name = "query")
+              })
 public interface DataSource
 {
+  public String getName();
 }

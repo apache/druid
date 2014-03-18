@@ -151,8 +151,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         .setUser4(query.getType())
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(query.getId());
+        .setUser9(Minutes.minutes(numMinutes).toString());
   }
 
   @Override

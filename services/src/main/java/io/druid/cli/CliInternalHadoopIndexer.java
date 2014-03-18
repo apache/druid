@@ -20,14 +20,20 @@
 package io.druid.cli;
 
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.api.client.util.Lists;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
+import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
+import io.druid.indexer.JobHelper;
+import io.druid.indexer.Jobby;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  */
@@ -37,17 +43,20 @@ import java.io.File;
 )
 public class CliInternalHadoopIndexer implements Runnable
 {
+  private static final Logger log = new Logger(CliHadoopIndexer.class);
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
-
-  private static final Logger log = new Logger(CliHadoopIndexer.class);
 
   @Override
   public void run()
   {
     try {
-      final HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(getHadoopDruidIndexerConfig());
-      job.run();
+      HadoopDruidIndexerConfig config = getHadoopDruidIndexerConfig();
+      List<Jobby> jobs = Lists.newArrayList();
+      jobs.add(new HadoopDruidDetermineConfigurationJob(config));
+      jobs.add(new HadoopDruidIndexerJob(config));
+      JobHelper.runJobs(jobs, config);
+
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

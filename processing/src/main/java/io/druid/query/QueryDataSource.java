@@ -37,6 +37,13 @@ public class QueryDataSource implements DataSource
     this.query = query;
   }
 
+  @Override
+  public String getName()
+  {
+    return query.getDataSource().getName();
+  }
+
+  @JsonProperty
   public Query getQuery()
   {
     return query;
@@ -47,12 +54,18 @@ public class QueryDataSource implements DataSource
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     QueryDataSource that = (QueryDataSource) o;
 
-    if (!query.equals(that.query)) return false;
+    if (!query.equals(that.query)) {
+      return false;
+    }
 
     return true;
   }

@@ -48,7 +48,7 @@ public class ArithmeticPostAggregatorTest
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6
+                "roku", 6, null
             ),
             new FieldAccessPostAggregator(
                 "rows", "rows"
@@ -79,7 +79,7 @@ public class ArithmeticPostAggregatorTest
     List<PostAggregator> postAggregatorList =
         Lists.newArrayList(
             new ConstantPostAggregator(
-                "roku", 6
+                "roku", 6, null
             ),
             new FieldAccessPostAggregator(
                 "rows", "rows"

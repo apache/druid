@@ -126,7 +126,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}")
-  @Consumes("application/json")
+  @Produces("application/json")
   public Response getTheDataSource(
       @PathParam("dataSourceName") final String dataSourceName
   )
