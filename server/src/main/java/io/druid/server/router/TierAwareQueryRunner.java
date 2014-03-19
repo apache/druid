@@ -84,12 +84,12 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
     String brokerServiceName = brokerSelector.select(query);
 
     if (brokerServiceName == null) {
-      log.error(
+      log.makeAlert(
           "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
           query.getDataSource(),
           query.getIntervals(),
           tierConfig.getDefaultBrokerServiceName()
-      );
+      ).emit();
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 
@@ -97,11 +97,11 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
 
     Server server;
     if (selector == null) {
-      log.error(
+      log.makeAlert(
           "WTF?! No selector found for brokerServiceName[%s]. Using default selector for[%s]",
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
-      );
+      ).emit();
       selector = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
 
       if (selector != null) {
@@ -122,11 +122,11 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
       server = serverBackup.get(brokerServiceName);
 
       if (server == null) {
-        log.error(
+        log.makeAlert(
             "WTF?! No backup found for brokerServiceName[%s]. Using default[%s]",
             brokerServiceName,
             tierConfig.getDefaultBrokerServiceName()
-        );
+        ).emit();
 
         server = serverBackup.get(tierConfig.getDefaultBrokerServiceName());
       }
@@ -144,10 +144,8 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
 
     if (server == null) {
       log.makeAlert(
-          "Catastrophic failure! No servers found for default broker [%s]!",
-          tierConfig.getDefaultBrokerServiceName()
+          "Catastrophic failure! No servers found at all! Failing request!"
       ).emit();
-
       return Sequences.empty();
     }
 
