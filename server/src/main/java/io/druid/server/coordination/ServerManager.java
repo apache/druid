@@ -299,7 +299,6 @@ public class ServerManager implements QuerySegmentWalker
                                 factory,
                                 toolChest,
                                 input.getObject(),
-
                                 new SegmentDescriptor(
                                     holder.getInterval(),
                                     holder.getVersion(),
