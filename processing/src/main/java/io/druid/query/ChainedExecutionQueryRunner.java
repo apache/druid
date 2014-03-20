@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -84,11 +85,6 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   {
     final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
 
-    if (Iterables.isEmpty(queryables)) {
-      log.warn("No queryables found.");
-      return Sequences.empty();
-    }
-
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
@@ -111,6 +107,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                               public List<T> call() throws Exception
                               {
                                 try {
+                                  if (input == null) {
+                                    throw new ISE("Input is null?! How is this possible?!");
+                                  }
                                   return Sequences.toList(input.run(query), Lists.<T>newArrayList());
                                 }
                                 catch (Exception e) {

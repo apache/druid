@@ -29,10 +29,12 @@ public class LocalCacheProvider extends CacheConfig implements CacheProvider
 {
   @JsonProperty
   @Min(0)
-  private long sizeInBytes = 0;
+  private long sizeInBytes = 10485760;
+
   @JsonProperty
   @Min(0)
   private int initialSize = 500000;
+
   @JsonProperty
   @Min(0)
   private int logEvictionCount = 0;

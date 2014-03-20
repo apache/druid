@@ -2,13 +2,13 @@
 layout: doc_page
 ---
 # Aggregation Granularity
-The granularity field determines how data gets bucketed across the time dimension, i.e how it gets aggregated by hour, day, minute, etc.
+The granularity field determines how data gets bucketed across the time dimension, or how it gets aggregated by hour, day, minute, etc.
 
 It can be specified either as a string for simple granularities or as an object for arbitrary granularities.
 
 ### Simple Granularities
 
-Simple granularities are specified as a string and bucket timestamps by their UTC time (i.e. days start at 00:00 UTC).
+Simple granularities are specified as a string and bucket timestamps by their UTC time (e.g., days start at 00:00 UTC).
 
 Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `thirty_minute`, `hour` and `day`
 
@@ -35,25 +35,21 @@ This chunks up every hour on the half-hour.
 
 ### Period Granularities
 
-Period granularities are specified as arbitrary period combinations of years, months, weeks, hours, minutes and seconds (e.g. P2W, P3M, PT1H30M, PT0.750S) in ISO8601 format.
+Period granularities are specified as arbitrary period combinations of years, months, weeks, hours, minutes and seconds (e.g. P2W, P3M, PT1H30M, PT0.750S) in ISO8601 format. They support specifying a time zone which determines where period boundaries start as well as the timezone of the returned timestamps. By default, years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
 
-They support specifying a time zone which determines where period boundaries start and also determines the timezone of the returned timestamps.
-
-By default years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
-
-Time zone is optional (defaults to UTC)
-Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone)
+Time zone is optional (defaults to UTC). Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone).
 
 ```
 {"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}
 ```
 
-This will bucket by two day chunks in the Pacific timezone.
+This will bucket by two-day chunks in the Pacific timezone.
 
 ```
 {"type": "period", "period": "P3M", "timeZone": "America/Los_Angeles", "origin": "2012-02-01T00:00:00-08:00"}
 ```
 
-This will bucket by 3 month chunks in the Pacific timezone where the three-month quarters are defined as starting from February.
+This will bucket by 3-month chunks in the Pacific timezone where the three-month quarters are defined as starting from February.
 
-Supported time zones: timezone support is provided by the [Joda Time library](http://www.joda.org), which uses the standard IANA time zones. [Joda Time supported timezones](http://joda-time.sourceforge.net/timezones.html)
+#### Supported Time Zones
+Timezone support is provided by the [Joda Time library](http://www.joda.org), which uses the standard IANA time zones. See the [Joda Time supported timezones](http://joda-time.sourceforge.net/timezones.html).

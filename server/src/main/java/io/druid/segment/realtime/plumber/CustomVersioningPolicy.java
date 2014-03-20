@@ -19,18 +19,28 @@
 
 package io.druid.segment.realtime.plumber;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.joda.time.Period;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "serverTime", value = ServerTimeRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "messageTime", value = MessageTimeRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "none", value = NoopRejectionPolicyFactory.class),
-    @JsonSubTypes.Type(name = "test", value = TestRejectionPolicyFactory.class)
-})
-public interface RejectionPolicyFactory
+/**
+ */
+public class CustomVersioningPolicy implements VersioningPolicy
 {
-  public RejectionPolicy create(Period windowPeriod);
+  private final String version;
+
+  @JsonCreator
+  public CustomVersioningPolicy(
+      @JsonProperty("version") String version
+  )
+  {
+    this.version = version == null ? new DateTime().toString() : version;
+  }
+
+  @Override
+  public String getVersion(Interval interval)
+  {
+    return version;
+  }
 }

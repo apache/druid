@@ -160,12 +160,14 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
         "segmentGranularity": "hour",
         "basePersistDirectory": "\/tmp\/realtime\/basePersist",
         "rejectionPolicy": {
-          "type": "none"
+          "type": "test"
         }
       }
     }
   ]
   ```
+
+Note: This config uses a "test" rejection policy which will accept all events and timely hand off, however, we strongly recommend you do not use this in production. Using this rejection policy, segments for events for the same time range will be overridden.
 
 3. Let's copy and paste some data into the Kafka console producer
 

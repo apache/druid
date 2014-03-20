@@ -32,6 +32,8 @@ import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.ops.LinkedOperationQueueFactory;
+import net.spy.memcached.ops.OperationQueueFactory;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Nullable;
@@ -56,7 +58,15 @@ public class MemcachedCache implements Cache
 
       // always use compression
       transcoder.setCompressionThreshold(0);
-      MemcachedOperationQueueFactory queueFactory = new MemcachedOperationQueueFactory(config.getMaxOperationQueueSize());
+
+      OperationQueueFactory opQueueFactory;
+      long maxQueueBytes = config.getMaxOperationQueueSize();
+      if(maxQueueBytes > 0) {
+        opQueueFactory = new MemcachedOperationQueueFactory(maxQueueBytes);
+      } else {
+        opQueueFactory = new LinkedOperationQueueFactory();
+      }
+
       return new MemcachedCache(
         new MemcachedClient(
           new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
@@ -68,7 +78,8 @@ public class MemcachedCache implements Cache
                                         .setShouldOptimize(true)
                                         .setOpQueueMaxBlockTime(config.getTimeout())
                                         .setOpTimeout(config.getTimeout())
-                                        .setOpQueueFactory(queueFactory)
+                                        .setReadBufferSize(config.getReadBufferSize())
+                                        .setOpQueueFactory(opQueueFactory)
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),

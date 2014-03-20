@@ -69,6 +69,11 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query)
   {
     final ServiceMetricEvent.Builder builder = builderFn.apply(query);
+    String queryId = query.getId();
+    if (queryId == null) {
+      queryId = "";
+    }
+    builder.setUser8(queryId);
 
     return new Sequence<T>()
     {
