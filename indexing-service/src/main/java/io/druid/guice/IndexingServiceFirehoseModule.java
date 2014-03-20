@@ -27,6 +27,7 @@ import com.google.inject.Binder;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
 import io.druid.indexing.common.index.FiniteEventReceiverFirehoseFactory;
 import io.druid.initialization.DruidModule;
+import io.druid.jackson.DefaultObjectMapper;
 
 import java.util.List;
 
@@ -47,5 +48,6 @@ public class IndexingServiceFirehoseModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(DefaultObjectMapper.class).in(LazySingleton.class);
   }
 }

@@ -29,12 +29,14 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.utils.Runnables;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -42,19 +44,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -73,6 +67,7 @@ public class FiniteEventReceiverFirehoseFactory implements FirehoseFactory
   private final String serviceName;
   private final MapInputRowParser parser;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
+  private final DefaultObjectMapper objectMapper;
   private volatile File dataFile;
   private volatile boolean inputFinished = false;
   private volatile boolean registered = false;
@@ -81,12 +76,14 @@ public class FiniteEventReceiverFirehoseFactory implements FirehoseFactory
   public FiniteEventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("parser") MapInputRowParser parser,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject DefaultObjectMapper objectMapper
   )
   {
     this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
     this.parser = Preconditions.checkNotNull(parser, "parser");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
+    this.objectMapper = Preconditions.checkNotNull(objectMapper, "defaultObjectMapper");
   }
 
   @Override
@@ -133,10 +130,15 @@ public class FiniteEventReceiverFirehoseFactory implements FirehoseFactory
     private volatile boolean closed = false;
     private PrintWriter writer;
     private BufferedReader reader;
-    private DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-
     private InputRow nextRow;
     private boolean doneReading = false;
+
+    public FiniteEventReceiverFirehose() throws FileNotFoundException
+    {
+      if (!inputFinished) {
+        writer = new PrintWriter(dataFile);
+      }
+    }
 
     @POST
     @Path("/push-events")
@@ -150,10 +152,6 @@ public class FiniteEventReceiverFirehoseFactory implements FirehoseFactory
       log.debug("Adding %,d events to firehose: %s", events.size(), serviceName);
 
       try {
-        if (writer == null) {
-          writer = new PrintWriter(dataFile);
-        }
-
         for (final Map<String, Object> event : events) {
           // Might throw an exception. We'd like that to happen now, instead of while adding to the row buffer.
           parser.parse(event);
@@ -219,14 +217,7 @@ public class FiniteEventReceiverFirehoseFactory implements FirehoseFactory
     @Override
     public Runnable commit()
     {
-      return new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          // Nothing
-        }
-      };
+      return Runnables.getNoopRunnable();
     }
 
     @POST

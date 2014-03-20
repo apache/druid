@@ -25,7 +25,9 @@ package io.druid.indexing.common.index;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.jackson.DefaultObjectMapper;
 import junit.framework.TestCase;
+import org.joda.time.DateTime;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -41,7 +43,6 @@ import java.util.Random;
 
 public class FiniteEventReceiverFactoryTest
 {
-  private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ");
   private final MapInputRowParser parser = new MapInputRowParser(
       new TimestampSpec("timestamp", null),
       Arrays.asList("dim1", "dim2"),
@@ -64,7 +65,7 @@ public class FiniteEventReceiverFactoryTest
     }
 
     FiniteEventReceiverFirehoseFactory factory = new FiniteEventReceiverFirehoseFactory(
-        "theServiceName", parser, null);
+        "theServiceName", parser, null, new DefaultObjectMapper());
 
     FiniteEventReceiverFirehoseFactory.FiniteEventReceiverFirehose firehose
         = (FiniteEventReceiverFirehoseFactory.FiniteEventReceiverFirehose) factory.connect();
@@ -85,7 +86,7 @@ public class FiniteEventReceiverFactoryTest
   private Map<String, Object> createEvent()
   {
     Map<String, Object> event = new HashMap<String, Object>();
-    event.put("timestamp", dateFormat.format(new Date()));
+    event.put("timestamp", new DateTime().toString());
     event.put("dim1", rand.nextLong());
     event.put("dim2", rand.nextInt());
 
