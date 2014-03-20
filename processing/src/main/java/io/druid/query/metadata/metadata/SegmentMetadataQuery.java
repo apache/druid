@@ -40,7 +40,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("toInclude") ColumnIncluderator toInclude,
       @JsonProperty("merge") Boolean merge,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(new TableDataSource(dataSource), querySegmentSpec, context);
@@ -74,7 +74,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   }
 
   @Override
-  public Query<SegmentAnalysis> withOverriddenContext(Map<String, String> contextOverride)
+  public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new SegmentMetadataQuery(
         ((TableDataSource)getDataSource()).getName(),

@@ -122,15 +122,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<DateTime, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = Boolean.parseBoolean(query.getContextValue("useCache", "true")) && strategy != null;
-    final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
+    final boolean useCache = Boolean.parseBoolean((String) query.getContextValue("useCache", "true")) && strategy != null;
+    final boolean populateCache = Boolean.parseBoolean((String) query.getContextValue("populateCache", "true"))
         && strategy != null;
-    final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    final boolean isBySegment = Boolean.parseBoolean((String) query.getContextValue("bySegment", "false"));
 
 
-    ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final String priority = query.getContextValue("priority", "0");
+    final String priority = (String) query.getContextValue("priority", "0");
     contextBuilder.put("priority", priority);
 
     if (populateCache) {

@@ -86,7 +86,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
       @JsonProperty("orderBy") LimitSpec orderBySpec,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -147,7 +147,7 @@ public class GroupByQuery extends BaseQuery<Row>
       HavingSpec havingSpec,
       LimitSpec orderBySpec,
       Function<Sequence<Row>, Sequence<Row>> orderByLimitFn,
-      Map<String, String> context
+      Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -222,7 +222,7 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @Override
-  public GroupByQuery withOverriddenContext(Map<String, String> contextOverride)
+  public GroupByQuery withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new GroupByQuery(
         getDataSource(),
@@ -268,7 +268,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<PostAggregator> postAggregatorSpecs;
     private HavingSpec havingSpec;
 
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
     private LimitSpec limitSpec = null;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
@@ -443,7 +443,7 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder setContext(Map<String, String> context)
+    public Builder setContext(Map<String, Object> context)
     {
       this.context = context;
       return this;
