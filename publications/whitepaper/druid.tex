@@ -1,4 +1,5 @@
-\documentclass{acm_proc_article-sp}
+\documentclass{sig-alternate-2013}
+
 \usepackage{graphicx}
 \usepackage{balance}
 \usepackage{fontspec}
@@ -7,28 +8,48 @@
 \graphicspath{{figures/}}
 \usepackage{enumitem}
 
-\hyphenation{metamarkets nelson}
+\hyphenation{metamarkets nelson cheddar}
 
 \begin{document}
 
 % ****************** TITLE ****************************************
 
-\title{Druid: A Real-time Analytical Data Store}
+\title{Druid}
+\subtitle{A Real-time Analytical Data Store}
 
 % ****************** AUTHORS **************************************
 
 \numberofauthors{6}
 \author{
-\alignauthor Fangjin Yang, Eric Tschetter, Xavier Léauté, Nelson Ray, Gian Merlino, Deep Ganguli\\
-\email{\{fangjin, cheddar, xavier, nelson, gian, deep\}@metamarkets.com}
+\alignauthor Fangjin Yang\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  % \affaddr{625 2nd St Suite 230}\\
+  % \affaddr{San Francisco, CA 94107}\\
+  \email{fangjin@metamarkets.com}
+\alignauthor Eric Tschetter\\
+  \email{echeddar@gmail.com}
+\alignauthor Xavier Léauté\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  \email{xavier@metamarkets.com}
+\and
+\alignauthor Nelson Ray\\
+  \email{ncray86@gmail.com}
+\alignauthor Gian Merlino\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  \email{gian@metamarkets.com}
+\alignauthor Deep Ganguli\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  \email{deep@metamarkets.com}
 }
 \date{21 March 2013}
+
+% ****************** AUTHORS **************************************
 
 \maketitle
 
 \begin{abstract} 
 Druid is an open
-source\footnote{\href{https://github.com/metamx/druid}{https://github.com/metamx/druid}}
+source\footnote{\href{http://druid.io/}{http://druid.io/} \href{https://github.com/metamx/druid}{https://github.com/metamx/druid}}
 data store designed for real-time exploratory analytics on large data sets.
 The system combines a column-oriented storage layout, a distributed,
 shared-nothing architecture, and an advanced indexing structure to allow for
@@ -36,6 +57,12 @@ the arbitrary exploration of billion-row tables with sub-second latencies. In
 this paper, we describe Druid's architecture, and detail how it supports fast
 aggregations, flexible filters, and low latency data ingestion.  
 \end{abstract}
+
+% A category with the (minimum) three required fields
+\category{H.2.4}{Database Management}{Systems}[Distributed databases]
+% \category{D.2.8}{Software Engineering}{Metrics}[complexity measures, performance measures]
+\keywords{distributed; real-time; analytics; OLAP; columnar}
+
 
 \section{Introduction} 
 In recent years, the proliferation of internet technology has
