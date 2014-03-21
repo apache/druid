@@ -27,7 +27,7 @@ import org.joda.time.Period;
 public class QueryConfig
 {
   @JsonProperty
-  private Period chunkPeriod = Period.months(1);
+  private Period chunkPeriod = new Period();
 
   public Period getChunkPeriod()
   {

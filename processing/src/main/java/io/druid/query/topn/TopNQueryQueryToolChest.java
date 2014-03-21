@@ -133,8 +133,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(query.getId());
+        .setUser9(Minutes.minutes(numMinutes).toString());
   }
 
   @Override

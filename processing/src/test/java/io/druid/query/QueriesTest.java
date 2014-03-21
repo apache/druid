@@ -119,7 +119,7 @@ public class QueriesTest
                     "+",
                     Arrays.asList(
                         new FieldAccessPostAggregator("idx", "idx"),
-                        new ConstantPostAggregator("const", 1)
+                        new ConstantPostAggregator("const", 1, null)
                     )
                 ),
                 new ArithmeticPostAggregator(
@@ -127,7 +127,7 @@ public class QueriesTest
                     "-",
                     Arrays.asList(
                         new FieldAccessPostAggregator("rev", "rev"),
-                        new ConstantPostAggregator("const", 1)
+                        new ConstantPostAggregator("const", 1, null)
                     )
                 )
             )
@@ -173,7 +173,7 @@ public class QueriesTest
                     "+",
                     Arrays.asList(
                         new FieldAccessPostAggregator("idx", "idx"),
-                        new ConstantPostAggregator("const", 1)
+                        new ConstantPostAggregator("const", 1, null)
                     )
                 ),
                 new ArithmeticPostAggregator(
@@ -181,7 +181,7 @@ public class QueriesTest
                     "-",
                     Arrays.asList(
                         new FieldAccessPostAggregator("rev", "rev2"),
-                        new ConstantPostAggregator("const", 1)
+                        new ConstantPostAggregator("const", 1, null)
                     )
                 )
             )
