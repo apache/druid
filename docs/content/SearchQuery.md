@@ -37,7 +37,7 @@ There are several main parts to a search query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
 |query|See [SearchQuerySpec](SearchQuerySpec.html).|yes|
-|sort|How the results of the search should sorted. Two possible types here are "lexicographic" and "strlen".|yes|
+|sort|How the results of the search should be sorted. Two possible types here are "lexicographic" and "strlen".|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 The format of the result is:
