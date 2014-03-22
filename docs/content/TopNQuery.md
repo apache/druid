@@ -9,6 +9,7 @@ TopN queries return a sorted set of results for the values in a given dimension 
 A topN query object looks like:
 
 ```json
+{
   "queryType": "topN",
   "dataSource": "sample_data",
   "dimension": "sample_dim",
