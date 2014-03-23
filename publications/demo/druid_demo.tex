@@ -16,7 +16,7 @@
 
 % ****************** TITLE ****************************************
 
-\title{Druid: An Open Source Real-time Analytics Data Store}
+\title{Druid: Open Source Real-time Analytics at Scale}
 
 % possible, but not really needed or used for PVLDB:
 %\subtitle{[Extended Abstract]
@@ -71,8 +71,7 @@ Fangjin Yang\\
 % 2nd. author
 \alignauthor
 Eric Tschetter\\
-       \affaddr{Tidepool.org}\\
-       \email{cheddar@tidepool.org}
+       \email{echeddar@gmail.com}
 % 3rd. author
 \alignauthor 
 Xavier Léauté\\
@@ -87,8 +86,7 @@ Nishant Bangarwa\\
 % 5th. author
 \alignauthor
 Nelson Ray\\
-       \affaddr{Google}\\
-       \email{ncray@google.com}
+       \email{ncray86@gmail.com}
 % 6th. author
 \alignauthor
 Gian Merlino\\
@@ -115,12 +113,12 @@ data store built for exploratory analytics on large data sets.  Druid supports
 fast data aggregation, low latency data ingestion, and arbitrary data
 exploration. The system combines a column-oriented storage layout, a
 distributed, shared-nothing architecture, and an advanced indexing structure to
-return queries on billion-row tables with sub-second latencies.  Druid is
-petabyte scale and is deployed in production at several technology companies.
+return queries on billion of rows in milliseconds.  Druid is petabyte scale and
+is deployed in production at several technology companies.
 \end{abstract}
 
 \section{Introduction}
-In recent years, the proliferation of internet technology has created a surge
+The recent proliferation of internet technology has created a surge
 in machine-generated events.  Individually, these events contain minimal useful
 information and are of low value.  Given the time and resources required to
 extract meaning from large collections of events, many companies were willing
@@ -144,39 +142,35 @@ ingesting data and making that data immediately readable.
 \subsection{The Need for Druid}
 Druid was originally designed to solve problems around ingesting and exploring
 large quantities of transactional events (log data). This form of timeseries
-data is commonly found in OLAP workflows and in the business intelligence
-space. The nature of the data tends to be very append heavy. Events typically
+data (OLAP data) is commonly found in the business intelligence
+space and the nature of the data tends to be very append heavy. Events typically
 have three distinct components: a timestamp column indicating when the event
 occurred, a set dimension columns indicating various attributes about the
 event, and a set of metric columns containing values (usually numeric) that can
 be aggregated. Queries are typically issued for the sum of some set of metrics,
 filtered by some set of dimensions, over some span of time. 
 
-The need for Druid was facilitated by the fact that existing open source
-Relational Database Management Systems (RDBMS), cluster computing frameworks,
-and NoSQL key/value stores were unable to provide a low latency data ingestion
-and query platform for interactive applications.  Druid was first built at
-Metamarkets to power a business intelligence dashboard that allowed users to
-arbitrary explore and visualize event streams.  Queries needed to return fast
-enough that the data visualizations in the dashboard could interactively
-update.
+The Druid project first began out of necessity at Metamarkets to power a
+business intelligence dashboard that allowed users to arbitrarily explore and
+visualize event streams. Existing open source Relational Database Management
+Systems, cluster computing frameworks, and NoSQL key/value stores were unable
+to provide a low latency data ingestion and query platform for an interactive
+dashboard. Queries needed to return fast enough that the data visualizations in
+the dashboard could interactively update.
 
 In addition to the query latency needs, the system had to be multi-tenant and
-highly available. The Metamarkets product is used in a highly concurrent
-environment. Downtime is costly and many businesses cannot afford to wait if a
-system is unavailable in the face of software upgrades or network failure.
-Downtime for startups, who often lack proper internal operations management,
-can determine business success or failure. Finally, another key problem that
-Metamarkets faced in its early days was to allow users and alerting systems to
-be able to make business decisions in ``real-time". The time from when an event
-is created to when that event is queryable determines how fast users and
-systems are able to react to potentially catastrophic occurrences in their
-systems. 
+highly available, as the dashboord is used in a highly concurrent environment.
+Downtime is costly and many businesses cannot afford to wait if a system is
+unavailable in the face of software upgrades or network failure. Finally,
+Metamarkets also wanted to allow users and alerting systems to be able to make
+business decisions in ``real-time". The time from when an event is created to
+when that event is queryable determines how fast users and systems are able to
+react to potentially catastrophic occurrences in their systems. 
 
 The problems of data exploration, ingestion, and availability span multiple
 industries. Since Druid was open sourced in October 2012, it been deployed as a
 video, network monitoring, operations monitoring, and online advertising
-analytics platform in multiple companies.
+analytics platform in multiple companies\footnote{\href{http://druid.io/druid.html}{http://druid.io/druid.html}}.
 
 \begin{figure*}
 \centering
@@ -192,12 +186,10 @@ concerns and simplifies the complexity of the system. The different node types
 operate fairly independent of each other and there is minimal interaction among
 them. Hence, intra-cluster communication failures have minimal impact on data
 availability.  To solve complex data analysis problems, the different node
-types come together to form a fully working system.  The name Druid comes from
-the Druid class in many role-playing games: it is a shape-shifter, capable of
-taking on many different forms to fulfill various different roles in a group.
-The composition of and flow of data in a Druid cluster are shown in
-Figure~\ref{fig:cluster}. All Druid nodes announce their availability and the
-data they are serving over Zookeeper\cite{hunt2010zookeeper}.
+types come together to form a fully working system. The composition of and flow
+of data in a Druid cluster are shown in Figure~\ref{fig:cluster}. All Druid
+nodes announce their availability and the data they are serving over
+Zookeeper\cite{hunt2010zookeeper}.
 
 \subsection{Real-time Nodes}
 Real-time nodes encapsulate the functionality to ingest and query event
@@ -209,13 +201,18 @@ dealing with batches of immutable events.
 
 Real-time nodes maintain an in-memory index buffer for all incoming events.
 These indexes are incrementally populated as new events are ingested and the
-indexes are also directly queryable.  Druid behaves virtually as a row store
-for queries on events that exist in this JVM heap-based buffer. To avoid heap
-overflow problems, real-time nodes persist their in-memory indexes to disk
-either periodically or after some maximum row limit is reached. This persist
-process converts data stored in the in-memory buffer to a column oriented
-storage format. Each persisted index is immutable and real-time nodes load
-persisted indexes into off-heap memory such that they can still be queried. 
+indexes are also directly queryable. To avoid heap overflow problems, real-time
+nodes persist their in-memory indexes to disk either periodically or after some
+maximum row limit is reached. This persist process converts data stored in the
+in-memory buffer to a column oriented storage format. Each persisted index is
+immutable and real-time nodes load persisted indexes into off-heap memory such
+that they can still be queried. On a periodic basis, each real-time node will
+schedule a background task that searches for all locally persisted indexes. The
+task merges these indexes together and builds an immutable block of data that
+contains all the events that have ingested by a real-time node for some span of
+time. We refer to this block of data as a ``segment". During the handoff stage,
+a real-time node uploads this segment to a permanent backup storage, typically
+a distributed file system that Druid calls ``deep storage".
 
 \subsection{Historical Nodes}
 Historical nodes encapsulate the functionality to load and serve the immutable
@@ -239,10 +236,7 @@ result to the caller.
 Druid coordinator nodes are primarily in charge of data management and
 distribution on historical nodes. The coordinator nodes tell historical nodes
 to load new data, drop outdated data, replicate data, and move data to load
-balance. Druid uses a multi-version concurrency control swapping protocol for
-managing immutable segments in order to maintain stable views.  If any
-immutable segment contains data that is wholly obsoleted by newer segments, the
-outdated segment is dropped from the cluster. Coordinator nodes undergo a
+balance. Coordinator nodes undergo a
 leader-election process that determines a single node that runs the coordinator
 functionality. The remaining coordinator nodes act as redundant backups.
 
@@ -272,19 +266,19 @@ efficient CPU usage as only what is needed is actually loaded and scanned.
 Druid has multiple column types to represent various data formats. Depending on
 the column type, different compression methods are used to reduce the cost of
 storing a column in memory and on disk. For example, if an entire column only
-contains string values, storing the values as strings is unnecessarily costly.
+contains string values, storing the raw strings is unnecessarily costly.
 String columns can be dictionary encoded instead. Dictionary encoding is a
 common method to compress data in column stores.
 
 In many real world OLAP workflows, queries are issued for the aggregated
 results of some set of metrics where some set of dimension specifications are
 met. Consider Table~\ref{tab:sample_data}. An example query for this table may
-be: ``How much revenue was generated in the first hour of 2014-01-01 in the
+ask: ``How much revenue was generated in the first hour of 2014-01-01 in the
 city of San Francisco?". This query is filtering a sales data set based on a
 Boolean expression of dimension values. In many real world data sets, dimension
-columns contain strings and metric columns contain numeric values. Druid
-creates additional lookup indices for string columns such that only those rows
-that pertain to a particular query filter are ever scanned.
+columns contain strings and metric columns contain numbers. Druid creates
+additional lookup indices for string columns such that only those rows that
+pertain to a particular query filter are ever scanned.
 
 \begin{table}
   \centering
@@ -322,7 +316,7 @@ the two arrays.
 This approach of performing Boolean operations on large bitmap sets is commonly
 used in search engines. Druid compresses each bitmap index using the Concise
 algorithm \cite{colantonio2010concise}. All Boolean operations on top of these
-Concise sets are done in the set's compressed form. 
+Concise sets are done without decompressing the set. 
 
 \subsection{Query Capabilities}
 Druid supports many types of aggregations including double sums, long sums,
@@ -337,18 +331,20 @@ cluster running at Metamarkets in early 2014. For comparison with other database
 we also include results from synthetic workloads on TPC-H data.
 
 \subsection{Query Performance}
-Druid query performance can vary signficantly depending on the query
-being issued. For example, sorting the values of a high cardinality dimension
-based on a given metric is much more expensive than a simple count over a time
-range.
+Query latencies are shown in Figure~\ref{fig:query_latency} for a cluster
+holding 10TB of data across several hundred nodes. The average queries per
+minute during this time was approximately 1000. The number of dimensions the
+various data sources vary from 25 to 78 dimensions, and 8 to 35 metrics. Across
+all the various data sources, average query latency is approximately 550
+milliseconds, with 90\% of queries returning in less than 1 second, 95\% in
+under 2 seconds, and 99\% of queries returning in less than 10 seconds.  
 
-Query latencies are shown in Figure~\ref{fig:query_latency}. The average
-queries per minute during this time was approximately 1000. The number of
-dimensions the various data sources vary from 25 to 78 dimensions, and 8 to 35
-metrics. Across all the various data sources, average query latency is
-approximately 550 milliseconds, with 90\% of queries returning in less than 1
-second, 95\% in under 2 seconds, and 99\% of queries returning in less than 10
-seconds.  
+\begin{figure}
+\centering
+\includegraphics[width = 2.3in]{avg_query_latency}
+\caption{Query latencies of production data sources.}
+\label{fig:query_latency}
+\end{figure}
 
 Approximately 30\% of the queries are standard
 aggregates involving different types of metrics and filters, 60\% of queries
@@ -360,10 +356,9 @@ involving all columns are very rare.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.3in]{avg_query_latency}
-\includegraphics[width = 2.3in]{query_percentiles}
-\caption{Query latencies of production data sources.}
-\label{fig:query_latency}
+\includegraphics[width = 2.3in]{tpch_100gb}
+\caption{Druid \& MySQL benchmarks -- 100GB TPC-H data.}
+\label{fig:tpch_100gb}
 \end{figure}
 
 We also present Druid benchmarks on TPC-H data.  Most TPC-H queries do
@@ -371,13 +366,6 @@ not directly apply to Druid, so we selected queries more typical of Druid's
 workload to demonstrate query performance. As a comparison, we also provide the
 results of the same queries using MySQL using the MyISAM engine (InnoDB was
 slower in our experiments).
-
-\begin{figure}
-\centering
-\includegraphics[width = 2.3in]{tpch_100gb}
-\caption{Druid \& MySQL benchmarks -- 100GB TPC-H data.}
-\label{fig:tpch_100gb}
-\end{figure}
 
 We benchmarked Druid's scan rate at 53,539,211 rows/second/core for
 \texttt{select count(*)} equivalent query over a given time interval and
@@ -393,7 +381,7 @@ want to perform on those metrics.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.8in]{ingestion_rate}
+\includegraphics[width = 2.3in]{ingestion_rate}
 \caption{Combined cluster ingestion rates.}
 \label{fig:ingestion_rate}
 \end{figure}
@@ -405,15 +393,48 @@ and 19 metrics.
 
 The latency measurements we presented are sufficient to address the our stated
 problems of interactivity. We would prefer the variability in the latencies to
-be less. It is still very possible to possible to decrease latencies by adding
-additional hardware, but we have not chosen to do so because infrastructure
-costs are still a consideration to us.
+be less, which is still very possible to possible by adding additional
+hardware, but we have not chosen to do so because of cost concerns.
 
 \section{Demonstration Details}
-\subsection{Demo Setup}
-Get some nodes and stuff
-\subsection{Story}
-Something about Exploring Twitter or something.
+
+We would like to do an end-to-end demonstratation of Druid, from setting up a
+cluster, ingesting data, structuring a query, and obtaining results. We would
+also like to showcase how to solve real-world data analysis problems with Druid
+and demonstrate tools that can be built on top of it, including interactive
+data visualizations, approximate algorithms, and machine learning components.
+We already use similar tools in production.
+
+\subsection{Setup}
+
+Users will be able to set up a local Druid cluster to better understand the
+components and architecture of the system. Druid is designed to run on
+commodity hardware and Druid nodes are simply java processes that need to be
+started up. The local setup will allow users to ingest data from Twitter's
+public API and query it.  We will also provide users access to an AWS hosted
+Druid cluster that contains several terabytes of Twitter data that we have been
+collecting for over 2 years. There are over 3 billion tweets in this data set,
+and new events are constantly being ingested. We will walk through a variety of
+different queries to demonstrate Druid's arbitrary data exploration
+capabilities.
+
+Finally, we will teach users how to build a simple interactive dashboard on top
+of Druid. The dashboard will use some of Druid's more powerful features such as
+approximate algorithms for quickly determining the cardinality of sets, and
+machine learning algorithms for scientific computing problems such as anomaly
+detection.  These use cases represent some of the more interesting problems we
+use Druid for in production.
+
+\subsection{Goals}
+
+We will not only walk users through solving real-world problems with Druid and
+different tools that have been built on top of Druid, but also answer
+conference-specific questions such as what are the trending tweets and topics
+at VLDB, what netizens are conversing about in the general area, and even
+perform a sentiment analysis of VLDB. Our goal is to clearly explain why the
+architecture of Druid makes it highly optimal for certain types of queries, and
+the potential of the system as a real-time analytics platform.
+
 %\end{document}  % This is where a 'short' article might terminate
 
 % ensure same length columns on last page (might need two sub-sequent latex runs)
