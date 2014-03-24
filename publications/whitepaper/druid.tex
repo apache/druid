@@ -61,8 +61,7 @@
 \maketitle
 
 \begin{abstract} 
-Druid is an open
-source\footnote{\href{http://druid.io/}{http://druid.io/} \href{https://github.com/metamx/druid}{https://github.com/metamx/druid}}
+Druid is an open source\footnote{\href{http://druid.io/}{http://druid.io/} \href{https://github.com/metamx/druid}{https://github.com/metamx/druid}}
 data store designed for real-time exploratory analytics on large data sets.
 The system combines a column-oriented storage layout, a distributed,
 shared-nothing architecture, and an advanced indexing structure to allow for
@@ -131,7 +130,6 @@ service, and attempts to help inform anyone who faces a similar problem about a
 potential method of solving it. Druid is deployed in production at several
 technology
 companies\footnote{\href{http://druid.io/druid.html}{http://druid.io/druid.html}}.
-
 The structure of the paper is as follows: we first describe the problem in
 Section \ref{sec:problem-definition}.  Next, we detail system architecture from
 the point of view of how data flows through the system in Section
@@ -144,6 +142,21 @@ in Section \ref{sec:related}.
 
 \section{Problem Definition}
 \label{sec:problem-definition}
+
+\begin{table*}
+  \centering
+  \begin{tabular}{| l | l | l | l | l | l | l | l |}
+    \hline
+    \textbf{Timestamp} & \textbf{Page} & \textbf{Username} & \textbf{Gender} & \textbf{City} & \textbf{Characters Added} & \textbf{Characters Removed} \\ \hline
+    2011-01-01T01:00:00Z & Justin Bieber & Boxer & Male & San Francisco & 1800 & 25 \\ \hline
+    2011-01-01T01:00:00Z & Justin Bieber & Reach & Male & Waterloo & 2912 & 42 \\ \hline
+    2011-01-01T02:00:00Z & Ke\$ha & Helz & Male & Calgary & 1953 & 17 \\ \hline
+    2011-01-01T02:00:00Z & Ke\$ha & Xeno & Male & Taiyuan & 3194 & 170 \\ \hline
+  \end{tabular}
+  \caption{Sample Druid data for edits that have occurred on Wikipedia.}
+  \label{tab:sample_data}
+\end{table*}
+
 
 Druid was originally designed to solve problems around ingesting and exploring
 large quantities of transactional events (log data). This form of timeseries
@@ -159,20 +172,6 @@ edited, the user who made the edit, and the location of the user. Finally,
 there are a set of metric columns that contain values (usually numeric) that
 can be aggregated, such as the number of characters added or removed in an
 edit. 
-
-\begin{table*}
-  \centering
-  \begin{tabular}{| l | l | l | l | l | l | l | l |}
-    \hline
-    \textbf{Timestamp} & \textbf{Page} & \textbf{Username} & \textbf{Gender} & \textbf{City} & \textbf{Characters Added} & \textbf{Characters Removed} \\ \hline
-    2011-01-01T01:00:00Z & Justin Bieber & Boxer & Male & San Francisco & 1800 & 25 \\ \hline
-    2011-01-01T01:00:00Z & Justin Bieber & Reach & Male & Waterloo & 2912 & 42 \\ \hline
-    2011-01-01T02:00:00Z & Ke\$ha & Helz & Male & Calgary & 1953 & 17 \\ \hline
-    2011-01-01T02:00:00Z & Ke\$ha & Xeno & Male & Taiyuan & 3194 & 170 \\ \hline
-  \end{tabular}
-  \caption{Sample Druid data for edits that have occurred on Wikipedia.}
-  \label{tab:sample_data}
-\end{table*}
 
 Our goal is to rapidly compute drill-downs and aggregates over this data. We
 want to answer questions like “How many edits were made on the page Justin
@@ -218,21 +217,21 @@ designed to perform a specific set of things. We believe this design separates
 concerns and simplifies the complexity of the system. The different node types
 operate fairly independent of each other and there is minimal interaction
 among them. Hence, intra-cluster communication failures have minimal impact
-on data availability.  To solve complex data analysis problems, the different
-node types come together to form a fully working system.  The name Druid comes
-from the Druid class in many role-playing games: it is a shape-shifter, capable
-of taking on many different forms to fulfill various different roles in a
-group. The composition of and flow of data in a Druid cluster are shown in
-Figure~\ref{fig:cluster}.
+on data availability.
+
+To solve complex data analysis problems, the different
+node types come together to form a fully working system. The composition of and
+flow of data in a Druid cluster are shown in Figure~\ref{fig:cluster}. The name Druid comes from the Druid class in many role-playing games: it is a
+shape-shifter, capable of taking on many different forms to fulfill various
+different roles in a group.
 
 \begin{figure*}
 \centering
-\includegraphics[width = 4.51in]{cluster}
+\includegraphics[width = 4.5in]{cluster}
 \caption{An overview of a Druid cluster and the flow of data through the cluster.}
 \label{fig:cluster}
 \end{figure*}
 
-\newpage
 \subsection{Real-time Nodes}
 \label{sec:realtime}
 Real-time nodes encapsulate the functionality to ingest and query event
@@ -260,10 +259,11 @@ in \cite{o1996log} and is illustrated in Figure~\ref{fig:realtime_flow}.
 \begin{figure} 
 \centering 
 \includegraphics[width = 2.6in]{realtime_flow}
-\caption{Real-time nodes first buffer events in memory. On a periodic basis,
-the in-memory index is persisted to disk. On another periodic basis, all
-persisted indexes are merged together and handed off. Queries will hit the
-in-memory index and the persisted indexes.}
+\caption{Real-time nodes buffer events to an in-memory index, which is 
+regularly persisted to disk. On a periodic basis, persisted indexes are then merged
+together before getting handed off.
+Queries will hit both the in-memory and persisted indexes.
+}
 \label{fig:realtime_flow}
 \end{figure}
 
@@ -428,9 +428,7 @@ caching the results would be unreliable.
 \begin{figure*}
 \centering
 \includegraphics[width = 4.5in]{caching}
-\caption{Broker nodes cache per segment results. Every Druid query is mapped to
-a set of segments. Queries often combine cached segment results with those that
-need to be computed on historical and real-time nodes.}
+\caption{Results are cached per segment. Queries combine cached results with results computed on historical and real-time nodes.}
 \label{fig:caching}
 \end{figure*}
 
@@ -802,7 +800,7 @@ involving all columns are very rare.
 
 \begin{table}
   \centering
-  \begin{tabular}{| l | l | l |}
+  \scriptsize\begin{tabular}{| l | l | l |}
     \hline
     \textbf{Data Source} & \textbf{Dimensions} & \textbf{Metrics} \\ \hline
     \texttt{a} & 25 & 21 \\ \hline
@@ -814,6 +812,7 @@ involving all columns are very rare.
     \texttt{g} & 26 & 18 \\ \hline
     \texttt{h} & 78 & 14 \\ \hline
   \end{tabular}
+  \normalsize
   \caption{Characteristics of production data sources.}
   \label{tab:datasources}
 \end{table}
