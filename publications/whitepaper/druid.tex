@@ -1,4 +1,18 @@
-\documentclass{acm_proc_article-sp}
+\documentclass{sig-alternate-2013}
+
+\newfont{\mycrnotice}{ptmr8t at 7pt}
+\newfont{\myconfname}{ptmri8t at 7pt}
+\let\crnotice\mycrnotice%
+\let\confname\myconfname%
+\permission{Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.}
+\conferenceinfo{SIGMOD/PODS'14,}{June 22--27, 2014, Salt Lake City, UT, USA. \\
+{\mycrnotice{Copyright is held by the owner/author(s). Publication rights licensed to ACM.}}}
+\copyrightetc{ACM \the\acmcopyr}
+\crdata{978-1-4503-2376-5/14/06\ ...\$15.00.\\
+\href{http://dx.doi.org/10.1145/2588555.2595631}{http://dx.doi.org/10.1145/2588555.2595631}}
+\clubpenalty=10000
+\widowpenalty = 10000
+
 \usepackage{graphicx}
 \usepackage{balance}
 \usepackage{fontspec}
@@ -7,28 +21,48 @@
 \graphicspath{{figures/}}
 \usepackage{enumitem}
 
-\hyphenation{metamarkets nelson}
+\hyphenation{metamarkets nelson cheddar}
 
 \begin{document}
 
 % ****************** TITLE ****************************************
 
-\title{Druid: A Real-time Analytical Data Store}
+\title{Druid}
+\subtitle{A Real-time Analytical Data Store}
 
 % ****************** AUTHORS **************************************
 
 \numberofauthors{6}
 \author{
-\alignauthor Fangjin Yang, Eric Tschetter, Xavier Léauté, Nelson Ray, Gian Merlino, Deep Ganguli\\
-\email{\{fangjin, cheddar, xavier, nelson, gian, deep\}@metamarkets.com}
+\alignauthor Fangjin Yang\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  % \affaddr{625 2nd St Suite 230}\\
+  % \affaddr{San Francisco, CA 94107}\\
+  \email{fangjin@metamarkets.com}
+\alignauthor Eric Tschetter\\
+  \email{echeddar@gmail.com}
+\alignauthor Xavier Léauté\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  \email{xavier@metamarkets.com}
+\and
+\alignauthor Nelson Ray\\
+  \email{ncray86@gmail.com}
+\alignauthor Gian Merlino\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  \email{gian@metamarkets.com}
+\alignauthor Deep Ganguli\\
+  \affaddr{Metamarkets Group, Inc.}\\
+  \email{deep@metamarkets.com}
 }
 \date{21 March 2013}
+
+% ****************** AUTHORS **************************************
 
 \maketitle
 
 \begin{abstract} 
 Druid is an open
-source\footnote{\href{https://github.com/metamx/druid}{https://github.com/metamx/druid}}
+source\footnote{\href{http://druid.io/}{http://druid.io/} \href{https://github.com/metamx/druid}{https://github.com/metamx/druid}}
 data store designed for real-time exploratory analytics on large data sets.
 The system combines a column-oriented storage layout, a distributed,
 shared-nothing architecture, and an advanced indexing structure to allow for
@@ -37,13 +71,19 @@ this paper, we describe Druid's architecture, and detail how it supports fast
 aggregations, flexible filters, and low latency data ingestion.  
 \end{abstract}
 
+% A category with the (minimum) three required fields
+\category{H.2.4}{Database Management}{Systems}[Distributed databases]
+% \category{D.2.8}{Software Engineering}{Metrics}[complexity measures, performance measures]
+\keywords{distributed; real-time; fault-tolerant; analytics; OLAP; columnar}
+
+
 \section{Introduction} 
 In recent years, the proliferation of internet technology has
 created a surge in machine-generated events.  Individually, these
 events contain minimal useful information and are of low value.  Given the
 time and resources required to extract meaning from large collections of
 events, many companies were willing to discard this data instead.  Although
-infrastructure has been built to handle event based data (e.g. IBM's
+infrastructure has been built to handle event-based data (e.g. IBM's
 Netezza\cite{singh2011introduction}, HP's Vertica\cite{bear2012vertica}, and EMC's
 Greenplum\cite{miner2012unified}), they are largely sold at high price points
 and are only targeted towards those companies who can afford the offering.
@@ -146,7 +186,7 @@ Relational Database Management Systems (RDBMS) and NoSQL key/value stores were
 unable to provide a low latency data ingestion and query platform for
 interactive applications \cite{tschetter2011druid}. In the early days of
 Metamarkets, we were focused on building a hosted dashboard that would allow
-users to arbitrary explore and visualize event streams.  The data store
+users to arbitrarily explore and visualize event streams.  The data store
 powering the dashboard needed to return queries fast enough that the data
 visualizations built on top of it could provide users with an interactive
 experience. 
@@ -187,7 +227,7 @@ Figure~\ref{fig:cluster}.
 
 \begin{figure*}
 \centering
-\includegraphics[width = 4.5in]{cluster}
+\includegraphics[width = 4.51in]{cluster}
 \caption{An overview of a Druid cluster and the flow of data through the cluster.}
 \label{fig:cluster}
 \end{figure*}
@@ -198,7 +238,7 @@ Figure~\ref{fig:cluster}.
 Real-time nodes encapsulate the functionality to ingest and query event
 streams. Events indexed via these nodes are immediately available for querying.
 The nodes are only concerned with events for some small time range and
-periodically hand off immutable batches of events they've collected over this
+periodically hand off immutable batches of events they have collected over this
 small time range to other nodes in the Druid cluster that are specialized in
 dealing with batches of immutable events. Real-time nodes leverage Zookeeper
 \cite{hunt2010zookeeper} for coordination with the rest of the Druid cluster.
@@ -789,7 +829,7 @@ approximately 10TB of segments loaded. Collectively,
 there are about 50 billion Druid rows in this tier. Results for
 every data source are not shown.
 
-\item The hot tier uses Xeon E5-2670 processors and consists of 1302 processing
+\item The hot tier uses Intel Xeon E5-2670 processors and consists of 1302 processing
 threads and 672 total cores (hyperthreaded).
 
 \item A memory-mapped storage engine was used (the machine was configured to
@@ -828,7 +868,7 @@ comparison, we also provide the results of the same queries using MySQL using th
 MyISAM engine (InnoDB was slower in our experiments).
 
 We selected MySQL to benchmark
-against because of its universal popularity. We choose not to select another
+against because of its universal popularity. We chose not to select another
 open source column store because we were not confident we could correctly tune
 it for optimal performance.
 
@@ -871,6 +911,7 @@ well.
 \begin{figure}
 \centering
 \includegraphics[width = 2.3in]{tpch_scaling}
+\includegraphics[width = 2.3in]{tpch_scaling_factor}
 \caption{Druid scaling benchmarks -- 100GB TPC-H data.}
 \label{fig:tpch_scaling}
 \end{figure}
@@ -933,9 +974,9 @@ running an Amazon \texttt{cc2.8xlarge} instance.
 \label{fig:ingestion_rate}
 \end{figure}
 
-The latency measurements we presented are sufficient to address the our stated
+The latency measurements we presented are sufficient to address the stated
 problems of interactivity. We would prefer the variability in the latencies to
-be less. It is still very possible to possible to decrease latencies by adding
+be less. It is still very possible to decrease latencies by adding
 additional hardware, but we have not chosen to do so because infrastructure
 costs are still a consideration to us.
 
@@ -1017,7 +1058,7 @@ data centers as well. The tier configuration in Druid coordinator nodes allow
 for segments to be replicated across multiple tiers. Hence, segments can be
 exactly replicated across historical nodes in multiple data centers.
 Similarily, query preference can be assigned to different tiers. It is possible
-to have nodes in one data center act as a primary cluster (and recieve all
+to have nodes in one data center act as a primary cluster (and receive all
 queries) and have a redundant cluster in another data center. Such a setup may
 be desired if one data center is situated much closer to users. 
 

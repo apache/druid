@@ -31,20 +31,20 @@ We have more details about the general design of the system and why you might wa
 When Druid?
 ----------
 
-* You need to do interactive, fast, exploration of large amounts of data
-* You need analytics (not key value store)
-* You have a lot of data (10s of Billions of events added per day, 10s of TB of data added per day)
-* You want to do your analysis on data as it’s happening (realtime)
-* Your store needs to be always-on, 24x7x365 and years into the future.
+* You need to do interactive, fast, exploration on large amounts of data
+* You need analytics (not a key-value store)
+* You have a lot of data (10s of billions of events added per day, 10s of TB of data added per day)
+* You want to do your analysis on data as it’s happening (in real-time)
+* You need a data store that is always available, 24x7x365, and years into the future.
 
 
 Not Druid?
 ----------
 
-* The amount of data you have can easily be handled by MySql
-* Your querying for individual entries or doing lookups (Not Analytics)
-* Batch is good enough
-* Canned queries is good enough
+* The amount of data you have can easily be handled by MySQL
+* You're querying for individual entries or doing lookups (not analytics)
+* Batch ingestion is good enough
+* Canned queries are good enough
 * Downtime is no big deal
 
 
