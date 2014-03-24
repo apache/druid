@@ -53,6 +53,7 @@ import io.druid.segment.serde.ComplexMetrics;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
+import io.druid.segment.serde.ComplexMetrics;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

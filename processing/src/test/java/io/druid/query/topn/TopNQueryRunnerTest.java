@@ -47,7 +47,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.awt.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -909,7 +908,7 @@ public class TopNQueryRunnerTest
         .build();
 
     final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
-        new Result<TopNResultValue>(
+        new Result<>(
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
