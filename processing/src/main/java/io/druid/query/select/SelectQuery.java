@@ -53,7 +53,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
       @JsonProperty("pagingSpec") PagingSpec pagingSpec,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -120,7 +120,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     );
   }
 
-  public SelectQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public SelectQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new SelectQuery(
         getDataSource(),

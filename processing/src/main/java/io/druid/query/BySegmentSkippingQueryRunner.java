@@ -37,7 +37,7 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(Query<T> query)
   {
-    if (Boolean.parseBoolean(query.getContextValue("bySegment"))) {
+    if (Boolean.parseBoolean(query.<String>getContextValue("bySegment"))) {
       return baseRunner.run(query);
     }
 
