@@ -681,7 +681,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final DictionaryEncodedColumn dict = column.getDictionaryEncoding();
 
                       if (dict == null) {
-                        return null;
+                        return new NullDimensionSelector();
                       }
                       else if (column.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()

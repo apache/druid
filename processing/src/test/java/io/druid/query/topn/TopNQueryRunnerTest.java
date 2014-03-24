@@ -953,14 +953,14 @@ public class TopNQueryRunnerTest
   public void testTopNWithNonExistentDimension()
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
         .dimension("doesn't exist")
-        .metric(indexMetric)
+        .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(1)
-        .intervals(firstToThird)
-        .aggregators(commonAggregators)
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
@@ -973,6 +973,7 @@ public class TopNQueryRunnerTest
                       put("rows", 26L);
                       put("index", 12459.361190795898D);
                       put("addRowsIndexConstant", 12486.361190795898D);
+                      put("uniques", QueryRunnerTestHelper.UNIQUES_9);
                     }}
                 )
             )
@@ -986,15 +987,15 @@ public class TopNQueryRunnerTest
   public void testTopNWithNonExistentDimensionAndActualFilter()
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
         .filters(providerDimension, "upfront")
         .dimension("doesn't exist")
-        .metric(indexMetric)
+        .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(firstToThird)
-        .aggregators(commonAggregators)
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
@@ -1007,6 +1008,7 @@ public class TopNQueryRunnerTest
                       put("rows", 4L);
                       put("index", 4875.669677734375D);
                       put("addRowsIndexConstant", 4880.669677734375D);
+                      put("uniques", QueryRunnerTestHelper.UNIQUES_2);
                     }}
                 )
             )
@@ -1020,15 +1022,15 @@ public class TopNQueryRunnerTest
   public void testTopNWithNonExistentDimensionAndNonExistentFilter()
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
         .filters("doesn't exist", null)
         .dimension("doesn't exist")
-        .metric(indexMetric)
+        .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(1)
-        .intervals(firstToThird)
-        .aggregators(commonAggregators)
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
@@ -1041,6 +1043,7 @@ public class TopNQueryRunnerTest
                       put("rows", 26L);
                       put("index", 12459.361190795898D);
                       put("addRowsIndexConstant", 12486.361190795898D);
+                      put("uniques", QueryRunnerTestHelper.UNIQUES_9);
                     }}
                 )
             )
@@ -1270,7 +1273,8 @@ public class TopNQueryRunnerTest
                         providerDimension, "total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
-                        "addRowsIndexConstant", 5356.814697265625D
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
                     )
                 )
             )
@@ -1285,12 +1289,12 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query =
         new TopNQueryBuilder()
-            .dataSource(dataSource)
-            .granularity(allGran)
+            .dataSource(QueryRunnerTestHelper.dataSource)
+            .granularity(QueryRunnerTestHelper.allGran)
             .dimension(providerDimension)
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
-            .intervals(firstToThird)
+            .intervals(QueryRunnerTestHelper.firstToThird)
             .aggregators(
                 Lists.<AggregatorFactory>newArrayList(
                     new DimensionCardinalityAggregatorFactory("numVals", providerDimension)

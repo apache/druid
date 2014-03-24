@@ -27,7 +27,9 @@ public class HllPlusComplexMetricSerdeTest
   @Before
   public void setUp() throws Exception
   {
-    ComplexMetrics.registerSerde("hll+", new HllPlusComplexMetricSerde());
+    if (ComplexMetrics.getSerdeForType("hll+") == null) {
+      ComplexMetrics.registerSerde("hll+", new HllPlusComplexMetricSerde());
+    }
   }
 
   @Test

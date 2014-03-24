@@ -1201,7 +1201,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
                     "index", 6626.151596069336,
-                    "addRowsIndexConstant", 6640.151596069336
+                    "addRowsIndexConstant", 6640.151596069336,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         ),
@@ -1211,7 +1212,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
                     "index", 5833.2095947265625,
-                    "addRowsIndexConstant", 5847.2095947265625
+                    "addRowsIndexConstant", 5847.2095947265625,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         )
