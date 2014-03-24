@@ -21,6 +21,7 @@ package io.druid.server.router;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
@@ -48,7 +49,6 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
   private final BrokerSelector<T> brokerSelector;
   private final TierConfig tierConfig;
 
-  private final ConcurrentHashMap<String, ServerDiscoverySelector> selectorMap = new ConcurrentHashMap<String, ServerDiscoverySelector>();
   private final ConcurrentHashMap<String, Server> serverBackup = new ConcurrentHashMap<String, Server>();
 
   public TierAwareQueryRunner(
@@ -56,8 +56,7 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
       ObjectMapper objectMapper,
       HttpClient httpClient,
       BrokerSelector<T> brokerSelector,
-      TierConfig tierConfig,
-      ServerDiscoveryFactory serverDiscoveryFactory
+      TierConfig tierConfig
   )
   {
     this.warehouse = warehouse;
@@ -65,54 +64,15 @@ public class TierAwareQueryRunner<T> implements QueryRunner<T>
     this.httpClient = httpClient;
     this.brokerSelector = brokerSelector;
     this.tierConfig = tierConfig;
-
-    try {
-      for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
-        ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(entry.getValue());
-        selector.start();
-        // TODO: stop?
-        selectorMap.put(entry.getValue(), selector);
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   public Server findServer(Query<T> query)
   {
-    String brokerServiceName = brokerSelector.select(query);
+    final Pair<String, ServerDiscoverySelector> selected = brokerSelector.select(query);
+    final String brokerServiceName = selected.lhs;
+    final ServerDiscoverySelector selector = selected.rhs;
 
-    if (brokerServiceName == null) {
-      log.makeAlert(
-          "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
-          query.getDataSource(),
-          query.getIntervals(),
-          tierConfig.getDefaultBrokerServiceName()
-      ).emit();
-      brokerServiceName = tierConfig.getDefaultBrokerServiceName();
-    }
-
-    ServerDiscoverySelector selector = selectorMap.get(brokerServiceName);
-
-    Server server;
-    if (selector == null) {
-      log.makeAlert(
-          "WTF?! No selector found for brokerServiceName[%s]. Using default selector for[%s]",
-          brokerServiceName,
-          tierConfig.getDefaultBrokerServiceName()
-      ).emit();
-      selector = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
-
-      if (selector != null) {
-        server = selector.pick();
-      } else {
-        return null;
-      }
-    } else {
-      server = selector.pick();
-    }
-
+    Server server = selector.pick();
     if (server == null) {
       log.error(
           "WTF?! No server found for brokerServiceName[%s]. Using backup",

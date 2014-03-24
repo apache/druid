@@ -36,12 +36,7 @@ public class TierConfig
   private String defaultBrokerServiceName = "";
 
   @JsonProperty
-  @NotNull
-  private LinkedHashMap<String, String> tierToBrokerMap = new LinkedHashMap<String, String>(
-      ImmutableMap.of(
-          DruidServer.DEFAULT_TIER, defaultBrokerServiceName
-      )
-  );
+  private LinkedHashMap<String, String> tierToBrokerMap;
 
   @JsonProperty
   @NotNull
@@ -62,7 +57,11 @@ public class TierConfig
   // tier, <bard, numThreads>
   public LinkedHashMap<String, String> getTierToBrokerMap()
   {
-    return tierToBrokerMap;
+    return tierToBrokerMap == null ? new LinkedHashMap<>(
+        ImmutableMap.of(
+            DruidServer.DEFAULT_TIER, defaultBrokerServiceName
+        )
+    ) : tierToBrokerMap;
   }
 
   public String getDefaultBrokerServiceName()

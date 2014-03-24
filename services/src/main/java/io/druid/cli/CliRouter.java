@@ -71,14 +71,14 @@ public class CliRouter extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            JsonConfigProvider.bind(binder, "druid.broker", TierConfig.class);
+            JsonConfigProvider.bind(binder, "druid.router", TierConfig.class);
 
             binder.bind(CoordinatorRuleManager.class);
             LifecycleModule.register(binder, CoordinatorRuleManager.class);
 
             binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 
-            binder.bind(BrokerSelector.class).in(LazySingleton.class);
+            binder.bind(BrokerSelector.class).in(ManageLifecycle.class);
             binder.bind(QuerySegmentWalker.class).to(RouterQuerySegmentWalker.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);

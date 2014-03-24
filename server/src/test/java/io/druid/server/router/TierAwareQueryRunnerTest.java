@@ -20,10 +20,11 @@
 package io.druid.server.router;
 
 import com.google.common.collect.ImmutableMap;
+import com.metamx.common.Pair;
 import io.druid.client.DruidServer;
 import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -41,16 +42,16 @@ import java.util.LinkedHashMap;
  */
 public class TierAwareQueryRunnerTest
 {
-  private ServerDiscoveryFactory factory;
   private ServerDiscoverySelector selector;
+  private BrokerSelector brokerSelector;
   private TierConfig config;
   private Server server;
 
   @Before
   public void setUp() throws Exception
   {
-    factory = EasyMock.createMock(ServerDiscoveryFactory.class);
     selector = EasyMock.createMock(ServerDiscoverySelector.class);
+    brokerSelector = EasyMock.createMock(BrokerSelector.class);
 
     config = new TierConfig()
     {
@@ -104,29 +105,25 @@ public class TierAwareQueryRunnerTest
   @After
   public void tearDown() throws Exception
   {
+    EasyMock.verify(brokerSelector);
     EasyMock.verify(selector);
-    EasyMock.verify(factory);
   }
 
   @Test
   public void testFindServer() throws Exception
   {
-    selector.start();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(brokerSelector.select(EasyMock.<Query>anyObject())).andReturn(new Pair("hotBroker", selector));
+    EasyMock.replay(brokerSelector);
+
     EasyMock.expect(selector.pick()).andReturn(server).once();
     EasyMock.replay(selector);
-
-    EasyMock.expect(factory.createSelector(EasyMock.<String>anyObject())).andReturn(selector).atLeastOnce();
-    EasyMock.replay(factory);
-
 
     TierAwareQueryRunner queryRunner = new TierAwareQueryRunner(
         null,
         null,
         null,
-        new BrokerSelector(new CoordinatorRuleManager(null, null, null, null), config),
-        config,
-        factory
+        brokerSelector,
+        config
     );
 
     Server server = queryRunner.findServer(

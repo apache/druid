@@ -40,7 +40,6 @@ public class RouterQuerySegmentWalker implements QuerySegmentWalker
   private final HttpClient httpClient;
   private final BrokerSelector brokerSelector;
   private final TierConfig tierConfig;
-  private final ServerDiscoveryFactory serverDiscoveryFactory;
 
   @Inject
   public RouterQuerySegmentWalker(
@@ -48,8 +47,7 @@ public class RouterQuerySegmentWalker implements QuerySegmentWalker
       ObjectMapper objectMapper,
       @Global HttpClient httpClient,
       BrokerSelector brokerSelector,
-      TierConfig tierConfig,
-      ServerDiscoveryFactory serverDiscoveryFactory
+      TierConfig tierConfig
   )
   {
     this.warehouse = warehouse;
@@ -57,7 +55,6 @@ public class RouterQuerySegmentWalker implements QuerySegmentWalker
     this.httpClient = httpClient;
     this.brokerSelector = brokerSelector;
     this.tierConfig = tierConfig;
-    this.serverDiscoveryFactory = serverDiscoveryFactory;
   }
 
   @Override
@@ -79,8 +76,7 @@ public class RouterQuerySegmentWalker implements QuerySegmentWalker
         objectMapper,
         httpClient,
         brokerSelector,
-        tierConfig,
-        serverDiscoveryFactory
+        tierConfig
     );
   }
 }

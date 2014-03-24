@@ -22,8 +22,10 @@ package io.druid.server.router;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import com.metamx.common.Pair;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.DruidServer;
+import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
@@ -36,7 +38,9 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import junit.framework.Assert;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -48,11 +52,16 @@ import java.util.List;
  */
 public class BrokerSelectorTest
 {
+  private ServerDiscoveryFactory factory;
+  private ServerDiscoverySelector selector;
   private BrokerSelector brokerSelector;
 
   @Before
   public void setUp() throws Exception
   {
+    factory = EasyMock.createMock(ServerDiscoveryFactory.class);
+    selector = EasyMock.createMock(ServerDiscoverySelector.class);
+
     brokerSelector = new BrokerSelector(
         new TestRuleManager(null, null, null, null),
         new TierConfig()
@@ -74,20 +83,41 @@ public class BrokerSelectorTest
           {
             return "hotBroker";
           }
-        }
+        },
+        factory
     );
+    EasyMock.expect(factory.createSelector(EasyMock.<String>anyObject())).andReturn(selector).atLeastOnce();
+    EasyMock.replay(factory);
+
+    selector.start();
+    EasyMock.expectLastCall().atLeastOnce();
+    selector.stop();
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.replay(selector);
+
+    brokerSelector.start();
+
+  }
+
+  @After
+  public void tearDown() throws Exception
+  {
+    brokerSelector.stop();
+
+    EasyMock.verify(selector);
+    EasyMock.verify(factory);
   }
 
   @Test
   public void testBasicSelect() throws Exception
   {
-    String brokerName = brokerSelector.select(
+    String brokerName = (String) brokerSelector.select(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
             new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01"))),
             null
         )
-    );
+    ).lhs;
 
     Assert.assertEquals("coldBroker", brokerName);
   }
@@ -96,13 +126,13 @@ public class BrokerSelectorTest
   @Test
   public void testBasicSelect2() throws Exception
   {
-    String brokerName = brokerSelector.select(
+    String brokerName = (String) brokerSelector.select(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
             new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2013-08-31/2013-09-01"))),
             null
         )
-    );
+    ).lhs;
 
     Assert.assertEquals("hotBroker", brokerName);
   }
@@ -110,7 +140,7 @@ public class BrokerSelectorTest
   @Test
   public void testSelectMatchesNothing() throws Exception
   {
-    String brokerName = brokerSelector.select(
+    Pair retVal = brokerSelector.select(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
             new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2010-08-31/2010-09-01"))),
@@ -118,14 +148,14 @@ public class BrokerSelectorTest
         )
     );
 
-    Assert.assertEquals(null, brokerName);
+    Assert.assertEquals(null, retVal);
   }
 
 
   @Test
   public void testSelectMultiInterval() throws Exception
   {
-    String brokerName = brokerSelector.select(
+    String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
@@ -138,7 +168,7 @@ public class BrokerSelectorTest
                       )
                   )
               ).build()
-    );
+    ).lhs;
 
     Assert.assertEquals("coldBroker", brokerName);
   }
@@ -146,7 +176,7 @@ public class BrokerSelectorTest
   @Test
   public void testSelectMultiInterval2() throws Exception
   {
-    String brokerName = brokerSelector.select(
+    String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
@@ -159,7 +189,7 @@ public class BrokerSelectorTest
                       )
                   )
               ).build()
-    );
+    ).lhs;
 
     Assert.assertEquals("coldBroker", brokerName);
   }
