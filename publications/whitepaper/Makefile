@@ -12,7 +12,7 @@ zip : sgmd0658-yang.zip
 	zip $@ $*.pdf $*.tex dummy.ps
 
 clean :
-	@rm -f *.aux *.bbl *.blg *.log dummy.ps *.zip
+	@rm -f *.aux *.bbl *.blg *.out *.log dummy.ps *.zip
 
 %.tex : %.bib
 
