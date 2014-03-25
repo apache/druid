@@ -37,12 +37,12 @@ public class HLLCV0 extends HyperLogLogCollector
 
   private static final ByteBuffer defaultStorageBuffer = ByteBuffer.wrap(new byte[]{0, 0, 0}).asReadOnlyBuffer();
 
-  public HLLCV0()
+  protected HLLCV0()
   {
     super(defaultStorageBuffer);
   }
 
-  public HLLCV0(ByteBuffer buffer)
+  protected HLLCV0(ByteBuffer buffer)
   {
     super(buffer);
   }
