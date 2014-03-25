@@ -350,7 +350,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     byte myOffset = getRegisterOffset();
     short numNonZero = getNumNonZeroRegisters();
 
-    int offsetDiff = myOffset - otherOffset;
+    final int offsetDiff = myOffset - otherOffset;
     if (offsetDiff < 0) {
       throw new ISE("offsetDiff[%d] < 0, shouldn't happen because of swap.", offsetDiff);
     }
@@ -368,13 +368,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
             offsetDiff,
             otherBuffer.get()
         );
-        if (numNonZero == NUM_BUCKETS) {
-          numNonZero = decrementBuckets();
-          setRegisterOffset(++myOffset);
-          setNumNonZeroRegisters(numNonZero);
-
-          offsetDiff = myOffset - otherOffset;
-        }
+      }
+      if (numNonZero == NUM_BUCKETS) {
+        numNonZero = decrementBuckets();
+        setRegisterOffset(++myOffset);
+        setNumNonZeroRegisters(numNonZero);
       }
     } else { // dense
       int position = getPayloadBytePosition();
@@ -384,14 +382,12 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
             offsetDiff,
             otherBuffer.get()
         );
-        if (numNonZero == NUM_BUCKETS) {
-          numNonZero = decrementBuckets();
-          setRegisterOffset(++myOffset);
-          setNumNonZeroRegisters(numNonZero);
-
-          offsetDiff = myOffset - otherOffset;
-        }
         position++;
+      }
+      if (numNonZero == NUM_BUCKETS) {
+        numNonZero = decrementBuckets();
+        setRegisterOffset(++myOffset);
+        setNumNonZeroRegisters(numNonZero);
       }
     }
 
