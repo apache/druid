@@ -83,7 +83,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
-    final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
+    final int priority = Integer.parseInt((String) query.getContextValue("priority", "0"));
 
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()

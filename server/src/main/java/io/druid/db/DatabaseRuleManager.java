@@ -159,7 +159,7 @@ public class DatabaseRuleManager
 
       this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
 
-      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultTier(), jsonMapper);
+      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultRule(), jsonMapper);
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
@@ -274,8 +274,8 @@ public class DatabaseRuleManager
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));
     }
-    if (theRules.get(config.get().getDefaultTier()) != null) {
-      retVal.addAll(theRules.get(config.get().getDefaultTier()));
+    if (theRules.get(config.get().getDefaultRule()) != null) {
+      retVal.addAll(theRules.get(config.get().getDefaultRule()));
     }
     return retVal;
   }

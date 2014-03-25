@@ -54,7 +54,6 @@ public class MapCache implements Cache
   )
   {
     this.byteCountingLRUMap = byteCountingLRUMap;
-
     this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 
     namespaceId = Maps.newHashMap();

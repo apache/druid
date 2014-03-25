@@ -69,7 +69,7 @@ public class TopNQueryBuilder
   private QueryGranularity granularity;
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
-  private Map<String, String> context;
+  private Map<String, Object> context;
 
   public TopNQueryBuilder()
   {
@@ -130,7 +130,7 @@ public class TopNQueryBuilder
     return postAggregatorSpecs;
   }
 
-  public Map<String, String> getContext()
+  public Map<String, Object> getContext()
   {
     return context;
   }
@@ -290,7 +290,7 @@ public class TopNQueryBuilder
     return this;
   }
 
-  public TopNQueryBuilder context(Map<String, String> c)
+  public TopNQueryBuilder context(Map<String, Object> c)
   {
     context = c;
     return this;

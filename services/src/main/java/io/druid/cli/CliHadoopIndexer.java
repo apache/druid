@@ -54,6 +54,10 @@ public class CliHadoopIndexer implements Runnable
           description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-core:1.0.3")
   private String hadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
 
+  @Option(name = "hadoopDependencies",
+          description = "The maven coordinates to the version of hadoop and all dependencies to run with. Defaults to using org.apache.hadoop:hadoop-core:1.0.3")
+  private List<String> hadoopDependencyCoordinates = Arrays.<String>asList("org.apache.hadoop:hadoop-core:1.0.3");
+
   @Inject
   private ExtensionsConfig extensionsConfig = null;
 
@@ -63,9 +67,6 @@ public class CliHadoopIndexer implements Runnable
   {
     try {
       final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
-      final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-          aetherClient, hadoopCoordinates
-      );
 
       final List<URL> extensionURLs = Lists.newArrayList();
       for (String coordinate : extensionsConfig.getCoordinates()) {
@@ -81,7 +82,12 @@ public class CliHadoopIndexer implements Runnable
       final List<URL> driverURLs = Lists.newArrayList();
       driverURLs.addAll(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-      driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      for (String coordinate : hadoopDependencyCoordinates) {
+        final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
+            aetherClient, coordinate
+        );
+        driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      }
 
       final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
       Thread.currentThread().setContextClassLoader(loader);
