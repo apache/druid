@@ -364,6 +364,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       while(otherBuffer.hasRemaining()) {
         final int payloadStartPosition = otherBuffer.getShort() - other.getNumHeaderBytes();
         numNonZero += mergeAndStoreByteRegister(
+            storageBuffer,
             myPayloadStart + payloadStartPosition,
             offsetDiff,
             otherBuffer.get()
@@ -378,6 +379,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       int position = getPayloadBytePosition();
       while (otherBuffer.hasRemaining()) {
         numNonZero += mergeAndStoreByteRegister(
+            storageBuffer,
             position,
             offsetDiff,
             otherBuffer.get()
@@ -604,7 +606,8 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
    *
    * @return
    */
-  private int mergeAndStoreByteRegister(
+  private static int mergeAndStoreByteRegister(
+      final ByteBuffer storageBuffer,
       final int position,
       final int offsetDiff,
       final byte byteToAdd
