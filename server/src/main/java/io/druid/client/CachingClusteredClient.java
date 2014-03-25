@@ -40,6 +40,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.guice.annotations.Smile;
@@ -79,19 +80,22 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
+  private final CacheConfig cacheConfig;
 
   @Inject
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
       TimelineServerView serverView,
       Cache cache,
-      @Smile ObjectMapper objectMapper
+      @Smile ObjectMapper objectMapper,
+      CacheConfig cacheConfig
   )
   {
     this.warehouse = warehouse;
     this.serverView = serverView;
     this.cache = cache;
     this.objectMapper = objectMapper;
+    this.cacheConfig = cacheConfig;
 
     serverView.registerSegmentCallback(
         Executors.newFixedThreadPool(
@@ -122,9 +126,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = Boolean.parseBoolean(query.getContextValue("useCache", "true"))
                              && strategy != null
-                             && cache.getCacheConfig().isUseCache();
+                             && cacheConfig.isUseCache();
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
-                                  && strategy != null && cache.getCacheConfig().isPopulateCache();
+                                  && strategy != null && cacheConfig.isPopulateCache();
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
 

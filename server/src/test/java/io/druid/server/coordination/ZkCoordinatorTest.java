@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.logger.Logger;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
@@ -83,7 +84,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
         new NoopServiceEmitter(),
         MoreExecutors.sameThreadExecutor(),
         new DefaultObjectMapper(),
-        new LocalCacheProvider().get()
+        new LocalCacheProvider().get(),
+        new CacheConfig()
     );
 
     final DruidServerMetadata me = new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0);

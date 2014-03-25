@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.MapCache;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -40,12 +42,15 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
   private final QueryToolChest toolChest;
   private final Cache cache;
   private final ObjectMapper mapper;
+  private final CacheConfig cacheConfig;
 
   public CachePopulatingQueryRunner(
       String segmentIdentifier,
       SegmentDescriptor segmentDescriptor, ObjectMapper mapper,
-      Cache cache, QueryToolChest toolchest,
-      QueryRunner<T> base
+      Cache cache,
+      QueryToolChest toolchest,
+      QueryRunner<T> base,
+      CacheConfig cacheConfig
   )
   {
     this.base = base;
@@ -54,6 +59,7 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
     this.toolChest = toolchest;
     this.cache = cache;
     this.mapper = mapper;
+    this.cacheConfig = cacheConfig;
   }
 
   @Override
@@ -63,7 +69,10 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
-                                  && strategy != null && cache.getCacheConfig().isPopulateCache();
+                                  && strategy != null
+                                  && cacheConfig.isPopulateCache()
+                                  // historical only populates distributed cache since the cache lookups are done at broker.
+                                  && !(cache instanceof MapCache) ;
     Sequence<T> results = base.run(query);
     if (populateCache) {
       Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(

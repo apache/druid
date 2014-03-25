@@ -1194,7 +1194,8 @@ public class CachingClusteredClientTest
           }
         },
         cache,
-        jsonMapper
+        jsonMapper,
+        new CacheConfig()
     );
   }
 

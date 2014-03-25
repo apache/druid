@@ -153,10 +153,4 @@ public class MapCache implements Cache
     retVal.rewind();
     return retVal;
   }
-
-  @Override
-  public CacheConfig getCacheConfig()
-  {
-    return config;
-  }
 }

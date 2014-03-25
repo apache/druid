@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachePopulatingQueryRunner;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.collections.CountingMap;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
@@ -83,6 +84,7 @@ public class ServerManager implements QuerySegmentWalker
   private final CountingMap<String> dataSourceCounts = new CountingMap<String>();
   private final Cache cache;
   private final ObjectMapper objectMapper;
+  private final CacheConfig cacheConfig;
 
   @Inject
   public ServerManager(
@@ -91,7 +93,8 @@ public class ServerManager implements QuerySegmentWalker
       ServiceEmitter emitter,
       @Processing ExecutorService exec,
       @Smile ObjectMapper objectMapper,
-      Cache cache
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.segmentLoader = segmentLoader;
@@ -103,6 +106,7 @@ public class ServerManager implements QuerySegmentWalker
     this.objectMapper = objectMapper;
 
     this.dataSources = new HashMap<>();
+    this.cacheConfig = cacheConfig;
   }
 
   public Map<String, Long> getDataSourceSizes()
@@ -412,7 +416,8 @@ public class ServerManager implements QuerySegmentWalker
                     objectMapper,
                     cache,
                     toolChest,
-                    new ReferenceCountingSegmentQueryRunner<T>(factory, adapter)
+                    new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
+                    cacheConfig
                 )
             )
         ).withWaitMeasuredFromNow(),

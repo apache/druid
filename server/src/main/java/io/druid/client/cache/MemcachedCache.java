@@ -101,7 +101,6 @@ public class MemcachedCache implements Cache
   private final AtomicLong timeoutCount = new AtomicLong(0);
   private final AtomicLong errorCount = new AtomicLong(0);
 
-  private final CacheConfig config;
 
   MemcachedCache(MemcachedClientIF client,  MemcachedCacheConfig config) {
     Preconditions.checkArgument(config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
@@ -112,7 +111,6 @@ public class MemcachedCache implements Cache
     this.expiration = config.getExpiration();
     this.client = client;
     this.memcachedPrefix = config.getMemcachedPrefix();
-    this.config = config;
   }
 
   @Override
@@ -127,12 +125,6 @@ public class MemcachedCache implements Cache
         timeoutCount.get(),
         errorCount.get()
     );
-  }
-
-  @Override
-  public CacheConfig getCacheConfig()
-  {
-    return config;
   }
 
   @Override

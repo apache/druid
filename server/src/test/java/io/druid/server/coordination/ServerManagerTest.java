@@ -37,6 +37,7 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
@@ -138,7 +139,8 @@ public class ServerManagerTest
           }
         },
         new NoopServiceEmitter(),
-        serverManagerExec, new DefaultObjectMapper(), new LocalCacheProvider().get()
+        serverManagerExec, new DefaultObjectMapper(), new LocalCacheProvider().get(),
+        new CacheConfig()
     );
 
     loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
