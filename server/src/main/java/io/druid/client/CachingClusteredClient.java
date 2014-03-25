@@ -132,7 +132,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
 
-    ImmutableMap.Builder<String, String> contextBuilder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
     final String priority = query.getContextValue("priority", "0");
     contextBuilder.put("priority", priority);

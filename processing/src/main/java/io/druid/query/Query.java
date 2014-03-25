@@ -70,11 +70,11 @@ public interface Query<T>
 
   public Duration getDuration();
 
-  public String getContextValue(String key);
+  public <ContextType> ContextType getContextValue(String key);
 
-  public String getContextValue(String key, String defaultValue);
+  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
-  public Query<T> withOverriddenContext(Map<String, String> contextOverride);
+  public Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
 

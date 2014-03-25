@@ -8,7 +8,7 @@ zip : sgmd0658-yang.zip
 
 %.zip : %.pdf
 	@rm -f dummy.ps
-	@touch dummy.ps
+	@echo 1234 > dummy.ps
 	zip $@ $*.pdf $*.tex dummy.ps
 
 clean :

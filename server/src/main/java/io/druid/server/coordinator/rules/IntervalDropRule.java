@@ -55,6 +55,12 @@ public class IntervalDropRule extends DropRule
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return interval.contains(segment.getInterval());
+    return appliesTo(segment.getInterval(), referenceTimestamp);
+  }
+
+  @Override
+  public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
+  {
+    return interval.contains(theInterval);
   }
 }

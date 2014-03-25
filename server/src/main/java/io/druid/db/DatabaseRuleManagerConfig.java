@@ -27,14 +27,14 @@ import org.joda.time.Period;
 public class DatabaseRuleManagerConfig
 {
   @JsonProperty
-  private String defaultTier = "_default";
+  private String defaultRule = "_default";
 
   @JsonProperty
   private Period pollDuration = new Period("PT1M");
 
-  public String getDefaultTier()
+  public String getDefaultRule()
   {
-    return defaultTier;
+    return defaultRule;
   }
 
   public Period getPollDuration()
