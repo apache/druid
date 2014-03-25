@@ -86,6 +86,7 @@ public class HadoopIndexTask extends AbstractTask
   public HadoopIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("config") HadoopDruidIndexerSchema schema,
+      @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates
   )
   {
@@ -101,7 +102,7 @@ public class HadoopIndexTask extends AbstractTask
 
     this.schema = schema;
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates == null ? Arrays.<String>asList(
-        defaultHadoopCoordinates
+        hadoopCoordinates == null ? defaultHadoopCoordinates : hadoopCoordinates
     ) : hadoopDependencyCoordinates;
   }
 
