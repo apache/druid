@@ -5,7 +5,7 @@
 \let\crnotice\mycrnotice%
 \let\confname\myconfname%
 \permission{Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components of this work owned by others than the author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.}
-\conferenceinfo{SIGMOD/PODS'14,}{June 22--27, 2014, Salt Lake City, UT, USA. \\
+\conferenceinfo{SIGMOD'14,}{June 22--27, 2014, Snowbird, UT, USA. \\
 {\mycrnotice{Copyright is held by the owner/author(s). Publication rights licensed to ACM.}}}
 \copyrightetc{ACM \the\acmcopyr}
 \crdata{978-1-4503-2376-5/14/06\ ...\$15.00.\\
@@ -73,7 +73,7 @@ aggregations, flexible filters, and low latency data ingestion.
 % A category with the (minimum) three required fields
 \category{H.2.4}{Database Management}{Systems}[Distributed databases]
 % \category{D.2.8}{Software Engineering}{Metrics}[complexity measures, performance measures]
-\keywords{distributed; real-time; fault-tolerant; analytics; OLAP; columnar}
+\keywords{distributed; real-time; fault-tolerant; analytics; column-oriented; OLAP}
 
 
 \section{Introduction} 
@@ -112,13 +112,12 @@ highly concurrent environment (1000+ users), Hadoop wasn't going to meet our
 needs.  We explored different solutions in the space, and after
 trying both Relational Database Management Systems and NoSQL architectures, we
 came to the conclusion that there was nothing in the open source world that
-could be fully leveraged for our requirements.
-
-We ended up creating Druid, an open-source, distributed, column-oriented,
-real-time analytical data store.  In many ways, Druid shares similarities with
-other OLAP systems \cite{oehler2012ibm, schrader2009oracle, lachev2005applied},
+could be fully leveraged for our requirements. We ended up creating Druid, an
+open-source, distributed, column-oriented, real-time analytical data store.  In
+many ways, Druid shares similarities with other OLAP systems
+\cite{oehler2012ibm, schrader2009oracle, lachev2005applied},
 interactive query systems \cite{melnik2010dremel}, main-memory databases
-\cite{farber2012sap}, and widely-known distributed data stores
+\cite{farber2012sap}, as well as widely known distributed data stores
 \cite{chang2008bigtable, decandia2007dynamo, lakshman2010cassandra}.  The
 distribution and query model also borrow ideas from current generation search
 infrastructure \cite{linkedin2013senseidb, apache2013solr,
