@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.logger.Logger;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.LocalCacheProvider;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
@@ -52,12 +54,12 @@ import java.util.List;
  */
 public class ZkCoordinatorTest extends CuratorTestBase
 {
+  private static final Logger log = new Logger(ZkCoordinatorTest.class);
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private ZkCoordinator zkCoordinator;
   private ServerManager serverManager;
   private DataSegmentAnnouncer announcer;
   private File infoDir;
-  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final Logger log = new Logger(ZkCoordinatorTest.class);
 
   @Before
   public void setUp() throws Exception
@@ -80,7 +82,10 @@ public class ZkCoordinatorTest extends CuratorTestBase
         new CacheTestSegmentLoader(),
         new NoopQueryRunnerFactoryConglomerate(),
         new NoopServiceEmitter(),
-        MoreExecutors.sameThreadExecutor()
+        MoreExecutors.sameThreadExecutor(),
+        new DefaultObjectMapper(),
+        new LocalCacheProvider().get(),
+        new CacheConfig()
     );
 
     final DruidServerMetadata me = new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0);
@@ -100,7 +105,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     zkCoordinator = new ZkCoordinator(
         jsonMapper,
-        new SegmentLoaderConfig(){
+        new SegmentLoaderConfig()
+        {
           @Override
           public File getInfoDir()
           {
@@ -214,7 +220,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     List<File> sortedFiles = Lists.newArrayList(files);
     Collections.sort(sortedFiles);
-    
+
     Assert.assertEquals(segments.size(), sortedFiles.size());
     for (int i = 0; i < sortedFiles.size(); i++) {
       DataSegment segment = jsonMapper.readValue(sortedFiles.get(i), DataSegment.class);

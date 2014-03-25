@@ -40,6 +40,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.guice.annotations.Smile;
@@ -61,8 +62,8 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -76,24 +77,26 @@ import java.util.concurrent.Executors;
 public class CachingClusteredClient<T> implements QueryRunner<T>
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
-
   private final QueryToolChestWarehouse warehouse;
   private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
+  private final CacheConfig cacheConfig;
 
   @Inject
   public CachingClusteredClient(
       QueryToolChestWarehouse warehouse,
       TimelineServerView serverView,
       Cache cache,
-      @Smile ObjectMapper objectMapper
+      @Smile ObjectMapper objectMapper,
+      CacheConfig cacheConfig
   )
   {
     this.warehouse = warehouse;
     this.serverView = serverView;
     this.cache = cache;
     this.objectMapper = objectMapper;
+    this.cacheConfig = cacheConfig;
 
     serverView.registerSegmentCallback(
         Executors.newFixedThreadPool(
@@ -122,18 +125,21 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<DateTime, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = Boolean.parseBoolean((String) query.getContextValue("useCache", "true")) && strategy != null;
-    final boolean populateCache = Boolean.parseBoolean((String) query.getContextValue("populateCache", "true"))
-        && strategy != null;
-    final boolean isBySegment = Boolean.parseBoolean((String) query.getContextValue("bySegment", "false"));
+    final boolean useCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.USE_CACHE, "true"))
+                             && strategy != null
+                             && cacheConfig.isUseCache();
+    final boolean populateCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.POPULATE_CACHE, "true"))
+                                  && strategy != null && cacheConfig.isPopulateCache();
+    final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
 
     ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final String priority = (String) query.getContextValue("priority", "0");
+    final String priority = query.getContextValue("priority", "0");
     contextBuilder.put("priority", priority);
 
     if (populateCache) {
+      contextBuilder.put(CacheConfig.POPULATE_CACHE, "false");
       contextBuilder.put("bySegment", "true");
     }
     contextBuilder.put("intermediate", "true");
@@ -180,7 +186,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     if (queryCacheKey != null) {
       Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newHashMap();
       for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
-        final Cache.NamedKey segmentCacheKey = computeSegmentCacheKey(
+        final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
             segment.lhs.getSegment().getIdentifier(),
             segment.rhs,
             queryCacheKey
@@ -286,7 +292,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                             objectMapper.getFactory().createParser(cachedResult),
                             cacheObjectClazz
                         );
-                      } catch (IOException e) {
+                      }
+                      catch (IOException e) {
                         throw Throwables.propagate(e);
                       }
                     }
@@ -372,26 +379,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     );
   }
 
-  private Cache.NamedKey computeSegmentCacheKey(
-      String segmentIdentifier,
-      SegmentDescriptor descriptor,
-      byte[] queryCacheKey
-  )
-  {
-    final Interval segmentQueryInterval = descriptor.getInterval();
-    final byte[] versionBytes = descriptor.getVersion().getBytes();
-
-    return new Cache.NamedKey(
-        segmentIdentifier, ByteBuffer
-        .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
-        .putLong(segmentQueryInterval.getStartMillis())
-        .putLong(segmentQueryInterval.getEndMillis())
-        .put(versionBytes)
-        .putInt(descriptor.getPartitionNumber())
-        .put(queryCacheKey).array()
-    );
-  }
-
   private static class CachePopulator
   {
     private final Cache cache;
@@ -407,26 +394,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     public void populate(Iterable<Object> results)
     {
-      try {
-        List<byte[]> bytes = Lists.newArrayList();
-        int size = 0;
-        for (Object result : results) {
-          final byte[] array = mapper.writeValueAsBytes(result);
-          size += array.length;
-          bytes.add(array);
-        }
-
-        byte[] valueBytes = new byte[size];
-        int offset = 0;
-        for (byte[] array : bytes) {
-          System.arraycopy(array, 0, valueBytes, offset, array.length);
-          offset += array.length;
-        }
-
-        cache.put(key, valueBytes);
-      } catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+      CacheUtil.populate(cache, mapper, key, results);
     }
   }
 }

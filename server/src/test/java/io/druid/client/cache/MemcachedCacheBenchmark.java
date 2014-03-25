@@ -38,19 +38,23 @@ import java.util.concurrent.TimeUnit;
 
 public class MemcachedCacheBenchmark extends SimpleBenchmark
 {
-  private static final String BASE_KEY = "test_2012-11-26T00:00:00.000Z_2012-11-27T00:00:00.000Z_2012-11-27T04:11:25.979Z_";
   public static final String NAMESPACE = "default";
-
+  private static final String BASE_KEY = "test_2012-11-26T00:00:00.000Z_2012-11-27T00:00:00.000Z_2012-11-27T04:11:25.979Z_";
+  private static byte[] randBytes;
+  @Param({"localhost:11211"})
+  String hosts;
+  // object size in kB
+  @Param({"1", "5", "10", "40"})
+  int objectSize;
+  @Param({"100", "1000"})
+  int objectCount;
   private MemcachedCache cache;
   private MemcachedClientIF client;
 
-  private static byte[] randBytes;
-
-  @Param({"localhost:11211"}) String hosts;
-
-  // object size in kB
-  @Param({"1", "5", "10", "40"}) int objectSize;
-  @Param({"100", "1000"}) int objectCount;
+  public static void main(String[] args) throws Exception
+  {
+    Runner.main(MemcachedCacheBenchmark.class, args);
+  }
 
   @Override
   protected void setUp() throws Exception
@@ -73,11 +77,29 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
         AddrUtil.getAddresses(hosts)
     );
 
+
     cache = new MemcachedCache(
         client,
-        "druid-memcached-benchmark",
-        30000, // 30 seconds
-        3600 // 1 hour
+        new MemcachedCacheConfig()
+        {
+          @Override
+          public String getMemcachedPrefix()
+          {
+            return "druid-memcached-benchmark";
+          }
+
+          @Override
+          public int getTimeout()
+          {
+            return 30000;
+          }
+
+          @Override
+          public int getExpiration()
+          {
+            return 3600;
+          }
+        }
     );
 
     randBytes = new byte[objectSize * 1024];
@@ -90,9 +112,10 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     client.shutdown(1, TimeUnit.MINUTES);
   }
 
-  public void timePutObjects(int reps) {
-    for(int i = 0; i < reps; ++i) {
-      for(int k = 0; k < objectCount; ++k) {
+  public void timePutObjects(int reps)
+  {
+    for (int i = 0; i < reps; ++i) {
+      for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
         cache.put(new Cache.NamedKey(NAMESPACE, key.getBytes()), randBytes);
       }
@@ -101,11 +124,12 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     }
   }
 
-  public long timeGetObject(int reps) {
+  public long timeGetObject(int reps)
+  {
     byte[] bytes = null;
     long count = 0;
     for (int i = 0; i < reps; i++) {
-      for(int k = 0; k < objectCount; ++k) {
+      for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
         bytes = cache.get(new Cache.NamedKey(NAMESPACE, key.getBytes()));
         count += bytes.length;
@@ -114,24 +138,21 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
     return count;
   }
 
-  public long timeBulkGetObjects(int reps) {
+  public long timeBulkGetObjects(int reps)
+  {
     long count = 0;
     for (int i = 0; i < reps; i++) {
       List<Cache.NamedKey> keys = Lists.newArrayList();
-      for(int k = 0; k < objectCount; ++k) {
+      for (int k = 0; k < objectCount; ++k) {
         String key = BASE_KEY + k;
         keys.add(new Cache.NamedKey(NAMESPACE, key.getBytes()));
       }
       Map<Cache.NamedKey, byte[]> results = cache.getBulk(keys);
-      for(Cache.NamedKey key : keys) {
+      for (Cache.NamedKey key : keys) {
         byte[] bytes = results.get(key);
         count += bytes.length;
       }
     }
     return count;
-  }
-
-  public static void main(String[] args) throws Exception {
-    Runner.main(MemcachedCacheBenchmark.class, args);
   }
 }
