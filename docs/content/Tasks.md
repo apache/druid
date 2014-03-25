@@ -175,6 +175,7 @@ Append tasks append a list of segments together into a single segment (one after
 
 ```json
 {
+    "type": "append",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -187,6 +188,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
 
 ```json
 {
+    "type": "merge",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -202,6 +204,7 @@ Delete tasks create empty segments with no data. The grammar is:
 
 ```json
 {
+    "type": "delete",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -214,6 +217,7 @@ Kill tasks delete all information about a segment and removes it from deep stora
 
 ```json
 {
+    "type": "kill",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -229,6 +233,7 @@ These tasks convert segments from an existing older index version to the latest 
 
 ```json
 {
+    "type": "version_converter",
     "id": <task_id>,
     "groupId" : <task_group_id>,
     "dataSource": <task_datasource>,
@@ -243,6 +248,7 @@ These tasks start, sleep for a time and are used only for testing. The available
 
 ```json
 {
+    "type": "noop",
     "id": <optional_task_id>,
     "interval" : <optional_segment_interval>,
     "runTime" : <optional_millis_to_sleep>,
