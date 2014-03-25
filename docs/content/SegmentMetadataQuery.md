@@ -15,7 +15,7 @@ Segment metadata queries return per segment information about:
 {
   "queryType":"segmentMetadata",
   "dataSource":"sample_datasource",
-  "intervals":["2013-01-01/2014-01-01"],
+  "intervals":["2013-01-01/2014-01-01"]
 }
 ```
 

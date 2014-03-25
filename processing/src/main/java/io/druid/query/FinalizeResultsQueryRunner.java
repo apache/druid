@@ -48,7 +48,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
-    final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment"));
+    final boolean isBySegment = Boolean.parseBoolean(query.<String>getContextValue("bySegment"));
     final boolean shouldFinalize = Boolean.parseBoolean(query.getContextValue("finalize", "true"));
     if (shouldFinalize) {
       Function<T, T> finalizerFn;
@@ -100,7 +100,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
       }
 
       return Sequences.map(
-          baseRunner.run(query.withOverriddenContext(ImmutableMap.of("finalize", "false"))),
+          baseRunner.run(query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", "false"))),
           finalizerFn
       );
     }

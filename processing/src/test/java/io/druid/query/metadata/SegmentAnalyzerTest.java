@@ -21,6 +21,7 @@ package io.druid.query.metadata;
 
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
+import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -98,7 +99,7 @@ public class SegmentAnalyzerTest
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
-        "test", QuerySegmentSpecs.create("2011/2012"), null, null, null
+        new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null
     );
     return Sequences.toList(query.run(runner), Lists.<SegmentAnalysis>newArrayList());
   }

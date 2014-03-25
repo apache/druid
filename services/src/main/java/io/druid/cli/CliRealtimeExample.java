@@ -42,7 +42,7 @@ import java.util.concurrent.Executor;
  */
 @Command(
     name = "realtime",
-    description = "Runs a standalone realtime node for examples, see http://druid.io/docs/0.6.72/Realtime.html for a description"
+    description = "Runs a standalone realtime node for examples, see http://druid.io/docs/0.6.73/Realtime.html for a description"
 )
 public class CliRealtimeExample extends ServerRunnable
 {

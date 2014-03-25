@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.73-SNAPSHOT</version>
+    <version>0.6.75-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.72-SNAPSHOT</tag>
+        <tag>druid-0.6.73-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
@@ -94,7 +94,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.0.5</version>
+                <version>0.0.9</version>
             </dependency>
 
             <dependency>
@@ -548,8 +548,8 @@
                         </dependency>
                     </dependencies>
                 </plugin>
-              </plugins>
-            </pluginManagement>
+            </plugins>
+        </pluginManagement>
     </build>
 
     <repositories>

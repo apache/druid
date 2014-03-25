@@ -64,7 +64,7 @@ public class DatabaseRuleManagerProvider implements Provider<DatabaseRuleManager
             {
               dbConnector.createRulesTable();
               DatabaseRuleManager.createDefaultRule(
-                  dbConnector.getDBI(), dbTables.get().getRulesTable(), config.get().getDefaultTier(), jsonMapper
+                  dbConnector.getDBI(), dbTables.get().getRulesTable(), config.get().getDefaultRule(), jsonMapper
               );
             }
 

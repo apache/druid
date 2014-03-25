@@ -36,6 +36,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.TrinaryFn;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
@@ -121,7 +122,7 @@ public class CachingClusteredClientTest
    */
   private static final int RANDOMNESS = 10;
 
-  public static final ImmutableMap<String, String> CONTEXT = ImmutableMap.of();
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
 
@@ -325,7 +326,7 @@ public class CachingClusteredClientTest
     testQueryCaching(
         1,
         true,
-        builder.context(ImmutableMap.of("useCache", "false",
+        builder.context(ImmutableMap.<String, Object>of("useCache", "false",
             "populateCache", "true")).build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
     );
@@ -339,7 +340,7 @@ public class CachingClusteredClientTest
     testQueryCaching(
         1,
         false,
-        builder.context(ImmutableMap.of("useCache", "false",
+        builder.context(ImmutableMap.<String, Object>of("useCache", "false",
             "populateCache", "false")).build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
     );
@@ -351,7 +352,7 @@ public class CachingClusteredClientTest
     testQueryCaching(
         1,
         false,
-        builder.context(ImmutableMap.of("useCache", "true",
+        builder.context(ImmutableMap.<String, Object>of("useCache", "true",
             "populateCache", "false")).build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
     );
@@ -1193,7 +1194,8 @@ public class CachingClusteredClientTest
           }
         },
         cache,
-        jsonMapper
+        jsonMapper,
+        new CacheConfig()
     );
   }
 

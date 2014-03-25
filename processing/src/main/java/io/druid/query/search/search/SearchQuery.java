@@ -58,7 +58,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("searchDimensions") List<String> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -112,7 +112,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @Override
-  public SearchQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public SearchQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new SearchQuery(
         getDataSource(),

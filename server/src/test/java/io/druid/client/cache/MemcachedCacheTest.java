@@ -60,7 +60,29 @@ public class MemcachedCacheTest
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    cache = new MemcachedCache(client, "druid-memcached-test", 500, 3600);
+    cache = new MemcachedCache(
+        client, new MemcachedCacheConfig()
+    {
+      @Override
+      public String getMemcachedPrefix()
+      {
+        return "druid-memcached-test";
+      }
+
+      @Override
+      public int getTimeout()
+      {
+        return 500;
+      }
+
+      @Override
+      public int getExpiration()
+      {
+        return 3600;
+      }
+
+    }
+    );
   }
 
   @Test
@@ -396,64 +418,64 @@ class MockMemcachedClient implements MemcachedClientIF
   public <T> BulkFuture<Map<String, T>> asyncGetBulk(final Iterator<String> keys, final Transcoder<T> tc)
   {
     return new BulkFuture<Map<String, T>>()
-        {
-          @Override
-          public boolean isTimeout()
-          {
-            return false;
-          }
+    {
+      @Override
+      public boolean isTimeout()
+      {
+        return false;
+      }
 
-          @Override
-          public Map<String, T> getSome(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException
-          {
-            return get();
-          }
+      @Override
+      public Map<String, T> getSome(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException
+      {
+        return get();
+      }
 
-          @Override
-          public OperationStatus getStatus()
-          {
-            return null;
-          }
+      @Override
+      public OperationStatus getStatus()
+      {
+        return null;
+      }
 
-          @Override
-          public boolean cancel(boolean b)
-          {
-            return false;
-          }
+      @Override
+      public boolean cancel(boolean b)
+      {
+        return false;
+      }
 
-          @Override
-          public boolean isCancelled()
-          {
-            return false;
-          }
+      @Override
+      public boolean isCancelled()
+      {
+        return false;
+      }
 
-          @Override
-          public boolean isDone()
-          {
-            return true;
-          }
+      @Override
+      public boolean isDone()
+      {
+        return true;
+      }
 
-          @Override
-          public Map<String, T> get() throws InterruptedException, ExecutionException
-          {
-            Map<String, T> retVal = Maps.newHashMap();
+      @Override
+      public Map<String, T> get() throws InterruptedException, ExecutionException
+      {
+        Map<String, T> retVal = Maps.newHashMap();
 
-            while(keys.hasNext()) {
-              String key = keys.next();
-              CachedData data = theMap.get(key);
-              retVal.put(key, data != null ? tc.decode(data) : null);
-            }
+        while (keys.hasNext()) {
+          String key = keys.next();
+          CachedData data = theMap.get(key);
+          retVal.put(key, data != null ? tc.decode(data) : null);
+        }
 
-            return retVal;
-          }
+        return retVal;
+      }
 
-          @Override
-          public Map<String, T> get(long l, TimeUnit timeUnit)
-              throws InterruptedException, ExecutionException, TimeoutException
-          {
-            return get();
-          }
-        };
+      @Override
+      public Map<String, T> get(long l, TimeUnit timeUnit)
+          throws InterruptedException, ExecutionException, TimeoutException
+      {
+        return get();
+      }
+    };
   }
 
   @Override
