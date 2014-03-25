@@ -163,7 +163,7 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 |availabilityGroup|String|An uniqueness identifier for the task. Tasks with the same availability group will always run on different middle managers. Used mainly for replication. |yes|
 |requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
 
-For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see the [realtime-ingestion doc](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
+For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see [Realtime Ingestion](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
 
 
 Segment Merging Tasks
