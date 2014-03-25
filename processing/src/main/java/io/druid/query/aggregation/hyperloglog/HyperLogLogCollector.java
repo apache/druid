@@ -202,9 +202,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return buffer.remaining() != NUM_BYTES_FOR_BUCKETS;
   }
 
-  private volatile ByteBuffer storageBuffer;
-  private volatile int initPosition;
-  private volatile Double estimatedCardinality;
+  private ByteBuffer storageBuffer;
+  private int initPosition;
+  private Double estimatedCardinality;
 
   public HyperLogLogCollector(ByteBuffer byteBuffer)
   {
