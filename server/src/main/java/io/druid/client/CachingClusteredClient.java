@@ -62,6 +62,7 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -124,10 +125,10 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<DateTime, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = Boolean.parseBoolean(query.getContextValue("useCache", "true"))
+    final boolean useCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.USE_CACHE, "true"))
                              && strategy != null
                              && cacheConfig.isUseCache();
-    final boolean populateCache = Boolean.parseBoolean(query.getContextValue("populateCache", "true"))
+    final boolean populateCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.POPULATE_CACHE, "true"))
                                   && strategy != null && cacheConfig.isPopulateCache();
     final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
 
@@ -138,7 +139,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     contextBuilder.put("priority", priority);
 
     if (populateCache) {
-      contextBuilder.put("populateCache", "false");
+      contextBuilder.put(CacheConfig.POPULATE_CACHE, "false");
       contextBuilder.put("bySegment", "true");
     }
     contextBuilder.put("intermediate", "true");

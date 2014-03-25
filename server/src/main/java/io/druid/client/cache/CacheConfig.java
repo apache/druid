@@ -21,16 +21,14 @@ package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.NotNull;
-
 public class CacheConfig
 {
+  public static String USE_CACHE = "useCache";
+  public static String POPULATE_CACHE = "populateCache";
   @JsonProperty
   private boolean useCache = true;
-
   @JsonProperty
   private boolean populateCache = true;
-
 
   public boolean isPopulateCache()
   {
