@@ -24,7 +24,7 @@ import net.spy.memcached.DefaultConnectionFactory;
 
 import javax.validation.constraints.NotNull;
 
-public class MemcachedCacheConfig extends CacheConfig
+public class MemcachedCacheConfig
 {
   // default to 30 day expiration for cache entries
   // values greater than 30 days are interpreted by memcached as absolute POSIX timestamps instead of duration

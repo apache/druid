@@ -25,7 +25,7 @@ import javax.validation.constraints.Min;
 
 /**
  */
-public class LocalCacheProvider extends CacheConfig implements CacheProvider
+public class LocalCacheProvider implements CacheProvider
 {
   @JsonProperty
   @Min(0)
@@ -42,6 +42,6 @@ public class LocalCacheProvider extends CacheConfig implements CacheProvider
   @Override
   public Cache get()
   {
-    return new MapCache(new ByteCountingLRUMap(initialSize, logEvictionCount, sizeInBytes), this);
+    return new MapCache(new ByteCountingLRUMap(initialSize, logEvictionCount, sizeInBytes));
   }
 }

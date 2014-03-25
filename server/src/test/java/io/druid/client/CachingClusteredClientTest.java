@@ -196,7 +196,7 @@ public class CachingClusteredClientTest
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createStrictMock(TimelineServerView.class);
-    cache = MapCache.create(100000, new CacheConfig());
+    cache = MapCache.create(100000);
 
     client = makeClient();
 

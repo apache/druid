@@ -33,9 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MapCache implements Cache
 {
-  public static Cache create(long sizeInBytes, CacheConfig config)
+  public static Cache create(long sizeInBytes)
   {
-    return new MapCache(new ByteCountingLRUMap(sizeInBytes),config);
+    return new MapCache(new ByteCountingLRUMap(sizeInBytes));
   }
 
   private final Map<ByteBuffer, byte[]> baseMap;
@@ -48,16 +48,12 @@ public class MapCache implements Cache
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
-  private final CacheConfig config;
 
   MapCache(
-      ByteCountingLRUMap byteCountingLRUMap,
-      CacheConfig config
+      ByteCountingLRUMap byteCountingLRUMap
   )
   {
     this.byteCountingLRUMap = byteCountingLRUMap;
-    this.config = config;
-
     this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 
     namespaceId = Maps.newHashMap();
