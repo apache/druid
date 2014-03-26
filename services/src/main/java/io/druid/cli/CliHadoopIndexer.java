@@ -45,18 +45,21 @@ import java.util.List;
 )
 public class CliHadoopIndexer implements Runnable
 {
+
+  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-client:2.3.0";
+
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
   @Option(name = "hadoop",
-          description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-core:1.0.3")
-  private String hadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+          description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-client:2.3.0")
+  private String hadoopCoordinates = defaultHadoopCoordinates;
 
   @Option(name = "hadoopDependencies",
-          description = "The maven coordinates to the version of hadoop and all dependencies to run with. Defaults to using org.apache.hadoop:hadoop-core:1.0.3")
-  private List<String> hadoopDependencyCoordinates = Arrays.<String>asList("org.apache.hadoop:hadoop-core:1.0.3");
+          description = "The maven coordinates to the version of hadoop and all dependencies to run with. Defaults to using org.apache.hadoop:hadoop-client:2.3.0")
+  private List<String> hadoopDependencyCoordinates = Arrays.<String>asList(defaultHadoopCoordinates);
 
   @Inject
   private ExtensionsConfig extensionsConfig = null;
