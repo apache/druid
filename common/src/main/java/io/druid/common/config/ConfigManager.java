@@ -65,7 +65,6 @@ public class ConfigManager
   private final String selectStatement;
   private final String configTable;
 
-  private volatile String insertStatement;
   private volatile ConfigManager.PollingCallable poller;
 
   @Inject
@@ -90,17 +89,6 @@ public class ConfigManager
         return;
       }
 
-      insertStatement = String.format(
-          DbConnector.isPostgreSQL(dbi) ?
-          "BEGIN;\n" +
-          "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
-          "WITH upsert AS (UPDATE %1$s SET payload=:payload WHERE name=:name RETURNING *)\n" +
-          "    INSERT INTO %1$s (name, payload) SELECT :name, :payload WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
-          "COMMIT;" :
-          "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
-          configTable
-      );
-
       poller = new PollingCallable();
       ScheduledExecutors.scheduleWithFixedDelay(
           exec, new Duration(0), config.get().getPollDuration().toStandardDuration(), poller
@@ -118,7 +106,6 @@ public class ConfigManager
         return;
       }
 
-      insertStatement = null;
       poller.stop();
       poller = null;
 
@@ -241,20 +228,7 @@ public class ConfigManager
             @Override
             public Boolean call() throws Exception
             {
-              dbi.withHandle(
-                  new HandleCallback<Void>()
-                  {
-                    @Override
-                    public Void withHandle(Handle handle) throws Exception
-                    {
-                      handle.createStatement(insertStatement)
-                            .bind("name", key)
-                            .bind("payload", newBytes)
-                            .execute();
-                      return null;
-                    }
-                  }
-              );
+              DbConnector.insertOrUpdate(dbi, configTable, "name", "payload", key, newBytes);
 
               final ConfigHolder configHolder = watchedConfigs.get(key);
               if (configHolder != null) {
