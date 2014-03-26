@@ -33,6 +33,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.utils.Runnables;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -197,14 +198,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
     @Override
     public Runnable commit()
     {
-      return new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          // Nothing
-        }
-      };
+      return Runnables.getNoopRunnable();
     }
 
     @Override

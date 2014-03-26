@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import io.druid.indexing.common.index.EventReceiverFirehoseFactory;
+import io.druid.indexing.common.index.FiniteEventReceiverFirehoseFactory;
 import io.druid.initialization.DruidModule;
+import io.druid.jackson.DefaultObjectMapper;
 
 import java.util.List;
 
@@ -37,7 +39,8 @@ public class IndexingServiceFirehoseModule implements DruidModule
     return ImmutableList.<Module>of(
         new SimpleModule("IndexingServiceFirehoseModule")
             .registerSubtypes(
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                new NamedType(FiniteEventReceiverFirehoseFactory.class, "finite_receiver")
             )
     );
   }
@@ -45,5 +48,6 @@ public class IndexingServiceFirehoseModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(DefaultObjectMapper.class).in(LazySingleton.class);
   }
 }
