@@ -66,7 +66,7 @@ public class HadoopIndexTask extends AbstractTask
     extensionsConfig = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
   }
 
-  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-client:2.3.0";
   @JsonIgnore
   private final HadoopDruidIndexerSchema schema;
   @JsonIgnore
