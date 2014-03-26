@@ -113,7 +113,7 @@ data store built for exploratory analytics on large data sets.  Druid supports
 fast data aggregation, low latency data ingestion, and arbitrary data
 exploration. The system combines a column-oriented storage layout, a
 distributed, shared-nothing architecture, and an advanced indexing structure to
-return queries on billion of rows in milliseconds.  Druid is petabyte scale and
+return queries on billions of rows in milliseconds.  Druid is petabyte scale and
 is deployed in production at several technology companies.
 \end{abstract}
 
@@ -145,7 +145,7 @@ large quantities of transactional events (log data). This form of timeseries
 data (OLAP data) is commonly found in the business intelligence
 space and the nature of the data tends to be very append heavy. Events typically
 have three distinct components: a timestamp column indicating when the event
-occurred, a set dimension columns indicating various attributes about the
+occurred, a set of dimension columns indicating various attributes about the
 event, and a set of metric columns containing values (usually numeric) that can
 be aggregated. Queries are typically issued for the sum of some set of metrics,
 filtered by some set of dimensions, over some span of time. 
@@ -155,11 +155,11 @@ business intelligence dashboard that allowed users to arbitrarily explore and
 visualize event streams. Existing open source Relational Database Management
 Systems, cluster computing frameworks, and NoSQL key/value stores were unable
 to provide a low latency data ingestion and query platform for an interactive
-dashboard. Queries needed to return fast enough that the data visualizations in
-the dashboard could interactively update.
+dashboard. Queries needed to return fast enough to allow the data
+visualizations in the dashboard to update interactively.
 
 In addition to the query latency needs, the system had to be multi-tenant and
-highly available, as the dashboord is used in a highly concurrent environment.
+highly available, as the dashboard is used in a highly concurrent environment.
 Downtime is costly and many businesses cannot afford to wait if a system is
 unavailable in the face of software upgrades or network failure. Finally,
 Metamarkets also wanted to allow users and alerting systems to be able to make
@@ -168,9 +168,9 @@ when that event is queryable determines how fast users and systems are able to
 react to potentially catastrophic occurrences in their systems. 
 
 The problems of data exploration, ingestion, and availability span multiple
-industries. Since Druid was open sourced in October 2012, it been deployed as a
+industries. Since Druid was open sourced in October 2012, it has been deployed as a
 video, network monitoring, operations monitoring, and online advertising
-analytics platform in multiple companies\footnote{\href{http://druid.io/druid.html}{http://druid.io/druid.html}}.
+analytics platform at multiple companies\footnote{\href{http://druid.io/druid.html}{http://druid.io/druid.html}}.
 
 \begin{figure*}
 \centering
@@ -183,7 +183,7 @@ analytics platform in multiple companies\footnote{\href{http://druid.io/druid.ht
 A Druid cluster consists of different types of nodes and each node type is
 designed to perform a specific set of things. We believe this design separates
 concerns and simplifies the complexity of the system. The different node types
-operate fairly independent of each other and there is minimal interaction among
+operate fairly independently of each other and there is minimal interaction among
 them. Hence, intra-cluster communication failures have minimal impact on data
 availability.  To solve complex data analysis problems, the different node
 types come together to form a fully working system. The composition of and flow
@@ -194,10 +194,9 @@ Zookeeper\cite{hunt2010zookeeper}.
 \subsection{Real-time Nodes}
 Real-time nodes encapsulate the functionality to ingest and query event
 streams. Events indexed via these nodes are immediately available for querying.
-The nodes are only concerned with events for some small time range and
-periodically hand off immutable batches of events they've collected over this
-small time range to other nodes in the Druid cluster that are specialized in
-dealing with batches of immutable events. 
+These nodes are only concerned with events for some small time range. They
+periodically hand off batches of immutable events to other nodes in the Druid
+cluster that are specialized in dealing with batches of immutable events.
 
 Real-time nodes maintain an in-memory index buffer for all incoming events.
 These indexes are incrementally populated as new events are ingested and the
@@ -211,13 +210,13 @@ schedule a background task that searches for all locally persisted indexes. The
 task merges these indexes together and builds an immutable block of data that
 contains all the events that have ingested by a real-time node for some span of
 time. We refer to this block of data as a ``segment". During the handoff stage,
-a real-time node uploads this segment to a permanent backup storage, typically
+a real-time node uploads this segment to permanent backup storage, typically
 a distributed file system that Druid calls ``deep storage".
 
 \subsection{Historical Nodes}
 Historical nodes encapsulate the functionality to load and serve the immutable
 blocks of data (segments) created by real-time nodes. In many real-world
-workflows, most of the data loaded in a Druid cluster is immutable and hence,
+workflows, most of the data loaded in a Druid cluster is immutable and hence
 historical nodes are typically the main workers of a Druid cluster.  Historical
 nodes follow a shared-nothing architecture and there is no single point of
 contention among the nodes. The nodes have no knowledge of one another and are
@@ -247,11 +246,11 @@ maintain a connection to a MySQL database that contains additional operational
 parameters and configurations.  One of the key pieces of information located in
 the MySQL database is a table that contains a list of all segments that should
 be served by historical nodes.  This table can be updated by any service that
-creates segments, for example, real-time nodes. 
+creates segments, such as real-time nodes. 
 
 \subsection{Query Processing}
 Data tables in Druid (called \emph{data sources}) are collections of
-timestamped events and partitioned into a set of segments, where each segment
+timestamped events partitioned into a set of segments, where each segment
 is typically 5--10 million rows. Formally, we define a segment as a collection
 of rows of data that span some period in time. Segments represent the
 fundamental storage unit in Druid and replication and distribution are done at
@@ -322,7 +321,9 @@ Concise sets are done without decompressing the set.
 Druid supports many types of aggregations including double sums, long sums,
 minimums, maximums, and complex aggregations such as cardinality estimation and
 approximate quantile estimation.  The results of aggregations can be combined
-in mathematical expressions to form other aggregations. 
+in mathematical expressions to form other aggregations. Druid supports
+different query types ranging from simple aggregates for an interval time,
+groupBys, and approximate top-K queries. 
 
 \section{Performance}
 Druid runs in production at several organizations, and to briefly demonstrate its
@@ -365,11 +366,11 @@ columns scanned in aggregate queries roughly follows an exponential
 distribution. Queries involving a single column are very frequent, and queries
 involving all columns are very rare.
 
-We also present Druid benchmarks on TPC-H data.  Most TPC-H queries do
-not directly apply to Druid, so we selected queries more typical of Druid's
-workload to demonstrate query performance. As a comparison, we also provide the
-results of the same queries using MySQL using the MyISAM engine (InnoDB was
-slower in our experiments).
+We also present Druid benchmarks on TPC-H data in Figure~\ref{fig:tpch_100g}.
+Most TPC-H queries do not directly apply to Druid, so we selected queries more
+typical of Druid's workload to demonstrate query performance. As a comparison,
+we also provide the results of the same queries using MySQL using the MyISAM
+engine (InnoDB was slower in our experiments).
 
 We benchmarked Druid's scan rate at 53,539,211 rows/second/core for
 \texttt{select count(*)} equivalent query over a given time interval and
@@ -397,7 +398,7 @@ and 19 metrics.
 
 The latency measurements we presented are sufficient to address the our stated
 problems of interactivity. We would prefer the variability in the latencies to
-be less, which is still very possible to possible by adding additional
+be less, which can be achieved by adding additional
 hardware, but we have not chosen to do so because of cost concerns.
 
 \section{Demonstration Details}
@@ -406,7 +407,7 @@ We would like to do an end-to-end demonstratation of Druid, from setting up a
 cluster, ingesting data, structuring a query, and obtaining results. We would
 also like to showcase how to solve real-world data analysis problems with Druid
 and demonstrate tools that can be built on top of it, including interactive
-data visualizations, approximate algorithms, and machine learning components.
+data visualizations, approximate algorithms, and machine-learning components.
 We already use similar tools in production.
 
 \subsection{Setup}
@@ -419,7 +420,7 @@ public API and query it.  We will also provide users access to an AWS hosted
 Druid cluster that contains several terabytes of Twitter data that we have been
 collecting for over 2 years. There are over 3 billion tweets in this data set,
 and new events are constantly being ingested. We will walk through a variety of
-different queries to demonstrate Druid's arbitrary data exploration
+different queries to demonstrate Druid's arbitrary data-exploration
 capabilities.
 
 Finally, we will teach users how to build a simple interactive dashboard on top
