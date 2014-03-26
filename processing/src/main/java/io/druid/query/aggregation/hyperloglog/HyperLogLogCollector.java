@@ -523,7 +523,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   private short decrementBuckets()
   {
-    int startPosition = getPayloadBytePosition();
+    final int startPosition = getPayloadBytePosition();
     short count = 0;
     for (int i = startPosition; i < startPosition + NUM_BYTES_FOR_BUCKETS; i++) {
       final byte val = (byte) (storageBuffer.get(i) - 0x11);
