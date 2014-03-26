@@ -50,11 +50,11 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
-|id|The task ID.|no|
+|id|The task ID. If this is not explicitly specified, Druid generates the task ID using the name of the task file and date-time stamp. |no|
 |granularitySpec|Specifies the segment chunks that the task will process. `type` is always "uniform"; `gran` sets the granularity of the chunks ("DAY" means all segments containing timestamps in the same day, while `intervals` sets the interval that the chunks will cover.|yes|
 |spatialDimensions|Dimensions to build spatial indexes over. See [Geographic Queries](GeographicQueries.html).|no|
 |aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html)|yes|
-|indexGranularity|The rollup granularity for timestamps.|no|
+|indexGranularity|The rollup granularity for timestamps. See [Realtime Ingestion](Realtime-ingestion.html) for more information. |no|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|no|
 |firehose|The input source of data. For more info, see [Firehose](Firehose.html)|yes|
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|no|
@@ -163,7 +163,7 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 |availabilityGroup|String|An uniqueness identifier for the task. Tasks with the same availability group will always run on different middle managers. Used mainly for replication. |yes|
 |requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
 
-For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see the [realtime-ingestion doc](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
+For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see [Realtime Ingestion](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
 
 
 Segment Merging Tasks
@@ -175,6 +175,7 @@ Append tasks append a list of segments together into a single segment (one after
 
 ```json
 {
+    "type": "append",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -187,6 +188,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
 
 ```json
 {
+    "type": "merge",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -202,6 +204,7 @@ Delete tasks create empty segments with no data. The grammar is:
 
 ```json
 {
+    "type": "delete",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -214,6 +217,7 @@ Kill tasks delete all information about a segment and removes it from deep stora
 
 ```json
 {
+    "type": "kill",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -229,6 +233,7 @@ These tasks convert segments from an existing older index version to the latest 
 
 ```json
 {
+    "type": "version_converter",
     "id": <task_id>,
     "groupId" : <task_group_id>,
     "dataSource": <task_datasource>,
@@ -243,6 +248,7 @@ These tasks start, sleep for a time and are used only for testing. The available
 
 ```json
 {
+    "type": "noop",
     "id": <optional_task_id>,
     "interval" : <optional_segment_interval>,
     "runTime" : <optional_millis_to_sleep>,
