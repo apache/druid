@@ -292,20 +292,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         try {
           jp = objectMapper.getFactory().createParser(future.get());
           if (jp.nextToken() != JsonToken.START_ARRAY) {
-            throw new IAE("Next token wasn't a START_ARRAY, was[%s] in url [%s]", jp.getCurrentToken(), url);
+            throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
             jp.nextToken();
             objectCodec = jp.getCodec();
           }
         }
         catch (IOException e) {
-          throw Throwables.propagate(new RE(e, "Failure getting results from[%s]", url));
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
         catch (InterruptedException e) {
-          throw Throwables.propagate(new RE(e, "Failure getting results from[%s]", url));
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
         catch (ExecutionException e) {
-          throw Throwables.propagate(new RE(e, "Failure getting results from[%s]", url));
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
       }
     }
