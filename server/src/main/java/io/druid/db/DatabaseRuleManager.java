@@ -63,7 +63,7 @@ public class DatabaseRuleManager
   public static void createDefaultRule(
       final IDBI dbi,
       final String ruleTable,
-      final String defaultTier,
+      final String defaultDatasourceName,
       final ObjectMapper jsonMapper
   )
   {
@@ -81,7 +81,7 @@ public class DatabaseRuleManager
                           ruleTable
                       )
                   )
-                  .bind("dataSource", defaultTier)
+                  .bind("dataSource", defaultDatasourceName)
                   .list();
 
               if (!existing.isEmpty()) {
@@ -103,8 +103,8 @@ public class DatabaseRuleManager
                       ruleTable
                   )
               )
-                    .bind("id", String.format("%s_%s", defaultTier, version))
-                    .bind("dataSource", defaultTier)
+                    .bind("id", String.format("%s_%s", defaultDatasourceName, version))
+                    .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsString(defaultRules))
                     .execute();
