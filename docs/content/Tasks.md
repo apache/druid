@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 # Tasks
-Tasks are run on middle managers and always operate on a single data source.
+Tasks are run on middle managers and always operate on a single data source. Tasks are submitted using [POST requests](Indexing-Service.html).
 
 There are several different types of tasks.
 
