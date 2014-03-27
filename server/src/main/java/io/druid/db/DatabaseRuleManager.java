@@ -74,13 +74,15 @@ public class DatabaseRuleManager
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              List<Map<String, Object>> existing = handle.select(
-                  String.format(
-                      "SELECT id from %s where datasource='%s';",
-                      ruleTable,
-                      defaultTier
+              List<Map<String, Object>> existing = handle
+                  .createQuery(
+                      String.format(
+                          "SELECT id from %s where datasource=:dataSource;",
+                          ruleTable
+                      )
                   )
-              );
+                  .bind("dataSource", defaultTier)
+                  .list();
 
               if (!existing.isEmpty()) {
                 return null;
