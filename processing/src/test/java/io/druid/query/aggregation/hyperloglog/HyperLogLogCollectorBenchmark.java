@@ -32,6 +32,7 @@ import java.lang.reflect.Field;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Random;
 
 public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 {
@@ -40,7 +41,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   private final List<HyperLogLogCollector> collectors = Lists.newLinkedList();
 
   @Param({"true"}) boolean targetIsDirect;
-  @Param({"0"}) int offset;
+  @Param({"default", "random", "0"}) String alignment;
 
   boolean alignSource;
   boolean alignTarget;
@@ -55,18 +56,28 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   @Override
   protected void setUp() throws Exception
   {
-    boolean align = true;
-    if(offset < 0) {
-      align = false;
-      offset = 0;
+    boolean random = false;
+    Random rand = new Random(0);
+    int defaultOffset = 0;
+
+    switch(alignment) {
+      case "default":
+        alignSource = false;
+        alignTarget = false;
+        break;
+
+      case "random":
+        random = true;
+        break;
+
+      default:
+        defaultOffset = Integer.parseInt(alignment);
     }
-    alignSource = align;
-    alignTarget = align;
 
     int val = 0;
     chunk = ByteBuffers.allocateAlignedByteBuffer(
         (HyperLogLogCollector.getLatestNumBytesForDenseStorage() + CACHE_LINE
-         + offset) * count, CACHE_LINE
+         + CACHE_LINE) * count, CACHE_LINE
     );
 
     int pos = 0;
@@ -77,6 +88,8 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
       int size = sparseHeapCopy.remaining();
 
       final ByteBuffer buf;
+
+      final int offset = random ? (int)(rand.nextDouble() * 64) : defaultOffset;
 
       if(alignSource && (pos % CACHE_LINE) != offset) {
         pos += (pos % CACHE_LINE) < offset ? offset - (pos % CACHE_LINE) : (CACHE_LINE + offset - pos % CACHE_LINE);
@@ -98,7 +111,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     }
   }
 
-  private HyperLogLogCollector allocateCollector(boolean direct, boolean aligned)
+  private ByteBuffer allocateEmptyHLLBuffer(boolean direct, boolean aligned, int offset)
   {
     final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
     final byte[] EMPTY_BYTES = HyperLogLogCollector.makeEmptyVersionedByteArray();
@@ -124,23 +137,30 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
       buf.put(EMPTY_BYTES);
       buf.rewind();
     }
-    return HyperLogLogCollector.makeCollector(buf);
+    return buf;
   }
 
-  public double timeFoldDirect(int reps) throws Exception
+  public double timeFold(int reps) throws Exception
   {
-    final HyperLogLogCollector rolling = allocateCollector(targetIsDirect, alignTarget);
+    final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);
 
     for (int k = 0; k < reps; ++k) {
       for(int i = 0; i < count; ++i) {
         final int pos = positions[i];
         final int size = sizes[i];
-        rolling.fold(HyperLogLogCollector.makeCollector(
-                         (ByteBuffer) chunk.limit(pos+size).position(pos)
-        ));
+
+        HyperLogLogCollector.makeCollector(
+            (ByteBuffer) buf.duplicate().position(0).limit(
+                HyperLogLogCollector.getLatestNumBytesForDenseStorage()
+            )
+        ).fold(
+            HyperLogLogCollector.makeCollector(
+                (ByteBuffer) chunk.duplicate().limit(pos + size).position(pos)
+            )
+        );
       }
     }
-    return rolling.estimateCardinality();
+    return HyperLogLogCollector.makeCollector(buf.duplicate()).estimateCardinality();
   }
 
   public static void main(String[] args) throws Exception {
