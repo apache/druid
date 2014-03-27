@@ -37,11 +37,11 @@ public class HyperLogLogCollectorTest
 {
 
   private final HashFunction fn = Hashing.murmur3_128();
-  private final Random random = new Random();
 
   @Test
   public void testFolding() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -154,6 +154,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testFoldingByteBuffers() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -186,6 +187,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testFoldingReadOnlyByteBuffers() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -221,6 +223,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testFoldingReadOnlyByteBuffersWithArbitraryPosition() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -485,6 +488,8 @@ public class HyperLogLogCollectorTest
   @Ignore @Test // This test can help when finding potential combinations that are weird, but it's non-deterministic
   public void testFoldingwithDifferentOffsets() throws Exception
   {
+    // final Random random = new Random(37); // this seed will cause this test to fail because of slightly larger errors
+    final Random random = new Random(0);
     for (int j = 0; j < 10; j++) {
       HyperLogLogCollector smallVals = HyperLogLogCollector.makeLatestCollector();
       HyperLogLogCollector bigVals = HyperLogLogCollector.makeLatestCollector();
@@ -514,6 +519,7 @@ public class HyperLogLogCollectorTest
   @Ignore @Test
   public void testFoldingwithDifferentOffsets2() throws Exception
   {
+    final Random random = new Random(0);
     MessageDigest md = MessageDigest.getInstance("SHA-1");
 
     for (int j = 0; j < 1; j++) {
@@ -632,6 +638,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testSparseEstimation() throws Exception
   {
+    final Random random = new Random(0);
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
     for (int i = 0; i < 100; ++i) {
