@@ -66,10 +66,13 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    ByteBuffer dataCopyBuffer = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+    final int size = HyperLogLogCollector.getLatestNumBytesForDenseStorage();
+    ByteBuffer dataCopyBuffer = ByteBuffer.allocateDirect(size);
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
-    mutationBuffer.get(dataCopyBuffer.array());
+    mutationBuffer.limit(position + size);
+    dataCopyBuffer.put(mutationBuffer);
+    dataCopyBuffer.rewind();
     return HyperLogLogCollector.makeCollector(dataCopyBuffer);
   }
 

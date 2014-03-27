@@ -66,12 +66,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop(String dataSource)
   {
-    try {
-      return new Path(config.getStorageDirectory(), dataSource).makeQualified(FileSystem.get(hadoopConfig)).toString();
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
+    return new Path(config.getStorageDirectory(), dataSource).toUri().toString();
   }
 
   @Override

@@ -36,8 +36,6 @@ druid.processing.numThreads=1
 druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
 ```
 
-Note: This will spin up a Historical node with the local filesystem as deep storage.
-
 Production Configs
 ------------------
 These production configs are using S3 as a deep store.
