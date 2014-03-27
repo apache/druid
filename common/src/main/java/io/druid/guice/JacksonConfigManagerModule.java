@@ -66,6 +66,6 @@ public class JacksonConfigManagerModule implements Module
         }
     );
 
-    return new ConfigManager(dbConnector.getDBI(), dbTables, config);
+    return new ConfigManager(dbConnector, dbTables, config);
   }
 }
