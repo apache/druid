@@ -121,9 +121,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         buffer.limit(buffer.position() + numBytes);
-
-        int remaining = buffer.remaining();
-        return (remaining % 3 == 0 || remaining == 1027) ? new HLLCV0(buffer) : new HLLCV1(buffer);
+        return HyperLogLogCollector.makeCollector(buffer);
       }
 
       @Override

@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -70,17 +71,29 @@ public class HyperLogLogCollectorTest
     }
   }
 
-  //  @Test
+
+  /**
+   * This is a very long running test, disabled by default.
+   * It is meant to catch issues when combining a large numer of HLL objects.
+   *
+   * It compares adding all the values to one HLL vs.
+   * splitting up values into HLLs of 100 values each, and folding those HLLs into a single main HLL.
+   *
+   * When reaching very large cardinalities (>> 50,000,000), offsets are mismatched between the main HLL and the ones
+   * with 100 values, requiring  a floating max as described in
+   * http://druid.io/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
+   */
+  @Ignore @Test
   public void testHighCardinalityRollingFold() throws Exception
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
     final HyperLogLogCollector simple = HyperLogLogCollector.makeLatestCollector();
 
-    int count;
     MessageDigest md = MessageDigest.getInstance("SHA-1");
     HyperLogLogCollector tmp = HyperLogLogCollector.makeLatestCollector();
 
-    for (count = 0; count < 5000000; ++count) {
+    int count;
+    for (count = 0; count < 100_000_000; ++count) {
       md.update(Integer.toString(count).getBytes());
 
       byte[] hashed = fn.hashBytes(md.digest()).asBytes();
@@ -110,14 +123,14 @@ public class HyperLogLogCollectorTest
     Assert.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
   }
 
-  //@Test
+  @Ignore @Test
   public void testHighCardinalityRollingFold2() throws Exception
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
     int count;
     long start = System.currentTimeMillis();
 
-    for (count = 0; count < 5000000; ++count) {
+    for (count = 0; count < 50_000_000; ++count) {
       HyperLogLogCollector theCollector = HyperLogLogCollector.makeLatestCollector();
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
