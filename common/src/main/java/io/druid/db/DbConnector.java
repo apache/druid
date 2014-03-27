@@ -205,6 +205,42 @@ public class DbConnector
     }
   }
 
+  public static Void insertOrUpdate(
+      final IDBI dbi,
+      final String tableName,
+      final String keyColumn,
+      final String valueColumn,
+      final String key,
+      final byte[] value
+  ) throws SQLException
+  {
+    final String insertOrUpdateStatement = String.format(
+        isPostgreSQL(dbi) ?
+        "BEGIN;\n" +
+        "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
+        "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
+        "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
+        "COMMIT;" :
+        "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
+        tableName, keyColumn, valueColumn
+    );
+
+    return dbi.withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
+          {
+            handle.createStatement(insertOrUpdateStatement)
+                  .bind("key", key)
+                  .bind("value", value)
+                  .execute();
+            return null;
+          }
+        }
+    );
+  }
+
   public static Boolean isPostgreSQL(final IDBI dbi)
   {
     return dbi.withHandle(
@@ -219,7 +255,7 @@ public class DbConnector
     );
   }
 
-  public static Boolean isPostgreSQL(final Handle handle) throws SQLException
+  protected static Boolean isPostgreSQL(final Handle handle) throws SQLException
   {
     return handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL");
   }
