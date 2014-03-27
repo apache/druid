@@ -482,7 +482,7 @@ public class HyperLogLogCollectorTest
     return retVal;
   }
 
-  //@Test // This test can help when finding potential combinations that are weird, but it's non-deterministic
+  @Ignore @Test // This test can help when finding potential combinations that are weird, but it's non-deterministic
   public void testFoldingwithDifferentOffsets() throws Exception
   {
     for (int j = 0; j < 10; j++) {
@@ -511,7 +511,7 @@ public class HyperLogLogCollectorTest
     }
   }
 
-  //@Test
+  @Ignore @Test
   public void testFoldingwithDifferentOffsets2() throws Exception
   {
     MessageDigest md = MessageDigest.getInstance("SHA-1");
@@ -742,6 +742,54 @@ public class HyperLogLogCollectorTest
     }
   }
 
+  @Test
+  public void testMaxOverflow() {
+    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    collector.add((short)23, (byte)16);
+    Assert.assertEquals(23, collector.getMaxOverflowRegister());
+    Assert.assertEquals(16, collector.getMaxOverflowValue());
+    Assert.assertEquals(0, collector.getRegisterOffset());
+    Assert.assertEquals(0, collector.getNumNonZeroRegisters());
+
+    collector.add((short)56, (byte)17);
+    Assert.assertEquals(56, collector.getMaxOverflowRegister());
+    Assert.assertEquals(17, collector.getMaxOverflowValue());
+
+    collector.add((short)43, (byte)16);
+    Assert.assertEquals(56, collector.getMaxOverflowRegister());
+    Assert.assertEquals(17, collector.getMaxOverflowValue());
+    Assert.assertEquals(0, collector.getRegisterOffset());
+    Assert.assertEquals(0, collector.getNumNonZeroRegisters());
+  }
+
+  @Test
+  public void testMergeMaxOverflow() {
+    // no offset
+    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    collector.add((short)23, (byte)16);
+
+    HyperLogLogCollector other = HyperLogLogCollector.makeLatestCollector();
+    collector.add((short)56, (byte)17);
+
+    collector.fold(other);
+    Assert.assertEquals(56, collector.getMaxOverflowRegister());
+    Assert.assertEquals(17, collector.getMaxOverflowValue());
+
+    // different offsets
+    // fill up all the buckets so we reach a registerOffset of 49
+    collector = HyperLogLogCollector.makeLatestCollector();
+    fillBuckets(collector, (byte) 0, (byte) 49);
+    collector.add((short)23, (byte)65);
+
+    other = HyperLogLogCollector.makeLatestCollector();
+    fillBuckets(other, (byte) 0, (byte) 43);
+    other.add((short)47, (byte)67);
+
+    collector.fold(other);
+    Assert.assertEquals(47, collector.getMaxOverflowRegister());
+    Assert.assertEquals(67, collector.getMaxOverflowValue());
+  }
+
 
   private static void fillBuckets(HyperLogLogCollector collector, byte startOffset, byte endOffset)
   {
@@ -756,7 +804,7 @@ public class HyperLogLogCollectorTest
   }
 
   // Provides a nice printout of error rates as a function of cardinality
-  //@Test
+  @Ignore @Test
   public void showErrorRate() throws Exception
   {
     HashFunction fn = Hashing.murmur3_128();
