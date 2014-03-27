@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 # Tasks
-Tasks are run on middle managers and always operate on a single data source.
+Tasks are run on middle managers and always operate on a single data source. Tasks are submitted using [POST requests](Indexing-Service.html).
 
 There are several different types of tasks.
 
@@ -163,7 +163,7 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 |availabilityGroup|String|An uniqueness identifier for the task. Tasks with the same availability group will always run on different middle managers. Used mainly for replication. |yes|
 |requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
 
-For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see [Realtime Ingestion](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
+For schema, windowPeriod, segmentGranularity, and other configuration information, see [Realtime Ingestion](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
 
 
 Segment Merging Tasks

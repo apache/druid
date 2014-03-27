@@ -39,9 +39,9 @@ Tasks are submitted to the overlord node in the form of JSON objects. Tasks can 
 ```
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/task
 ```
-this will return you the taskId of the submitted task.
+this will return the taskId of the submitted task.
 
-Tasks can cancelled via POST requests to:
+Tasks can be cancelled via POST requests to:
 
 ```
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
