@@ -198,31 +198,31 @@ determine business success or failure.
 
 Finally, another key problem that Metamarkets faced in its early days was to
 allow users and alerting systems to be able to make business decisions in
-``real-time". The time from when an event is created to when that
-event is queryable determines how fast users and systems are able to react to
-potentially catastrophic occurrences in their systems. Popular open source data
-warehousing systems such as Hadoop were unable to provide the sub-second data ingestion
-latencies we required. 
+``real-time". The time from when an event is created to when that event is
+queryable determines how fast interested parties are able to react to
+potentially catastrophic situations in their systems. Popular open source data
+warehousing systems such as Hadoop were unable to provide the sub-second data
+ingestion latencies we required. 
 
 The problems of data exploration, ingestion, and availability span multiple
 industries. Since Druid was open sourced in October 2012, it been deployed as a
 video, network monitoring, operations monitoring, and online advertising
-analytics platform in multiple companies.
+analytics platform at multiple companies.
 
 \section{Architecture}
 \label{sec:architecture}
 A Druid cluster consists of different types of nodes and each node type is
 designed to perform a specific set of things. We believe this design separates
-concerns and simplifies the complexity of the system. The different node types
-operate fairly independent of each other and there is minimal interaction
-among them. Hence, intra-cluster communication failures have minimal impact
-on data availability.
+concerns and simplifies the complexity of the overall system. The different
+node types operate fairly independent of each other and there is minimal
+interaction among them. Hence, intra-cluster communication failures have
+minimal impact on data availability.
 
-To solve complex data analysis problems, the different
-node types come together to form a fully working system. The composition of and
-flow of data in a Druid cluster are shown in Figure~\ref{fig:cluster}. The name Druid comes from the Druid class in many role-playing games: it is a
-shape-shifter, capable of taking on many different forms to fulfill various
-different roles in a group.
+To solve complex data analysis problems, the different node types come together
+to form a fully working system. The name Druid comes from the Druid class in
+many role-playing games: it is a shape-shifter, capable of taking on many
+different forms to fulfill various different roles in a group. The composition
+of and flow of data in a Druid cluster are shown in Figure~\ref{fig:cluster}. 
 
 \begin{figure*}
 \centering
@@ -422,7 +422,7 @@ their results, the broker will cache these results on a per segment basis for
 future use. This process is illustrated in Figure~\ref{fig:caching}. Real-time
 data is never cached and hence requests for real-time data will always be
 forwarded to real-time nodes.  Real-time data is perpetually changing and
-caching the results would be unreliable.
+caching the results is unreliable.
 
 \begin{figure*}
 \centering
@@ -534,7 +534,7 @@ queryable during MySQL outages.
 Data tables in Druid (called \emph{data sources}) are collections of
 timestamped events and partitioned into a set of segments, where each segment
 is typically 5--10 million rows. Formally, we define a segment as a collection
-of rows of data that span some period in time. Segments represent the
+of rows of data that span some period of time. Segments represent the
 fundamental storage unit in Druid and replication and distribution are done at
 a segment level.
  
@@ -839,9 +839,9 @@ minute are shown in Figure~\ref{fig:queries_per_min}. Across all the various
 data sources, average query latency is approximately 550 milliseconds, with
 90\% of queries returning in less than 1 second, 95\% in under 2 seconds, and
 99\% of queries returning in less than 10 seconds.  Occasionally we observe
-spikes in latency, as observed on February 19, in which case network issues on
+spikes in latency, as observed on February 19, where network issues on
 the Memcached instances were compounded by very high query load on one of our
-largest datasources.
+largest data sources.
 
 \begin{figure}
 \centering 
@@ -984,7 +984,7 @@ production workloads with Druid and have made a couple of interesting observatio
 
 \paragraph{Query Patterns}
 Druid is often used to explore data and generate reports on data. In the
-explore use case, the number of queries issued by a single user is much higher
+explore use case, the number of queries issued by a single user are much higher
 than in the reporting use case. Exploratory queries often involve progressively
 adding filters for the same time range to narrow down results. Users tend to
 explore short time intervals of recent data. In the generate report use case,
