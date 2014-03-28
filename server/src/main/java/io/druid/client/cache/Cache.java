@@ -39,6 +39,8 @@ public interface Cache
 
   public CacheStats getStats();
 
+  public boolean isLocal();
+
   public class NamedKey
   {
     final public String namespace;

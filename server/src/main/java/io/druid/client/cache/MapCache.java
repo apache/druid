@@ -149,4 +149,8 @@ public class MapCache implements Cache
     retVal.rewind();
     return retVal;
   }
+
+  public boolean isLocal() {
+    return true;
+  }
 }

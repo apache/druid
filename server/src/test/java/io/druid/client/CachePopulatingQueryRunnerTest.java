@@ -96,16 +96,18 @@ public class CachePopulatingQueryRunnerTest
         return super.toYielder(
             initValue,
             accumulator
-        );    //To change body of overridden methods use File | Settings | File Templates.
+        );
       }
     };
 
+    Cache cache = EasyMock.createMock(Cache.class);
+    // cache populater ignores populating for local cache, so a dummy cache
+    EasyMock.expect(cache.isLocal()).andReturn(false);
     CachePopulatingQueryRunner runner = new CachePopulatingQueryRunner(
         "segment",
         new SegmentDescriptor(new Interval("2011/2012"), "version", 0),
         new DefaultObjectMapper(),
-        // cache populater ignores populating for local cache, so a dummy cache
-        EasyMock.createMock(Cache.class),
+        cache,
         new TopNQueryQueryToolChest(new TopNQueryConfig()),
         new QueryRunner()
         {
