@@ -315,6 +315,7 @@ public class RealtimeIndexTask extends AbstractTask
         final InputRow inputRow;
         try {
           inputRow = firehose.nextRow();
+          long start = System.currentTimeMillis();
           if (inputRow == null) {
             continue;
           }
@@ -342,6 +343,8 @@ public class RealtimeIndexTask extends AbstractTask
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
+          long end = System.currentTimeMillis();
+          fireDepartment.getMetrics().incrementIngestionTime(end - start);
         }
         catch (FormattedException e) {
           log.warn(e, "unparseable line");
