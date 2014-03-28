@@ -26,6 +26,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.metamx.common.MapUtils;
+import com.metamx.common.Pair;
+import com.metamx.common.guava.Comparators;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
@@ -86,7 +89,7 @@ public class DatasourcesResource
       @QueryParam("simple") String simple
   )
   {
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    Response.ResponseBuilder builder = Response.ok();
     if (full != null) {
       return builder.entity(getDataSources()).build();
     } else if (simple != null) {
@@ -133,7 +136,7 @@ public class DatasourcesResource
   {
     DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
     if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return Response.noContent().build();
     }
 
     return Response.ok(dataSource).build();
@@ -147,10 +150,10 @@ public class DatasourcesResource
   )
   {
     if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return Response.noContent().build();
     }
 
-    return Response.status(Response.Status.OK).build();
+    return Response.ok().build();
   }
 
   @DELETE
@@ -163,29 +166,161 @@ public class DatasourcesResource
   )
   {
     if (indexingServiceClient == null) {
-      return Response.ok().entity(ImmutableMap.of("error", "no indexing service found")).build();
+      return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
     if (kill != null && Boolean.valueOf(kill)) {
       try {
         indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
       }
       catch (Exception e) {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(
-                           ImmutableMap.of(
-                               "error",
-                               "Exception occurred. Are you sure you have an indexing service?"
-                           )
-                       )
+        return Response.serverError().entity(
+            ImmutableMap.of(
+                "error",
+                "Exception occurred. Are you sure you have an indexing service?"
+            )
+        )
                        .build();
       }
     } else {
       if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return Response.noContent().build();
       }
     }
 
-    return Response.status(Response.Status.OK).build();
+    return Response.ok().build();
+  }
+
+  @GET
+  @Path("/{dataSourceName}/intervals")
+  @Produces("application/json")
+  public Response getSegmentDataSourceIntervals(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("simple") String simple,
+      @QueryParam("full") String full
+  )
+  {
+    final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+
+    if (dataSource == null) {
+      return Response.noContent().build();
+    }
+
+    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+
+    if (full != null) {
+      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        Map<String, Object> segments = retVal.get(dataSegment.getInterval());
+        if (segments == null) {
+          segments = Maps.newHashMap();
+          retVal.put(dataSegment.getInterval(), segments);
+        }
+
+        Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
+
+        segments.put("id", dataSegment.getIdentifier());
+        segments.put("metadata", val.lhs);
+        segments.put("servers", val.rhs);
+      }
+
+      return Response.ok(retVal).build();
+    }
+
+    if (simple != null) {
+      final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        Map<String, Object> properties = retVal.get(dataSegment.getInterval());
+        if (properties == null) {
+          properties = Maps.newHashMap();
+          properties.put("size", dataSegment.getSize());
+          properties.put("count", 1);
+
+          retVal.put(dataSegment.getInterval(), properties);
+        } else {
+          properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
+          properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
+        }
+      }
+
+      return Response.ok(retVal).build();
+    }
+
+    final Set<Interval> intervals = Sets.newTreeSet(comparator);
+    for (DataSegment dataSegment : dataSource.getSegments()) {
+      intervals.add(dataSegment.getInterval());
+    }
+
+    return Response.ok(intervals).build();
+  }
+
+  @GET
+  @Path("/{dataSourceName}/intervals/{interval}")
+  @Produces("application/json")
+  public Response getSegmentDataSourceSpecificInterval(
+      @PathParam("dataSourceName") String dataSourceName,
+      @PathParam("interval") String interval,
+      @QueryParam("simple") String simple,
+      @QueryParam("full") String full
+  )
+  {
+    final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    final Interval theInterval = new Interval(interval.replace("_", "/"));
+
+    if (dataSource == null || interval == null) {
+      return Response.noContent().build();
+    }
+
+    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    if (full != null) {
+      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        if (theInterval.contains(dataSegment.getInterval())) {
+          Map<String, Object> segments = retVal.get(dataSegment.getInterval());
+          if (segments == null) {
+            segments = Maps.newHashMap();
+            retVal.put(dataSegment.getInterval(), segments);
+          }
+
+          Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
+
+          segments.put("id", dataSegment.getIdentifier());
+          segments.put("metadata", val.lhs);
+          segments.put("servers", val.rhs);
+        }
+      }
+
+      return Response.ok(retVal).build();
+    }
+
+    if (simple != null) {
+      final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        if (theInterval.contains(dataSegment.getInterval())) {
+          Map<String, Object> properties = retVal.get(dataSegment.getInterval());
+          if (properties == null) {
+            properties = Maps.newHashMap();
+            properties.put("size", dataSegment.getSize());
+            properties.put("count", 1);
+
+            retVal.put(dataSegment.getInterval(), properties);
+          } else {
+            properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
+            properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
+          }
+        }
+      }
+
+      return Response.ok(retVal).build();
+    }
+
+    final Set<Interval> intervals = Sets.newTreeSet(comparator);
+    for (DataSegment dataSegment : dataSource.getSegments()) {
+      if (theInterval.contains(dataSegment.getInterval())) {
+        intervals.add(dataSegment.getInterval());
+      }
+    }
+
+    return Response.ok(intervals).build();
   }
 
   @GET
@@ -198,10 +333,10 @@ public class DatasourcesResource
   {
     DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
     if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return Response.noContent().build();
     }
 
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    Response.ResponseBuilder builder = Response.ok();
     if (full != null) {
       return builder.entity(dataSource.getSegments()).build();
     }
@@ -212,7 +347,7 @@ public class DatasourcesResource
             new Function<DataSegment, Object>()
             {
               @Override
-              public Object apply(@Nullable DataSegment segment)
+              public Object apply(DataSegment segment)
               {
                 return segment.getIdentifier();
               }
@@ -231,15 +366,18 @@ public class DatasourcesResource
   {
     DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
     if (dataSource == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return Response.noContent().build();
     }
 
-    for (DataSegment segment : dataSource.getSegments()) {
-      if (segment.getIdentifier().equalsIgnoreCase(segmentId)) {
-        return Response.status(Response.Status.OK).entity(segment).build();
-      }
+    Pair<DataSegment, Set<String>> retVal = getSegment(segmentId);
+
+    if (retVal != null) {
+      return Response.ok(
+          ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs)
+      ).build();
     }
-    return Response.status(Response.Status.NOT_FOUND).build();
+
+    return Response.noContent().build();
   }
 
   @DELETE
@@ -250,10 +388,10 @@ public class DatasourcesResource
   )
   {
     if (!databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return Response.noContent().build();
     }
 
-    return Response.status(Response.Status.OK).build();
+    return Response.ok().build();
   }
 
   @POST
@@ -265,10 +403,27 @@ public class DatasourcesResource
   )
   {
     if (!databaseSegmentManager.enableSegment(segmentId)) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      return Response.noContent().build();
     }
 
-    return Response.status(Response.Status.OK).build();
+    return Response.ok().build();
+  }
+
+  @GET
+  @Path("/{dataSourceName}/tiers")
+  @Produces("application/json")
+  public Response getSegmentDataSourceTiers(
+      @PathParam("dataSourceName") String dataSourceName
+  )
+  {
+    Set<String> retVal = Sets.newHashSet();
+    for (DruidServer druidServer : serverInventoryView.getInventory()) {
+      if(druidServer.getDataSource(dataSourceName) != null) {
+        retVal.add(druidServer.getTier());
+      }
+    }
+
+    return Response.ok(retVal).build();
   }
 
   private DruidDataSource getDataSource(final String dataSourceName)
@@ -344,5 +499,24 @@ public class DatasourcesResource
         )
     );
     return dataSources;
+  }
+
+  private Pair<DataSegment, Set<String>> getSegment(String segmentId)
+  {
+    DataSegment theSegment = null;
+    Set<String> servers = Sets.newHashSet();
+    for (DruidServer druidServer : serverInventoryView.getInventory()) {
+      DataSegment currSegment = druidServer.getSegments().get(segmentId);
+      if (currSegment != null) {
+        theSegment = currSegment;
+        servers.add(druidServer.getHost());
+      }
+    }
+
+    if (theSegment == null) {
+      return null;
+    }
+
+    return new Pair<>(theSegment, servers);
   }
 }
