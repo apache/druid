@@ -1,10 +1,10 @@
-all : druid
+all : druid sigmod zip
 
 druid : druid.pdf
 
-sigmod : sgmd0658-yang.pdf
+sigmod : modii658-yang.pdf
 
-zip : sgmd0658-yang.zip
+zip : modii658-yang.zip
 
 %.zip : %.pdf
 	@rm -f dummy.ps
