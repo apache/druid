@@ -48,6 +48,8 @@ public class ServersResource
     return new ImmutableMap.Builder<String, Object>()
         .put("host", input.getHost())
         .put("tier", input.getTier())
+        .put("type", input.getType())
+        .put("priority", input.getPriority())
         .put("currSize", input.getCurrSize())
         .put("maxSize", input.getMaxSize())
         .build();
