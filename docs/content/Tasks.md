@@ -51,12 +51,12 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using the name of the task file and date-time stamp. |no|
-|granularitySpec|Specifies the segment chunks that the task will process. `type` is always "uniform"; `gran` sets the granularity of the chunks ("DAY" means all segments containing timestamps in the same day, while `intervals` sets the interval that the chunks will cover.|yes|
+|granularitySpec|Specifies the segment chunks that the task will process. `type` is always "uniform"; `gran` sets the granularity of the chunks ("DAY" means all segments containing timestamps in the same day), while `intervals` sets the interval that the chunks will cover.|yes|
 |spatialDimensions|Dimensions to build spatial indexes over. See [Geographic Queries](GeographicQueries.html).|no|
-|aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html)|yes|
+|aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html).|yes|
 |indexGranularity|The rollup granularity for timestamps. See [Realtime Ingestion](Realtime-ingestion.html) for more information. |no|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|no|
-|firehose|The input source of data. For more info, see [Firehose](Firehose.html)|yes|
+|firehose|The input source of data. For more info, see [Firehose](Firehose.html).|yes|
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|no|
 
 ### Index Hadoop Task
