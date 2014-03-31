@@ -278,4 +278,8 @@ public class MemcachedCache implements Cache
     // hash keys to keep things under 250 characters for memcached
     return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
   }
+
+  public boolean isLocal() {
+    return false;
+  }
 }
