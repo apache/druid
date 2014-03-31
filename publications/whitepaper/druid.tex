@@ -238,10 +238,10 @@ streams. Events indexed via these nodes are immediately available for querying.
 The nodes are only concerned with events for some small time range and
 periodically hand off immutable batches of events they have collected over this
 small time range to other nodes in the Druid cluster that are specialized in
-dealing with batches of immutable events. Real-time nodes leverage Zookeeper
+dealing with batches of immutable events. Real-time nodes leverage ZooKeeper
 \cite{hunt2010zookeeper} for coordination with the rest of the Druid cluster.
 The nodes announce their online state and the data they serve in
-Zookeeper.
+ZooKeeper.
 
 Real-time nodes maintain an in-memory index buffer for all incoming events.
 These indexes are incrementally populated as events are ingested and the
@@ -354,15 +354,15 @@ operationally simple; they only know how to load, drop, and serve immutable
 segments.
 
 Similar to real-time nodes, historical nodes announce their online state and
-the data they are serving in Zookeeper. Instructions to load and drop segments
-are sent over Zookeeper and contain information about where the segment is
+the data they are serving in ZooKeeper. Instructions to load and drop segments
+are sent over ZooKeeper and contain information about where the segment is
 located in deep storage and how to decompress and process the segment. Before
 a historical node downloads a particular segment from deep storage, it first
 checks a local cache that maintains information about what segments already
 exist on the node. If information about a segment is not present in the cache,
 the historical node will proceed to download the segment from deep storage.
 This process is shown in Figure~\ref{fig:historical_download}. Once processing
-is complete, the segment is announced in Zookeeper. At this point, the segment
+is complete, the segment is announced in ZooKeeper. At this point, the segment
 is queryable. The local cache also allows for historical nodes to be quickly
 updated and restarted. On startup, the node examines its cache and immediately
 serves whatever data it finds.
@@ -393,16 +393,16 @@ can also be created with much less powerful backing hardware. The
 “cold” cluster would only contain less frequently accessed segments.
 
 \subsubsection{Availability}
-Historical nodes depend on Zookeeper for segment load and unload instructions.
-Should Zookeeper become unavailable, historical nodes are no longer able to serve
+Historical nodes depend on ZooKeeper for segment load and unload instructions.
+Should ZooKeeper become unavailable, historical nodes are no longer able to serve
 new data or drop outdated data, however, because the queries are served over
 HTTP, historical nodes are still able to respond to query requests for
-the data they are currently serving. This means that Zookeeper outages do not
+the data they are currently serving. This means that ZooKeeper outages do not
 impact current data availability on historical nodes.
 
 \subsection{Broker Nodes}
-Broker nodes act as query routers to historical and real-time nodes. Broker
-nodes understand the metadata published in Zookeeper about what segments are
+Broker nodes act as query routers to historical and real-time nodes. They
+understand the metadata published in ZooKeeper about what segments are
 queryable and where those segments are located. Broker nodes route incoming queries
 such that the queries hit the right historical or real-time nodes. Broker nodes
 also merge partial results from historical and real-time nodes before returning
@@ -436,13 +436,13 @@ that all historical nodes fail, it is still possible to query results if those
 results already exist in the cache.
 
 \subsubsection{Availability}
-In the event of a total Zookeeper outage, data is still queryable. If broker
-nodes are unable to communicate to Zookeeper, they use their last known view of
+In the event of a total ZooKeeper outage, data is still queryable. If broker
+nodes are unable to communicate to ZooKeeper, they use their last known view of
 the cluster and continue to forward queries to real-time and historical nodes.
 Broker nodes make the assumption that the structure of the cluster is the same
 as it was before the outage. In practice, this availability model has allowed
 our Druid cluster to continue serving queries for a significant period of time while we
-diagnosed Zookeeper outages.
+diagnosed ZooKeeper outages.
 
 \subsection{Coordinator Nodes}
 Druid coordinator nodes are primarily in charge of data management and
@@ -458,7 +458,7 @@ functionality. The remaining coordinator nodes act as redundant backups.
 A coordinator node runs periodically to determine the current state of the
 cluster. It makes decisions by comparing the expected state of the cluster with
 the actual state of the cluster at the time of the run. As with all Druid
-nodes, coordinator nodes maintain a Zookeeper connection for current cluster
+nodes, coordinator nodes maintain a ZooKeeper connection for current cluster
 information. Coordinator nodes also maintain a connection to a MySQL
 database that contains additional operational parameters and configurations.
 One of the key pieces of information located in the MySQL database is a table
@@ -513,13 +513,13 @@ cluster. Over the last two years, we have never taken downtime in our Druid
 cluster for software upgrades.
 
 \subsubsection{Availability}
-Druid coordinator nodes have Zookeeper and MySQL as external dependencies.
-Coordinator nodes rely on Zookeeper to determine what historical nodes already
-exist in the cluster. If Zookeeper becomes unavailable, the coordinator will no
+Druid coordinator nodes have ZooKeeper and MySQL as external dependencies.
+Coordinator nodes rely on ZooKeeper to determine what historical nodes already
+exist in the cluster. If ZooKeeper becomes unavailable, the coordinator will no
 longer be able to send instructions to assign, balance, and drop segments.
 However, these operations do not affect data availability at all.
 
-The design principle for responding to MySQL and Zookeeper failures is the
+The design principle for responding to MySQL and ZooKeeper failures is the
 same: if an external dependency responsible for coordination fails, the cluster
 maintains the status quo. Druid uses MySQL to store operational management
 information and segment metadata information about what segments should exist
@@ -1063,7 +1063,7 @@ be desired if one data center is situated much closer to users.
 \label{sec:related}
 Cattell \cite{cattell2011scalable} maintains a great summary about existing
 Scalable SQL and NoSQL data stores. Hu \cite{hu2011stream} contributed another
-great summary for streaming databases. Druid feature-wise sits somewhere
+great summary for streaming databases. Druid, feature-wise, sits somewhere
 between Google’s Dremel \cite{melnik2010dremel} and PowerDrill
 \cite{hall2012processing}. Druid has most of the features implemented in Dremel
 (Dremel handles arbitrary nested data structures while Druid only allows for a
@@ -1083,7 +1083,7 @@ Druid allows system wide rolling software updates with no downtime.
 
 Druid is similiar to C-Store \cite{stonebraker2005c} and LazyBase \cite{cipar2012lazybase} in that it has
 two subsystems, a read-optimized subsystem in the historical nodes and a
-write-optimized subsystem in real-time nodes. Real-time nodes are designed to
+write-optimized subsystem in the real-time nodes. Real-time nodes are designed to
 ingest a high volume of append heavy data, and do not support data updates.
 Unlike the two aforementioned systems, Druid is meant for OLAP transactions and
 not OLTP transactions.
