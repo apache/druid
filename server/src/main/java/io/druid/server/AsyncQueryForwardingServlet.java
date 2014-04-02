@@ -180,7 +180,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
                   .build("request/time", requestTime)
           );
 
-
           final OutputStream obj = clientResponse.getObj();
           try {
             resp.flushBuffer();

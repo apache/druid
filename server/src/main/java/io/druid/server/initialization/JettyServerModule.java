@@ -156,11 +156,11 @@ public class JettyServerModule extends JerseyServletModule
 
     final Server server = new Server(threadPool);
 
-    ServerConnector CONNECTOR = new ServerConnector(server);
-    CONNECTOR.setPort(node.getPort());
-    CONNECTOR.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
+    ServerConnector connector = new ServerConnector(server);
+    connector.setPort(node.getPort());
+    connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
 
-    server.setConnectors(new Connector[]{CONNECTOR});
+    server.setConnectors(new Connector[]{connector});
 
     return server;
   }
