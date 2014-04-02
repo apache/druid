@@ -25,24 +25,20 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.client.RoutingDruidClient;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
-import io.druid.query.MapQueryToolChestWarehouse;
-import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChestWarehouse;
-import io.druid.server.QueryResource;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.router.BrokerSelector;
 import io.druid.server.router.CoordinatorRuleManager;
-import io.druid.server.router.RouterQuerySegmentWalker;
-import io.druid.server.router.TierConfig;
+import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.TieredBrokerConfig;
+import io.druid.server.router.TieredBrokerHostSelector;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -71,19 +67,16 @@ public class CliRouter extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            JsonConfigProvider.bind(binder, "druid.router", TierConfig.class);
+            JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
 
             binder.bind(CoordinatorRuleManager.class);
             LifecycleModule.register(binder, CoordinatorRuleManager.class);
 
-            binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
+            binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
+            binder.bind(QueryHostFinder.class).in(LazySingleton.class);
+            binder.bind(RoutingDruidClient.class).in(LazySingleton.class);
 
-            binder.bind(BrokerSelector.class).in(ManageLifecycle.class);
-            binder.bind(QuerySegmentWalker.class).to(RouterQuerySegmentWalker.class).in(LazySingleton.class);
-
-            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-            Jerseys.addResource(binder, QueryResource.class);
-            LifecycleModule.register(binder, QueryResource.class);
+            binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
@@ -92,7 +85,7 @@ public class CliRouter extends ServerRunnable
           @Provides
           @ManageLifecycle
           public ServerDiscoverySelector getCoordinatorServerDiscoverySelector(
-              TierConfig config,
+              TieredBrokerConfig config,
               ServerDiscoveryFactory factory
 
           )

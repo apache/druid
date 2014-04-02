@@ -111,6 +111,14 @@ public class QueryResource
         query = query.withId(queryId);
       }
 
+      if ((boolean) query.getContextValue("block", false)) {
+        log.info("BEGIN WAITING");
+        while (true) {
+          log.info("Still sleeping...");
+          Thread.sleep(10000);
+        }
+      }
+
       requestLogger.log(
           new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
       );
