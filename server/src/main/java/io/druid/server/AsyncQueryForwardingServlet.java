@@ -175,8 +175,8 @@ public class AsyncQueryForwardingServlet extends HttpServlet
                   .setUser5(theQuery.getIntervals().get(0).toString())
                   .setUser6(String.valueOf(theQuery.hasFilters()))
                   .setUser7(req.getRemoteAddr())
+                  .setUser8(theQueryId)
                   .setUser9(theQuery.getDuration().toPeriod().toStandardMinutes().toString())
-                  .setUser10(theQueryId)
                   .build("request/time", requestTime)
           );
 
