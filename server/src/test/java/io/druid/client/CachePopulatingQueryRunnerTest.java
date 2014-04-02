@@ -123,7 +123,7 @@ public class CachePopulatingQueryRunnerTest
 
     Sequence res = runner.run(builder.build());
     // base sequence is not closed yet
-    Assert.assertTrue(closable.isClosed());
+    Assert.assertFalse("sequence must not be closed", closable.isClosed());
     ArrayList results = Sequences.toList(res, new ArrayList());
     Assert.assertTrue(closable.isClosed());
     Assert.assertEquals(expectedRes, results);
