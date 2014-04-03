@@ -20,8 +20,6 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -35,7 +33,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 
 public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
@@ -75,33 +72,26 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
 
     final boolean populateCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.POPULATE_CACHE, "true"))
                                   && strategy != null
-                                  && cacheConfig.isPopulateCache();
-
-    final Sequence<T> results = base.run(query);
-
+                                  && cacheConfig.isPopulateCache()
+                                  // historical only populates distributed cache since the cache lookups are done at broker.
+                                  && !(cache instanceof MapCache);
     if (populateCache) {
-      final Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
+      Sequence<T> results = base.run(query);
+      Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
           segmentIdentifier,
           segmentDescriptor,
           strategy.computeCacheKey(query)
       );
-
-      final Function cacheFn = strategy.prepareForCache();
-      return Sequences.map(
-          results,
-          new Function<T, T>()
-          {
-            @Nullable
-            @Override
-            public T apply(@Nullable T input)
-            {
-              CacheUtil.populate(cache, mapper, key, ImmutableList.of(cacheFn.apply(input)));
-              return input;
-            }
-          }
+      ArrayList<T> resultAsList = Sequences.toList(results, new ArrayList<T>());
+      CacheUtil.populate(
+          cache,
+          mapper,
+          key,
+          Lists.transform(resultAsList, strategy.prepareForCache())
       );
+      return Sequences.simple(resultAsList);
     } else {
-      return results;
+      return base.run(query);
     }
   }
 
