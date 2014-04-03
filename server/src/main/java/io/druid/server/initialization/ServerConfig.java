@@ -32,7 +32,7 @@ public class ServerConfig
   @JsonProperty
   @Min(1)
   // Jetty defaults are whack
-  private int numThreads = Math.max(10, Runtime.getRuntime().availableProcessors() * (17 / 16) + 2);
+  private int numThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2);
 
   @JsonProperty
   @NotNull
