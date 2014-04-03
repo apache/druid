@@ -27,7 +27,7 @@ druid.host=localhost
 druid.service=realtime
 druid.port=8083
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.73"]
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.77"]
 
 
 druid.zk.service.host=localhost
@@ -76,7 +76,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/realtime
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.73","io.druid.extensions:druid-kafka-seven:0.6.73"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.77","io.druid.extensions:druid-kafka-seven:0.6.77"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
