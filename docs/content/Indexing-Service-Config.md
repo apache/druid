@@ -66,7 +66,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/indexer
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.77"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.78"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -115,7 +115,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/worker
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.77","io.druid.extensions:druid-kafka-seven:0.6.77"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.78","io.druid.extensions:druid-kafka-seven:0.6.78"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
