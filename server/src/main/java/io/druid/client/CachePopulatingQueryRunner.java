@@ -20,20 +20,21 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Accumulator;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.client.cache.MapCache;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
-import java.util.ArrayList;
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
 {
@@ -67,29 +68,45 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(Query<T> query)
   {
-
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
     final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null
-                                  && cacheConfig.isPopulateCache()
-                                  // historical only populates distributed cache since the cache lookups are done at broker.
-                                  && !(cache instanceof MapCache);
+                                  && cacheConfig.isPopulateCache();
     if (populateCache) {
-      Sequence<T> results = base.run(query);
-      Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
+      final Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
           segmentIdentifier,
           segmentDescriptor,
           strategy.computeCacheKey(query)
       );
-      ArrayList<T> resultAsList = Sequences.toList(results, new ArrayList<T>());
-      CacheUtil.populate(
-          cache,
-          mapper,
-          key,
-          Lists.transform(resultAsList, strategy.prepareForCache())
+
+      final Function cacheFn = strategy.prepareForCache();
+      final List<Object> cacheResults = Lists.newLinkedList();
+
+      return Sequences.withEffect(
+          Sequences.map(
+              base.run(query),
+              new Function<T, T>()
+              {
+                @Nullable
+                @Override
+                public T apply(@Nullable T input)
+                {
+                  cacheResults.add(cacheFn.apply(input));
+                  return input;
+                }
+              }
+          ),
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              CacheUtil.populate(cache, mapper, key, cacheResults);
+            }
+          },
+          MoreExecutors.sameThreadExecutor()
       );
-      return Sequences.simple(resultAsList);
     } else {
       return base.run(query);
     }

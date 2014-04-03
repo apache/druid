@@ -19,7 +19,10 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.ResourceClosingSequence;
@@ -29,8 +32,10 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.MapCache;
 import io.druid.granularity.AllGranularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -38,11 +43,11 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -52,6 +57,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,13 +74,15 @@ public class CachePopulatingQueryRunnerTest
   @Test
   public void testCachePopulatingQueryRunnerResourceClosing() throws Exception
   {
-    Iterable<Result<TopNResultValue>> expectedRes = makeTopNResults(
+    Object[] objects = new Object[]{
         new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
         new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
         new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
         new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
         new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
-    );
+    };
+
+    Iterable<Result<TopNResultValue>> expectedRes = makeTopNResults(false,objects);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource("ds")
         .dimension("top_dim")
@@ -100,15 +108,18 @@ public class CachePopulatingQueryRunnerTest
       }
     };
 
-    Cache cache = EasyMock.createMock(Cache.class);
-    // cache populater ignores populating for local cache, so a dummy cache
-    EasyMock.expect(cache.isLocal()).andReturn(false);
+    Cache cache = MapCache.create(1024 * 1024);
+
+    String segmentIdentifier = "segment";
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
+
+    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     CachePopulatingQueryRunner runner = new CachePopulatingQueryRunner(
-        "segment",
-        new SegmentDescriptor(new Interval("2011/2012"), "version", 0),
+        segmentIdentifier,
+        segmentDescriptor,
         new DefaultObjectMapper(),
         cache,
-        new TopNQueryQueryToolChest(new TopNQueryConfig()),
+        toolchest,
         new QueryRunner()
         {
           @Override
@@ -121,17 +132,46 @@ public class CachePopulatingQueryRunnerTest
 
     );
 
-    Sequence res = runner.run(builder.build());
+    TopNQuery query = builder.build();
+    CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> cacheStrategy = toolchest.getCacheStrategy(query);
+    Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
+        segmentIdentifier,
+        segmentDescriptor,
+        cacheStrategy.computeCacheKey(query)
+    );
+
+
+    Sequence res = runner.run(query);
     // base sequence is not closed yet
-    Assert.assertTrue(closable.isClosed());
+    Assert.assertFalse("sequence must not be closed", closable.isClosed());
+    Assert.assertNull("cache must be empty", cache.get(cacheKey));
+
     ArrayList results = Sequences.toList(res, new ArrayList());
     Assert.assertTrue(closable.isClosed());
     Assert.assertEquals(expectedRes, results);
 
+    Iterable<Result<TopNResultValue>> expectedCacheRes = makeTopNResults(true, objects);
+
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+
+    byte[] cacheValue = cache.get(cacheKey);
+    Assert.assertNotNull(cacheValue);
+
+    Function<Object, Result<TopNResultValue>> fn = cacheStrategy.pullFromCache();
+    List<Result<TopNResultValue>> cacheResults = Lists.newArrayList(
+        Iterators.transform(
+            objectMapper.readValues(
+                objectMapper.getFactory().createParser(cacheValue),
+                cacheStrategy.getCacheObjectClazz()
+            ),
+            fn
+        )
+    );
+    Assert.assertEquals(expectedCacheRes, cacheResults);
   }
 
   private Iterable<Result<TopNResultValue>> makeTopNResults
-      (Object... objects)
+      (boolean cachedResults, Object... objects)
   {
     List<Result<TopNResultValue>> retVal = Lists.newArrayList();
     int index = 0;
@@ -147,15 +187,27 @@ public class CachePopulatingQueryRunnerTest
         }
         final double imps = ((Number) objects[index + 2]).doubleValue();
         final double rows = ((Number) objects[index + 1]).doubleValue();
-        values.add(
-            ImmutableMap.of(
-                "top_dim", objects[index],
-                "rows", rows,
-                "imps", imps,
-                "impers", imps,
-                "avg_imps_per_row", imps / rows
-            )
-        );
+
+        if (cachedResults) {
+          values.add(
+              ImmutableMap.of(
+                  "top_dim", objects[index],
+                  "rows", rows,
+                  "imps", imps,
+                  "impers", imps
+                  )
+          );
+        } else {
+          values.add(
+              ImmutableMap.of(
+                  "top_dim", objects[index],
+                  "rows", rows,
+                  "imps", imps,
+                  "impers", imps,
+                  "avg_imps_per_row", imps / rows
+              )
+          );
+        }
         index += 3;
       }
 
