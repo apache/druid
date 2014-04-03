@@ -20,20 +20,20 @@
 package io.druid.server.router;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.client.selector.HostSelector;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.query.Query;
+import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -42,23 +42,23 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
-public class BrokerSelector<T>
+public class TieredBrokerHostSelector<T> implements HostSelector<T>
 {
-  private static EmittingLogger log = new EmittingLogger(BrokerSelector.class);
+  private static EmittingLogger log = new EmittingLogger(TieredBrokerHostSelector.class);
 
   private final CoordinatorRuleManager ruleManager;
-  private final TierConfig tierConfig;
+  private final TieredBrokerConfig tierConfig;
   private final ServerDiscoveryFactory serverDiscoveryFactory;
-  private final ConcurrentHashMap<String, ServerDiscoverySelector> selectorMap = new ConcurrentHashMap<String, ServerDiscoverySelector>();
+  private final ConcurrentHashMap<String, ServerDiscoverySelector> selectorMap = new ConcurrentHashMap<>();
 
   private final Object lock = new Object();
 
   private volatile boolean started = false;
 
   @Inject
-  public BrokerSelector(
+  public TieredBrokerHostSelector(
       CoordinatorRuleManager ruleManager,
-      TierConfig tierConfig,
+      TieredBrokerConfig tierConfig,
       ServerDiscoveryFactory serverDiscoveryFactory
   )
   {
@@ -112,6 +112,12 @@ public class BrokerSelector<T>
     }
   }
 
+  @Override
+  public String getDefaultServiceName()
+  {
+    return tierConfig.getDefaultBrokerServiceName();
+  }
+
   public Pair<String, ServerDiscoverySelector> select(final Query<T> query)
   {
     synchronized (lock) {
@@ -120,35 +126,46 @@ public class BrokerSelector<T>
       }
     }
 
-    List<Rule> rules = ruleManager.getRulesWithDefault((query.getDataSource()).getName());
+    String brokerServiceName = null;
 
-    // find the rule that can apply to the entire set of intervals
-    DateTime now = new DateTime();
-    int lastRulePosition = -1;
-    LoadRule baseRule = null;
+    // Somewhat janky way of always selecting highest priority broker for this type of query
+    if (query instanceof TimeBoundaryQuery) {
+      brokerServiceName = Iterables.getFirst(
+          tierConfig.getTierToBrokerMap().values(),
+          tierConfig.getDefaultBrokerServiceName()
+      );
+    }
 
-    for (Interval interval : query.getIntervals()) {
-      int currRulePosition = 0;
-      for (Rule rule : rules) {
-        if (rule instanceof LoadRule && currRulePosition > lastRulePosition && rule.appliesTo(interval, now)) {
-          lastRulePosition = currRulePosition;
-          baseRule = (LoadRule) rule;
+    if (brokerServiceName == null) {
+      List<Rule> rules = ruleManager.getRulesWithDefault((query.getDataSource()).getName());
+
+      // find the rule that can apply to the entire set of intervals
+      DateTime now = new DateTime();
+      int lastRulePosition = -1;
+      LoadRule baseRule = null;
+
+      for (Interval interval : query.getIntervals()) {
+        int currRulePosition = 0;
+        for (Rule rule : rules) {
+          if (rule instanceof LoadRule && currRulePosition > lastRulePosition && rule.appliesTo(interval, now)) {
+            lastRulePosition = currRulePosition;
+            baseRule = (LoadRule) rule;
+            break;
+          }
+          currRulePosition++;
+        }
+      }
+
+      if (baseRule == null) {
+        return null;
+      }
+
+      // in the baseRule, find the broker of highest priority
+      for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
+        if (baseRule.getTieredReplicants().containsKey(entry.getKey())) {
+          brokerServiceName = entry.getValue();
           break;
         }
-        currRulePosition++;
-      }
-    }
-
-    if (baseRule == null) {
-      return null;
-    }
-
-    // in the baseRule, find the broker of highest priority
-    String brokerServiceName = null;
-    for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
-      if (baseRule.getTieredReplicants().containsKey(entry.getKey())) {
-        brokerServiceName = entry.getValue();
-        break;
       }
     }
 

@@ -50,11 +50,11 @@ import java.util.List;
 
 /**
  */
-public class BrokerSelectorTest
+public class TieredBrokerHostSelectorTest
 {
   private ServerDiscoveryFactory factory;
   private ServerDiscoverySelector selector;
-  private BrokerSelector brokerSelector;
+  private TieredBrokerHostSelector brokerSelector;
 
   @Before
   public void setUp() throws Exception
@@ -62,9 +62,9 @@ public class BrokerSelectorTest
     factory = EasyMock.createMock(ServerDiscoveryFactory.class);
     selector = EasyMock.createMock(ServerDiscoverySelector.class);
 
-    brokerSelector = new BrokerSelector(
+    brokerSelector = new TieredBrokerHostSelector(
         new TestRuleManager(null, null, null, null),
-        new TierConfig()
+        new TieredBrokerConfig()
         {
           @Override
           public LinkedHashMap<String, String> getTierToBrokerMap()
@@ -112,11 +112,12 @@ public class BrokerSelectorTest
   public void testBasicSelect() throws Exception
   {
     String brokerName = (String) brokerSelector.select(
-        new TimeBoundaryQuery(
-            new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01"))),
-            null
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .granularity("all")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
+              .intervals(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01")))
+              .build()
     ).lhs;
 
     Assert.assertEquals("coldBroker", brokerName);
@@ -127,11 +128,12 @@ public class BrokerSelectorTest
   public void testBasicSelect2() throws Exception
   {
     String brokerName = (String) brokerSelector.select(
-        new TimeBoundaryQuery(
-            new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2013-08-31/2013-09-01"))),
-            null
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .granularity("all")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
+              .intervals(Arrays.<Interval>asList(new Interval("2013-08-31/2013-09-01")))
+              .build()
     ).lhs;
 
     Assert.assertEquals("hotBroker", brokerName);
@@ -141,11 +143,12 @@ public class BrokerSelectorTest
   public void testSelectMatchesNothing() throws Exception
   {
     Pair retVal = brokerSelector.select(
-        new TimeBoundaryQuery(
-            new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2010-08-31/2010-09-01"))),
-            null
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .granularity("all")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
+              .intervals(Arrays.<Interval>asList(new Interval("2010-08-31/2010-09-01")))
+              .build()
     );
 
     Assert.assertEquals(null, retVal);
@@ -199,7 +202,7 @@ public class BrokerSelectorTest
     public TestRuleManager(
         @Global HttpClient httpClient,
         @Json ObjectMapper jsonMapper,
-        Supplier<TierConfig> config,
+        Supplier<TieredBrokerConfig> config,
         ServerDiscoverySelector selector
     )
     {
