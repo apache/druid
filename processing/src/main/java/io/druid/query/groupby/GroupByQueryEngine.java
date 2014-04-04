@@ -182,7 +182,7 @@ public class GroupByQueryEngine
 
         final DimensionSelector dimSelector = dims.get(0);
         final IndexedInts row = dimSelector.getRow();
-        if (row.size() == 0) {
+        if (row == null || row.size() == 0) {
           ByteBuffer newKey = key.duplicate();
           newKey.putInt(dimSelector.getValueCardinality());
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
