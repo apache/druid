@@ -17,13 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.segment.realtime.firehose;
+
+import com.google.common.base.Optional;
 
 /**
- * Objects that can be registered with a {@link ServiceAnnouncingChatHandlerProvider} and provide http endpoints for indexing-related
- * objects. This interface is empty because it only exists to signal intent. The actual http endpoints are provided
- * through JAX-RS annotations on the {@link ChatHandler} objects.
  */
-public interface ChatHandler
+public interface ChatHandlerProvider
 {
+  public void register(final String key, ChatHandler handler);
+
+  public void unregister(final String key);
+
+  public Optional<ChatHandler> get(final String key);
 }

@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -33,6 +33,8 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.segment.realtime.firehose.ChatHandler;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -48,10 +50,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
- * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
+ * Builds firehoses that accept events through the {@link io.druid.segment.realtime.firehose.EventReceiver} interface. Can also register these
+ * firehoses with an {@link io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider}.
  */
-@JsonTypeName("receiver")
 public class EventReceiverFirehoseFactory implements FirehoseFactory
 {
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
