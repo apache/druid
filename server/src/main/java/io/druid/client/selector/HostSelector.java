@@ -17,34 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization;
+package io.druid.client.selector;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
-
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import com.metamx.common.Pair;
+import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.query.Query;
 
 /**
  */
-public class ServerConfig
+public interface HostSelector<T>
 {
-  @JsonProperty
-  @Min(1)
-  // Jetty defaults are whack
-  private int numThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2);
+  public String getDefaultServiceName();
 
-  @JsonProperty
-  @NotNull
-  private Period maxIdleTime = new Period("PT5m");
-
-  public int getNumThreads()
-  {
-    return numThreads;
-  }
-
-  public Period getMaxIdleTime()
-  {
-    return maxIdleTime;
-  }
+  public Pair<String, ServerDiscoverySelector> select(Query<T> query);
 }

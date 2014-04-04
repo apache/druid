@@ -19,18 +19,24 @@
 
 package io.druid.server.http;
 
+import com.google.api.client.util.Lists;
 import com.google.api.client.util.Maps;
+import com.google.common.base.Function;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
+import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
@@ -85,5 +91,56 @@ public class TiersResource
     }
 
     return builder.entity(tiers).build();
+  }
+
+  @GET
+  @Path("/{tierName}")
+  @Produces("application/json")
+  public Response getTierDatasources(
+      @PathParam("tierName") String tierName,
+      @QueryParam("simple") String simple
+  )
+  {
+    if (simple != null) {
+      Table<String, Interval, Map<String, Object>> retVal = HashBasedTable.create();
+      for (DruidServer druidServer : serverInventoryView.getInventory()) {
+        if (druidServer.getTier().equalsIgnoreCase(tierName)) {
+          for (DataSegment dataSegment : druidServer.getSegments().values()) {
+            Map<String, Object> properties = retVal.get(dataSegment.getDataSource(), dataSegment.getInterval());
+            if (properties == null) {
+              properties = Maps.newHashMap();
+              retVal.put(dataSegment.getDataSource(), dataSegment.getInterval(), properties);
+            }
+            properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
+            properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
+          }
+        }
+      }
+
+      return Response.ok(retVal.rowMap()).build();
+    }
+
+    Set<String> retVal = Sets.newHashSet();
+    for (DruidServer druidServer : serverInventoryView.getInventory()) {
+      if (druidServer.getTier().equalsIgnoreCase(tierName)) {
+        retVal.addAll(
+            Lists.newArrayList(
+                Iterables.transform(
+                    druidServer.getDataSources(),
+                    new Function<DruidDataSource, String>()
+                    {
+                      @Override
+                      public String apply(DruidDataSource input)
+                      {
+                        return input.getName();
+                      }
+                    }
+                )
+            )
+        );
+      }
+    }
+
+    return Response.ok(retVal).build();
   }
 }

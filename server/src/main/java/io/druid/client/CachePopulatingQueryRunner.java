@@ -20,6 +20,8 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.client.cache.Cache;
@@ -72,22 +74,25 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
                                   && strategy != null
                                   && cacheConfig.isPopulateCache()
                                   // historical only populates distributed cache since the cache lookups are done at broker.
-                                  && !(cache instanceof MapCache) ;
-    Sequence<T> results = base.run(query);
+                                  && !(cache instanceof MapCache);
     if (populateCache) {
+      Sequence<T> results = base.run(query);
       Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
           segmentIdentifier,
           segmentDescriptor,
           strategy.computeCacheKey(query)
       );
+      ArrayList<T> resultAsList = Sequences.toList(results, new ArrayList<T>());
       CacheUtil.populate(
           cache,
           mapper,
           key,
-          Sequences.toList(Sequences.map(results, strategy.prepareForCache()), new ArrayList())
+          Lists.transform(resultAsList, strategy.prepareForCache())
       );
+      return Sequences.simple(resultAsList);
+    } else {
+      return base.run(query);
     }
-    return results;
-
   }
+
 }

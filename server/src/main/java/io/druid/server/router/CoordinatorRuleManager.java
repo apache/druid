@@ -57,7 +57,7 @@ public class CoordinatorRuleManager
 
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
-  private final Supplier<TierConfig> config;
+  private final Supplier<TieredBrokerConfig> config;
   private final ServerDiscoverySelector selector;
 
   private final StatusResponseHandler responseHandler;
@@ -73,7 +73,7 @@ public class CoordinatorRuleManager
   public CoordinatorRuleManager(
       @Global HttpClient httpClient,
       @Json ObjectMapper jsonMapper,
-      Supplier<TierConfig> config,
+      Supplier<TieredBrokerConfig> config,
       ServerDiscoverySelector selector
   )
   {

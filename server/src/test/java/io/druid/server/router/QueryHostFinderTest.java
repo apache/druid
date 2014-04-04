@@ -40,20 +40,20 @@ import java.util.LinkedHashMap;
 
 /**
  */
-public class TierAwareQueryRunnerTest
+public class QueryHostFinderTest
 {
   private ServerDiscoverySelector selector;
-  private BrokerSelector brokerSelector;
-  private TierConfig config;
+  private TieredBrokerHostSelector brokerSelector;
+  private TieredBrokerConfig config;
   private Server server;
 
   @Before
   public void setUp() throws Exception
   {
     selector = EasyMock.createMock(ServerDiscoverySelector.class);
-    brokerSelector = EasyMock.createMock(BrokerSelector.class);
+    brokerSelector = EasyMock.createMock(TieredBrokerHostSelector.class);
 
-    config = new TierConfig()
+    config = new TieredBrokerConfig()
     {
       @Override
       public LinkedHashMap<String, String> getTierToBrokerMap()
@@ -118,12 +118,8 @@ public class TierAwareQueryRunnerTest
     EasyMock.expect(selector.pick()).andReturn(server).once();
     EasyMock.replay(selector);
 
-    TierAwareQueryRunner queryRunner = new TierAwareQueryRunner(
-        null,
-        null,
-        null,
-        brokerSelector,
-        config
+    QueryHostFinder queryRunner = new QueryHostFinder(
+        brokerSelector
     );
 
     Server server = queryRunner.findServer(

@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 
 /**
  */
-public class TierConfig
+public class TieredBrokerConfig
 {
   @JsonProperty
   @NotNull
