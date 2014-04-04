@@ -91,8 +91,8 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.manager.segments", DatabaseSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
 
-            //binder.bind(RedirectFilter.class).in(LazySingleton.class);
-            //binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
+            binder.bind(RedirectFilter.class).in(LazySingleton.class);
+            binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
 
             binder.bind(DatabaseSegmentManager.class)
                   .toProvider(DatabaseSegmentManagerProvider.class)
