@@ -19,10 +19,14 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.client.cache.Cache;
@@ -34,9 +38,11 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
-public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
+public class CachingQueryRunner<T> implements QueryRunner<T>
 {
 
   private final String segmentIdentifier;
@@ -47,9 +53,10 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
   private final ObjectMapper mapper;
   private final CacheConfig cacheConfig;
 
-  public CachePopulatingQueryRunner(
+  public CachingQueryRunner(
       String segmentIdentifier,
-      SegmentDescriptor segmentDescriptor, ObjectMapper mapper,
+      SegmentDescriptor segmentDescriptor,
+      ObjectMapper mapper,
       Cache cache,
       QueryToolChest toolchest,
       QueryRunner<T> base,
@@ -73,13 +80,57 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
     final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null
                                   && cacheConfig.isPopulateCache();
-    if (populateCache) {
-      final Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
-          segmentIdentifier,
-          segmentDescriptor,
-          strategy.computeCacheKey(query)
-      );
 
+    final boolean useCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.USE_CACHE, "true"))
+        && strategy != null
+        && cacheConfig.isPopulateCache();
+
+    final Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
+        segmentIdentifier,
+        segmentDescriptor,
+        strategy.computeCacheKey(query)
+    );
+
+    if(useCache) {
+      final Function cacheFn = strategy.pullFromCache();
+      final byte[] cachedResult = cache.get(key);
+      if(cachedResult != null) {
+        final TypeReference cacheObjectClazz = strategy.getCacheObjectClazz();
+
+        return Sequences.map(
+            new BaseSequence<>(
+                new BaseSequence.IteratorMaker<T, Iterator<T>>()
+                {
+                  @Override
+                  public Iterator<T> make()
+                  {
+                    try {
+                      if (cachedResult.length == 0) {
+                        return Iterators.emptyIterator();
+                      }
+
+                      return mapper.readValues(
+                          mapper.getFactory().createParser(cachedResult),
+                          cacheObjectClazz
+                      );
+                    }
+                    catch (IOException e) {
+                      throw Throwables.propagate(e);
+                    }
+                  }
+
+                  @Override
+                  public void cleanup(Iterator<T> iterFromMake)
+                  {
+                  }
+                }
+            ),
+            cacheFn
+        );
+      }
+    }
+
+    if (populateCache) {
       final Function cacheFn = strategy.prepareForCache();
       final List<Object> cacheResults = Lists.newLinkedList();
 

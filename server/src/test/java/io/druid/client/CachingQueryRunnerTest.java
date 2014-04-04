@@ -19,9 +19,9 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
@@ -57,12 +57,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class CachePopulatingQueryRunnerTest
+public class CachingQueryRunnerTest
 {
 
   private static final List<AggregatorFactory> AGGS = Arrays.asList(
@@ -71,17 +70,17 @@ public class CachePopulatingQueryRunnerTest
       new LongSumAggregatorFactory("impers", "imps")
   );
 
-  @Test
-  public void testCachePopulatingQueryRunnerResourceClosing() throws Exception
-  {
-    Object[] objects = new Object[]{
-        new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-        new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-        new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-        new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-        new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
-    };
+  private static final Object[] objects = new Object[]{
+      new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+      new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+      new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+      new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+      new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+  };
 
+  @Test
+  public void testCloseAndPopulate() throws Exception
+  {
     Iterable<Result<TopNResultValue>> expectedRes = makeTopNResults(false,objects);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource("ds")
@@ -114,10 +113,11 @@ public class CachePopulatingQueryRunnerTest
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
 
     TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
-    CachePopulatingQueryRunner runner = new CachePopulatingQueryRunner(
+    DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+    CachingQueryRunner runner = new CachingQueryRunner(
         segmentIdentifier,
         segmentDescriptor,
-        new DefaultObjectMapper(),
+        objectMapper,
         cache,
         toolchest,
         new QueryRunner()
@@ -152,8 +152,6 @@ public class CachePopulatingQueryRunnerTest
 
     Iterable<Result<TopNResultValue>> expectedCacheRes = makeTopNResults(true, objects);
 
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
@@ -168,6 +166,64 @@ public class CachePopulatingQueryRunnerTest
         )
     );
     Assert.assertEquals(expectedCacheRes, cacheResults);
+  }
+
+  @Test
+  public void testUseCache() throws Exception
+  {
+    DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+    Iterable<Result<TopNResultValue>> expectedResults = makeTopNResults(true, objects);
+    String segmentIdentifier = "segment";
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
+    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+
+    final TopNQueryBuilder builder = new TopNQueryBuilder()
+        .dataSource("ds")
+        .dimension("top_dim")
+        .metric("imps")
+        .threshold(3)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(AGGS)
+        .granularity(AllGranularity.ALL);
+
+    final TopNQuery query = builder.build();
+
+    CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> cacheStrategy = toolchest.getCacheStrategy(query);
+    Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
+        segmentIdentifier,
+        segmentDescriptor,
+        cacheStrategy.computeCacheKey(query)
+    );
+
+    Cache cache = MapCache.create(1024 * 1024);
+    CacheUtil.populate(
+        cache,
+        objectMapper,
+        cacheKey,
+        Iterables.transform(expectedResults, cacheStrategy.prepareForCache())
+    );
+
+    CachingQueryRunner runner = new CachingQueryRunner(
+        segmentIdentifier,
+        segmentDescriptor,
+        objectMapper,
+        cache,
+        toolchest,
+        // return an empty sequence since results should get pulled from cache
+        new QueryRunner()
+        {
+          @Override
+          public Sequence run(Query query)
+          {
+            return Sequences.empty();
+          }
+        },
+        new CacheConfig()
+
+    );
+
+    List<Object> results = Sequences.toList(runner.run(query), new ArrayList());
+    Assert.assertEquals(expectedResults, results);
   }
 
   private Iterable<Result<TopNResultValue>> makeTopNResults

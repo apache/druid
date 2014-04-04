@@ -29,7 +29,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.client.CachePopulatingQueryRunner;
+import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.CountingMap;
@@ -410,7 +410,7 @@ public class ServerManager implements QuerySegmentWalker
             new BySegmentQueryRunner<T>(
                 adapter.getIdentifier(),
                 adapter.getDataInterval().getStart(),
-                new CachePopulatingQueryRunner<T>(
+                new CachingQueryRunner<T>(
                     adapter.getIdentifier(),
                     segmentDescriptor,
                     objectMapper,
