@@ -7,7 +7,7 @@ The plumber handles generated segments both while they are being generated and w
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|type|String|Specifies the type of plumber. Each value will have its own configuration schema. Plumbers packaged with Druid are described below.|yes|
+|type|String|Specifies the type of plumber. Each value will have its own configuration schema. Plumbers packaged with Druid are described below. The default type is "realtime".|yes|
 
 The following can be configured on the plumber:
 
@@ -16,11 +16,10 @@ The following can be configured on the plumber:
 * `maxPendingPersists` is how many persists a plumber can do concurrently without starting to block.
 * `segmentGranularity` specifies the granularity of the segment, or the amount of time a segment will represent.
 * `rejectionPolicy` controls how data sets the data acceptance policy for creating and handing off segments. The following policies are available:
-    * `serverTime` &ndash; The default policy, it is optimal for current data that is generated and ingested in real time. Uses `windowPeriod` to accept only those events that are inside the window looking forward and back.
+    * `serverTime` &ndash; The recommended policy for "current time" data, it is optimal for current data that is generated and ingested in real time. Uses `windowPeriod` to accept only those events that are inside the window looking forward and back.
+    * `messageTime` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are rejected if they are less than `windowPeriod` from the event with the latest timestamp. Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod`.
     * `none` &ndash; Never hands off data unless shutdown() is called on the configured firehose.
     * `test` &ndash; Useful for testing that handoff is working, *not useful in terms of data integrity*. It uses the sum of `segmentGranularity` plus `windowPeriod` as a window.
-
-
 
 Available Plumbers
 ------------------

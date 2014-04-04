@@ -159,6 +159,10 @@ public class DatasourcesResource
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
 
+      if (druidDataSource == null) {
+        continue;
+      }
+
       long dataSourceSegmentSize = 0;
       for (DataSegment dataSegment : druidDataSource.getSegments()) {
         dataSourceSegmentSize += dataSegment.getSize();
@@ -270,10 +274,7 @@ public class DatasourcesResource
         }
 
         Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
-
-        segments.put("id", dataSegment.getIdentifier());
-        segments.put("metadata", val.lhs);
-        segments.put("servers", val.rhs);
+        segments.put(dataSegment.getIdentifier(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
       }
 
       return Response.ok(retVal).build();
@@ -335,10 +336,7 @@ public class DatasourcesResource
           }
 
           Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
-
-          segments.put("id", dataSegment.getIdentifier());
-          segments.put("metadata", val.lhs);
-          segments.put("servers", val.rhs);
+          segments.put(dataSegment.getIdentifier(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
         }
       }
 
@@ -366,14 +364,14 @@ public class DatasourcesResource
       return Response.ok(retVal).build();
     }
 
-    final Set<Interval> intervals = Sets.newTreeSet(comparator);
+    final Set<String> retVal = Sets.newTreeSet(Comparators.inverse(String.CASE_INSENSITIVE_ORDER));
     for (DataSegment dataSegment : dataSource.getSegments()) {
       if (theInterval.contains(dataSegment.getInterval())) {
-        intervals.add(dataSegment.getInterval());
+        retVal.add(dataSegment.getIdentifier());
       }
     }
 
-    return Response.ok(intervals).build();
+    return Response.ok(retVal).build();
   }
 
   @GET

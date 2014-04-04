@@ -46,7 +46,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(holderPwd, "/");
     root.setResourceBase(DruidCoordinator.class.getClassLoader().getResource("static").toExternalForm());
-    root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+    //root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
     root.addFilter(GzipFilter.class, "/*", null);
 
     // Can't use '/*' here because of Guice and Jetty static content conflicts

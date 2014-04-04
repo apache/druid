@@ -54,10 +54,8 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
     "gran": "day"
   },
   "pathSpec": {
-    "type": "granularity",
-    "dataGranularity": "hour",
-    "inputPath": "s3n:\/\/billy-bucket\/the\/data\/is\/here",
-    "filePattern": ".*"
+    "type": "static",
+    "paths" : "example/path/data.gz,example/path/moredata.gz"
   },
   "rollupSpec": {
     "aggs": [
@@ -115,6 +113,20 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 ### Path specification
 
 There are multiple types of path specification:
+
+##### `static`
+
+Is a type of data loader where a static path to where the data files are located is passed.
+
+|property|description|required?|
+|--------|-----------|---------|
+|paths|A String of input paths indicating where the raw data is located.|yes|
+
+For example, using the static input paths:
+
+```
+"paths" : "s3n://billy-bucket/the/data/is/here/data.gz, s3n://billy-bucket/the/data/is/here/moredata.gz, s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
+```
 
 ##### `granularity`
 

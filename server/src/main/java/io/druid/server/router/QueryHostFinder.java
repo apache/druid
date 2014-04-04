@@ -91,7 +91,7 @@ public class QueryHostFinder<T>
       return null;
     }
 
-    log.info("Selected [%s]", server.getHost());
+    log.debug("Selected [%s]", server.getHost());
 
     return server.getHost();
   }
