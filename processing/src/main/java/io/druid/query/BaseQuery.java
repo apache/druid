@@ -140,48 +140,39 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public boolean getContextBySegment(boolean defaultValue)
   {
-    Object val = context.get("bySegment");
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Boolean.parseBoolean((String) val);
-    } else if (val instanceof Integer) {
-      return (boolean) val;
-    } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
-    }
+    return parseBoolean("bySegment", defaultValue);
   }
 
   @Override
   public boolean getContextPopulateCache(boolean defaultValue)
   {
-    Object val = context.get("populateCache");
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Boolean.parseBoolean((String) val);
-    } else if (val instanceof Integer) {
-      return (boolean) val;
-    } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
-    }
+    return parseBoolean("populateCache", defaultValue);
   }
 
   @Override
   public boolean getContextUseCache(boolean defaultValue)
   {
-    Object val = context.get("useCache");
+    return parseBoolean("useCache", defaultValue);
+  }
+
+  @Override
+  public boolean getContextFinalize(boolean defaultValue)
+  {
+    return parseBoolean("finalize", defaultValue);
+  }
+
+  private boolean parseBoolean(String key, boolean defaultValue)
+  {
+    Object val = context.get(key);
     if (val == null) {
       return defaultValue;
     }
     if (val instanceof String) {
       return Boolean.parseBoolean((String) val);
-    } else if (val instanceof Integer) {
+    } else if (val instanceof Boolean) {
       return (boolean) val;
     } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
     }
   }
 
