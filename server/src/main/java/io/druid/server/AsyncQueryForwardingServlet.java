@@ -239,6 +239,11 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
   private String makeUrl(String host, HttpServletRequest req)
   {
+    String queryString = req.getQueryString();
+
+    if (queryString == null) {
+      return String.format("http://%s%s", host, req.getRequestURI());
+    }
     return String.format("http://%s%s?%s", host, req.getRequestURI(), req.getQueryString());
   }
 }
