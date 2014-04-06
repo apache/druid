@@ -210,7 +210,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             @Override
             public void run()
             {
-              routingDruidClient.run(host, theQuery, responseHandler);
+              routingDruidClient.run(makeUrl(host, req), theQuery, responseHandler);
             }
           }
       );
@@ -235,5 +235,10 @@ public class AsyncQueryForwardingServlet extends HttpServlet
          .addData("peer", req.getRemoteAddr())
          .emit();
     }
+  }
+
+  private String makeUrl(String host, HttpServletRequest req)
+  {
+    return String.format("http://%s%s?%s", host, req.getRequestURI(), req.getQueryString());
   }
 }
