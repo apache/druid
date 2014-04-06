@@ -70,7 +70,7 @@ public class CachePopulatingQueryRunner<T> implements QueryRunner<T>
 
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
-    final boolean populateCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.POPULATE_CACHE, "true"))
+    final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null
                                   && cacheConfig.isPopulateCache()
                                   // historical only populates distributed cache since the cache lookups are done at broker.

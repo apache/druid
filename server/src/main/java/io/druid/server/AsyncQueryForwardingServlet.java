@@ -106,8 +106,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       }
 
       req.setAttribute(DISPATCHED, true);
-      resp.setStatus(200);
-      resp.setContentType("application/x-javascript");
 
       query = objectMapper.readValue(req.getInputStream(), Query.class);
       queryId = query.getId();
@@ -132,6 +130,9 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         @Override
         public ClientResponse<OutputStream> handleResponse(HttpResponse response)
         {
+          resp.setStatus(response.getStatus().getCode());
+          resp.setContentType("application/x-javascript");
+
           byte[] bytes = getContentBytes(response.getContent());
           if (bytes.length > 0) {
             try {

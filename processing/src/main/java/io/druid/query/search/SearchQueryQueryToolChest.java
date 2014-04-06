@@ -294,7 +294,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(query);
       }
 
-      final boolean isBySegment = Boolean.parseBoolean((String) query.getContextValue("bySegment", "false"));
+      final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
           runner.run(query.withLimit(config.getMaxSearchLimit())),

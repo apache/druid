@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
@@ -118,6 +119,70 @@ public abstract class BaseQuery<T> implements Query<T>
   {
     ContextType retVal = getContextValue(key);
     return retVal == null ? defaultValue : retVal;
+  }
+
+  @Override
+  public int getContextPriority(int defaultValue)
+  {
+    Object val = context.get("priority");
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Integer.parseInt((String) val);
+    } else if (val instanceof Integer) {
+      return (int) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
+
+  @Override
+  public boolean getContextBySegment(boolean defaultValue)
+  {
+    Object val = context.get("bySegment");
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Integer) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
+
+  @Override
+  public boolean getContextPopulateCache(boolean defaultValue)
+  {
+    Object val = context.get("populateCache");
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Integer) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
+
+  @Override
+  public boolean getContextUseCache(boolean defaultValue)
+  {
+    Object val = context.get("useCache");
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Integer) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
   }
 
   protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)

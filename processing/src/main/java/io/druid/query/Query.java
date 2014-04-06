@@ -74,6 +74,13 @@ public interface Query<T>
 
   public <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
+  // For backwards compatibility
+  public int getContextPriority(int defaultValue);
+  public boolean getContextBySegment(boolean defaultValue);
+  public boolean getContextPopulateCache(boolean defaultValue);
+  public boolean getContextUseCache(boolean defaultValue);
+  public boolean getContextFinalize(boolean defaultValue);
+
   public Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);

@@ -48,8 +48,8 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
-    final boolean isBySegment = Boolean.parseBoolean(query.<String>getContextValue("bySegment"));
-    final boolean shouldFinalize = Boolean.parseBoolean(query.getContextValue("finalize", "true"));
+    final boolean isBySegment = query.getContextBySegment(false);
+    final boolean shouldFinalize = query.getContextFinalize(true);
     if (shouldFinalize) {
       Function<T, T> finalizerFn;
       if (isBySegment) {
@@ -84,8 +84,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
             );
           }
         };
-      }
-      else {
+      } else {
         finalizerFn = toolChest.makeMetricManipulatorFn(
             query,
             new MetricManipulationFn()
@@ -100,7 +99,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
       }
 
       return Sequences.map(
-          baseRunner.run(query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", "false"))),
+          baseRunner.run(query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false))),
           finalizerFn
       );
     }
