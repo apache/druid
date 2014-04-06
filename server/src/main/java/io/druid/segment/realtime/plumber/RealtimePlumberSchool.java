@@ -117,6 +117,12 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.rejectionPolicyFactory = factory;
   }
 
+  @JsonProperty("maxPendingPersists")
+  public void setDefaultMaxPendingPersists(int maxPendingPersists)
+  {
+    this.maxPendingPersists = maxPendingPersists;
+  }
+
   public void setEmitter(ServiceEmitter emitter)
   {
     this.emitter = emitter;
@@ -150,11 +156,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   public void setQueryExecutorService(ExecutorService executorService)
   {
     this.queryExecutorService = executorService;
-  }
-
-  public void setDefaultMaxPendingPersists(int maxPendingPersists)
-  {
-    this.maxPendingPersists = maxPendingPersists;
   }
 
   @Override
