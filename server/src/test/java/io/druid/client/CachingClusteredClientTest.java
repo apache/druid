@@ -217,6 +217,7 @@ public class CachingClusteredClientTest
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
+
     testQueryCaching(
         runner,
         builder.build(),
@@ -280,6 +281,7 @@ public class CachingClusteredClientTest
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
+
     QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
 
     testQueryCaching(
@@ -786,11 +788,11 @@ public class CachingClusteredClientTest
       for (Capture queryCapture : queryCaptures) {
         Query capturedQuery = (Query) queryCapture.getValue();
         if (expectBySegment) {
-          Assert.assertEquals("true", capturedQuery.getContextValue("bySegment"));
+          Assert.assertEquals(true, capturedQuery.getContextValue("bySegment"));
         } else {
           Assert.assertTrue(
               capturedQuery.getContextValue("bySegment") == null ||
-              capturedQuery.getContextValue("bySegment").equals("false")
+              capturedQuery.getContextValue("bySegment").equals(false)
           );
         }
       }

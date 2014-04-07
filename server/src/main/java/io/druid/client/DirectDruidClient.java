@@ -106,7 +106,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(Query<T> query)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    boolean isBySegment = query.getContextBySegment(false);
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {

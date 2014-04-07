@@ -347,7 +347,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         return runner.run(query);
       }
 
-      final boolean isBySegment = Boolean.parseBoolean((String) query.getContextValue("bySegment", "false"));
+      final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
           runner.run(query.withThreshold(minTopNThreshold)),

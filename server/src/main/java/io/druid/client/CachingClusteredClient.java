@@ -62,7 +62,6 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -125,24 +124,24 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<DateTime, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.USE_CACHE, "true"))
+    final boolean useCache = query.getContextUseCache(true)
                              && strategy != null
                              && cacheConfig.isUseCache();
-    final boolean populateCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.POPULATE_CACHE, "true"))
+    final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null && cacheConfig.isPopulateCache();
-    final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    final boolean isBySegment = query.getContextBySegment(false);
 
 
     ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final String priority = query.getContextValue("priority", "0");
+    final int priority = query.getContextPriority(0);
     contextBuilder.put("priority", priority);
 
     if (populateCache) {
-      contextBuilder.put(CacheConfig.POPULATE_CACHE, "false");
-      contextBuilder.put("bySegment", "true");
+      contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
+      contextBuilder.put("bySegment", true);
     }
-    contextBuilder.put("intermediate", "true");
+    contextBuilder.put("intermediate", true);
 
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 

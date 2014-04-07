@@ -39,7 +39,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
     S3DataSegmentPusherConfig restoreConfig
   )
   {
-    super(s3Client);
+    super(s3Client, restoreConfig);
     this.archiveConfig = archiveConfig;
     this.restoreConfig = restoreConfig;
   }

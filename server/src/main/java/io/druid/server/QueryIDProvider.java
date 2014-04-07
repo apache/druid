@@ -44,7 +44,7 @@ public class QueryIDProvider
     return String.format(
         "%s_%s_%s_%s_%s",
         query.getDataSource(),
-        query.getDuration(),
+        query.getIntervals(),
         host,
         new DateTime(),
         id.incrementAndGet()
