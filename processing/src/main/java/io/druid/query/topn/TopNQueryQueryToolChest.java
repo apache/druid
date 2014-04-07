@@ -64,11 +64,13 @@ import java.util.Map;
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
   private static final byte TOPN_QUERY = 0x1;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
-  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<Result<TopNResultValue>>(){};
-
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>(){};
+  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<Result<TopNResultValue>>()
+  {
+  };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
   private final TopNQueryConfig config;
 
   @Inject
@@ -163,7 +165,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
                       Object calculatedPostAgg = input.getMetric(postAgg.getName());
                       if (calculatedPostAgg != null) {
-                        values.put(postAgg.getName(), input.getMetric(postAgg.getName()));
+                        values.put(postAgg.getName(), calculatedPostAgg);
                       } else {
                         values.put(postAgg.getName(), postAgg.compute(values));
                       }
@@ -314,6 +316,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new ThresholdAdjustingQueryRunner(runner, config.getMinTopNThreshold());
   }
 
+  public Ordering<Result<TopNResultValue>> getOrdering()
+  {
+    return Ordering.natural();
+  }
+
   private static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;
@@ -397,10 +404,5 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           }
       );
     }
-  }
-
-  public Ordering<Result<TopNResultValue>> getOrdering()
-  {
-    return Ordering.natural();
   }
 }
