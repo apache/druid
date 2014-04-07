@@ -106,8 +106,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       }
 
       req.setAttribute(DISPATCHED, true);
-      resp.setStatus(200);
-      resp.setContentType("application/x-javascript");
 
       query = objectMapper.readValue(req.getInputStream(), Query.class);
       queryId = query.getId();
@@ -132,6 +130,9 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         @Override
         public ClientResponse<OutputStream> handleResponse(HttpResponse response)
         {
+          resp.setStatus(response.getStatus().getCode());
+          resp.setContentType("application/x-javascript");
+
           byte[] bytes = getContentBytes(response.getContent());
           if (bytes.length > 0) {
             try {
@@ -209,7 +210,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             @Override
             public void run()
             {
-              routingDruidClient.run(host, theQuery, responseHandler);
+              routingDruidClient.run(makeUrl(host, req), theQuery, responseHandler);
             }
           }
       );
@@ -234,5 +235,15 @@ public class AsyncQueryForwardingServlet extends HttpServlet
          .addData("peer", req.getRemoteAddr())
          .emit();
     }
+  }
+
+  private String makeUrl(String host, HttpServletRequest req)
+  {
+    String queryString = req.getQueryString();
+
+    if (queryString == null) {
+      return String.format("http://%s%s", host, req.getRequestURI());
+    }
+    return String.format("http://%s%s?%s", host, req.getRequestURI(), req.getQueryString());
   }
 }

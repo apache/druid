@@ -214,13 +214,13 @@ public class CachingClusteredClientTest
   public void testTimeseriesCaching() throws Exception
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
-        .dataSource(DATA_SOURCE)
-        .intervals(SEG_SPEC)
-        .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
-        .aggregators(AGGS)
-        .postAggregators(POST_AGGS)
-        .context(CONTEXT);
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
 
     testQueryCaching(
         builder.build(),
@@ -265,9 +265,9 @@ public class CachingClusteredClientTest
         ),
         client.run(
             builder.intervals("2011-01-01/2011-01-10")
-                .aggregators(RENAMED_AGGS)
-                .postAggregators(RENAMED_POST_AGGS)
-                .build()
+                   .aggregators(RENAMED_AGGS)
+                   .postAggregators(RENAMED_POST_AGGS)
+                   .build()
         )
     );
   }
@@ -277,13 +277,13 @@ public class CachingClusteredClientTest
   public void testTimeseriesCachingTimeZone() throws Exception
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
-        .dataSource(DATA_SOURCE)
-        .intervals(SEG_SPEC)
-        .filters(DIM_FILTER)
-        .granularity(PT1H_TZ_GRANULARITY)
-        .aggregators(AGGS)
-        .postAggregators(POST_AGGS)
-        .context(CONTEXT);
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(PT1H_TZ_GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
 
     testQueryCaching(
         builder.build(),
@@ -305,9 +305,9 @@ public class CachingClusteredClientTest
         ),
         client.run(
             builder.intervals("2011-11-04/2011-11-08")
-                .aggregators(RENAMED_AGGS)
-                .postAggregators(RENAMED_POST_AGGS)
-                .build()
+                   .aggregators(RENAMED_AGGS)
+                   .postAggregators(RENAMED_POST_AGGS)
+                   .build()
         )
     );
   }
@@ -316,18 +316,22 @@ public class CachingClusteredClientTest
   public void testDisableUseCache() throws Exception
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
-        .dataSource(DATA_SOURCE)
-        .intervals(SEG_SPEC)
-        .filters(DIM_FILTER)
-        .granularity(GRANULARITY)
-        .aggregators(AGGS)
-        .postAggregators(POST_AGGS);
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS);
 
     testQueryCaching(
         1,
         true,
-        builder.context(ImmutableMap.<String, Object>of("useCache", "false",
-            "populateCache", "true")).build(),
+        builder.context(
+            ImmutableMap.<String, Object>of(
+                "useCache", "false",
+                "populateCache", "true"
+            )
+        ).build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
     );
 
@@ -340,8 +344,12 @@ public class CachingClusteredClientTest
     testQueryCaching(
         1,
         false,
-        builder.context(ImmutableMap.<String, Object>of("useCache", "false",
-            "populateCache", "false")).build(),
+        builder.context(
+            ImmutableMap.<String, Object>of(
+                "useCache", "false",
+                "populateCache", "false"
+            )
+        ).build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
     );
 
@@ -352,8 +360,12 @@ public class CachingClusteredClientTest
     testQueryCaching(
         1,
         false,
-        builder.context(ImmutableMap.<String, Object>of("useCache", "true",
-            "populateCache", "false")).build(),
+        builder.context(
+            ImmutableMap.<String, Object>of(
+                "useCache", "true",
+                "populateCache", "false"
+            )
+        ).build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000)
     );
 
@@ -422,10 +434,10 @@ public class CachingClusteredClientTest
         ),
         client.run(
             builder.intervals("2011-01-01/2011-01-10")
-                .metric("imps")
-                .aggregators(RENAMED_AGGS)
-                .postAggregators(RENAMED_POST_AGGS)
-                .build()
+                   .metric("imps")
+                   .aggregators(RENAMED_AGGS)
+                   .postAggregators(RENAMED_POST_AGGS)
+                   .build()
         )
     );
   }
@@ -467,10 +479,10 @@ public class CachingClusteredClientTest
         ),
         client.run(
             builder.intervals("2011-11-04/2011-11-08")
-                .metric("imps")
-                .aggregators(RENAMED_AGGS)
-                .postAggregators(RENAMED_POST_AGGS)
-                .build()
+                   .metric("imps")
+                   .aggregators(RENAMED_AGGS)
+                   .postAggregators(RENAMED_POST_AGGS)
+                   .build()
         )
     );
   }
@@ -533,10 +545,10 @@ public class CachingClusteredClientTest
         ),
         client.run(
             builder.intervals("2011-01-01/2011-01-10")
-                .metric("imps")
-                .aggregators(RENAMED_AGGS)
-                .postAggregators(RENAMED_POST_AGGS)
-                .build()
+                   .metric("imps")
+                   .aggregators(RENAMED_AGGS)
+                   .postAggregators(RENAMED_POST_AGGS)
+                   .build()
         )
     );
   }
@@ -638,8 +650,8 @@ public class CachingClusteredClientTest
 
 
         EasyMock.expect(serverView.getQueryRunner(server))
-            .andReturn(expectations.getQueryRunner())
-            .once();
+                .andReturn(expectations.getQueryRunner())
+                .once();
 
         final Capture<? extends Query> capture = new Capture();
         queryCaptures.add(capture);
@@ -656,8 +668,8 @@ public class CachingClusteredClientTest
           }
 
           EasyMock.expect(queryable.run(EasyMock.capture(capture)))
-              .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
-              .once();
+                  .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
+                  .once();
 
         } else if (query instanceof TopNQuery) {
           List<String> segmentIds = Lists.newArrayList();
@@ -669,8 +681,8 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture)))
-              .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
-              .once();
+                  .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
+                  .once();
         } else if (query instanceof SearchQuery) {
           List<String> segmentIds = Lists.newArrayList();
           List<Interval> intervals = Lists.newArrayList();
@@ -681,8 +693,8 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture)))
-              .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
-              .once();
+                  .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
+                  .once();
         } else if (query instanceof TimeBoundaryQuery) {
           List<String> segmentIds = Lists.newArrayList();
           List<Interval> intervals = Lists.newArrayList();
@@ -693,8 +705,8 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture)))
-              .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
-              .once();
+                  .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
+                  .once();
         } else {
           throw new ISE("Unknown query type[%s]", query.getClass());
         }
@@ -762,11 +774,11 @@ public class CachingClusteredClientTest
       for (Capture queryCapture : queryCaptures) {
         Query capturedQuery = (Query) queryCapture.getValue();
         if (expectBySegment) {
-          Assert.assertEquals("true", capturedQuery.getContextValue("bySegment"));
+          Assert.assertEquals(true, capturedQuery.<Boolean>getContextValue("bySegment"));
         } else {
           Assert.assertTrue(
               capturedQuery.getContextValue("bySegment") == null ||
-                  capturedQuery.getContextValue("bySegment").equals("false")
+              capturedQuery.getContextValue("bySegment").equals(false)
           );
         }
       }
@@ -1160,13 +1172,13 @@ public class CachingClusteredClientTest
     return new CachingClusteredClient(
         new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                .put(
-                    TimeseriesQuery.class,
-                    new TimeseriesQueryQueryToolChest(new QueryConfig())
-                )
-                .put(TopNQuery.class, new TopNQueryQueryToolChest(new TopNQueryConfig()))
-                .put(SearchQuery.class, new SearchQueryQueryToolChest(new SearchQueryConfig()))
-                .build()
+                        .put(
+                            TimeseriesQuery.class,
+                            new TimeseriesQueryQueryToolChest(new QueryConfig())
+                        )
+                        .put(TopNQuery.class, new TopNQueryQueryToolChest(new TopNQueryConfig()))
+                        .put(SearchQuery.class, new SearchQueryQueryToolChest(new SearchQueryConfig()))
+                        .build()
         ),
         new TimelineServerView()
         {

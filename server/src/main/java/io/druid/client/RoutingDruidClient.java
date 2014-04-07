@@ -68,13 +68,12 @@ public class RoutingDruidClient<IntermediateType, FinalType>
   }
 
   public ListenableFuture<FinalType> run(
-      String host,
+      String url,
       Query query,
       HttpResponseHandler<IntermediateType, FinalType> responseHandler
   )
   {
     final ListenableFuture<FinalType> future;
-    final String url = String.format("http://%s/druid/v2/", host);
 
     try {
       log.debug("Querying url[%s]", url);
