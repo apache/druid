@@ -124,6 +124,9 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public int getContextPriority(int defaultValue)
   {
+    if (context == null) {
+      return defaultValue;
+    }
     Object val = context.get("priority");
     if (val == null) {
       return defaultValue;
@@ -163,6 +166,9 @@ public abstract class BaseQuery<T> implements Query<T>
 
   private boolean parseBoolean(String key, boolean defaultValue)
   {
+    if (context == null) {
+      return defaultValue;
+    }
     Object val = context.get(key);
     if (val == null) {
       return defaultValue;
