@@ -136,7 +136,7 @@ Indexing the Data
 To index the data and build a Druid segment, we are going to need to submit a task to the indexing service. This task should already exist:
 
 ```
-examples/indexing/index_task.json
+examples/indexing/wikipedia_index_task.json
 ```
 
 Open up the file to see the following:
