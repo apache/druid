@@ -216,8 +216,9 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
     testQueryCaching(
-        client,
+        runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000),
         new Interval("2011-01-02/2011-01-03"), makeTimeResults(new DateTime("2011-01-02"), 30, 6000),
@@ -258,7 +259,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09"), 18, 521,
             new DateTime("2011-01-09T01"), 181, 52
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
@@ -279,9 +280,10 @@ public class CachingClusteredClientTest
                                                         .aggregators(AGGS)
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
 
     testQueryCaching(
-        client,
+        runner,
         builder.build(),
         new Interval("2011-11-04/2011-11-08"),
         makeTimeResults(
@@ -299,7 +301,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-06", TIMEZONE), 23, 85312,
             new DateTime("2011-11-07", TIMEZONE), 85, 102
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-11-04/2011-11-08")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
