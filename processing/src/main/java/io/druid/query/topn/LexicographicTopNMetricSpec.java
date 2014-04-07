@@ -112,6 +112,12 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public String getMetricName(DimensionSpec dimSpec)
+  {
+    return dimSpec.getOutputName();
+  }
+
+  @Override
   public String toString()
   {
     return "LexicographicTopNMetricSpec{" +

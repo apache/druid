@@ -151,6 +151,12 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public String getMetricName(DimensionSpec dimSpec)
+  {
+    return metric;
+  }
+
+  @Override
   public String toString()
   {
     return "NumericTopNMetricSpec{" +

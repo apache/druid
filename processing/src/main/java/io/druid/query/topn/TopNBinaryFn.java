@@ -40,7 +40,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
   private final TopNResultMerger merger;
   private final DimensionSpec dimSpec;
   private final QueryGranularity gran;
-  private final String dimension;
+  private final DimensionSpec dimensionSpec;
   private final TopNMetricSpec topNMetricSpec;
   private final int threshold;
   private final List<AggregatorFactory> aggregations;
@@ -65,7 +65,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     this.aggregations = aggregatorSpecs;
     this.postAggregations = postAggregatorSpecs;
 
-    this.dimension = dimSpec.getOutputName();
+    this.dimensionSpec = dimSpec;
     this.comparator = topNMetricSpec.getComparator(aggregatorSpecs, postAggregatorSpecs);
   }
 
@@ -79,11 +79,13 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       return merger.getResult(arg1, comparator);
     }
 
-    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<String, DimensionAndMetricValueExtractor>();
 
     TopNResultValue arg1Vals = arg1.getValue();
     TopNResultValue arg2Vals = arg2.getValue();
+    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<String, DimensionAndMetricValueExtractor>();
 
+    String dimension = dimensionSpec.getOutputName();
+    String topNMetricName = topNMetricSpec.getMetricName(dimensionSpec);
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
       retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
     }
@@ -92,16 +94,17 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       DimensionAndMetricValueExtractor arg1Val = retVals.get(dimensionValue);
 
       if (arg1Val != null) {
-        Map<String, Object> retVal = new LinkedHashMap<String, Object>();
+        Map<String, Object> retVal = new LinkedHashMap<String, Object>(aggregations.size() + 2);
 
         retVal.put(dimension, dimensionValue);
         for (AggregatorFactory factory : aggregations) {
           final String metricName = factory.getName();
           retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
         }
-
-        for (PostAggregator pf : postAggregations) {
-          retVal.put(pf.getName(), pf.compute(retVal));
+        for (PostAggregator postAgg : postAggregations) {
+          if (postAgg.getName().equals(topNMetricName)) {
+            retVal.put(postAgg.getName(), postAgg.compute(retVal));
+          }
         }
 
         retVals.put(dimensionValue, new DimensionAndMetricValueExtractor(retVal));

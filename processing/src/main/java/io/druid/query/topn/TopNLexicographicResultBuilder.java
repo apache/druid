@@ -75,9 +75,6 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       for (Object metricVal : metricVals) {
         metricValues.put(aggsIter.next().getName(), metricVal);
       }
-      for (PostAggregator postAgg : postAggs) {
-        metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
-      }
 
       pQueue.add(new DimValHolder.Builder().withDirName(dimName).withMetricValues(metricValues).build());
     }

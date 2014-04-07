@@ -40,7 +40,6 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String metricName;
-
   private MinMaxPriorityQueue<DimValHolder> pQueue = null;
 
   public TopNNumericResultBuilder(
@@ -75,8 +74,12 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     for (Object metricVal : metricVals) {
       metricValues.put(aggFactoryIter.next().getName(), metricVal);
     }
+
     for (PostAggregator postAgg : postAggs) {
-      metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
+      if (postAgg.getName().equals(metricName)) {
+        metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
+        break;
+      }
     }
 
     Object topNMetricVal = metricValues.get(metricName);

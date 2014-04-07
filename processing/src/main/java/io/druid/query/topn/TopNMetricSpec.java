@@ -55,4 +55,6 @@ public interface TopNMetricSpec
   public <T> TopNMetricSpecBuilder<T> configureOptimizer(TopNMetricSpecBuilder<T> builder);
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector);
+
+  public String getMetricName(DimensionSpec dimSpec);
 }

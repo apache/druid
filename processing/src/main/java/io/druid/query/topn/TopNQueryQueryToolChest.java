@@ -161,7 +161,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                       values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
                     }
                     for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-                      values.put(postAgg.getName(), input.getMetric(postAgg.getName()));
+                      Object calculatedPostAgg = input.getMetric(postAgg.getName());
+                      if (calculatedPostAgg != null) {
+                        values.put(postAgg.getName(), input.getMetric(postAgg.getName()));
+                      } else {
+                        values.put(postAgg.getName(), postAgg.compute(values));
+                      }
                     }
                     values.put(dimension, input.getDimensionValue(dimension));
 
@@ -279,10 +284,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               while (aggIter.hasNext() && resultIter.hasNext()) {
                 final AggregatorFactory factory = aggIter.next();
                 vals.put(factory.getName(), factory.deserialize(resultIter.next()));
-              }
-
-              for (PostAggregator postAgg : postAggs) {
-                vals.put(postAgg.getName(), postAgg.compute(vals));
               }
 
               retVal.add(vals);
