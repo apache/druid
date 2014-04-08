@@ -76,7 +76,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     }
 
     for (PostAggregator postAgg : postAggs) {
-      if (postAgg.getName().equals(metricName)) {
+      if (postAgg.getName().equalsIgnoreCase(metricName)) {
         metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
         break;
       }

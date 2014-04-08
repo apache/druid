@@ -94,6 +94,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       DimensionAndMetricValueExtractor arg1Val = retVals.get(dimensionValue);
 
       if (arg1Val != null) {
+        // size of map = aggregattor + topNDim + postAgg (If sorting is done on post agg field)
         Map<String, Object> retVal = new LinkedHashMap<String, Object>(aggregations.size() + 2);
 
         retVal.put(dimension, dimensionValue);
@@ -102,7 +103,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
           retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
         }
         for (PostAggregator postAgg : postAggregations) {
-          if (postAgg.getName().equals(topNMetricName)) {
+          if (postAgg.getName().equalsIgnoreCase(topNMetricName)) {
             retVal.put(postAgg.getName(), postAgg.compute(retVal));
           }
         }
