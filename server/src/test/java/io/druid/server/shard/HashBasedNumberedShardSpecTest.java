@@ -161,7 +161,7 @@ public class HashBasedNumberedShardSpecTest
     @Override
     public int hashCode()
     {
-      return super.hashCode();    //To change body of overridden methods use File | Settings | File Templates.
+      return hashcode;
     }
 
     @Override
