@@ -51,11 +51,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public boolean isInChunk(InputRow inputRow)
   {
-    int hash = Math.abs(hash(inputRow));
-    if (hash == Integer.MIN_VALUE) {
-      hash = 0;
-    }
-    return hash % getPartitions() == getPartitionNum();
+    return (((long) hash(inputRow)) - getPartitionNum()) % getPartitions() == 0;
   }
 
   protected int hash(InputRow inputRow)
