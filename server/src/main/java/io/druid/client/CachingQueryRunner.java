@@ -37,7 +37,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -81,7 +80,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
                                   && strategy != null
                                   && cacheConfig.isPopulateCache();
 
-    final boolean useCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.USE_CACHE, "true"))
+    final boolean useCache = query.getContextUseCache(true)
         && strategy != null
         && cacheConfig.isPopulateCache();
 
@@ -139,9 +138,8 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
               base.run(query),
               new Function<T, T>()
               {
-                @Nullable
                 @Override
-                public T apply(@Nullable T input)
+                public T apply(T input)
                 {
                   cacheResults.add(cacheFn.apply(input));
                   return input;
