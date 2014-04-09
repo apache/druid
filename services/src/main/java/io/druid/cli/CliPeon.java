@@ -56,7 +56,7 @@ import io.druid.indexing.overlord.IndexerDBCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
-import io.druid.indexing.worker.executor.ChatHandlerResource;
+import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.query.QuerySegmentWalker;
