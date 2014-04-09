@@ -37,16 +37,20 @@ import io.druid.guice.annotations.Smile;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryWatcher;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -66,6 +70,7 @@ public class QueryResource
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
+  private final QueryManager queryManager;
 
   @Inject
   public QueryResource(
@@ -73,7 +78,8 @@ public class QueryResource
       @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
-      RequestLogger requestLogger
+      RequestLogger requestLogger,
+      QueryManager queryManager
   )
   {
     this.jsonMapper = jsonMapper;
@@ -81,6 +87,16 @@ public class QueryResource
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+    this.queryManager = queryManager;
+  }
+
+  @DELETE
+  @Path("{id}")
+  @Produces("application/json")
+  public Response getServer(@PathParam("id") String queryId)
+  {
+    queryManager.cancelQuery(queryId);
+    return Response.status(Response.Status.ACCEPTED).build();
   }
 
   @POST
@@ -124,9 +140,12 @@ public class QueryResource
 
       resp.setStatus(200);
       resp.setContentType("application/x-javascript");
+      resp.setHeader("X-Druid-Query-Id", query.getId());
 
       out = resp.getOutputStream();
       jsonWriter.writeValue(out, results);
+
+//      JsonGenerator jgen = jsonWriter.getFactory().createGenerator(out);
 
       long requestTime = System.currentTimeMillis() - start;
 

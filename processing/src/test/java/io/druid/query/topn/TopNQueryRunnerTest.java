@@ -23,12 +23,15 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
+import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -68,7 +71,15 @@ public class TopNQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new TopNQueryRunnerFactory(
                 TestQueryRunners.getPool(),
-                new TopNQueryQueryToolChest(new TopNQueryConfig())
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
+                new QueryWatcher()
+                {
+                  @Override
+                  public void registerQuery(Query query, ListenableFuture future)
+                  {
+
+                  }
+                }
             )
         )
     );
@@ -85,7 +96,15 @@ public class TopNQueryRunnerTest
                       }
                     }
                 ),
-                new TopNQueryQueryToolChest(new TopNQueryConfig())
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
+                new QueryWatcher()
+                {
+                  @Override
+                  public void registerQuery(Query query, ListenableFuture future)
+                  {
+
+                  }
+                }
             )
         )
     );

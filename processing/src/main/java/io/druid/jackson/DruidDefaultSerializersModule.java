@@ -32,6 +32,7 @@ import com.google.common.base.Throwables;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Yielder;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;

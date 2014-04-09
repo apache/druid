@@ -20,6 +20,7 @@
 package io.druid.query.select;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
@@ -29,6 +30,7 @@ import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 
@@ -43,21 +45,31 @@ public class SelectQueryRunnerFactory
   {
     return new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(new QueryConfig(), jsonMapper),
-        new SelectQueryEngine()
+        new SelectQueryEngine(),
+        new QueryWatcher()
+        {
+          @Override
+          public void registerQuery(Query query, ListenableFuture future)
+          {
+          }
+        }
     );
   }
 
   private final SelectQueryQueryToolChest toolChest;
   private final SelectQueryEngine engine;
+  private final QueryWatcher queryWatcher;
 
   @Inject
   public SelectQueryRunnerFactory(
       SelectQueryQueryToolChest toolChest,
-      SelectQueryEngine engine
+      SelectQueryEngine engine,
+      QueryWatcher queryWatcher
   )
   {
     this.toolChest = toolChest;
     this.engine = engine;
+    this.queryWatcher = queryWatcher;
   }
 
   @Override
@@ -72,7 +84,7 @@ public class SelectQueryRunnerFactory
   )
   {
     return new ChainedExecutionQueryRunner<Result<SelectResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryRunners
+        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
     );
   }
 

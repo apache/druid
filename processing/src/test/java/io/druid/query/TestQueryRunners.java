@@ -1,6 +1,7 @@
 package io.druid.query;
 
 import com.google.common.base.Supplier;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
@@ -40,7 +41,14 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new TopNQueryRunnerFactory(pool, new TopNQueryQueryToolChest(topNConfig));
+    QueryRunnerFactory factory = new TopNQueryRunnerFactory(pool, new TopNQueryQueryToolChest(topNConfig), new QueryWatcher()
+    {
+      @Override
+      public void registerQuery(Query query, ListenableFuture future)
+      {
+
+      }
+    });
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
@@ -62,7 +70,14 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()));
+    QueryRunnerFactory factory = new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()), new QueryWatcher()
+    {
+      @Override
+      public void registerQuery(Query query, ListenableFuture future)
+      {
+
+      }
+    });
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
@@ -73,7 +88,14 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory();
+    QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(new QueryWatcher()
+    {
+      @Override
+      public void registerQuery(Query query, ListenableFuture future)
+      {
+
+      }
+    });
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()

@@ -20,10 +20,13 @@
 package io.druid.query.timeboundary;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -43,7 +46,14 @@ public class TimeBoundaryQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        new TimeBoundaryQueryRunnerFactory()
+        new TimeBoundaryQueryRunnerFactory(new QueryWatcher()
+        {
+          @Override
+          public void registerQuery(Query query, ListenableFuture future)
+          {
+
+          }
+        })
     );
   }
 
