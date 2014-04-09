@@ -170,23 +170,23 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     }
 
     if (brokerServiceName == null) {
-      log.makeAlert(
+      log.error(
           "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
           query.getDataSource(),
           query.getIntervals(),
           tierConfig.getDefaultBrokerServiceName()
-      ).emit();
+      );
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 
     ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
 
     if (retVal == null) {
-      log.makeAlert(
+      log.error(
           "WTF?! No selector found for brokerServiceName[%s]. Using default selector for[%s]",
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
-      ).emit();
+      );
       retVal = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
     }
 
