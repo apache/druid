@@ -22,9 +22,14 @@ package io.druid.segment;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.metamx.common.IAE;
+import com.metamx.common.Pair;
 import com.metamx.common.collect.MoreIterators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
@@ -35,8 +40,10 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
 import io.druid.segment.data.SingleIndexedInts;
@@ -44,6 +51,12 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.nio.LongBuffer;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -161,6 +174,194 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     return FunctionalIterable.create(iterable).keep(Functions.<Cursor>identity());
+  }
+
+  public BufferCursor makeBufferCursor(Interval interval, QueryGranularity gran)
+  {
+    Interval actualInterval = interval;
+
+    final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
+
+    if (!actualInterval.overlaps(dataInterval)) {
+      return null;
+    }
+
+    if (actualInterval.getStart().isBefore(dataInterval.getStart())) {
+      actualInterval = actualInterval.withStart(dataInterval.getStart());
+    }
+    if (actualInterval.getEnd().isAfter(dataInterval.getEnd())) {
+      actualInterval = actualInterval.withEnd(dataInterval.getEnd());
+    }
+
+    return new BufferCursorMaker(index, actualInterval, gran).makeBufferCursor();
+  }
+
+  private static class BufferCursorMaker
+  {
+    private final ColumnSelector index;
+    private final Interval interval;
+    private final QueryGranularity gran;
+
+    public BufferCursorMaker(ColumnSelector index, Interval interval, QueryGranularity gran)
+    {
+      this.index = index;
+      this.interval = interval;
+      this.gran = gran;
+    }
+
+    public BufferCursor makeBufferCursor()
+    {
+      final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
+      final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
+      final Map<String, Object> objectColumnCache = Maps.newHashMap();
+
+      final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
+
+      return new BufferCursor()
+      {
+        private int currBuffer = 0;
+        private int numBuffers = -1;
+
+        @Override
+        public void advance()
+        {
+          currBuffer++;
+        }
+
+        @Override
+        public boolean isDone()
+        {
+          return currBuffer < numBuffers;
+        }
+
+        @Override
+        public Pair<LongBuffer, IntBuffer> makeBucketOffsets()
+        {
+          long[][] offsets = Iterators.toArray(
+              FunctionalIterator
+                  .create(gran.iterable(interval.getStartMillis(), interval.getEndMillis()).iterator())
+                  .transform(
+                      new Function<Long, long[]>()
+                      {
+                        private int currRow = 0;
+
+                        @Override
+                        public long[] apply(final Long input)
+                        {
+                          final long timeStart = Math.max(interval.getStartMillis(), input);
+                          while (currRow < timestamps.length()
+                                 && timestamps.getLongSingleValueRow(currRow) < timeStart) {
+                            ++currRow;
+                          }
+
+                          final int initRow = currRow;
+                          final long nextBucket = Math.min(gran.next(input), interval.getEndMillis());
+
+                          while (currRow < timestamps.length()
+                                 || timestamps.getLongSingleValueRow(currRow) < nextBucket) {
+                            currRow++;
+                          }
+
+                          return new long[]{input, initRow, currRow};
+                        }
+                      }
+                  ),
+              long[].class
+          );
+          LongBuffer timestamps = ByteBuffer.allocate(offsets.length * Longs.BYTES)
+              .order(ByteOrder.nativeOrder())
+              .asLongBuffer();
+
+          IntBuffer buckets = ByteBuffer.allocateDirect(offsets.length * 2 * Ints.BYTES)
+                                       .order(ByteOrder.nativeOrder())
+                                       .asIntBuffer();
+
+          for (long[] offset : offsets) {
+            timestamps.put(offset[0]);
+            buckets.put((int)offset[1]);
+            buckets.put((int)offset[2]);
+          }
+          return new Pair<>(timestamps, buckets);
+        }
+
+        @Override
+        public FloatBufferSelector makeFloatBufferSelector(String columnName)
+        {
+          final String metricName = columnName.toLowerCase();
+          GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
+
+          if (cachedMetricVals == null) {
+            Column holder = index.getColumn(metricName);
+            if (holder != null && holder.getCapabilities().getType() == ValueType.FLOAT) {
+              cachedMetricVals = holder.getGenericColumn();
+              genericColumnCache.put(metricName, cachedMetricVals);
+            }
+          }
+
+          if (cachedMetricVals == null) {
+            throw new IAE("Column [%s] does not exist", columnName);
+          }
+
+          final IndexedFloats vals = ((IndexedFloatsGenericColumn)cachedMetricVals).column;
+
+          if(numBuffers > 0 && numBuffers != vals.chunks()) {
+            throw new UnsupportedOperationException("Cannot scan columns with different number of chunks");
+          } else {
+            numBuffers = vals.chunks();
+          }
+
+          return new FloatBufferSelector()
+          {
+            @Override
+            public FloatBuffer getBuffer()
+            {
+              return vals.getBuffer(currBuffer);
+            }
+          };
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          Closeables.closeQuietly(timestamps);
+          for (GenericColumn column : genericColumnCache.values()) {
+            Closeables.closeQuietly(column);
+          }
+          for (ComplexColumn complexColumn : complexColumnCache.values()) {
+            Closeables.closeQuietly(complexColumn);
+          }
+          for (Object column : objectColumnCache.values()) {
+            if (column instanceof Closeable) {
+              Closeables.closeQuietly((Closeable) column);
+            }
+          }
+        }
+
+        @Override
+        public TimestampColumnSelector makeTimestampColumnSelector()
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DimensionSelector makeDimensionSelector(String dimensionName)
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public FloatColumnSelector makeFloatColumnSelector(String columnName)
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+        {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }
   }
 
   private static class CursorIterable implements Iterable<Cursor>

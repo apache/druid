@@ -29,7 +29,7 @@ import java.io.IOException;
 */
 public class IndexedFloatsGenericColumn implements GenericColumn
 {
-  private final IndexedFloats column;
+  public final IndexedFloats column;
 
   public IndexedFloatsGenericColumn(
       final IndexedFloats column

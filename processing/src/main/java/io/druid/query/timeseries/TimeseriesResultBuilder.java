@@ -21,6 +21,7 @@ package io.druid.query.timeseries;
 
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.KernelAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import org.joda.time.DateTime;
 
@@ -45,6 +46,12 @@ public class TimeseriesResultBuilder
   public TimeseriesResultBuilder addMetric(Aggregator aggregator)
   {
     metricValues.put(aggregator.getName(), aggregator.get());
+    return this;
+  }
+
+  public TimeseriesResultBuilder addMetric(String name, Object value)
+  {
+    metricValues.put(name, value);
     return this;
   }
 

@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,19 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.data;
+package io.druid.segment;
 
-import java.io.Closeable;
 import java.nio.FloatBuffer;
 
-/**
- * Get a float at an index (array or list lookup abstraction without boxing).
- */
-public abstract class IndexedFloats implements Closeable
+public interface FloatBufferSelector
 {
-  public abstract int size();
-  public int chunks() { throw new UnsupportedOperationException(); }
-  public abstract float get(int index);
-  public FloatBuffer getBuffer(int bufferNum) { throw new UnsupportedOperationException(); }
-  public abstract void fill(int index, float[] toFill);
+  public FloatBuffer getBuffer();
 }

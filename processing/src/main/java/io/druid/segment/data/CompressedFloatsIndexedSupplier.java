@@ -78,6 +78,12 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
       }
 
       @Override
+      public int chunks()
+      {
+        return baseFloatBuffers.size();
+      }
+
+      @Override
       public float get(int index)
       {
         int bufferNum = index / sizePer;
@@ -88,6 +94,16 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
         }
 
         return buffer.get(buffer.position() + bufferIndex);
+      }
+
+      @Override
+      public FloatBuffer getBuffer(int bufferNum)
+      {
+        if(bufferNum != currIndex) {
+          loadBuffer(bufferNum);
+        }
+
+        return buffer;
       }
 
       @Override
