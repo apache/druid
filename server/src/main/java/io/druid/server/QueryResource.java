@@ -112,6 +112,10 @@ public class QueryResource
         query = query.withId(queryId);
       }
 
+      if (log.isDebugEnabled()) {
+        log.debug("Got query [%s]", query);
+      }
+
       Sequence<?> results = query.run(texasRanger);
 
       if (results == null) {
@@ -185,7 +189,7 @@ public class QueryResource
         );
       }
       catch (Exception e2) {
-        log.error(e2, "Unable to log quer!");
+        log.error(e2, "Unable to log query [%s]!", queryString);
       }
 
       emitter.emit(

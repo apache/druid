@@ -249,7 +249,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         );
       }
       catch (Exception e2) {
-        log.error(e2, "Unable to log query!");
+        log.error(e2, "Unable to log query [%s]!", query);
       }
 
       log.makeAlert(e, "Exception handling request")
