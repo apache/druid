@@ -28,7 +28,6 @@ import io.druid.client.RoutingDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
-import io.druid.server.QueryIDProvider;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
@@ -51,7 +50,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   private final RoutingDruidClient routingDruidClient;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryIDProvider idProvider;
 
   @Inject
   public RouterJettyServerInitializer(
@@ -60,8 +58,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       QueryHostFinder hostFinder,
       RoutingDruidClient routingDruidClient,
       ServiceEmitter emitter,
-      RequestLogger requestLogger,
-      QueryIDProvider idProvider
+      RequestLogger requestLogger
   )
   {
     this.jsonMapper = jsonMapper;
@@ -70,7 +67,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     this.routingDruidClient = routingDruidClient;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.idProvider = idProvider;
   }
 
   @Override
@@ -85,8 +81,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
                 hostFinder,
                 routingDruidClient,
                 emitter,
-                requestLogger,
-                idProvider
+                requestLogger
             )
         ), "/druid/v2/*"
     );

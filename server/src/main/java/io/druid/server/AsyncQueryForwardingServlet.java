@@ -21,6 +21,8 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -46,8 +48,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.UUID;
 
 /**
+ * This class does async query processing and should be merged with QueryResource at some point
  */
 @WebServlet(asyncSupported = true)
 public class AsyncQueryForwardingServlet extends HttpServlet
@@ -55,6 +59,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final String DISPATCHED = "dispatched";
+  private static final Joiner COMMA_JOIN = Joiner.on(",");
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -62,7 +67,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   private final RoutingDruidClient routingDruidClient;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryIDProvider idProvider;
 
   public AsyncQueryForwardingServlet(
       @Json ObjectMapper jsonMapper,
@@ -70,8 +74,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       QueryHostFinder hostFinder,
       RoutingDruidClient routingDruidClient,
       ServiceEmitter emitter,
-      RequestLogger requestLogger,
-      QueryIDProvider idProvider
+      RequestLogger requestLogger
   )
   {
     this.jsonMapper = jsonMapper;
@@ -80,7 +83,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
     this.routingDruidClient = routingDruidClient;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.idProvider = idProvider;
   }
 
   @Override
@@ -94,7 +96,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
     final boolean isSmile = "application/smile".equals(req.getContentType());
 
-    ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
+    final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
 
     OutputStream out = null;
 
@@ -110,13 +112,14 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       query = objectMapper.readValue(req.getInputStream(), Query.class);
       queryId = query.getId();
       if (queryId == null) {
-        queryId = idProvider.next(query);
+        queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
 
-      requestLogger.log(
-          new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
-      );
+      if (log.isDebugEnabled()) {
+        log.debug("Got query [%s]", query);
+      }
+
       out = resp.getOutputStream();
       final OutputStream outputStream = out;
 
@@ -167,13 +170,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         {
           final long requestTime = System.currentTimeMillis() - start;
 
-          log.info("Request time: %d", requestTime);
+          log.debug("Request time: %d", requestTime);
 
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setUser2(theQuery.getDataSource().getName())
                   .setUser4(theQuery.getType())
-                  .setUser5(theQuery.getIntervals().get(0).toString())
+                  .setUser5(COMMA_JOIN.join(theQuery.getIntervals()))
                   .setUser6(String.valueOf(theQuery.hasFilters()))
                   .setUser7(req.getRemoteAddr())
                   .setUser8(theQueryId)
@@ -183,6 +186,15 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
           final OutputStream obj = clientResponse.getObj();
           try {
+            requestLogger.log(
+                new RequestLogLine(
+                    new DateTime(),
+                    req.getRemoteAddr(),
+                    theQuery,
+                    new QueryStats(ImmutableMap.<String, Object>of("request/time", requestTime, "success", true))
+                )
+            );
+
             resp.flushBuffer();
             outputStream.close();
           }
@@ -229,6 +241,20 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       }
 
       resp.flushBuffer();
+
+      try {
+        requestLogger.log(
+            new RequestLogLine(
+                new DateTime(),
+                req.getRemoteAddr(),
+                query,
+                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", e.toString()))
+            )
+        );
+      }
+      catch (Exception e2) {
+        log.error(e2, "Unable to log query [%s]!", query);
+      }
 
       log.makeAlert(e, "Exception handling request")
          .addData("query", query)
