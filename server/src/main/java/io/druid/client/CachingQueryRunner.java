@@ -84,11 +84,16 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
         && strategy != null
         && cacheConfig.isPopulateCache();
 
-    final Cache.NamedKey key = CacheUtil.computeSegmentCacheKey(
-        segmentIdentifier,
-        segmentDescriptor,
-        strategy.computeCacheKey(query)
-    );
+    final Cache.NamedKey key;
+    if(strategy != null && (useCache || populateCache)) {
+      key = CacheUtil.computeSegmentCacheKey(
+          segmentIdentifier,
+          segmentDescriptor,
+          strategy.computeCacheKey(query)
+      );
+    } else {
+      key = null;
+    }
 
     if(useCache) {
       final Function cacheFn = strategy.pullFromCache();
