@@ -116,6 +116,10 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         query = query.withId(queryId);
       }
 
+      if (log.isDebugEnabled()) {
+        log.debug("Got query [%s]", query);
+      }
+
       out = resp.getOutputStream();
       final OutputStream outputStream = out;
 
