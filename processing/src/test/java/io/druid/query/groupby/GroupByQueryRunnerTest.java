@@ -45,6 +45,9 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.PartialDimExtractionFn;
+import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
@@ -172,6 +175,47 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
         createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 97L),
         createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
+    );
+
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithDimExtractionFn()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new ExtractionDimensionSpec("quality", "alias", new RegexDimExtractionFn("(\\w{1})"))))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
+        createExpectedRow("2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
+        createExpectedRow("2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
+        createExpectedRow("2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
+        createExpectedRow("2011-04-01", "alias", "m", "rows", 3L, "idx", 2870L),
+        createExpectedRow("2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
+        createExpectedRow("2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
+        createExpectedRow("2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
+
+        createExpectedRow("2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
+        createExpectedRow("2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
+        createExpectedRow("2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
+        createExpectedRow("2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
+        createExpectedRow("2011-04-02", "alias", "m", "rows", 3L, "idx", 2447L),
+        createExpectedRow("2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
+        createExpectedRow("2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
+        createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
     );
 
     Iterable<Row> results = runQuery(query);
