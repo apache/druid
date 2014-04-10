@@ -22,6 +22,7 @@ package io.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
@@ -49,6 +50,7 @@ import javax.ws.rs.core.Context;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.UUID;
 
 /**
  */
@@ -57,12 +59,13 @@ public class QueryResource
 {
   private static final Logger log = new Logger(QueryResource.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
+  private static final Joiner COMMA_JOIN = Joiner.on(",");
+
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryIDProvider idProvider;
 
   @Inject
   public QueryResource(
@@ -70,8 +73,7 @@ public class QueryResource
       @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
-      RequestLogger requestLogger,
-      QueryIDProvider idProvider
+      RequestLogger requestLogger
   )
   {
     this.jsonMapper = jsonMapper;
@@ -79,7 +81,6 @@ public class QueryResource
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.idProvider = idProvider;
   }
 
   @POST
@@ -107,13 +108,9 @@ public class QueryResource
       query = objectMapper.readValue(requestQuery, Query.class);
       queryId = query.getId();
       if (queryId == null) {
-        queryId = idProvider.next(query);
+        queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-
-      requestLogger.log(
-          new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
-      );
 
       Sequence<?> results = query.run(texasRanger);
 
@@ -133,12 +130,26 @@ public class QueryResource
           new ServiceMetricEvent.Builder()
               .setUser2(query.getDataSource().toString())
               .setUser4(query.getType())
-              .setUser5(query.getIntervals().get(0).toString())
+              .setUser5(COMMA_JOIN.join(query.getIntervals()))
               .setUser6(String.valueOf(query.hasFilters()))
               .setUser7(req.getRemoteAddr())
               .setUser8(queryId)
               .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
               .build("request/time", requestTime)
+      );
+
+      requestLogger.log(
+          new RequestLogLine(
+              new DateTime(),
+              req.getRemoteAddr(),
+              query,
+              new QueryStats(
+                  ImmutableMap.<String, Object>of(
+                      "request/time", requestTime,
+                      "success", true
+                  )
+              )
+          )
       );
     }
     catch (Exception e) {
@@ -162,6 +173,20 @@ public class QueryResource
       }
 
       resp.flushBuffer();
+
+      try {
+        requestLogger.log(
+            new RequestLogLine(
+                new DateTime(),
+                req.getRemoteAddr(),
+                query,
+                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", e.toString()))
+            )
+        );
+      }
+      catch (Exception e2) {
+        log.error(e2, "Unable to log quer!");
+      }
 
       emitter.emit(
           new AlertEvent.Builder().build(

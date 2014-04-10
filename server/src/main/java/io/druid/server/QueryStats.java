@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,35 +19,24 @@
 
 package io.druid.server;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import io.druid.guice.annotations.Self;
-import io.druid.query.Query;
-import org.joda.time.DateTime;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
 
-@Singleton
-public class QueryIDProvider
+/**
+ */
+public class QueryStats
 {
-  private final String host;
-  private final AtomicLong id = new AtomicLong();
+  private final Map<String, Object> stats;
 
-  @Inject
-  public QueryIDProvider(@Self DruidNode node)
+  public QueryStats(Map<String, Object> stats)
   {
-    host = node.getHost();
+    this.stats = stats;
   }
 
-  public String next(Query query)
+  @JsonValue
+  public Map<String, Object> getStats()
   {
-    return String.format(
-        "%s_%s_%s_%s_%s",
-        query.getDataSource(),
-        query.getIntervals(),
-        host,
-        new DateTime(),
-        id.incrementAndGet()
-    );
+    return stats;
   }
 }
