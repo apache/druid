@@ -23,13 +23,13 @@ package io.druid.segment;
 import com.metamx.common.Pair;
 
 import java.io.Closeable;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
 public interface BufferCursor extends Closeable, BufferSelectorFactory
 {
-  public Pair<LongBuffer, IntBuffer> makeBucketOffsets();
-  public FloatBufferSelector makeFloatBufferSelector(String columnName);
+  public Pair<LongBuffer, IntBuffer> makeBucketOffsets(ByteOrder order);
   public boolean isDone();
   public void advance();
 }

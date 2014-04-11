@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -235,7 +236,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
 
         @Override
-        public Pair<LongBuffer, IntBuffer> makeBucketOffsets()
+        public Pair<LongBuffer, IntBuffer> makeBucketOffsets(ByteOrder byteOrder)
         {
           long[][] offsets = Iterators.toArray(
               FunctionalIterator
@@ -269,11 +270,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
               long[].class
           );
           LongBuffer timestamps = ByteBuffer.allocate(offsets.length * Longs.BYTES)
-              .order(ByteOrder.nativeOrder())
+              .order(byteOrder)
               .asLongBuffer();
 
           IntBuffer buckets = ByteBuffer.allocateDirect(offsets.length * 2 * Ints.BYTES)
-                                       .order(ByteOrder.nativeOrder())
+                                       .order(byteOrder)
                                        .asIntBuffer();
 
           for (long[] offset : offsets) {
@@ -285,7 +286,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         }
 
         @Override
-        public FloatBufferSelector makeFloatBufferSelector(String columnName)
+        public FloatBufferSelector makeFloatBufferSelector(String columnName, final ByteOrder byteOrder)
         {
           final String metricName = columnName.toLowerCase();
           GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
@@ -313,9 +314,24 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
           return new FloatBufferSelector()
           {
             @Override
+            public int size()
+            {
+              return vals.size();
+            }
+
+            @Override
             public FloatBuffer getBuffer()
             {
-              return vals.getBuffer(currBuffer);
+              FloatBuffer buf = vals.getBuffer(currBuffer);
+              if(buf.order() == byteOrder) {
+                return buf;
+              } else{
+                FloatBuffer newBuf = ByteBuffer.allocateDirect(buf.remaining() * Floats.BYTES)
+                    .order(byteOrder)
+                    .asFloatBuffer();
+                newBuf.put(buf).rewind();
+                return newBuf;
+              }
             }
           };
         }
@@ -335,30 +351,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
               Closeables.closeQuietly((Closeable) column);
             }
           }
-        }
-
-        @Override
-        public TimestampColumnSelector makeTimestampColumnSelector()
-        {
-          throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public DimensionSelector makeDimensionSelector(String dimensionName)
-        {
-          throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public FloatColumnSelector makeFloatColumnSelector(String columnName)
-        {
-          throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ObjectColumnSelector makeObjectColumnSelector(String columnName)
-        {
-          throw new UnsupportedOperationException();
         }
       };
     }

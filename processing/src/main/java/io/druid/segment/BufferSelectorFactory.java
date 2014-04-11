@@ -19,7 +19,9 @@
 
 package io.druid.segment;
 
+import java.nio.ByteOrder;
+
 public interface BufferSelectorFactory
 {
-  public FloatBufferSelector makeFloatBufferSelector(String columnName);
+  public FloatBufferSelector makeFloatBufferSelector(String columnName, ByteOrder byteOrder);
 }

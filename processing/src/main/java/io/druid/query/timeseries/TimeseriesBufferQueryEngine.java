@@ -106,13 +106,14 @@ public class TimeseriesBufferQueryEngine
 
             KernelAggregator aggregator = kernelFactory.factorizeKernel(cursor);
 
+            ByteOrder kernelByteOrder = kernelFactory.getByteOrder();
 
-            Pair<LongBuffer, IntBuffer> timeAndBuckets = cursor.makeBucketOffsets();
+            Pair<LongBuffer, IntBuffer> timeAndBuckets = cursor.makeBucketOffsets(kernelByteOrder);
             ByteBuffer out = ByteBuffer.allocateDirect(
                 kernelFactory.getMaxIntermediateSize()
                 * timeAndBuckets.lhs.remaining()
             )
-            .order(ByteOrder.nativeOrder());
+            .order(kernelByteOrder);
 
             while (!cursor.isDone()) {
               aggregator.copyBuffer();

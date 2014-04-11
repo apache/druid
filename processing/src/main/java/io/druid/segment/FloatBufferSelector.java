@@ -23,5 +23,6 @@ import java.nio.FloatBuffer;
 
 public interface FloatBufferSelector
 {
+  public int size();
   public FloatBuffer getBuffer();
 }
