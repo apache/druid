@@ -28,15 +28,13 @@ import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.CLQueue;
 import com.nativelibs4java.opencl.JavaCL;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.gpu.CLUtils;
 import io.druid.segment.BufferSelectorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.FloatBufferSelector;
 
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -117,19 +115,19 @@ public class KernelAggregatorFactory implements AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    throw new UnsupportedOperationException();
+    return object;
   }
 
   @Override
   public String getName()
   {
-    throw new UnsupportedOperationException();
+    return name;
   }
 
   @Override
   public List<String> requiredFields()
   {
-    return null;
+    return Arrays.asList(fieldName);
   }
 
   @Override

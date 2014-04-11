@@ -35,7 +35,9 @@ import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
+import io.druid.query.timeseries.TimeseriesBufferQueryEngine;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryRunnerFactory;
@@ -70,6 +72,8 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
+
+    binder.bind(TimeseriesQueryEngine.class).to(TimeseriesBufferQueryEngine.class);
 
     binder.bind(GroupByQueryEngine.class).in(LazySingleton.class);
   }

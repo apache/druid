@@ -21,26 +21,19 @@ package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Floats;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.logger.Logger;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.KernelAggregator;
 import io.druid.query.aggregation.KernelAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.BufferCursor;
-import io.druid.segment.Cursor;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -52,7 +45,7 @@ import java.nio.LongBuffer;
 import java.util.Iterator;
 import java.util.List;
 
-public class TimeseriesBufferQueryEngine
+public class TimeseriesBufferQueryEngine extends TimeseriesQueryEngine
 {
   public static class LongBufferIterator implements Iterator<Long>
   {
@@ -81,6 +74,15 @@ public class TimeseriesBufferQueryEngine
       throw new UnsupportedOperationException();
     }
   }
+
+  private static final Logger log = new Logger(TimeseriesBufferQueryEngine.class);
+
+  public TimeseriesBufferQueryEngine()
+  {
+    log.info("Creating Buffer Engine");
+  }
+
+  @Override
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
     return new BaseSequence<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>(

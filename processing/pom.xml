@@ -78,6 +78,11 @@
             <artifactId>rhino</artifactId>
             <version>1.7R4</version>
         </dependency>
+        <dependency>
+            <groupId>com.nativelibs4java</groupId>
+            <artifactId>javacl</artifactId>
+            <version>1.0.0-RC3</version>
+        </dependency>
 
 
         <!-- Tests -->

@@ -21,24 +21,18 @@ package io.druid.query.aggregation;
 
 import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLContext;
-import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLMem;
-import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.CLQueue;
-import com.nativelibs4java.opencl.JavaCL;
 import com.nativelibs4java.opencl.util.OpenCLType;
 import com.nativelibs4java.opencl.util.ReductionUtils;
-import io.druid.query.aggregation.gpu.CLUtils;
 import io.druid.segment.FloatBufferSelector;
 import org.bridj.Pointer;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class FloatKernelAggregator implements KernelAggregator

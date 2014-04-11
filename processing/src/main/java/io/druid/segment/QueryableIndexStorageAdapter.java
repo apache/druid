@@ -232,7 +232,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         @Override
         public boolean isDone()
         {
-          return currBuffer < numBuffers;
+          return currBuffer >= numBuffers;
         }
 
         @Override
@@ -250,16 +250,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         public long[] apply(final Long input)
                         {
                           final long timeStart = Math.max(interval.getStartMillis(), input);
-                          while (currRow < timestamps.length()
-                                 && timestamps.getLongSingleValueRow(currRow) < timeStart) {
+                          while (currRow < timestamps.length() && timestamps.getLongSingleValueRow(currRow) < timeStart) {
                             ++currRow;
                           }
 
                           final int initRow = currRow;
                           final long nextBucket = Math.min(gran.next(input), interval.getEndMillis());
 
-                          while (currRow < timestamps.length()
-                                 || timestamps.getLongSingleValueRow(currRow) < nextBucket) {
+                          while (currRow < timestamps.length() && timestamps.getLongSingleValueRow(currRow) < nextBucket) {
                             currRow++;
                           }
 
@@ -282,6 +280,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             buckets.put((int)offset[1]);
             buckets.put((int)offset[2]);
           }
+          timestamps.rewind();
+          buckets.rewind();
           return new Pair<>(timestamps, buckets);
         }
 

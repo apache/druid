@@ -35,7 +35,7 @@ import java.util.List;
 
 /**
  */
-public class InMemoryCompressedFloats implements IndexedFloats
+public class InMemoryCompressedFloats extends IndexedFloats
 {
   private final CompressedFloatBufferObjectStrategy strategy;
   private final int sizePer;
