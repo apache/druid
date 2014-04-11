@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.gpu;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,7 +28,9 @@ import com.nativelibs4java.opencl.CLDevice;
 import com.nativelibs4java.opencl.CLPlatform;
 import com.nativelibs4java.opencl.CLQueue;
 import com.nativelibs4java.opencl.JavaCL;
-import io.druid.query.aggregation.gpu.CLUtils;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.BufferSelectorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.FloatBufferSelector;
@@ -43,6 +45,8 @@ public class KernelAggregatorFactory implements AggregatorFactory
 {
   private final String fieldName;
   private final String name;
+  private final String kernelName;
+  private final String src;
 
   private final CLContext context;
   private final CLQueue queue;
@@ -50,8 +54,10 @@ public class KernelAggregatorFactory implements AggregatorFactory
 
   @JsonCreator
   public KernelAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("name") final String name,
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("kernelName") final String kernelName,
+      @JsonProperty("src") final String src
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -59,6 +65,8 @@ public class KernelAggregatorFactory implements AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.kernelName = kernelName;
+    this.src = src;
 
     CLDevice device = CLUtils.getDevice();
 
@@ -69,8 +77,13 @@ public class KernelAggregatorFactory implements AggregatorFactory
 
   public KernelAggregator factorizeKernel(BufferSelectorFactory columnFactory)
   {
-    FloatBufferSelector floatBufferSelector = columnFactory.makeFloatBufferSelector(fieldName, byteOrder);
-    return new FloatKernelAggregator(floatBufferSelector, context, queue);
+    final FloatBufferSelector floatBufferSelector = columnFactory.makeFloatBufferSelector(fieldName, byteOrder);
+    if(kernelName == null || kernelName.isEmpty()) {
+      return new ReducingKernelAggregator(floatBufferSelector, context, queue);
+    }
+    else {
+      return new FloatKernelAggregator(floatBufferSelector, context, queue, src, kernelName);
+    }
   }
 
   @Override
@@ -136,19 +149,20 @@ public class KernelAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return null;
+    return "float";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
+    // in this case it indicates the size of each ouput buffer element
     return Floats.BYTES;
   }
 
   @Override
   public Object getAggregatorStartValue()
   {
-    return null;
+    return 0f;
   }
 
   public ByteOrder getByteOrder()

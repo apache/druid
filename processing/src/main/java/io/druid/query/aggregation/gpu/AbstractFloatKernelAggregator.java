@@ -17,15 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.gpu;
 
 import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
 import com.nativelibs4java.opencl.CLMem;
 import com.nativelibs4java.opencl.CLQueue;
-import com.nativelibs4java.opencl.util.OpenCLType;
-import com.nativelibs4java.opencl.util.ReductionUtils;
 import io.druid.segment.FloatBufferSelector;
 import org.bridj.Pointer;
 
@@ -35,36 +33,29 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FloatKernelAggregator implements KernelAggregator
+public abstract class AbstractFloatKernelAggregator implements KernelAggregator
 {
-  private final FloatBufferSelector selector;
-
-  private final CLContext context;
-  private final CLQueue queue;
-
-  private final CLBuffer<Float> totalBuffer;
+  protected final FloatBufferSelector selector;
+  protected final CLContext context;
+  protected final CLQueue queue;
+  protected final CLBuffer<Float> totalBuffer;
+  protected List<CLEvent> copyEvents;
   private int totalBufferOffset = 0;
 
-  private final ReductionUtils.Reductor<Float> reductor;
-
-  private List<CLEvent> copyEvents;
-
-  public FloatKernelAggregator(
+  public AbstractFloatKernelAggregator(
+      CLQueue queue,
       FloatBufferSelector selector,
-      CLContext context,
-      CLQueue queue
+      CLContext context
   )
   {
-    this.selector = selector;
+    this.copyEvents = new ArrayList<>();
     this.context = context;
-    this.queue = queue;
-
     this.totalBuffer = this.context.createFloatBuffer(CLMem.Usage.Input, selector.size());
-    this.reductor = ReductionUtils.createReductor(context, ReductionUtils.Operation.Add, OpenCLType.Float, 1);
-
-    copyEvents = new ArrayList<CLEvent>();
+    this.queue = queue;
+    this.selector = selector;
   }
 
+  public abstract void run(IntBuffer buckets, ByteBuffer out, int position);
 
   @Override
   public void copyBuffer()
@@ -75,30 +66,8 @@ public class FloatKernelAggregator implements KernelAggregator
     int bufRemaining = currentBuffer.remaining();
     CLEvent copyEvent = buf.copyTo(queue, 0, bufRemaining, totalBuffer, totalBufferOffset);
     totalBufferOffset += bufRemaining;
-    copyEvent.waitFor();
     copyEvents.add(copyEvent);
-  }
-
-  @Override
-  public void run(IntBuffer buckets, ByteBuffer out, int position)
-  {
-    Pointer<Float> ptr = reductor.reduce(queue, this.totalBuffer);
-    Float value = ptr.get();
-
-    // TODO: count in buckets
-    out.asFloatBuffer().put(position, value);
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    return null;
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return 0;
+    copyEvent.waitFor();
   }
 
   @Override

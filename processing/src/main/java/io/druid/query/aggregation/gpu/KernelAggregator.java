@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.gpu;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -26,9 +26,5 @@ public interface KernelAggregator
 {
   void copyBuffer();
   void run(IntBuffer buckets, ByteBuffer out, int position);
-
-  Object get(ByteBuffer buf, int position);
-  float getFloat(ByteBuffer buf, int position);
-
   void close();
 }
