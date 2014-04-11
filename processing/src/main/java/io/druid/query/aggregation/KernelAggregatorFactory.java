@@ -60,10 +60,7 @@ public class KernelAggregatorFactory implements AggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
 
-    CLDevice device = CLUtils.findDevice("i7");
-    if (device == null) {
-      throw new IllegalStateException("No OpenCL-capable device!");
-    }
+    CLDevice device = CLUtils.getDevice();
 
     this.context = JavaCL.createContext(new HashMap<CLPlatform.ContextProperties, Object>(), device);
     this.queue = this.context.createDefaultQueue();
@@ -109,7 +106,7 @@ public class KernelAggregatorFactory implements AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    throw new UnsupportedOperationException();
+    return object;
   }
 
   @Override

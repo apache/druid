@@ -75,14 +75,14 @@ public class FloatKernelAggregator implements KernelAggregator
     int bufRemaining = currentBuffer.remaining();
     CLEvent copyEvent = buf.copyTo(queue, 0, bufRemaining, totalBuffer, totalBufferOffset);
     totalBufferOffset += bufRemaining;
-
+    copyEvent.waitFor();
     copyEvents.add(copyEvent);
   }
 
   @Override
   public void run(IntBuffer buckets, ByteBuffer out, int position)
   {
-    Pointer<Float> ptr = reductor.reduce(queue, this.totalBuffer, copyEvents.toArray(new CLEvent[copyEvents.size()]));
+    Pointer<Float> ptr = reductor.reduce(queue, this.totalBuffer);
     Float value = ptr.get();
 
     // TODO: count in buckets

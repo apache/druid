@@ -21,6 +21,8 @@ package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.FunctionalIterator;
@@ -85,7 +87,20 @@ public class TimeseriesBufferQueryEngine extends TimeseriesQueryEngine
   @Override
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
-    return new BaseSequence<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>(
+    if (Iterables.any(
+        query.getAggregatorSpecs(), new Predicate<AggregatorFactory>()
+        {
+          @Override
+          public boolean apply(@Nullable AggregatorFactory input)
+          {
+            return !(input instanceof KernelAggregatorFactory);
+          }
+        }
+    )) {
+      return super.process(query, adapter);
+    }
+
+    return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>()
         {
           @Override

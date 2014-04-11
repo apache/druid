@@ -25,17 +25,19 @@ import com.nativelibs4java.opencl.JavaCL;
 
 public class CLUtils
 {
-  public static CLDevice findDevice(String deviceStr)
-  {
+  public static CLDevice getDevice() {
     return JavaCL.getBestDevice(CLPlatform.DeviceFeature.GPU);
+  }
 
-//    for (CLPlatform platform : JavaCL.listGPUPoweredPlatforms()) {
-//      for (CLDevice device : platform.listAllDevices(true)) {
-//        if (device.createSignature().contains(deviceStr)) {
-//          return device;
-//        }
-//      }
-//    }
-//    return null;
+  public static CLDevice getDevice(String deviceStr)
+  {
+    for (CLPlatform platform : JavaCL.listPlatforms()) {
+      for (CLDevice device : platform.listAllDevices(true)) {
+        if (device.createSignature().contains(deviceStr)) {
+          return device;
+        }
+      }
+    }
+    throw new IllegalStateException("No OpenCL-capable device!");
   }
 }
