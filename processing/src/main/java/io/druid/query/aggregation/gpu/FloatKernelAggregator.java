@@ -53,15 +53,19 @@ public class FloatKernelAggregator extends AbstractFloatKernelAggregator
   @Override
   public void run(IntBuffer buckets, ByteBuffer out, int position)
   {
-    final int n = buckets.remaining() / 2;
-    CLBuffer<Float> kernelOut = context.createFloatBuffer(CLMem.Usage.Output, n);
-    kernel.setArgs(buckets, totalBuffer, kernelOut, n);
+    final int nBuckets = buckets.remaining() / 2;
+    final int n = (int)totalBuffer.getElementCount();
 
+    CLBuffer<Integer> kernelBuckets = context.createIntBuffer(CLMem.Usage.Input, Pointer.pointerToInts(buckets));
+    CLBuffer<Float> kernelOut = context.createFloatBuffer(CLMem.Usage.Output, nBuckets);
+
+    kernel.setArgs(kernelBuckets, totalBuffer, kernelOut, nBuckets, n);
     final int[] globalSizes = new int[] { n };
     CLEvent addEvt = kernel.enqueueNDRange(queue, globalSizes);
 
-    kernelOut.read(queue, Pointer.pointerToFloats(out.asFloatBuffer()), true, addEvt)
-             .waitFor();
+    final Pointer<Float> outPtr = Pointer.pointerToFloats(out.asFloatBuffer());
+    CLEvent readEvt = kernelOut.read(queue, outPtr, false, addEvt);
+    readEvt.waitFor();
   }
 
   @Override
