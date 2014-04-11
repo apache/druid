@@ -313,10 +313,10 @@ public class RealtimePlumber implements Plumber
             final Interval interval = sink.getInterval();
 
             for (FireHydrant hydrant : sink) {
-                if (!hydrant.hasSwapped()) {
-                  log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                  final int rowCount = persistHydrant(hydrant, schema, interval);
-                  metrics.incrementRowOutputCount(rowCount);
+              if (!hydrant.hasSwapped()) {
+                log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
+                final int rowCount = persistHydrant(hydrant, schema, interval);
+                metrics.incrementRowOutputCount(rowCount);
               }
             }
 
@@ -429,10 +429,10 @@ public class RealtimePlumber implements Plumber
           "plumber_persist_%d", maxPendingPersists
       );
     }
-    if (persistExecutor == null) {
+    if (mergeExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       mergeExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_persist_%d", maxPendingPersists
+          "plumber_merge_%d", 1
       );
     }
 
