@@ -27,13 +27,15 @@ public class CLUtils
 {
   public static CLDevice findDevice(String deviceStr)
   {
-    for (CLPlatform platform : JavaCL.listGPUPoweredPlatforms()) {
-      for (CLDevice device : platform.listAllDevices(true)) {
-        if (device.createSignature().contains(deviceStr)) {
-          return device;
-        }
-      }
-    }
-    return null;
+    return JavaCL.getBestDevice(CLPlatform.DeviceFeature.GPU);
+
+//    for (CLPlatform platform : JavaCL.listGPUPoweredPlatforms()) {
+//      for (CLDevice device : platform.listAllDevices(true)) {
+//        if (device.createSignature().contains(deviceStr)) {
+//          return device;
+//        }
+//      }
+//    }
+//    return null;
   }
 }

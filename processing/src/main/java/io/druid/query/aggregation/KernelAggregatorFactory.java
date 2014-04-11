@@ -97,7 +97,7 @@ public class KernelAggregatorFactory implements AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    throw new UnsupportedOperationException();
+    return ((Number) lhs).doubleValue() + ((Number) rhs).doubleValue();
   }
 
   @Override
