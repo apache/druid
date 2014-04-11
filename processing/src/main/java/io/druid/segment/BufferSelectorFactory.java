@@ -19,17 +19,7 @@
 
 package io.druid.segment;
 
-
-import com.metamx.common.Pair;
-
-import java.io.Closeable;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-
-public interface BufferCursor extends Closeable, BufferSelectorFactory
+public interface BufferSelectorFactory
 {
-  public Pair<LongBuffer, IntBuffer> makeBucketOffsets();
   public FloatBufferSelector makeFloatBufferSelector(String columnName);
-  public boolean isDone();
-  public void advance();
 }

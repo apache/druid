@@ -20,13 +20,15 @@
 package io.druid.query.aggregation;
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 public interface KernelAggregator
 {
-  void init(ByteBuffer buf, int position);
   void copyBuffer();
-  void run(ByteBuffer buf, int position);
+  void run(IntBuffer buckets, ByteBuffer out, int position);
+
   Object get(ByteBuffer buf, int position);
   float getFloat(ByteBuffer buf, int position);
+
   void close();
 }

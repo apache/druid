@@ -21,17 +21,20 @@ package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Floats;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.KernelAggregator;
+import io.druid.query.aggregation.KernelAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.BufferCursor;
 import io.druid.segment.Cursor;
@@ -42,6 +45,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.Iterator;
@@ -49,6 +54,33 @@ import java.util.List;
 
 public class TimeseriesBufferQueryEngine
 {
+  public static class LongBufferIterator implements Iterator<Long>
+  {
+    final LongBuffer buf;
+
+    public LongBufferIterator(LongBuffer buf)
+    {
+      this.buf = buf;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return buf.hasRemaining();
+    }
+
+    @Override
+    public Long next()
+    {
+      return buf.get();
+    }
+
+    @Override
+    public void remove()
+    {
+      throw new UnsupportedOperationException();
+    }
+  }
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
     return new BaseSequence<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>(
@@ -64,37 +96,52 @@ public class TimeseriesBufferQueryEngine
 
 
             QueryableIndexStorageAdapter bufferAdapter = (QueryableIndexStorageAdapter) adapter;
-            BufferCursor cursor = bufferAdapter.makeBufferCursor(queryIntervals.get(0), query.getGranularity());
+            final QueryGranularity gran = query.getGranularity();
+            BufferCursor cursor = bufferAdapter.makeBufferCursor(queryIntervals.get(0), gran);
 
             final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
 
             Preconditions.checkArgument(aggregatorSpecs.size() == 1);
-            AggregatorFactory kernelFactory = aggregatorSpecs.get(0);
+            final KernelAggregatorFactory kernelFactory = (KernelAggregatorFactory) aggregatorSpecs.get(0);
 
-            KernelAggregator aggregator = (KernelAggregator) kernelFactory.factorizeBuffered(cursor);
+            KernelAggregator aggregator = kernelFactory.factorizeKernel(cursor);
 
-            ByteBuffer buffer = ByteBuffer.allocateDirect(kernelFactory.getMaxIntermediateSize());
-            int pos = 0;
+
+            Pair<LongBuffer, IntBuffer> timeAndBuckets = cursor.makeBucketOffsets();
+            ByteBuffer out = ByteBuffer.allocateDirect(
+                kernelFactory.getMaxIntermediateSize()
+                * timeAndBuckets.lhs.remaining()
+            )
+            .order(ByteOrder.nativeOrder());
 
             while (!cursor.isDone()) {
               aggregator.copyBuffer();
               cursor.advance();
             }
-            aggregator.run(buffer, pos);
+            aggregator.run(timeAndBuckets.rhs, out, 0);
+            aggregator.close();
 
-            Pair<LongBuffer, IntBuffer> bucketOffsets = cursor.makeBucketOffsets();
+            out.rewind();
+            final FloatBuffer outFloat = out.asFloatBuffer();
 
-            // do something here
+            return FunctionalIterator
+                .create(new LongBufferIterator(timeAndBuckets.lhs))
+                .transform(
+                    new Function<Long, Result<TimeseriesResultValue>>()
+                    {
+                      @Nullable
+                      @Override
+                      public Result<TimeseriesResultValue> apply(
+                          @Nullable Long input
+                      )
+                      {
 
-//            TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime(time));
-//
-//            bob.addMetric(kernelFactory.getName(), aggregator.get(buffer, pos));
-//
-//
-//            Result<TimeseriesResultValue> retVal = bob.build();
-//                      aggregator.close();
-
-            throw new UnsupportedOperationException();
+                        TimeseriesResultBuilder bob = new TimeseriesResultBuilder(gran.toDateTime(input));
+                        bob.addMetric(kernelFactory.getName(), outFloat.get());
+                        return bob.build();
+                      }
+                    }
+                );
           }
 
           @Override
