@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.gpu;
 
+import com.metamx.common.logger.Logger;
 import com.nativelibs4java.opencl.CLBuffer;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLEvent;
@@ -37,6 +38,8 @@ public class FloatKernelAggregator extends AbstractFloatKernelAggregator
   private final CLProgram program;
   private final CLKernel kernel;
 
+  private static final Logger log = new Logger(FloatKernelAggregator.class);
+
   public FloatKernelAggregator(
       FloatBufferSelector selector,
       CLContext context,
@@ -53,6 +56,7 @@ public class FloatKernelAggregator extends AbstractFloatKernelAggregator
   @Override
   public void run(IntBuffer buckets, ByteBuffer out, int position)
   {
+    long t0 = System.nanoTime();
     final int nBuckets = buckets.remaining() / 2;
     final int n = (int)totalBuffer.getElementCount();
 
@@ -66,6 +70,9 @@ public class FloatKernelAggregator extends AbstractFloatKernelAggregator
     final Pointer<Float> outPtr = Pointer.pointerToFloats(out.asFloatBuffer());
     CLEvent readEvt = kernelOut.read(queue, outPtr, false, addEvt);
     readEvt.waitFor();
+
+    log.debug("Memory copy took: %d ns for %d bytes", this.t, totalBuffer.getByteCount());
+    log.debug("Computation took: %d ns", System.nanoTime() - t0);
   }
 
   @Override

@@ -41,6 +41,7 @@ public abstract class AbstractFloatKernelAggregator implements KernelAggregator
   protected final CLBuffer<Float> totalBuffer;
   protected List<CLEvent> copyEvents;
   private int totalBufferOffset = 0;
+  protected long t = 0;
 
   public AbstractFloatKernelAggregator(
       CLQueue queue,
@@ -64,10 +65,13 @@ public abstract class AbstractFloatKernelAggregator implements KernelAggregator
     CLBuffer<Float> buf = context.createFloatBuffer(CLMem.Usage.Input, Pointer.pointerToFloats(currentBuffer));
 
     int bufRemaining = currentBuffer.remaining();
+
+    long t0 = System.nanoTime();
     CLEvent copyEvent = buf.copyTo(queue, 0, bufRemaining, totalBuffer, totalBufferOffset);
-    totalBufferOffset += bufRemaining;
-    copyEvents.add(copyEvent);
     copyEvent.waitFor();
+    t += System.nanoTime() - t0;
+    copyEvents.add(copyEvent);
+    totalBufferOffset += bufRemaining;
   }
 
   @Override
