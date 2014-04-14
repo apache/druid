@@ -170,10 +170,9 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-
         final Set<String> metrics = Sets.newTreeSet();
         if (query.getMetrics() != null) {
-          dimensions.addAll(query.getMetrics());
+          metrics.addAll(query.getMetrics());
         }
 
         final byte[][] metricBytes = new byte[metrics.size()][];
