@@ -212,11 +212,6 @@ public class Announcer
                         pathsToReinstate.add(path);
                       }
 
-                      for (ChildData data : cache.getCurrentData()) {
-                        log.info("Node[%s] in cache is removed to reinstate.", data.getPath());
-                        pathsToReinstate.remove(data.getPath());
-                      }
-
                       if (!pathsToReinstate.isEmpty() && !pathsLost.compareAndSet(null, pathsToReinstate)) {
                         log.info("Already had a pathsLost set!?[%s]", parentPath);
                       }
