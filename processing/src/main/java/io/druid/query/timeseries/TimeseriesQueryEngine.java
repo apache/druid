@@ -74,10 +74,6 @@ public class TimeseriesQueryEngine
                       bob.addMetric(aggregator);
                     }
 
-                    for (PostAggregator postAgg : postAggregatorSpecs) {
-                      bob.addMetric(postAgg);
-                    }
-
                     Result<TimeseriesResultValue> retVal = bob.build();
 
                     // cleanup

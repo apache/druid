@@ -36,7 +36,6 @@ import java.util.List;
 public class InvertedTopNMetricSpec implements TopNMetricSpec
 {
   private static final byte CACHE_TYPE_ID = 0x3;
-
   private final TopNMetricSpec delegate;
 
   @JsonCreator
@@ -76,10 +75,12 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   )
   {
-    return delegate.getResultBuilder(timestamp, dimSpec, threshold, comparator);
+    return delegate.getResultBuilder(timestamp, dimSpec, threshold, comparator, aggFactories, postAggs);
   }
 
   @Override
@@ -103,14 +104,26 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public String getMetricName(DimensionSpec dimSpec)
+  {
+    return delegate.getMetricName(dimSpec);
+  }
+
+  @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     InvertedTopNMetricSpec that = (InvertedTopNMetricSpec) o;
 
-    if (delegate != null ? !delegate.equals(that.delegate) : that.delegate != null) return false;
+    if (delegate != null ? !delegate.equals(that.delegate) : that.delegate != null) {
+      return false;
+    }
 
     return true;
   }
