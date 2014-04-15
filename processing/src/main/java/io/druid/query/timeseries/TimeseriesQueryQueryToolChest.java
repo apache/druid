@@ -146,12 +146,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
         }
         for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-          Object computedPostAggValue = holder.getMetric(postAgg.getName());
-          if (computedPostAggValue != null) {
-            values.put(postAgg.getName(), computedPostAggValue);
-          } else {
             values.put(postAgg.getName(), postAgg.compute(values));
-          }
         }
         return new Result<TimeseriesResultValue>(
             result.getTimestamp(),
