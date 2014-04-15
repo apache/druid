@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
@@ -40,6 +41,8 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String metricName;
+  private final List<AggregatorFactory> aggFactories;
+  private final List<PostAggregator> postAggs;
   private MinMaxPriorityQueue<DimValHolder> pQueue = null;
 
   public TopNNumericResultBuilder(
@@ -47,12 +50,16 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       DimensionSpec dimSpec,
       String metricName,
       int threshold,
-      final Comparator comparator
+      final Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   )
   {
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.metricName = metricName;
+    this.aggFactories = aggFactories;
+    this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
 
     instantiatePQueue(threshold, comparator);
   }
@@ -61,9 +68,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   public TopNResultBuilder addEntry(
       String dimName,
       Object dimValIndex,
-      Object[] metricVals,
-      List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      Object[] metricVals
   )
   {
     Map<String, Object> metricValues = Maps.newLinkedHashMap();
@@ -76,10 +81,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     }
 
     for (PostAggregator postAgg : postAggs) {
-      if (postAgg.getName().equalsIgnoreCase(metricName)) {
-        metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
-        break;
-      }
+      metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
     }
 
     Object topNMetricVal = metricValues.get(metricName);

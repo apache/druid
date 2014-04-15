@@ -75,10 +75,12 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   )
   {
-    return delegate.getResultBuilder(timestamp, dimSpec, threshold, comparator);
+    return delegate.getResultBuilder(timestamp, dimSpec, threshold, comparator, aggFactories, postAggs);
   }
 
   @Override

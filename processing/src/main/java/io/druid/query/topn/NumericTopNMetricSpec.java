@@ -121,10 +121,12 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   )
   {
-    return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator);
+    return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator, aggFactories, postAggs);
   }
 
   @Override

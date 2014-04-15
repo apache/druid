@@ -47,7 +47,9 @@ public interface TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   );
 
   public byte[] getCacheKey();
