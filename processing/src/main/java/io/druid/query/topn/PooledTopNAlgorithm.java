@@ -35,7 +35,8 @@ import java.util.Comparator;
 
 /**
  */
-public class PooledTopNAlgorithm extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
+public class PooledTopNAlgorithm
+    extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
@@ -117,7 +118,12 @@ public class PooledTopNAlgorithm extends BaseTopNAlgorithm<int[], BufferAggregat
   public TopNResultBuilder makeResultBuilder(PooledTopNParams params)
   {
     return query.getTopNMetricSpec().getResultBuilder(
-        params.getCursor().getTime(), query.getDimensionSpec(), query.getThreshold(), comparator
+        params.getCursor().getTime(),
+        query.getDimensionSpec(),
+        query.getThreshold(),
+        comparator,
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs()
     );
   }
 
@@ -217,9 +223,7 @@ public class PooledTopNAlgorithm extends BaseTopNAlgorithm<int[], BufferAggregat
         resultBuilder.addEntry(
             dimSelector.lookupName(i),
             i,
-            vals,
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            vals
         );
       }
     }
@@ -228,7 +232,7 @@ public class PooledTopNAlgorithm extends BaseTopNAlgorithm<int[], BufferAggregat
   @Override
   protected void closeAggregators(BufferAggregator[] bufferAggregators)
   {
-    for(BufferAggregator agg : bufferAggregators) {
+    for (BufferAggregator agg : bufferAggregators) {
       agg.close();
     }
   }
@@ -246,11 +250,6 @@ public class PooledTopNAlgorithm extends BaseTopNAlgorithm<int[], BufferAggregat
 
   public static class PooledTopNParams extends TopNParams
   {
-    public static Builder builder()
-    {
-      return new Builder();
-    }
-
     private final ResourceHolder<ByteBuffer> resultsBufHolder;
     private final ByteBuffer resultsBuf;
     private final int[] aggregatorSizes;
@@ -276,6 +275,11 @@ public class PooledTopNAlgorithm extends BaseTopNAlgorithm<int[], BufferAggregat
       this.aggregatorSizes = aggregatorSizes;
       this.numBytesPerRecord = numBytesPerRecord;
       this.arrayProvider = arrayProvider;
+    }
+
+    public static Builder builder()
+    {
+      return new Builder();
     }
 
     public ResourceHolder<ByteBuffer> getResultsBufHolder()

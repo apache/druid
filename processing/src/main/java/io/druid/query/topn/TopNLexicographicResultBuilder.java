@@ -40,7 +40,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String previousStop;
-
+  private final List<AggregatorFactory> aggFactories;
   private MinMaxPriorityQueue<DimValHolder> pQueue = null;
 
   public TopNLexicographicResultBuilder(
@@ -48,12 +48,14 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       DimensionSpec dimSpec,
       int threshold,
       String previousStop,
-      final Comparator comparator
+      final Comparator comparator,
+      List<AggregatorFactory> aggFactories
   )
   {
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.previousStop = previousStop;
+    this.aggFactories = aggFactories;
 
     instantiatePQueue(threshold, comparator);
   }
@@ -62,9 +64,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   public TopNResultBuilder addEntry(
       String dimName,
       Object dimValIndex,
-      Object[] metricVals,
-      List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      Object[] metricVals
   )
   {
     Map<String, Object> metricValues = Maps.newLinkedHashMap();
@@ -74,9 +74,6 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       Iterator<AggregatorFactory> aggsIter = aggFactories.iterator();
       for (Object metricVal : metricVals) {
         metricValues.put(aggsIter.next().getName(), metricVal);
-      }
-      for (PostAggregator postAgg : postAggs) {
-        metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
       }
 
       pQueue.add(new DimValHolder.Builder().withDirName(dimName).withMetricValues(metricValues).build());

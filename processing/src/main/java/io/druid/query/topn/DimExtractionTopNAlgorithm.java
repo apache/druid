@@ -60,7 +60,12 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   public TopNResultBuilder makeResultBuilder(TopNParams params)
   {
     return query.getTopNMetricSpec().getResultBuilder(
-        params.getCursor().getTime(), query.getDimensionSpec(), query.getThreshold(), comparator
+        params.getCursor().getTime(),
+        query.getDimensionSpec(),
+        query.getThreshold(),
+        comparator,
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs()
     );
   }
 
@@ -144,9 +149,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
         resultBuilder.addEntry(
             entry.getKey(),
             entry.getKey(),
-            vals,
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            vals
         );
       }
     }

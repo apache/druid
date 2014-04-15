@@ -56,7 +56,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     this.bufferPool = bufferPool;
   }
 
-
   @Override
   public TopNParams makeInitParams(
       DimensionSelector dimSelector, Cursor cursor
@@ -69,7 +68,12 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   public TopNResultBuilder makeResultBuilder(TopNParams params)
   {
     return query.getTopNMetricSpec().getResultBuilder(
-        params.getCursor().getTime(), query.getDimensionSpec(), query.getThreshold(), comparator
+        params.getCursor().getTime(),
+        query.getDimensionSpec(),
+        query.getThreshold(),
+        comparator,
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs()
     );
   }
 

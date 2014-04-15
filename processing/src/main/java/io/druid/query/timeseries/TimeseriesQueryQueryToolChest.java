@@ -101,8 +101,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         TimeseriesQuery query = (TimeseriesQuery) input;
         return new TimeseriesBinaryFn(
             query.getGranularity(),
-            query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getAggregatorSpecs()
         );
       }
     };
@@ -147,7 +146,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
         }
         for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-          values.put(postAgg.getName(), holder.getMetric(postAgg.getName()));
+            values.put(postAgg.getName(), postAgg.compute(values));
         }
         return new Result<TimeseriesResultValue>(
             result.getTimestamp(),
@@ -169,7 +168,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
-      private final List<PostAggregator> postAggs = query.getPostAggregatorSpecs();
 
       @Override
       public byte[] computeCacheKey(TimeseriesQuery query)
@@ -236,10 +234,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             while (aggsIter.hasNext() && resultIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
-            }
-
-            for (PostAggregator postAgg : postAggs) {
-              retVal.put(postAgg.getName(), postAgg.compute(retVal));
             }
 
             return new Result<TimeseriesResultValue>(
