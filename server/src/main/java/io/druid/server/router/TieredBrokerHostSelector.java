@@ -122,7 +122,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
   {
     synchronized (lock) {
       if (!ruleManager.isStarted() || !started) {
-        return null;
+        return getDefaultLookup();
       }
     }
 
@@ -157,7 +157,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       }
 
       if (baseRule == null) {
-        return null;
+        return getDefaultLookup();
       }
 
       // in the baseRule, find the broker of highest priority
@@ -190,6 +190,13 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       retVal = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
     }
 
+    return new Pair<>(brokerServiceName, retVal);
+  }
+
+  private Pair<String, ServerDiscoverySelector> getDefaultLookup()
+  {
+    final String brokerServiceName = tierConfig.getDefaultBrokerServiceName();
+    final ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
     return new Pair<>(brokerServiceName, retVal);
   }
 }

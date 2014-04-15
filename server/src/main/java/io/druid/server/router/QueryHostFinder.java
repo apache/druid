@@ -50,10 +50,14 @@ public class QueryHostFinder<T>
   {
     final Pair<String, ServerDiscoverySelector> selected = hostSelector.select(query);
 
-    final String serviceName = selected.lhs;
-    final ServerDiscoverySelector selector = selected.rhs;
+    if (selected == null) {
+      log.error("Danger, Will Robinson! Unable to find any brokers!");
+    }
 
-    Server server = selector.pick();
+    final String serviceName = selected == null ? hostSelector.getDefaultServiceName() : selected.lhs;
+    final ServerDiscoverySelector selector = selected == null ? null : selected.rhs;
+
+    Server server = selector == null ? null : selector.pick();
     if (server == null) {
       log.error(
           "WTF?! No server found for serviceName[%s]. Using backup",

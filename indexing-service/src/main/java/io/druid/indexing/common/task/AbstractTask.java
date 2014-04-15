@@ -61,8 +61,8 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource)
   {
-    this.id = Preconditions.checkNotNull(id.toLowerCase(), "id");
-    this.groupId = Preconditions.checkNotNull(groupId.toLowerCase(), "groupId");
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
     this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
     this.dataSource = Preconditions.checkNotNull(dataSource.toLowerCase(), "dataSource");
   }
