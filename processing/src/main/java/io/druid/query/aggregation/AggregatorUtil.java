@@ -32,7 +32,8 @@ public class AggregatorUtil
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
    * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order
-   *                           such that all the dependencies of any given aggregator should occur before that aggregator
+   *                           such that all the dependencies of any given aggregator should occur before that aggregator.
+   *                           See AggregatorUtilTest.testOutOfOrderPruneDependentPostAgg for example.
    * @param postAggName        name of the postAgg on which dependency is to be calculated
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String postAggName)

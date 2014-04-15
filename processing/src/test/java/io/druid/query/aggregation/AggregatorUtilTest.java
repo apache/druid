@@ -66,4 +66,39 @@ public class AggregatorUtilTest
     Assert.assertEquals(Lists.newArrayList(dependency1, dependency2, aggregator), prunedAgg);
   }
 
+  @Test
+  public void testOutOfOrderPruneDependentPostAgg()
+  {
+    PostAggregator agg1 = new ArithmeticPostAggregator(
+        "abc", "+", Lists.<PostAggregator>newArrayList(
+        new ConstantPostAggregator("1", 1L, 1L), new ConstantPostAggregator("2", 2L, 2L)
+    )
+    );
+    PostAggregator dependency1 = new ArithmeticPostAggregator(
+        "dep1", "+", Lists.<PostAggregator>newArrayList(
+        new ConstantPostAggregator("1", 1L, 1L), new ConstantPostAggregator("4", 4L, 4L)
+    )
+    );
+    PostAggregator agg2 = new FieldAccessPostAggregator("def", "def");
+    PostAggregator dependency2 = new FieldAccessPostAggregator("dep2", "dep2");
+    PostAggregator aggregator = new ArithmeticPostAggregator(
+        "finalAgg",
+        "+",
+        Lists.<PostAggregator>newArrayList(
+            new FieldAccessPostAggregator("dep1", "dep1"),
+            new FieldAccessPostAggregator("dep2", "dep2")
+        )
+    );
+    List<PostAggregator> prunedAgg = AggregatorUtil.pruneDependentPostAgg(
+        Lists.newArrayList(
+            agg1,
+            dependency1,
+            aggregator, // dependency is added later than the aggregator
+            agg2,
+            dependency2
+        ), aggregator.getName()
+    );
+    Assert.assertEquals(Lists.newArrayList(dependency1, aggregator), prunedAgg);
+  }
+
 }
