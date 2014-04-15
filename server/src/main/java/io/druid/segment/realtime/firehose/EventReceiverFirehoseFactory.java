@@ -32,6 +32,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -139,7 +140,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
       final List<InputRow> rows = Lists.newArrayList();
       for (final Map<String, Object> event : events) {
         // Might throw an exception. We'd like that to happen now, instead of while adding to the row buffer.
-        rows.add(parser.parse(event));
+        InputRow row = parser.parse(event);
+        rows.add(Rows.toCaseInsensitiveInputRow(row,row.getDimensions()));
       }
 
       try {
