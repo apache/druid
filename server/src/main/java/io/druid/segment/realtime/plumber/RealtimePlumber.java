@@ -298,7 +298,7 @@ public class RealtimePlumber implements Plumber
     );
   }
 
-  // Submits persist-n-merge task for a Sink to the persistExecutor
+  // Submits persist-n-merge task for a Sink to the mergeExecutor
   private void persistAndMerge(final long truncatedTime, final Sink sink)
   {
     final String threadName = String.format(
