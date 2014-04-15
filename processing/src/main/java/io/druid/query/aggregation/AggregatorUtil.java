@@ -28,8 +28,11 @@ import java.util.Set;
 
 public class AggregatorUtil
 {
-  /** returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
-   * @param postAggregatorList List of postAggregator, there is a restriction that the postAgg should be in order that it can
+  /**
+   * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
+   *
+   * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order
+   *                           such that all the dependencies of any given aggregator should occur before that aggregator
    * @param postAggName        name of the postAgg on which dependency is to be calculated
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String postAggName)
@@ -37,9 +40,8 @@ public class AggregatorUtil
     LinkedList<PostAggregator> rv = Lists.newLinkedList();
     Set<String> deps = new HashSet<>();
     deps.add(postAggName);
-    // Iterate backwards to calculate deps
-    for (int i = postAggregatorList.size() - 1; i >= 0; i--) {
-      PostAggregator agg = postAggregatorList.get(i);
+    // Iterate backwards to find the last calculated aggregate and add dependent aggregator as we find dependencies in reverse order
+    for (PostAggregator agg : Lists.reverse(postAggregatorList)) {
       if (deps.contains(agg.getName())) {
         rv.addFirst(agg); // add to the beginning of List
         deps.remove(agg.getName());
