@@ -113,16 +113,15 @@ public class AsyncQueryForwardingServlet extends HttpServlet
           resp.setStatus(response.getStatus().getCode());
           resp.setContentType("application/json");
 
-          byte[] bytes = getContentBytes(response.getContent());
-          if (bytes.length > 0) {
-            try {
-              outputStream.write(bytes);
-            }
-            catch (Exception e) {
-              asyncContext.complete();
-              throw Throwables.propagate(e);
-            }
+          try {
+            ChannelBuffer buf = response.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
           }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
+          }
+
           return ClientResponse.finished(outputStream);
         }
 
@@ -131,15 +130,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             ClientResponse<OutputStream> clientResponse, HttpChunk chunk
         )
         {
-          byte[] bytes = getContentBytes(chunk.getContent());
-          if (bytes.length > 0) {
-            try {
-              clientResponse.getObj().write(bytes);
-            }
-            catch (Exception e) {
-              asyncContext.complete();
-              throw Throwables.propagate(e);
-            }
+          try {
+            ChannelBuffer buf = chunk.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
           }
           return clientResponse;
         }
@@ -249,15 +246,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
           resp.setStatus(response.getStatus().getCode());
           resp.setContentType("application/x-javascript");
 
-          byte[] bytes = getContentBytes(response.getContent());
-          if (bytes.length > 0) {
-            try {
-              outputStream.write(bytes);
-            }
-            catch (Exception e) {
-              asyncContext.complete();
-              throw Throwables.propagate(e);
-            }
+          try {
+            ChannelBuffer buf = response.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
           }
           return ClientResponse.finished(outputStream);
         }
@@ -267,15 +262,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             ClientResponse<OutputStream> clientResponse, HttpChunk chunk
         )
         {
-          byte[] bytes = getContentBytes(chunk.getContent());
-          if (bytes.length > 0) {
-            try {
-              clientResponse.getObj().write(bytes);
-            }
-            catch (Exception e) {
-              asyncContext.complete();
-              throw Throwables.propagate(e);
-            }
+          try {
+            ChannelBuffer buf = chunk.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
           }
           return clientResponse;
         }
@@ -386,12 +379,5 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       return String.format("http://%s%s", host, req.getRequestURI());
     }
     return String.format("http://%s%s?%s", host, req.getRequestURI(), req.getQueryString());
-  }
-
-  private byte[] getContentBytes(ChannelBuffer content)
-  {
-    byte[] contentBytes = new byte[content.readableBytes()];
-    content.readBytes(contentBytes);
-    return contentBytes;
   }
 }
