@@ -81,7 +81,8 @@ public class QueryRunnerTestHelper
       "+",
       Lists.newArrayList(
           constant,
-          new FieldAccessPostAggregator(addRowsIndexConstantMetric, addRowsIndexConstantMetric)
+          new FieldAccessPostAggregator(addRowsIndexConstantMetric, addRowsIndexConstantMetric),
+          new FieldAccessPostAggregator("rows", "rows")
       )
   );
 

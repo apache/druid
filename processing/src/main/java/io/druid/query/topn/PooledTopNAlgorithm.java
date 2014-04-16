@@ -114,18 +114,7 @@ public class PooledTopNAlgorithm
                            .build();
   }
 
-  @Override
-  public TopNResultBuilder makeResultBuilder(PooledTopNParams params, TopNQuery query)
-  {
-    return query.getTopNMetricSpec().getResultBuilder(
-        params.getCursor().getTime(),
-        query.getDimensionSpec(),
-        query.getThreshold(),
-        comparator,
-        query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs()
-    );
-  }
+
 
   @Override
   protected int[] makeDimValSelector(PooledTopNParams params, int numProcessed, int numToProcess)

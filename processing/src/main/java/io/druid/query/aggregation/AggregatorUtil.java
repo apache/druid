@@ -20,6 +20,8 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -51,6 +53,33 @@ public class AggregatorUtil
     }
 
     return rv;
+  }
+
+  public static Pair<List<AggregatorFactory>, List<PostAggregator>> condensedAggregators(
+      List<AggregatorFactory> aggList,
+      List<PostAggregator> postAggList,
+      String metric
+  )
+  {
+
+    List<PostAggregator> condensedPostAggs = AggregatorUtil.pruneDependentPostAgg(
+        postAggList,
+        metric
+    );
+    // calculate dependent aggregators for these postAgg
+    Set<String> dependencySet = new HashSet<>();
+    dependencySet.add(metric);
+    for (PostAggregator postAggregator : condensedPostAggs) {
+      dependencySet.addAll(postAggregator.getDependentFields());
+    }
+
+    List<AggregatorFactory> condensedAggs = Lists.newArrayList();
+    for (AggregatorFactory aggregatorSpec : aggList) {
+      if (dependencySet.contains(aggregatorSpec.getName())) {
+        condensedAggs.add(aggregatorSpec);
+      }
+    }
+    return new Pair(condensedAggs, condensedPostAggs);
   }
 
 }
