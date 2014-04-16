@@ -57,7 +57,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   }
 
   @Override
-  public TopNResultBuilder makeResultBuilder(TopNParams params)
+  public TopNResultBuilder makeResultBuilder(TopNParams params, TopNQuery query)
   {
     return query.getTopNMetricSpec().getResultBuilder(
         params.getCursor().getTime(),

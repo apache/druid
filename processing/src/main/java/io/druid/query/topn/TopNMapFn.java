@@ -52,7 +52,7 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
     try {
       params = topNAlgorithm.makeInitParams(dimSelector, cursor);
 
-      TopNResultBuilder resultBuilder = topNAlgorithm.makeResultBuilder(params);
+      TopNResultBuilder resultBuilder = topNAlgorithm.makeResultBuilder(params, query);
 
       topNAlgorithm.run(params, resultBuilder, null);
 

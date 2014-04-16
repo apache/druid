@@ -65,7 +65,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   }
 
   @Override
-  public TopNResultBuilder makeResultBuilder(TopNParams params)
+  public TopNResultBuilder makeResultBuilder(TopNParams params, TopNQuery query)
   {
     return query.getTopNMetricSpec().getResultBuilder(
         params.getCursor().getTime(),
@@ -82,7 +82,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       TopNParams params, TopNResultBuilder resultBuilder, int[] ints
   )
   {
-    final TopNResultBuilder singleMetricResultBuilder = makeResultBuilder(params);
     final String metric;
     // ugly
     TopNMetricSpec spec = query.getTopNMetricSpec();
@@ -128,6 +127,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
                                                         .aggregators(condensedAggs)
                                                         .postAggregators(condensedPostAggs)
                                                         .build();
+    final TopNResultBuilder singleMetricResultBuilder = makeResultBuilder(params, singleMetricQuery);
 
     PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;

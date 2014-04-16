@@ -115,7 +115,7 @@ public class PooledTopNAlgorithm
   }
 
   @Override
-  public TopNResultBuilder makeResultBuilder(PooledTopNParams params)
+  public TopNResultBuilder makeResultBuilder(PooledTopNParams params, TopNQuery query)
   {
     return query.getTopNMetricSpec().getResultBuilder(
         params.getCursor().getTime(),
