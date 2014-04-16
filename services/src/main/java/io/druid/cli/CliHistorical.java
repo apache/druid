@@ -48,7 +48,7 @@ import java.util.List;
  */
 @Command(
     name = "historical",
-    description = "Runs a Historical node, see http://druid.io/docs/0.6.86/Historical.html for a description"
+    description = "Runs a Historical node, see http://druid.io/docs/latest/Historical.html for a description"
 )
 public class CliHistorical extends ServerRunnable
 {
