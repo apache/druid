@@ -19,14 +19,21 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.metamx.common.Pair;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import static io.druid.query.QueryRunnerTestHelper.dependentPostAggMetric;
 
 public class AggregatorUtilTest
 {
@@ -99,6 +106,43 @@ public class AggregatorUtilTest
         ), aggregator.getName()
     );
     Assert.assertEquals(Lists.newArrayList(dependency1, aggregator), prunedAgg);
+  }
+
+  @Test
+  public void testCondenseAggregators()
+  {
+
+    ArrayList<AggregatorFactory> aggregatorFactories = Lists.<AggregatorFactory>newArrayList(
+        Iterables.concat(
+            QueryRunnerTestHelper.commonAggregators,
+            Lists.newArrayList(
+                new MaxAggregatorFactory("maxIndex", "index"),
+                new MinAggregatorFactory("minIndex", "index")
+            )
+        )
+    );
+
+    List<PostAggregator> postAggregatorList = Arrays.<PostAggregator>asList(
+        QueryRunnerTestHelper.addRowsIndexConstant,
+        QueryRunnerTestHelper.dependentPostAgg
+    );
+    Pair<List<AggregatorFactory>, List<PostAggregator>> aggregatorsPair = AggregatorUtil.condensedAggregators(
+        aggregatorFactories,
+        postAggregatorList,
+        dependentPostAggMetric
+    );
+    // verify aggregators
+    Assert.assertEquals(
+        Lists.newArrayList(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum),
+        aggregatorsPair.lhs
+    );
+    Assert.assertEquals(
+        Lists.newArrayList(
+            QueryRunnerTestHelper.addRowsIndexConstant,
+            QueryRunnerTestHelper.dependentPostAgg
+        ), aggregatorsPair.rhs
+    );
+
   }
 
 }
