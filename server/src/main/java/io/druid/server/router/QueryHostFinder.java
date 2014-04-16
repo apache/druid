@@ -20,6 +20,7 @@
 package io.druid.server.router;
 
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
@@ -49,7 +50,49 @@ public class QueryHostFinder<T>
   public Server findServer(Query<T> query)
   {
     final Pair<String, ServerDiscoverySelector> selected = hostSelector.select(query);
+    return findServerInner(selected);
+  }
 
+  public Server findDefaultServer()
+  {
+    final Pair<String, ServerDiscoverySelector> selected = hostSelector.getDefaultLookup();
+    return findServerInner(selected);
+  }
+
+  public String getHost(Query<T> query)
+  {
+    Server server = findServer(query);
+
+    if (server == null) {
+      log.makeAlert(
+          "Catastrophic failure! No servers found at all! Failing request!"
+      ).emit();
+
+      throw new ISE("No server found for query[%s]", query);
+    }
+
+    log.debug("Selected [%s]", server.getHost());
+
+    return server.getHost();
+  }
+
+  public String getDefaultHost()
+  {
+    Server server = findDefaultServer();
+
+    if (server == null) {
+      log.makeAlert(
+          "Catastrophic failure! No servers found at all! Failing request!"
+      ).emit();
+
+      throw new ISE("No default server found!");
+    }
+
+    return server.getHost();
+  }
+
+  private Server findServerInner(final Pair<String, ServerDiscoverySelector> selected)
+  {
     if (selected == null) {
       log.error("Danger, Will Robinson! Unable to find any brokers!");
     }
@@ -81,22 +124,5 @@ public class QueryHostFinder<T>
     }
 
     return server;
-  }
-
-  public String getHost(Query<T> query)
-  {
-    Server server = findServer(query);
-
-    if (server == null) {
-      log.makeAlert(
-          "Catastrophic failure! No servers found at all! Failing request!"
-      ).emit();
-
-      return null;
-    }
-
-    log.debug("Selected [%s]", server.getHost());
-
-    return server.getHost();
   }
 }
