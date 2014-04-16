@@ -193,7 +193,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     return new Pair<>(brokerServiceName, retVal);
   }
 
-  private Pair<String, ServerDiscoverySelector> getDefaultLookup()
+  public Pair<String, ServerDiscoverySelector> getDefaultLookup()
   {
     final String brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     final ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
