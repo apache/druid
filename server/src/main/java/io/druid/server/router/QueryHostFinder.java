@@ -20,6 +20,7 @@
 package io.druid.server.router;
 
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
@@ -67,7 +68,7 @@ public class QueryHostFinder<T>
           "Catastrophic failure! No servers found at all! Failing request!"
       ).emit();
 
-      return null;
+      throw new ISE("No server found for query[%s]", query);
     }
 
     log.debug("Selected [%s]", server.getHost());
@@ -84,7 +85,7 @@ public class QueryHostFinder<T>
           "Catastrophic failure! No servers found at all! Failing request!"
       ).emit();
 
-      return null;
+      throw new ISE("No default server found!");
     }
 
     return server.getHost();
