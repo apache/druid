@@ -17,27 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.topn;
+package io.druid.server.router;
 
-import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.Cursor;
-import io.druid.segment.DimensionSelector;
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  */
-public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+public @interface Router
 {
-  public static final Aggregator[] EMPTY_ARRAY = {};
-  public static final int INIT_POSITION_VALUE = -1;
-  public static final int SKIP_POSITION_VALUE = -2;
-
-  public TopNParams makeInitParams(DimensionSelector dimSelector, Cursor cursor);
-
-  public void run(
-      Parameters params,
-      TopNResultBuilder resultBuilder,
-      DimValSelector dimValSelector
-  );
-
-  public void cleanup(Parameters params);
 }

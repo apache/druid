@@ -142,18 +142,17 @@ public class TieredBrokerHostSelectorTest
   @Test
   public void testSelectMatchesNothing() throws Exception
   {
-    Pair retVal = brokerSelector.select(
+    String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .granularity("all")
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
               .intervals(Arrays.<Interval>asList(new Interval("2010-08-31/2010-09-01")))
               .build()
-    );
+    ).lhs;
 
-    Assert.assertEquals(null, retVal);
+    Assert.assertEquals("hotBroker", brokerName);
   }
-
 
   @Test
   public void testSelectMultiInterval() throws Exception

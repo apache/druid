@@ -60,6 +60,7 @@ public class QueryRunnerTestHelper
   public static final String indexMetric = "index";
   public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
+  public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
@@ -72,8 +73,20 @@ public class QueryRunnerTestHelper
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator addRowsIndexConstant =
       new ArithmeticPostAggregator(
-          "addRowsIndexConstant", "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
+          addRowsIndexConstantMetric, "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
       );
+  // dependent on AddRowsIndexContact postAgg
+  public static final ArithmeticPostAggregator dependentPostAgg = new ArithmeticPostAggregator(
+      dependentPostAggMetric,
+      "+",
+      Lists.newArrayList(
+          constant,
+          new FieldAccessPostAggregator(addRowsIndexConstantMetric, addRowsIndexConstantMetric),
+          new FieldAccessPostAggregator("rows", "rows")
+      )
+  );
+
+
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
       rowsCount,
       indexDoubleSum,

@@ -28,8 +28,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.HttpResponseHandler;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.Client;
 import io.druid.query.Query;
+import io.druid.server.router.Router;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.inject.Inject;
@@ -52,7 +53,7 @@ public class RoutingDruidClient<IntermediateType, FinalType>
   @Inject
   public RoutingDruidClient(
       ObjectMapper objectMapper,
-      @Global HttpClient httpClient
+      @Router HttpClient httpClient
   )
   {
     this.objectMapper = objectMapper;
@@ -67,7 +68,7 @@ public class RoutingDruidClient<IntermediateType, FinalType>
     return openConnections.get();
   }
 
-  public ListenableFuture<FinalType> run(
+  public ListenableFuture<FinalType> post(
       String url,
       Query query,
       HttpResponseHandler<IntermediateType, FinalType> responseHandler
@@ -108,5 +109,20 @@ public class RoutingDruidClient<IntermediateType, FinalType>
     }
 
     return future;
+  }
+
+  public ListenableFuture<FinalType> get(
+      String url,
+      HttpResponseHandler<IntermediateType, FinalType> responseHandler
+  )
+  {
+    try {
+      return httpClient
+          .get(new URL(url))
+          .go(responseHandler);
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

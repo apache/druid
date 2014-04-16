@@ -47,6 +47,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryConfig;
@@ -115,17 +116,21 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
+  public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
+  public static final String DATA_SOURCE = "test";
+  protected static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
+
+  static {
+    jsonMapper.getFactory().setCodec(jsonMapper);
+  }
+
   /**
    * We want a deterministic test, but we'd also like a bit of randomness for the distribution of segments
    * across servers.  Thus, we loop multiple times and each time use a deterministically created Random instance.
    * Increase this value to increase exposure to random situations at the expense of test run time.
    */
   private static final int RANDOMNESS = 10;
-
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
-  public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
-  public static final String DATA_SOURCE = "test";
-
   private static final List<AggregatorFactory> AGGS = Arrays.asList(
       new CountAggregatorFactory("rows"),
       new LongSumAggregatorFactory("imps", "imps"),
@@ -152,6 +157,17 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
   private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
+  private final Random random;
+  protected VersionedIntervalTimeline<String, ServerSelector> timeline;
+  protected TimelineServerView serverView;
+  protected Cache cache;
+  public CachingClusteredClient client;
+  DruidServer[] servers;
+
+  public CachingClusteredClientTest(int randomSeed)
+  {
+    this.random = new Random(randomSeed);
+  }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -167,28 +183,6 @@ public class CachingClusteredClientTest
           }
         }
     );
-  }
-
-
-  protected static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
-
-  static {
-    jsonMapper.getFactory().setCodec(jsonMapper);
-  }
-
-  private final Random random;
-
-  protected VersionedIntervalTimeline<String, ServerSelector> timeline;
-  protected TimelineServerView serverView;
-  protected Cache cache;
-
-  CachingClusteredClient client;
-
-  DruidServer[] servers;
-
-  public CachingClusteredClientTest(int randomSeed)
-  {
-    this.random = new Random(randomSeed);
   }
 
   @Before
@@ -222,7 +216,10 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
+
     testQueryCaching(
+        runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"), makeTimeResults(new DateTime("2011-01-01"), 50, 5000),
         new Interval("2011-01-02/2011-01-03"), makeTimeResults(new DateTime("2011-01-02"), 30, 6000),
@@ -263,7 +260,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09"), 18, 521,
             new DateTime("2011-01-09T01"), 181, 52
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
@@ -285,7 +282,10 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
 
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
+
     testQueryCaching(
+        runner,
         builder.build(),
         new Interval("2011-11-04/2011-11-08"),
         makeTimeResults(
@@ -303,7 +303,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-06", TIMEZONE), 23, 85312,
             new DateTime("2011-11-07", TIMEZONE), 85, 102
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-11-04/2011-11-08")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
@@ -324,6 +324,7 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS);
 
     testQueryCaching(
+        client,
         1,
         true,
         builder.context(
@@ -342,6 +343,7 @@ public class CachingClusteredClientTest
     cache.close("0_0");
 
     testQueryCaching(
+        client,
         1,
         false,
         builder.context(
@@ -358,6 +360,7 @@ public class CachingClusteredClientTest
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     testQueryCaching(
+        client,
         1,
         false,
         builder.context(
@@ -390,7 +393,10 @@ public class CachingClusteredClientTest
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TopNQueryQueryToolChest(new TopNQueryConfig()));
+
     testQueryCaching(
+        runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
         makeTopNResults(new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998),
@@ -432,7 +438,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
             new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
@@ -458,7 +464,10 @@ public class CachingClusteredClientTest
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TopNQueryQueryToolChest(new TopNQueryConfig()));
+
     testQueryCaching(
+        runner,
         builder.build(),
         new Interval("2011-11-04/2011-11-08"),
         makeTopNResults(
@@ -477,7 +486,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-06", TIMEZONE), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-11-07", TIMEZONE), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-11-04/2011-11-08")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
@@ -503,7 +512,9 @@ public class CachingClusteredClientTest
         .postAggregators(POST_AGGS)
         .context(CONTEXT);
 
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TopNQueryQueryToolChest(new TopNQueryConfig()));
     testQueryCaching(
+        runner,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
         makeTopNResults(),
@@ -530,6 +541,7 @@ public class CachingClusteredClientTest
         )
     );
 
+
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -543,7 +555,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
             new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
-        client.run(
+        runner.run(
             builder.intervals("2011-01-01/2011-01-10")
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
@@ -557,6 +569,7 @@ public class CachingClusteredClientTest
   public void testSearchCaching() throws Exception
   {
     testQueryCaching(
+        client,
         new SearchQuery(
             new TableDataSource(DATA_SOURCE),
             DIM_FILTER,
@@ -594,13 +607,14 @@ public class CachingClusteredClientTest
     );
   }
 
-  public void testQueryCaching(final Query query, Object... args)
+  public void testQueryCaching(QueryRunner runner, final Query query, Object... args)
   {
-    testQueryCaching(3, true, query, args);
+    testQueryCaching(runner, 3, true, query, args);
   }
 
   @SuppressWarnings("unchecked")
   public void testQueryCaching(
+      final QueryRunner runner,
       final int numTimesToQuery,
       boolean expectBySegment,
       final Query query, Object... args // does this assume query intervals must be ordered?
@@ -754,7 +768,7 @@ public class CachingClusteredClientTest
                                 }
                             )
                     ),
-                    client.run(
+                    runner.run(
                         query.withQuerySegmentSpec(
                             new MultipleIntervalSegmentSpec(
                                 Arrays.asList(
@@ -774,7 +788,7 @@ public class CachingClusteredClientTest
       for (Capture queryCapture : queryCaptures) {
         Query capturedQuery = (Query) queryCapture.getValue();
         if (expectBySegment) {
-          Assert.assertEquals(true, capturedQuery.<Boolean>getContextValue("bySegment"));
+          Assert.assertEquals(true, capturedQuery.getContextValue("bySegment"));
         } else {
           Assert.assertTrue(
               capturedQuery.getContextValue("bySegment") == null ||
@@ -1253,6 +1267,8 @@ public class CachingClusteredClientTest
 
     private class MyDataSegment extends DataSegment
     {
+      private final DataSegment baseSegment = segment;
+
       private MyDataSegment()
       {
         super(
@@ -1267,8 +1283,6 @@ public class CachingClusteredClientTest
             -1
         );
       }
-
-      private final DataSegment baseSegment = segment;
 
       @Override
       @JsonProperty
@@ -1370,7 +1384,6 @@ public class CachingClusteredClientTest
   {
     private final DruidServer server;
     private final QueryRunner queryRunner;
-
     private final List<ServerExpectation> expectations = Lists.newArrayList();
 
     public ServerExpectations(
