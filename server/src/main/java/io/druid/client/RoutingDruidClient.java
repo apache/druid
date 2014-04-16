@@ -30,6 +30,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.HttpResponseHandler;
 import io.druid.guice.annotations.Client;
 import io.druid.query.Query;
+import io.druid.server.router.Router;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.inject.Inject;
@@ -52,7 +53,7 @@ public class RoutingDruidClient<IntermediateType, FinalType>
   @Inject
   public RoutingDruidClient(
       ObjectMapper objectMapper,
-      @Client HttpClient httpClient
+      @Router HttpClient httpClient
   )
   {
     this.objectMapper = objectMapper;

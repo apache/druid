@@ -39,6 +39,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.router.CoordinatorRuleManager;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.Router;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.server.router.TieredBrokerHostSelector;
 import org.eclipse.jetty.server.Server;
@@ -64,7 +65,7 @@ public class CliRouter extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new HttpClientModule("druid.router.http", Client.class),
+        new HttpClientModule("druid.router.http", Router.class),
         new Module()
         {
           @Override
