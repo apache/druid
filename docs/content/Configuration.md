@@ -115,7 +115,7 @@ The metrics module is used to track Druid metrics.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`|How often metrics are emitted.|PT1m|
-|`druid.monitoring.monitors`|List of Druid monitors each specified as `com.metamx.metrics.<monitor-name>` (see below for names and more information). For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]`.|none (no monitors)|
+|`druid.monitoring.monitors`|Sets list of Druid monitors used by a node. Each monitor is specified as `com.metamx.metrics.<monitor-name>` (see below for names and more information). For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]`.|none (no monitors)|
 
 The following monitors are available:
 
