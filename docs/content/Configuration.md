@@ -47,7 +47,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |`druid.emitter.http.timeOut`|The timeout for data reads.|PT5M|
 |`druid.emitter.http.flushMillis`|How often to internal message buffer is flushed (data is sent).|60000|
 |`druid.emitter.http.flushCount`|How many messages can the internal message buffer hold before flushing (sending).|500|
-|`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to.|none|
+|`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none|
 
 ### Http Client Module
 
@@ -105,7 +105,7 @@ This module contains query processing functionality.
 |--------|-----------|-------|
 |`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
 |`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
-|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, this means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments.|Number of cores - 1|
+|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
 
 
 ### Metrics Module
@@ -195,7 +195,7 @@ This module is required by nodes that can serve queries.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.chunkPeriod`|Long-interval queries (of any type) may be broken into shorter interval queries, reducing the impact on resources.|0 (off)|
+|`druid.query.chunkPeriod`|Long-interval queries (of any type) may be broken into shorter interval queries, reducing the impact on resources. Use ISO 8601 periods. For example, if this property is set to `P1M` (one month), then a query covering a year would be broken into 12 smaller queries. |0 (off)|
 
 #### GroupBy Query Config
 
