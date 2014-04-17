@@ -79,17 +79,23 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       @Override
       public HyperLogLogCollector extractValue(InputRow inputRow, String metricName)
       {
-        HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+        Object rawValue = inputRow.getRaw(metricName);
 
-        List<String> dimValues = inputRow.getDimension(metricName);
-        if (dimValues == null) {
+        if (rawValue instanceof HyperLogLogCollector) {
+          return (HyperLogLogCollector) inputRow.getRaw(metricName);
+        } else {
+          HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+
+          List<String> dimValues = inputRow.getDimension(metricName);
+          if (dimValues == null) {
+            return collector;
+          }
+
+          for (String dimensionValue : dimValues) {
+            collector.add(hashFn.hashBytes(dimensionValue.getBytes(Charsets.UTF_8)).asBytes());
+          }
           return collector;
         }
-
-        for (String dimensionValue : dimValues) {
-          collector.add(hashFn.hashBytes(dimensionValue.getBytes(Charsets.UTF_8)).asBytes());
-        }
-        return collector;
       }
     };
   }

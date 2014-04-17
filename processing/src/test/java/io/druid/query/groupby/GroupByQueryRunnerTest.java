@@ -35,6 +35,7 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -46,7 +47,6 @@ import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
-import io.druid.query.extraction.PartialDimExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
@@ -64,7 +64,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -182,13 +181,51 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByWithUniques()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.qualityUniques
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow(
+            "2011-04-01",
+            "rows",
+            26L,
+            "uniques",
+            QueryRunnerTestHelper.UNIQUES_9
+        )
+    );
+
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testGroupByWithDimExtractionFn()
   {
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new ExtractionDimensionSpec("quality", "alias", new RegexDimExtractionFn("(\\w{1})"))))
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new ExtractionDimensionSpec(
+                    "quality",
+                    "alias",
+                    new RegexDimExtractionFn("(\\w{1})")
+                )
+            )
+        )
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -228,33 +265,33 @@ public class GroupByQueryRunnerTest
     DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
 
     GroupByQuery query = GroupByQuery.builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
-        .setDimensions(
-            Lists.newArrayList(
-                (DimensionSpec) new DefaultDimensionSpec(
-                    "quality",
-                    "alias"
-                )
-            )
-        )
-        .setAggregatorSpecs(
-            Arrays.<AggregatorFactory>asList(
-                QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory(
-                    "idx",
-                    "index"
-                )
-            )
-        )
-        .setGranularity(
-            new PeriodGranularity(
-                new Period("P1D"),
-                null,
-                tz
-            )
-        )
-        .build();
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
+                                     .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
+                                     .setDimensions(
+                                         Lists.newArrayList(
+                                             (DimensionSpec) new DefaultDimensionSpec(
+                                                 "quality",
+                                                 "alias"
+                                             )
+                                         )
+                                     )
+                                     .setAggregatorSpecs(
+                                         Arrays.<AggregatorFactory>asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory(
+                                                 "idx",
+                                                 "index"
+                                             )
+                                         )
+                                     )
+                                     .setGranularity(
+                                         new PeriodGranularity(
+                                             new Period("P1D"),
+                                             null,
+                                             tz
+                                         )
+                                     )
+                                     .build();
 
     List<Row> expectedResults = Arrays.asList(
         createExpectedRow(new DateTime("2011-03-31", tz), "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -993,8 +1030,14 @@ public class GroupByQueryRunnerTest
 
   private Iterable<Row> runQuery(GroupByQuery query)
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
-    Sequence<Row> queryResult = toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)).run(query);
+
+    QueryToolChest toolChest = factory.getToolchest();
+    QueryRunner theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)),
+        toolChest
+    );
+
+    Sequence<Row> queryResult = theRunner.run(query);
     return Sequences.toList(queryResult, Lists.<Row>newArrayList());
   }
 
