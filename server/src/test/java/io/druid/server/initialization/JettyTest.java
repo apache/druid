@@ -71,10 +71,11 @@ public class JettyTest
     System.setProperty("druid.global.http.readTimeout", "PT1S");
   }
 
-  @Test
-  @Ignore
+  @Test @Ignore // this test will deadlock if it hits an issue, so ignored by default
   public void testTimeouts() throws Exception
   {
+    // test for request timeouts properly not locking up all threads
+
     setProperties();
     Injector injector = Initialization.makeInjectorWithModules(
         Initialization.makeStartupInjector(), Lists.<Object>newArrayList(
