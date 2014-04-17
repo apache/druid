@@ -43,6 +43,8 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -69,7 +71,8 @@ public class JettyTest
     System.setProperty("druid.global.http.readTimeout", "PT1S");
   }
 
-  // @Test
+  @Test
+  @Ignore
   public void testTimeouts() throws Exception
   {
     setProperties();
