@@ -112,6 +112,13 @@ public class QueryResource
         query = query.withId(queryId);
       }
 
+      if (query.getContextValue("block") != null) {
+        while (true) {
+          System.out.println("SLEEPING");
+          Thread.sleep(10000);
+        }
+      }
+
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
