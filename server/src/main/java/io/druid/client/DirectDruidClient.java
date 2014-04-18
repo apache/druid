@@ -218,7 +218,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     if (!isBySegment) {
       retVal = Sequences.map(
           retVal,
-          toolChest.makeMetricManipulatorFn(
+          toolChest.makePreComputeManipulatorFn(
               query, new MetricManipulationFn()
           {
             @Override

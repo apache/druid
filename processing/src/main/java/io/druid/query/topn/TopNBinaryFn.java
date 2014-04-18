@@ -90,7 +90,6 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<String, DimensionAndMetricValueExtractor>();
 
     String dimension = dimensionSpec.getOutputName();
-    String topNMetricName = topNMetricSpec.getMetricName(dimensionSpec);
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
       retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
     }

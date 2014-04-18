@@ -129,7 +129,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makeMetricManipulatorFn(
+  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makePreComputeManipulatorFn(
       SearchQuery query, MetricManipulationFn fn
   )
   {

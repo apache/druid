@@ -123,7 +123,7 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makeMetricManipulatorFn(
+  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makePreComputeManipulatorFn(
       TimeBoundaryQuery query, MetricManipulationFn fn
   )
   {

@@ -116,7 +116,8 @@ import java.util.concurrent.Executor;
 @RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
-  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
+
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
   protected static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
@@ -321,10 +322,11 @@ public class CachingClusteredClientTest
                                                         .filters(DIM_FILTER)
                                                         .granularity(GRANULARITY)
                                                         .aggregators(AGGS)
-                                                        .postAggregators(POST_AGGS);
-
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
     testQueryCaching(
-        client,
+        runner,
         1,
         true,
         builder.context(
@@ -343,7 +345,7 @@ public class CachingClusteredClientTest
     cache.close("0_0");
 
     testQueryCaching(
-        client,
+        runner,
         1,
         false,
         builder.context(

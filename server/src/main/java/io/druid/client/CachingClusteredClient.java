@@ -357,7 +357,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                           }
                                         }
                                     ),
-                                    toolChest.makeMetricManipulatorFn(
+                                    toolChest.makePreComputeManipulatorFn(
                                         rewrittenQuery,
                                         new MetricManipulationFn()
                                         {

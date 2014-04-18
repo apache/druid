@@ -131,7 +131,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public Function<Result<SelectResultValue>, Result<SelectResultValue>> makeMetricManipulatorFn(
+  public Function<Result<SelectResultValue>, Result<SelectResultValue>> makePreComputeManipulatorFn(
       final SelectQuery query, final MetricManipulationFn fn
   )
   {
