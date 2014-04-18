@@ -135,11 +135,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       final TimeseriesQuery query, final MetricManipulationFn fn
   )
   {
-       return makeComputeManipulatorFn(query, fn, false);
+       return makeManipulatorFn(query, fn);
   }
 
-  private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(
-      final TimeseriesQuery query, final MetricManipulationFn fn, final boolean calculatePostAggs
+  private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeManipulatorFn(
+      final TimeseriesQuery query, final MetricManipulationFn fn
   )
   {
     return new Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>()
@@ -149,13 +149,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
         final Map<String, Object> values = Maps.newHashMap();
         final TimeseriesResultValue holder = result.getValue();
-        if (calculatePostAggs) {
-          for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-            values.put(postAgg.getName(), postAgg.compute(holder.getBaseObject()));
-          }
-        }
         for (AggregatorFactory agg : query.getAggregatorSpecs()) {
           values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
+        }
+        for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+          values.put(postAgg.getName(), postAgg.compute(values));
         }
 
         return new Result<TimeseriesResultValue>(
@@ -278,7 +276,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       TimeseriesQuery query, MetricManipulationFn fn
   )
   {
-    return makeComputeManipulatorFn(query, fn, true);
+    return makeManipulatorFn(query, fn);
   }
 
 
