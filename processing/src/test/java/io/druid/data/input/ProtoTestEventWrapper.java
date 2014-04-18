@@ -23,6 +23,7 @@
 package io.druid.data.input;
 
 import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.UnknownFieldSet;
 
 public final class ProtoTestEventWrapper {
   private ProtoTestEventWrapper() {}
@@ -85,7 +86,13 @@ public final class ProtoTestEventWrapper {
     public ProtoTestEvent getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    @Override
+    public UnknownFieldSet getUnknownFields()
+    {
+      return UnknownFieldSet.getDefaultInstance();
+    }
+
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return ProtoTestEventWrapper.internal_static_prototest_ProtoTestEvent_descriptor;
@@ -1049,6 +1056,7 @@ public final class ProtoTestEventWrapper {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
+
   
   // @@protoc_insertion_point(outer_class_scope)
 }
