@@ -1260,6 +1260,4 @@ public class TopNQueryRunnerTest
 
     TestHelper.assertExpectedResults(expectedResults, runner.run(query));
   }
-
-
 }
