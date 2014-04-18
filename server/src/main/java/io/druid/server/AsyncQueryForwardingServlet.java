@@ -371,13 +371,14 @@ public class AsyncQueryForwardingServlet extends HttpServlet
     }
   }
 
-  private String makeUrl(String host, HttpServletRequest req)
+  private String makeUrl(final String host, final HttpServletRequest req)
   {
-    String queryString = req.getQueryString();
+    final String queryString = req.getQueryString();
+    final String requestURI = req.getRequestURI() == null ? "" : req.getRequestURI();
 
     if (queryString == null) {
-      return String.format("http://%s%s", host, req.getRequestURI());
+      return String.format("http://%s%s", host, requestURI);
     }
-    return String.format("http://%s%s?%s", host, req.getRequestURI(), req.getQueryString());
+    return String.format("http://%s%s?%s", host, requestURI, queryString);
   }
 }
