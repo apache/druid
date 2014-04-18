@@ -293,4 +293,10 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       }
     };
   }
+
+  @Override
+  public Query<Result<TimeseriesResultValue>> makeNonFinalizedQuery(TimeseriesQuery query)
+  {
+    return super.makeNonFinalizedQuery(query.withPostAggregations(Lists.<PostAggregator>newArrayList()));
+  }
 }

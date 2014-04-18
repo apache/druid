@@ -98,7 +98,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
       }
 
       return Sequences.map(
-          baseRunner.run(query.makeNonFinalizedQuery()),
+          baseRunner.run(toolChest.makeNonFinalizedQuery(query)),
           finalizerFn
       );
     }

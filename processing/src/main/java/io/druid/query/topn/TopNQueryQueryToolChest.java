@@ -46,6 +46,7 @@ import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
@@ -373,6 +374,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         );
       }
     };
+  }
+
+  @Override
+  public Query<Result<TopNResultValue>> makeNonFinalizedQuery(TopNQuery query)
+  {
+    return super.makeNonFinalizedQuery(
+        query.withPostAggregations(
+            AggregatorUtil.pruneDependentPostAgg(
+                query.getPostAggregatorSpecs(),
+                query.getTopNMetricSpec()
+                     .getMetricName(query.getDimensionSpec())
+            )
+        )
+    );
   }
 
   private static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>

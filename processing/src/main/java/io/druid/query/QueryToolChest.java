@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -65,5 +66,9 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   public abstract Function<ResultType, ResultType> makeFinalizerFn(QueryType query, MetricManipulationFn fn);
+
+  public Query<ResultType> makeNonFinalizedQuery(QueryType query){
+    return query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false));
+  }
 
 }

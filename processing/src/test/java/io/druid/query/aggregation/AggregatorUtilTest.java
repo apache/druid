@@ -178,4 +178,35 @@ public class AggregatorUtilTest
 
   }
 
+  @Test
+  public void testCasing(){
+    AggregatorFactory agg1 = new DoubleSumAggregatorFactory("Agg1", "value");
+    AggregatorFactory agg2 = new DoubleSumAggregatorFactory("Agg2", "count");
+    PostAggregator postAgg1 = new ArithmeticPostAggregator(
+        null, "*", Lists.<PostAggregator>newArrayList(
+        new FieldAccessPostAggregator(
+            null,
+            "Agg1"
+        ), new FieldAccessPostAggregator(null, "Agg2")
+    )
+    );
+
+    PostAggregator postAgg2 = new ArithmeticPostAggregator(
+        "postAgg",
+        "/",
+        Lists.<PostAggregator>newArrayList(
+            new FieldAccessPostAggregator(
+                null,
+                "Agg1"
+            ), new FieldAccessPostAggregator(null, "Agg2")
+        )
+    );
+
+    Assert.assertEquals(new Pair(Lists.newArrayList(agg1,agg2),Lists.newArrayList(postAgg2)), AggregatorUtil.condensedAggregators(
+        Lists.newArrayList(agg1, agg2),
+        Lists.newArrayList(postAgg1, postAgg2),
+        "postAgg"
+    ));
+  }
+
 }

@@ -174,8 +174,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return result;
   }
 
-  @Override
-  public Query<Result<TimeseriesResultValue>> makeNonFinalizedQuery()
+  public TimeseriesQuery withPostAggregations(List<PostAggregator> postAggs)
   {
     return new TimeseriesQuery(
         getDataSource(),
@@ -183,8 +182,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         dimFilter,
         granularity,
         aggregatorSpecs,
-        // Empty Post Agg, they are calculated during finalization
-        Lists.<PostAggregator>newArrayList(),
+        postAggs,
         getContext()
     );
   }

@@ -269,8 +269,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return result;
   }
 
-  @Override
-  public Query<Result<TopNResultValue>> makeNonFinalizedQuery()
+  public TopNQuery withPostAggregations(List<PostAggregator> postAggs)
   {
     return new TopNQuery(
         getDataSource(),
@@ -281,8 +280,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         dimFilter,
         granularity,
         aggregatorSpecs,
-        // Only calculate dependent post aggs, all aggregators calculated on finalization
-        AggregatorUtil.pruneDependentPostAgg(postAggregatorSpecs, topNMetricSpec.getMetricName(dimensionSpec)),
+        postAggs,
         getContext()
     );
   }

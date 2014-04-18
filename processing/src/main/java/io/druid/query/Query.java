@@ -89,5 +89,4 @@ public interface Query<T>
 
   public String getId();
 
-  public Query<T> makeNonFinalizedQuery();
 }
