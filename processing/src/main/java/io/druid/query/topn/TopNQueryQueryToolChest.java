@@ -163,12 +163,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                       values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
                     }
                     for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-                      Object calculatedPostAgg = input.getMetric(postAgg.getName());
-                      if (calculatedPostAgg != null) {
-                        values.put(postAgg.getName(), calculatedPostAgg);
-                      } else {
-                        values.put(postAgg.getName(), postAgg.compute(values));
-                      }
+                      values.put(postAgg.getName(), input.getMetric(postAgg.getName()));
                     }
                     values.put(dimension, input.getDimensionValue(dimension));
 
@@ -288,6 +283,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 vals.put(factory.getName(), factory.deserialize(resultIter.next()));
               }
 
+              for (PostAggregator postAgg : postAggs) {
+                vals.put(postAgg.getName(), postAgg.compute(vals));
+              }
+
               retVal.add(vals);
             }
 
@@ -319,6 +318,61 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   public Ordering<Result<TopNResultValue>> getOrdering()
   {
     return Ordering.natural();
+  }
+
+  @Override
+  public Function<Result<TopNResultValue>, Result<TopNResultValue>> makeFinalizerFn(
+      final TopNQuery query, final MetricManipulationFn fn
+  )
+  {
+    return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+    {
+      private String dimension = query.getDimensionSpec().getOutputName();
+
+      @Override
+      public Result<TopNResultValue> apply(@Nullable Result<TopNResultValue> result)
+      {
+        List<Map<String, Object>> serializedValues = Lists.newArrayList(
+            Iterables.transform(
+                result.getValue(),
+                new Function<DimensionAndMetricValueExtractor, Map<String, Object>>()
+                {
+                  @Override
+                  public Map<String, Object> apply(@Nullable DimensionAndMetricValueExtractor input)
+                  {
+                    final Map<String, Object> values = Maps.newHashMap();
+                    // calculate postAgg before finalizing aggregators
+                    for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                      Object calculatedValue = input.getMetric(postAgg.getName());
+                      if (calculatedValue == null) {
+                        values.put(postAgg.getName(), postAgg.compute(input.getBaseObject()));
+                      } else {
+                        values.put(postAgg.getName(), calculatedValue);
+                      }
+                    }
+                    for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+                      values.put(
+                          agg.getName(), fn.manipulate(
+                          agg,
+                          input.getMetric(agg.getName())
+                      )
+                      );
+                    }
+                    values.put(dimension, input.getDimensionValue(dimension));
+
+                    return values;
+
+                  }
+                }
+            )
+        );
+
+        return new Result<TopNResultValue>(
+            result.getTimestamp(),
+            new TopNResultValue(serializedValues)
+        );
+      }
+    };
   }
 
   private static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>

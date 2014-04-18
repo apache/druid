@@ -20,7 +20,6 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -55,7 +54,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
       if (isBySegment) {
         finalizerFn = new Function<T, T>()
         {
-          final Function<T, T> baseFinalizer = toolChest.makeMetricManipulatorFn(
+          final Function<T, T> baseFinalizer = toolChest.makeFinalizerFn(
               query,
               new MetricManipulationFn()
               {
@@ -85,7 +84,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
           }
         };
       } else {
-        finalizerFn = toolChest.makeMetricManipulatorFn(
+        finalizerFn = toolChest.makeFinalizerFn(
             query,
             new MetricManipulationFn()
             {
@@ -99,7 +98,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
       }
 
       return Sequences.map(
-          baseRunner.run(query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false))),
+          baseRunner.run(query.makeNonFinalizedQuery()),
           finalizerFn
       );
     }

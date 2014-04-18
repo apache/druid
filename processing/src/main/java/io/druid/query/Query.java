@@ -88,4 +88,6 @@ public interface Query<T>
   public Query<T> withId(String id);
 
   public String getId();
+
+  public Query<T> makeNonFinalizedQuery();
 }

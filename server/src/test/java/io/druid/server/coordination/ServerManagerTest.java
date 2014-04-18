@@ -590,6 +590,12 @@ public class ServerManagerTest
       {
       };
     }
+
+    @Override
+    public Function<T, T> makeFinalizerFn(QueryType query, MetricManipulationFn fn)
+    {
+      return makeMetricManipulatorFn(query, fn);
+    }
   }
 
   private static class SegmentForTesting implements Segment

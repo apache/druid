@@ -27,8 +27,10 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
+import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
@@ -42,7 +44,6 @@ import java.util.Map;
 public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 {
   public static final String TOPN = "topN";
-
   private final DimensionSpec dimensionSpec;
   private final TopNMetricSpec topNMetricSpec;
   private final int threshold;
@@ -213,23 +214,43 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     TopNQuery topNQuery = (TopNQuery) o;
 
-    if (threshold != topNQuery.threshold) return false;
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null)
+    if (threshold != topNQuery.threshold) {
       return false;
-    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) return false;
-    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null)
+    }
+    if (aggregatorSpecs != null
+        ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs)
+        : topNQuery.aggregatorSpecs != null) {
       return false;
-    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) return false;
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs) : topNQuery.postAggregatorSpecs != null)
+    }
+    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) {
       return false;
-    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null)
+    }
+    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null) {
       return false;
+    }
+    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) {
+      return false;
+    }
+    if (postAggregatorSpecs != null
+        ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs)
+        : topNQuery.postAggregatorSpecs != null) {
+      return false;
+    }
+    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null) {
+      return false;
+    }
 
     return true;
   }
@@ -246,5 +267,23 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public Query<Result<TopNResultValue>> makeNonFinalizedQuery()
+  {
+    return new TopNQuery(
+        getDataSource(),
+        dimensionSpec,
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        // Only calculate dependent post aggs, all aggregators calculated on finalization
+        AggregatorUtil.pruneDependentPostAgg(postAggregatorSpecs, topNMetricSpec.getMetricName(dimensionSpec)),
+        getContext()
+    );
   }
 }

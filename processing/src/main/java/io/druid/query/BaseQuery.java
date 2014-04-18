@@ -245,4 +245,10 @@ public abstract class BaseQuery<T> implements Query<T>
     result = 31 * result + (duration != null ? duration.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public Query<T> makeNonFinalizedQuery()
+  {
+    return withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false));
+  }
 }

@@ -262,4 +262,35 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
     return Ordering.natural();
   }
+
+  @Override
+  public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeFinalizerFn(
+      final TimeseriesQuery query, final MetricManipulationFn fn
+  )
+  {
+    return new Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>()
+    {
+      @Override
+      public Result<TimeseriesResultValue> apply(Result<TimeseriesResultValue> result)
+      {
+        final Map<String, Object> values = Maps.newHashMap();
+        final TimeseriesResultValue holder = result.getValue();
+        // calculate PostAgg before finalization
+        for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+          values.put(postAgg.getName(), postAgg.compute(holder.getBaseObject()));
+        }
+        for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+          values.put(
+              agg.getName(),
+              fn.manipulate(agg, holder.getMetric(agg.getName()))
+          );
+        }
+
+        return new Result<TimeseriesResultValue>(
+            result.getTimestamp(),
+            new TimeseriesResultValue(values)
+        );
+      }
+    };
+  }
 }

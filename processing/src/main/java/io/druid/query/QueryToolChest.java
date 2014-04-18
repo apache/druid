@@ -63,4 +63,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments) {
     return segments;
   }
+
+  public abstract Function<ResultType, ResultType> makeFinalizerFn(QueryType query, MetricManipulationFn fn);
+
 }

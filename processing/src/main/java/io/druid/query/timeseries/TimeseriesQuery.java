@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -171,5 +172,20 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
     return result;
+  }
+
+  @Override
+  public Query<Result<TimeseriesResultValue>> makeNonFinalizedQuery()
+  {
+    return new TimeseriesQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        // Empty Post Agg, they are calculated during finalization
+        Lists.<PostAggregator>newArrayList(),
+        getContext()
+    );
   }
 }
