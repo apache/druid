@@ -698,13 +698,13 @@ public class TopNQueryRunnerTest
         .fields(
             Lists.<DimFilter>newArrayList(
                 Druids.newSelectorDimFilterBuilder()
-                    .dimension(providerDimension)
-                    .value("billyblank")
-                    .build(),
+                      .dimension(providerDimension)
+                      .value("billyblank")
+                      .build(),
                 Druids.newSelectorDimFilterBuilder()
-                    .dimension(QueryRunnerTestHelper.qualityDimension)
-                    .value("mezzanine")
-                    .build()
+                      .dimension(QueryRunnerTestHelper.qualityDimension)
+                      .value("mezzanine")
+                      .build()
             )
         ).build();
     TopNQuery query = new TopNQueryBuilder()
@@ -1200,7 +1200,8 @@ public class TopNQueryRunnerTest
         .postAggregators(
             Arrays.<PostAggregator>asList(
                 QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg
+                QueryRunnerTestHelper.dependentPostAgg,
+                QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
             )
         )
         .build();
@@ -1219,6 +1220,10 @@ public class TopNQueryRunnerTest
                                 .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
                                 .put("maxIndex", 1743.9217529296875D)
                                 .put("minIndex", 792.3260498046875D)
+                                .put(
+                                    QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
+                                    QueryRunnerTestHelper.UNIQUES_2 + 1.0
+                                )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
                                 .put(providerDimension, "upfront")
@@ -1229,6 +1234,10 @@ public class TopNQueryRunnerTest
                                 .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
                                 .put("maxIndex", 1870.06103515625D)
                                 .put("minIndex", 545.9906005859375D)
+                                .put(
+                                    QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
+                                    QueryRunnerTestHelper.UNIQUES_2 + 1.0
+                                )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
                                 .put(providerDimension, "spot")
@@ -1237,6 +1246,10 @@ public class TopNQueryRunnerTest
                                 .put("addRowsIndexConstant", 96444.57232284546D)
                                 .put(QueryRunnerTestHelper.dependentPostAggMetric, 97282.57232284546D)
                                 .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                                .put(
+                                    QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
+                                    QueryRunnerTestHelper.UNIQUES_9 + 1.0
+                                )
                                 .put("maxIndex", 277.2735290527344D)
                                 .put("minIndex", 59.02102279663086D)
                                 .build()

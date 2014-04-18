@@ -280,6 +280,15 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     return new IntervalChunkingQueryRunner<Result<SelectResultValue>>(runner, config.getChunkPeriod());
   }
 
+  @Override
+  public Function<Result<SelectResultValue>, Result<SelectResultValue>> makeFinalizerFn(
+      SelectQuery query,
+      MetricManipulationFn fn
+  )
+  {
+    return makeMetricManipulatorFn(query, fn);
+  }
+
   public Ordering<Result<SelectResultValue>> getOrdering()
   {
     return Ordering.natural();

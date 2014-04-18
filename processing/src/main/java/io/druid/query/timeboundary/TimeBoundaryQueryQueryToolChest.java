@@ -51,7 +51,6 @@ public class TimeBoundaryQueryQueryToolChest
     extends QueryToolChest<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
 {
   private static final byte TIMEBOUNDARY_QUERY = 0x3;
-
   private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<Result<TimeBoundaryResultValue>>()
   {
   };
@@ -78,11 +77,20 @@ public class TimeBoundaryQueryQueryToolChest
               public boolean apply(T input)
               {
                 return input.getInterval().overlaps(first.getInterval()) || input.getInterval()
-                    .overlaps(second.getInterval());
+                                                                                 .overlaps(second.getInterval());
               }
             }
         )
     );
+  }
+
+  @Override
+  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makeFinalizerFn(
+      TimeBoundaryQuery query,
+      MetricManipulationFn fn
+  )
+  {
+    return makeMetricManipulatorFn(query, fn);
   }
 
   @Override
@@ -145,9 +153,9 @@ public class TimeBoundaryQueryQueryToolChest
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
         return ByteBuffer.allocate(2)
-            .put(TIMEBOUNDARY_QUERY)
-            .put(query.getCacheKey())
-            .array();
+                         .put(TIMEBOUNDARY_QUERY)
+                         .put(query.getCacheKey())
+                         .array();
       }
 
       @Override

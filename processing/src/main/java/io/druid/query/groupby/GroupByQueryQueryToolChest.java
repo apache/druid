@@ -205,4 +205,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new SubqueryQueryRunner<Row>(
         new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod()));
   }
+
+  @Override
+  public Function<Row, Row> makeFinalizerFn(GroupByQuery query, MetricManipulationFn fn)
+  {
+    return makeMetricManipulatorFn(query, fn);
+  }
+
 }

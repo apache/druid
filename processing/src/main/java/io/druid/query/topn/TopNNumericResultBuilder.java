@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
@@ -59,7 +58,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.dimSpec = dimSpec;
     this.metricName = metricName;
     this.aggFactories = aggFactories;
-    this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
+    this.postAggs = postAggs;
 
     instantiatePQueue(threshold, comparator);
   }

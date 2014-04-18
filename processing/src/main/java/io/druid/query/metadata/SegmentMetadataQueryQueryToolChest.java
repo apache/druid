@@ -169,6 +169,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
+  public Function<SegmentAnalysis, SegmentAnalysis> makeFinalizerFn(SegmentMetadataQuery query, MetricManipulationFn fn)
+  {
+    return makeMetricManipulatorFn(query, fn);
+  }
+
+  @Override
   public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(SegmentMetadataQuery query)
   {
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()

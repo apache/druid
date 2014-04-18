@@ -24,7 +24,6 @@ import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
@@ -65,12 +64,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     this.threshold = threshold;
     this.aggregations = aggregatorSpecs;
     this.dimensionSpec = dimSpec;
-
-    this.postAggregations = AggregatorUtil.pruneDependentPostAgg(
-        postAggregatorSpecs,
-        this.topNMetricSpec.getMetricName(this.dimensionSpec)
-    );
-
+    this.postAggregations = postAggregatorSpecs;
     this.comparator = topNMetricSpec.getComparator(aggregatorSpecs, postAggregatorSpecs);
   }
 
@@ -90,7 +84,6 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<String, DimensionAndMetricValueExtractor>();
 
     String dimension = dimensionSpec.getOutputName();
-    String topNMetricName = topNMetricSpec.getMetricName(dimensionSpec);
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
       retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
     }

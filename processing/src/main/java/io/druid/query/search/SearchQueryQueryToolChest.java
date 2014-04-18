@@ -172,7 +172,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1 + 4 + granularityBytes.length + filterBytes.length +
-                    querySpecBytes.length + dimensionsBytesSize
+                querySpecBytes.length + dimensionsBytesSize
             )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))
@@ -261,6 +261,15 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, config.getChunkPeriod()),
         config
     );
+  }
+
+  @Override
+  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makeFinalizerFn(
+      SearchQuery query,
+      MetricManipulationFn fn
+  )
+  {
+    return makeMetricManipulatorFn(query, fn);
   }
 
   public Ordering<Result<SearchResultValue>> getOrdering()
