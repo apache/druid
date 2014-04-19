@@ -42,7 +42,7 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutiroal%3A-The-Druid-Cluster.html).
+At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutorial%3A-The-Druid-Cluster.html).
 
 Let's start from our usual starting point in the tarball directory.
 
