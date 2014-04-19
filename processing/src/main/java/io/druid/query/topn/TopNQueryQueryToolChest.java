@@ -149,7 +149,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private String dimension = query.getDimensionSpec().getOutputName();
 
       @Override
-      public Result<TopNResultValue> apply(@Nullable Result<TopNResultValue> result)
+      public Result<TopNResultValue> apply(Result<TopNResultValue> result)
       {
         List<Map<String, Object>> serializedValues = Lists.newArrayList(
             Iterables.transform(
@@ -157,7 +157,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 new Function<DimensionAndMetricValueExtractor, Map<String, Object>>()
                 {
                   @Override
-                  public Map<String, Object> apply(@Nullable DimensionAndMetricValueExtractor input)
+                  public Map<String, Object> apply(DimensionAndMetricValueExtractor input)
                   {
                     final Map<String, Object> values = Maps.newHashMap();
                     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
@@ -197,7 +197,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private String dimension = query.getDimensionSpec().getOutputName();
 
       @Override
-      public Result<TopNResultValue> apply(@Nullable Result<TopNResultValue> result)
+      public Result<TopNResultValue> apply(Result<TopNResultValue> result)
       {
         List<Map<String, Object>> serializedValues = Lists.newArrayList(
             Iterables.transform(
@@ -205,7 +205,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 new Function<DimensionAndMetricValueExtractor, Map<String, Object>>()
                 {
                   @Override
-                  public Map<String, Object> apply(@Nullable DimensionAndMetricValueExtractor input)
+                  public Map<String, Object> apply(DimensionAndMetricValueExtractor input)
                   {
                     final Map<String, Object> values = Maps.newHashMap();
                     // compute all post aggs
@@ -249,7 +249,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
-      private final List<PostAggregator> postAggs = query.getPostAggregatorSpecs();
 
       @Override
       public byte[] computeCacheKey(TopNQuery query)
@@ -289,7 +288,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         return new Function<Result<TopNResultValue>, Object>()
         {
           @Override
-          public Object apply(@Nullable final Result<TopNResultValue> input)
+          public Object apply(final Result<TopNResultValue> input)
           {
             List<DimensionAndMetricValueExtractor> results = Lists.newArrayList(input.getValue());
             final List<Object> retVal = Lists.newArrayListWithCapacity(results.size() + 1);
@@ -317,7 +316,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           private final QueryGranularity granularity = query.getGranularity();
 
           @Override
-          public Result<TopNResultValue> apply(@Nullable Object input)
+          public Result<TopNResultValue> apply(Object input)
           {
             List<Object> results = (List<Object>) input;
             List<Map<String, Object>> retVal = Lists.newArrayListWithCapacity(results.size());
@@ -418,7 +417,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                             new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
                             {
                               @Override
-                              public Result<TopNResultValue> apply(@Nullable Result<TopNResultValue> input)
+                              public Result<TopNResultValue> apply(Result<TopNResultValue> input)
                               {
                                 return new Result<TopNResultValue>(
                                     input.getTimestamp(),

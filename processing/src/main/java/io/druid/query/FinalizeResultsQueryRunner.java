@@ -25,6 +25,8 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.FinalizeMetricManipulationFn;
+import io.druid.query.aggregation.IdentityMetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulationFn;
 
 import javax.annotation.Nullable;
@@ -62,14 +64,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
         {
           final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
               query,
-              new MetricManipulationFn()
-              {
-                @Override
-                public Object manipulate(AggregatorFactory factory, Object object)
-                {
-                  return factory.finalizeComputation(factory.deserialize(object));
-                }
-              }
+              new FinalizeMetricManipulationFn()
           );
 
           @Override
@@ -90,31 +85,14 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
           }
         };
       } else {
-        finalizerFn = toolChest.makePostComputeManipulatorFn(
-            query,
-            new MetricManipulationFn()
-            {
-              @Override
-              public Object manipulate(AggregatorFactory factory, Object object)
-              {
-                return factory.finalizeComputation(object);
-              }
-            }
-        );
+        finalizerFn = toolChest.makePostComputeManipulatorFn(query, new FinalizeMetricManipulationFn());
       }
     } else {
       // finalize is false here.
       queryToRun = query;
       finalizerFn = toolChest.makePostComputeManipulatorFn(
           query,
-          new MetricManipulationFn()
-          {
-            @Override
-            public Object manipulate(AggregatorFactory factory, Object object)
-            {
-              return object;
-            }
-          }
+          new IdentityMetricManipulationFn()
       );
     }
 

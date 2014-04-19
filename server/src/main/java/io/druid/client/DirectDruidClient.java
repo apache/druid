@@ -122,8 +122,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType typeRef;
     if (isBySegment) {
       typeRef = types.rhs;
-    }
-    else {
+    } else {
       typeRef = types.lhs;
     }
 
@@ -219,14 +218,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       retVal = Sequences.map(
           retVal,
           toolChest.makePreComputeManipulatorFn(
-              query, new MetricManipulationFn()
-          {
-            @Override
-            public Object manipulate(AggregatorFactory factory, Object object)
-            {
-              return factory.deserialize(object);
-            }
-          }
+              query,
+              new MetricManipulationFn()
+              {
+                @Override
+                public Object manipulate(AggregatorFactory factory, Object object)
+                {
+                  return factory.deserialize(object);
+                }
+              }
           )
       );
     }
@@ -313,7 +313,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     @Override
     public void close() throws IOException
     {
-      if(jp != null) {
+      if (jp != null) {
         jp.close();
       }
     }
