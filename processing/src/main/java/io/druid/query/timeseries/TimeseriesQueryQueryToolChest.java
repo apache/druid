@@ -131,32 +131,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeMetricManipulatorFn(
-      final TimeseriesQuery query, final MetricManipulationFn fn
-  )
-  {
-    return new Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>()
-    {
-      @Override
-      public Result<TimeseriesResultValue> apply(Result<TimeseriesResultValue> result)
-      {
-        final Map<String, Object> values = Maps.newHashMap();
-        final TimeseriesResultValue holder = result.getValue();
-        for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-          values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
-        }
-        for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-            values.put(postAgg.getName(), postAgg.compute(values));
-        }
-        return new Result<TimeseriesResultValue>(
-            result.getTimestamp(),
-            new TimeseriesResultValue(values)
-        );
-      }
-    };
-  }
-
-  @Override
   public TypeReference<Result<TimeseriesResultValue>> getResultTypeReference()
   {
     return TYPE_REFERENCE;
@@ -261,5 +235,49 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public Ordering<Result<TimeseriesResultValue>> getOrdering()
   {
     return Ordering.natural();
+  }
+
+  @Override
+  public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makePreComputeManipulatorFn(
+      final TimeseriesQuery query, final MetricManipulationFn fn
+  )
+  {
+    return makeComputeManipulatorFn(query, fn, false);
+  }
+
+  @Override
+  public Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makePostComputeManipulatorFn(
+      TimeseriesQuery query, MetricManipulationFn fn
+  )
+  {
+    return makeComputeManipulatorFn(query, fn, true);
+  }
+
+  private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(
+      final TimeseriesQuery query, final MetricManipulationFn fn, final boolean calculatePostAggs
+  )
+  {
+    return new Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>()
+    {
+      @Override
+      public Result<TimeseriesResultValue> apply(Result<TimeseriesResultValue> result)
+      {
+        final Map<String, Object> values = Maps.newHashMap();
+        final TimeseriesResultValue holder = result.getValue();
+        if (calculatePostAggs) {
+          for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+            values.put(postAgg.getName(), postAgg.compute(holder.getBaseObject()));
+          }
+        }
+        for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+          values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
+        }
+
+        return new Result<TimeseriesResultValue>(
+            result.getTimestamp(),
+            new TimeseriesResultValue(values)
+        );
+      }
+    };
   }
 }
