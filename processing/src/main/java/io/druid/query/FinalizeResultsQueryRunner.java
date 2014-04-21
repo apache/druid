@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.FinalizeMetricManipulationFn;
+import io.druid.query.aggregation.IdentityMetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulationFn;
 
 import javax.annotation.Nullable;
@@ -50,24 +51,25 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   {
     final boolean isBySegment = query.getContextBySegment(false);
     final boolean shouldFinalize = query.getContextFinalize(true);
-    Function<T, T> finalizerFn;
+
+    final Query<T> queryToRun;
+    final Function<T, T> finalizerFn;
+    final MetricManipulationFn metricManipulationFn;
+
+    if (shouldFinalize) {
+      queryToRun = query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false));
+      metricManipulationFn = new FinalizeMetricManipulationFn();
+
+    } else {
+      queryToRun = query;
+      metricManipulationFn = new IdentityMetricManipulationFn();
+    }
     if (isBySegment) {
       finalizerFn = new Function<T, T>()
       {
         final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
             query,
-            new MetricManipulationFn()
-            {
-              @Override
-              public Object manipulate(AggregatorFactory factory, Object object)
-              {
-                if (shouldFinalize) {
-                  return factory.finalizeComputation(factory.deserialize(object));
-                } else {
-                  return object;
-                }
-              }
-            }
+            metricManipulationFn
         );
 
         @Override
@@ -88,25 +90,12 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
         }
       };
     } else {
-      finalizerFn = toolChest.makePostComputeManipulatorFn(
-          query,
-          new MetricManipulationFn()
-          {
-            @Override
-            public Object manipulate(AggregatorFactory factory, Object object)
-            {
-              if (shouldFinalize) {
-                return factory.finalizeComputation(factory.deserialize(object));
-              } else {
-                return object;
-              }
-            }
-          }
-      );
+      finalizerFn = toolChest.makePostComputeManipulatorFn(query, metricManipulationFn);
     }
 
+
     return Sequences.map(
-        baseRunner.run(query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false))),
+        baseRunner.run(queryToRun),
         finalizerFn
     );
 
