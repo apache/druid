@@ -171,7 +171,10 @@ public class QueryRunnerTestHelper
   )
   {
     return new FinalizeResultsQueryRunner<T>(
-        factory.createRunner(adapter),
+        new BySegmentQueryRunner<T>(
+            segmentId, adapter.getDataInterval().getStart(),
+            factory.createRunner(adapter)
+        ),
         factory.getToolchest()
     );
   }
