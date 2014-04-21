@@ -51,54 +51,43 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
     final boolean isBySegment = query.getContextBySegment(false);
     final boolean shouldFinalize = query.getContextFinalize(true);
     Function<T, T> finalizerFn;
-    if (shouldFinalize) {
-      if (isBySegment) {
-        finalizerFn = new Function<T, T>()
-        {
-          final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
-              query,
-              new MetricManipulationFn()
-              {
-                @Override
-                public Object manipulate(AggregatorFactory factory, Object object)
-                {
-                  return factory.finalizeComputation(factory.deserialize(object));
-                }
-              }
-          );
-
-          @Override
-          @SuppressWarnings("unchecked")
-          public T apply(@Nullable T input)
-          {
-            Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
-            BySegmentResultValueClass<T> resultsClass = result.getValue();
-
-            return (T) new Result<BySegmentResultValueClass>(
-                result.getTimestamp(),
-                new BySegmentResultValueClass(
-                    Lists.transform(resultsClass.getResults(), baseFinalizer),
-                    resultsClass.getSegmentId(),
-                    resultsClass.getInterval()
-                )
-            );
-          }
-        };
-      } else {
-        finalizerFn = toolChest.makePostComputeManipulatorFn(
+    if (isBySegment) {
+      finalizerFn = new Function<T, T>()
+      {
+        final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
             query,
             new MetricManipulationFn()
             {
               @Override
               public Object manipulate(AggregatorFactory factory, Object object)
               {
-                return factory.finalizeComputation(object);
+                if (shouldFinalize) {
+                  return factory.finalizeComputation(factory.deserialize(object));
+                } else {
+                  return object;
+                }
               }
             }
         );
-      }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public T apply(@Nullable T input)
+        {
+          Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
+          BySegmentResultValueClass<T> resultsClass = result.getValue();
+
+          return (T) new Result<BySegmentResultValueClass>(
+              result.getTimestamp(),
+              new BySegmentResultValueClass(
+                  Lists.transform(resultsClass.getResults(), baseFinalizer),
+                  resultsClass.getSegmentId(),
+                  resultsClass.getInterval()
+              )
+          );
+        }
+      };
     } else {
-      // finalize is false here.
       finalizerFn = toolChest.makePostComputeManipulatorFn(
           query,
           new MetricManipulationFn()
@@ -106,7 +95,11 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
             @Override
             public Object manipulate(AggregatorFactory factory, Object object)
             {
-              return object;
+              if (shouldFinalize) {
+                return factory.finalizeComputation(factory.deserialize(object));
+              } else {
+                return object;
+              }
             }
           }
       );
