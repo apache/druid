@@ -265,8 +265,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         final Map<String, Object> values = Maps.newHashMap();
         final TimeseriesResultValue holder = result.getValue();
         if (calculatePostAggs) {
+          // put non finalized aggregators for calculating dependent post Aggregators
+          for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+            values.put(agg.getName(), holder.getMetric(agg.getName()));
+          }
           for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-            values.put(postAgg.getName(), postAgg.compute(holder.getBaseObject()));
+            values.put(postAgg.getName(), postAgg.compute(values));
           }
         }
         for (AggregatorFactory agg : query.getAggregatorSpecs()) {

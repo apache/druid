@@ -294,17 +294,20 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
                     "index", 2L,
-                    "testdim", "1"
+                    "testdim", "1",
+                    "addrowsindexconstant", 3.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 4L,
-                    "testdim", "2"
+                    "testdim", "2",
+                    "addrowsindexconstant", 7.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 2L,
-                    "testdim", "3"
+                    "testdim", "3",
+                    "addrowsindexconstant", 3.0
                 )
             )
         )
@@ -316,17 +319,20 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 3L,
-                    "testdim", "1"
+                    "testdim", "1",
+                    "addrowsindexconstant", 6.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 0L,
-                    "testdim", "2"
+                    "testdim", "2",
+                    "addrowsindexconstant", 3.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 4L,
                     "index", 5L,
-                    "testdim", "other"
+                    "testdim", "other",
+                    "addrowsindexconstant", 10.0
                 )
             )
         )
@@ -434,7 +440,8 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "testdim", "2",
                     "rows", 4L,
-                    "index", 4L                )
+                    "index", 4L
+                )
             )
         )
     );

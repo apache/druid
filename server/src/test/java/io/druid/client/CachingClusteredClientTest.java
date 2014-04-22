@@ -61,6 +61,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
+import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.SearchQueryQueryToolChest;
@@ -144,6 +145,22 @@ public class CachingClusteredClientTest
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("imps", "imps"),
               new FieldAccessPostAggregator("rows", "rows")
+          )
+      ),
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row_double",
+          "*",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
+              new ConstantPostAggregator("constant", 2, 2 )
+          )
+      ),
+      new ArithmeticPostAggregator(
+          "avg_imps_per_row_half",
+          "/",
+          Arrays.<PostAggregator>asList(
+              new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
+              new ConstantPostAggregator("constant", 2, 2 )
           )
       )
   );
@@ -412,7 +429,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
 
         new Interval("2011-01-05/2011-01-10"),
@@ -421,7 +438,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
 
@@ -437,8 +454,8 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
             new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
             new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-            new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
-            new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -562,6 +579,73 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
+                   .build()
+        )
+    );
+  }
+
+  @Test
+  public  void testTopNOnPostAggMetricCaching() {
+    final TopNQueryBuilder builder = new TopNQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .dimension(TOP_DIM)
+        .metric("avg_imps_per_row_double")
+        .threshold(3)
+        .intervals(SEG_SPEC)
+        .filters(DIM_FILTER)
+        .granularity(GRANULARITY)
+        .aggregators(AGGS)
+        .postAggregators(POST_AGGS)
+        .context(CONTEXT);
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TopNQueryQueryToolChest(new TopNQueryConfig()));
+    testQueryCaching(
+        runner,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeTopNResults(),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeTopNResults(),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeTopNResults(
+            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeTopNResults(
+            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
+        )
+    );
+
+
+    TestHelper.assertExpectedResults(
+        makeTopNResults(
+            new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            new DateTime("2011-01-05T01"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+            new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            new DateTime("2011-01-09"), "c1", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                   .metric("avg_imps_per_row_double")
+                   .aggregators(AGGS)
+                   .postAggregators(POST_AGGS)
                    .build()
         )
     );
@@ -1007,20 +1091,22 @@ public class CachingClusteredClientTest
 
     List<Result<TimeseriesResultValue>> retVal = Lists.newArrayListWithCapacity(objects.length / 3);
     for (int i = 0; i < objects.length; i += 3) {
+      double avg_impr = ((Number) objects[i + 2]).doubleValue() / ((Number) objects[i + 1]).doubleValue();
       retVal.add(
           new Result<>(
               (DateTime) objects[i],
               new TimeseriesResultValue(
-                  ImmutableMap.of(
-                      "rows", objects[i + 1],
-                      "imps", objects[i + 2],
-                      "impers", objects[i + 2],
-                      "avg_imps_per_row",
-                      ((Number) objects[i + 2]).doubleValue() / ((Number) objects[i + 1]).doubleValue()
+                  ImmutableMap.<String, Object>builder()
+                      .put("rows", objects[i + 1])
+                      .put("imps", objects[i + 2])
+                      .put("impers", objects[i + 2])
+                      .put("avg_imps_per_row",avg_impr)
+                      .put("avg_imps_per_row_half",avg_impr / 2)
+                      .put("avg_imps_per_row_double",avg_impr * 2)
+                      .build()
                   )
               )
-          )
-      );
+          );
     }
     return retVal;
   }
@@ -1099,13 +1185,15 @@ public class CachingClusteredClientTest
         final double imps = ((Number) objects[index + 2]).doubleValue();
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
-            ImmutableMap.of(
-                TOP_DIM, objects[index],
-                "rows", rows,
-                "imps", imps,
-                "impers", imps,
-                "avg_imps_per_row", imps / rows
-            )
+            ImmutableMap.<String, Object>builder()
+                .put(TOP_DIM, objects[index])
+                .put("rows", rows)
+                .put("imps", imps)
+                .put("impers", imps)
+                .put("avg_imps_per_row", imps / rows)
+                .put("avg_imps_per_row_double", ((imps * 2) / rows))
+                .put("avg_imps_per_row_half", (imps / (rows * 2)))
+                .build()
         );
         index += 3;
       }
