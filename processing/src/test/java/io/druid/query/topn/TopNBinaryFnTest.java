@@ -324,9 +324,9 @@ public class TopNBinaryFnTest
                     "testdim", "2"
                 ),
                 ImmutableMap.<String, Object>of(
-                    "rows", 4L,
-                    "index", 5L,
-                    "testdim", "other"
+                    "rows", 0L,
+                    "index", 1L,
+                    "testdim", "3"
                 )
             )
         )
@@ -336,12 +336,6 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
-                    "testdim", "other",
-                    "rows", 4L,
-                    "index", 5L,
-                    "addrowsindexconstant", 10.0
-                ),
                 ImmutableMap.<String, Object>of(
                     "testdim", "1",
                     "rows", 3L,
@@ -363,7 +357,7 @@ public class TopNBinaryFnTest
         QueryGranularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("addrowsindexconstant"),
-        3,
+        2,
         aggregatorFactories,
         postAggregators
     ).apply(
