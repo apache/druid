@@ -46,11 +46,11 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
     this.assumeGrouped = assumeGrouped == null ? false : assumeGrouped;
     this.shardCount = shardCount == null ? -1 : shardCount;
     Preconditions.checkArgument(
-        targetPartitionSize == -1 || shardCount == -1,
+        this.targetPartitionSize == -1 || this.shardCount == -1,
         "targetPartitionsSize and shardCount both cannot be set"
     );
     Preconditions.checkArgument(
-        shardCount < MAX_SHARDS,
+        this.shardCount < MAX_SHARDS,
         "shardCount cannot be more than MAX_SHARD_COUNT[%d] ", MAX_SHARDS
     );
   }
