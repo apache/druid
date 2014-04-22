@@ -87,6 +87,12 @@ public class TimeBoundaryQueryRunnerFactory
             @Override
             public Iterator<Result<TimeBoundaryResultValue>> make()
             {
+              if (adapter == null) {
+                throw new ISE(
+                    "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+                );
+              }
+
               return legacyQuery.buildResult(
                   adapter.getInterval().getStart(),
                   adapter.getMinTime(),

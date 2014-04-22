@@ -70,7 +70,7 @@ public class GroupByQueryEngine
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
 
   @Inject
-  public GroupByQueryEngine (
+  public GroupByQueryEngine(
       Supplier<GroupByQueryConfig> config,
       @Global StupidPool<ByteBuffer> intermediateResultsBufferPool
   )
@@ -81,6 +81,12 @@ public class GroupByQueryEngine
 
   public Sequence<Row> process(final GroupByQuery query, StorageAdapter storageAdapter)
   {
+    if (storageAdapter == null) {
+      throw new ISE(
+          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+      );
+    }
+
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     if (intervals.size() != 1) {
       throw new IAE("Should only have one interval, got[%s]", intervals);
@@ -187,8 +193,7 @@ public class GroupByQueryEngine
           ByteBuffer newKey = key.duplicate();
           newKey.putInt(dimSelector.getValueCardinality());
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
-        }
-        else {
+        } else {
           for (Integer dimValue : row) {
             ByteBuffer newKey = key.duplicate();
             newKey.putInt(dimValue);
@@ -202,8 +207,7 @@ public class GroupByQueryEngine
           retVal.addAll(unaggregatedBuffers);
         }
         return retVal;
-      }
-      else {
+      } else {
         key.clear();
         Integer position = positions.get(key);
         int[] increments = positionMaintainer.getIncrements();
@@ -267,8 +271,7 @@ public class GroupByQueryEngine
     {
       if (nextVal > max) {
         return null;
-      }
-      else {
+      } else {
         int retVal = (int) nextVal;
         nextVal += increment;
         return retVal;
@@ -402,7 +405,7 @@ public class GroupByQueryEngine
                     final DimExtractionFn fn = dimensionSpecs.get(i).getDimExtractionFn();
                     final int dimVal = keyBuffer.getInt();
                     if (dimSelector.getValueCardinality() != dimVal) {
-                      if(fn != null) {
+                      if (fn != null) {
                         theEvent.put(dimNames.get(i), fn.apply(dimSelector.lookupName(dimVal)));
                       } else {
                         theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
@@ -434,9 +437,10 @@ public class GroupByQueryEngine
       throw new UnsupportedOperationException();
     }
 
-    public void close() {
+    public void close()
+    {
       // cleanup
-      for(BufferAggregator agg : aggregators) {
+      for (BufferAggregator agg : aggregators) {
         agg.close();
       }
     }
