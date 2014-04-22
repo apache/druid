@@ -21,6 +21,7 @@ package io.druid.indexer.partitions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.indexer.DetermineHashedPartitionsJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
@@ -33,10 +34,11 @@ public class HashedPartitionsSpec extends AbstractPartitionsSpec
   public HashedPartitionsSpec(
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
       @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
-      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped,
+      @JsonProperty("shardCount") @Nullable Integer shardCount
   )
   {
-    super(targetPartitionSize, maxPartitionSize, assumeGrouped);
+    super(targetPartitionSize, maxPartitionSize, assumeGrouped, shardCount);
   }
 
   @Override

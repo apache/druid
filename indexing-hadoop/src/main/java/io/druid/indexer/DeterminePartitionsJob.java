@@ -215,23 +215,20 @@ public class DeterminePartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
         }
-        if (fileSystem.exists(partitionInfoPath)) {
-          List<ShardSpec> specs = config.jsonMapper.readValue(
-              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
-          {
-          }
-          );
-
-          List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
-          for (int i = 0; i < specs.size(); ++i) {
-            actualSpecs.add(new HadoopyShardSpec(specs.get(i), shardCount++));
-            log.info("DateTime[%s], partition[%d], spec[%s]", segmentGranularity, i, actualSpecs.get(i));
-          }
-
-          shardSpecs.put(segmentGranularity.getStart(), actualSpecs);
-        } else {
-          log.info("Path[%s] didn't exist!?", partitionInfoPath);
+        List<ShardSpec> specs = config.jsonMapper.readValue(
+            Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
+        {
         }
+        );
+
+        List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
+        for (int i = 0; i < specs.size(); ++i) {
+          actualSpecs.add(new HadoopyShardSpec(specs.get(i), shardCount++));
+          log.info("DateTime[%s], partition[%d], spec[%s]", segmentGranularity, i, actualSpecs.get(i));
+        }
+
+        shardSpecs.put(segmentGranularity.getStart(), actualSpecs);
+
       }
       config.setShardSpecs(shardSpecs);
 

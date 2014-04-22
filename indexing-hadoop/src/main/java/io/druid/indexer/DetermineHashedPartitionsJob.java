@@ -100,6 +100,8 @@ public class DetermineHashedPartitionsJob implements Jobby
       groupByJob.setOutputFormatClass(SequenceFileOutputFormat.class);
       if (!config.getSegmentGranularIntervals().isPresent()) {
         groupByJob.setNumReduceTasks(1);
+      } else {
+        groupByJob.setNumReduceTasks(config.getSegmentGranularIntervals().get().size());
       }
       JobHelper.setupClasspath(config, groupByJob);
 
@@ -124,9 +126,6 @@ public class DetermineHashedPartitionsJob implements Jobby
       if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
         fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
-        if (!fileSystem.exists(intervalInfoPath)) {
-          throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
-        }
         List<Interval> intervals = config.jsonMapper.readValue(
             Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
         {
@@ -144,37 +143,33 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
-        if (fileSystem.exists(partitionInfoPath)) {
-          Long cardinality = config.jsonMapper.readValue(
-              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-          {
-          }
-          );
-          int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
-
-          if (numberOfShards > MAX_SHARDS) {
-            throw new ISE(
-                "Number of shards [%d] exceed the maximum limit of [%d], either targetPartitionSize is too low or data volume is too high",
-                numberOfShards,
-                MAX_SHARDS
-            );
-          }
-
-          List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-          if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
-          } else {
-            for (int i = 0; i < numberOfShards; ++i) {
-              actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
-              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
-            }
-          }
-
-          shardSpecs.put(bucket, actualSpecs);
-
-        } else {
-          log.info("Path[%s] didn't exist!?", partitionInfoPath);
+        Long cardinality = config.jsonMapper.readValue(
+            Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
+        {
         }
+        );
+        int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
+
+        if (numberOfShards > MAX_SHARDS) {
+          throw new ISE(
+              "Number of shards [%d] exceed the maximum limit of [%d], either targetPartitionSize is too low or data volume is too high",
+              numberOfShards,
+              MAX_SHARDS
+          );
+        }
+
+        List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
+        if (numberOfShards == 1) {
+          actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+        } else {
+          for (int i = 0; i < numberOfShards; ++i) {
+            actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
+            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+          }
+        }
+
+        shardSpecs.put(bucket, actualSpecs);
+
       }
       config.setShardSpecs(shardSpecs);
       log.info(
