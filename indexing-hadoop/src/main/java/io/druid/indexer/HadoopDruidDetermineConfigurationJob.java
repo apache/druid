@@ -63,14 +63,17 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
         if (shardsPerInterval > 0) {
+          List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);
           for (int i = 0; i < shardsPerInterval; i++) {
-            final HadoopyShardSpec spec = new HadoopyShardSpec(
-                new HashBasedNumberedShardSpec(i, shardsPerInterval),
-                shardCount++
+            specs.add(
+                new HadoopyShardSpec(
+                    new HashBasedNumberedShardSpec(i, shardsPerInterval),
+                    shardCount++
+                )
             );
-            shardSpecs.put(bucket, Lists.newArrayList(spec));
-            log.info("DateTime[%s], spec[%s]", bucket, spec);
           }
+          shardSpecs.put(bucket, specs);
+          log.info("DateTime[%s], spec[%s]", bucket, specs);
         } else {
           final HadoopyShardSpec spec = new HadoopyShardSpec(new NoneShardSpec(), shardCount++);
           shardSpecs.put(bucket, Lists.newArrayList(spec));
