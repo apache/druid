@@ -90,7 +90,19 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     TopNResultValue arg2Vals = arg2.getValue();
 
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
-      retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
+      final String dimensionValue = arg1Val.getStringDimensionValue(dimension);
+      Map<String, Object> retVal = new LinkedHashMap<String, Object>(aggregations.size() + 2);
+      retVal.put(dimension, dimensionValue);
+
+      for (AggregatorFactory factory : aggregations) {
+        final String metricName = factory.getName();
+        retVal.put(metricName, arg1Val.getMetric(metricName));
+      }
+      for (PostAggregator postAgg : postAggregations) {
+        retVal.put(postAgg.getName(), postAgg.compute(retVal));
+      }
+
+      retVals.put(dimensionValue, new DimensionAndMetricValueExtractor(retVal));
     }
     for (DimensionAndMetricValueExtractor arg2Val : arg2Vals) {
       final String dimensionValue = arg2Val.getStringDimensionValue(dimension);
@@ -112,7 +124,18 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
 
         retVals.put(dimensionValue, new DimensionAndMetricValueExtractor(retVal));
       } else {
-        retVals.put(dimensionValue, arg2Val);
+        Map<String, Object> retVal = new LinkedHashMap<String, Object>(aggregations.size() + 2);
+        retVal.put(dimension, dimensionValue);
+
+        for (AggregatorFactory factory : aggregations) {
+          final String metricName = factory.getName();
+          retVal.put(metricName, arg2Val.getMetric(metricName));
+        }
+        for (PostAggregator postAgg : postAggregations) {
+          retVal.put(postAgg.getName(), postAgg.compute(retVal));
+        }
+
+        retVals.put(dimensionValue, new DimensionAndMetricValueExtractor(retVal));
       }
     }
 
