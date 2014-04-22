@@ -41,7 +41,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
   private final TopNResultMerger merger;
   private final DimensionSpec dimSpec;
   private final QueryGranularity gran;
-  private final DimensionSpec dimensionSpec;
+  private final String dimension;
   private final TopNMetricSpec topNMetricSpec;
   private final int threshold;
   private final List<AggregatorFactory> aggregations;
@@ -64,13 +64,13 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;
     this.aggregations = aggregatorSpecs;
-    this.dimensionSpec = dimSpec;
 
     this.postAggregations = AggregatorUtil.pruneDependentPostAgg(
         postAggregatorSpecs,
-        this.topNMetricSpec.getMetricName(this.dimensionSpec)
+        topNMetricSpec.getMetricName(dimSpec)
     );
 
+    this.dimension = dimSpec.getOutputName();
     this.comparator = topNMetricSpec.getComparator(aggregatorSpecs, postAggregatorSpecs);
   }
 
@@ -84,12 +84,11 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       return merger.getResult(arg1, comparator);
     }
 
+    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();
 
     TopNResultValue arg1Vals = arg1.getValue();
     TopNResultValue arg2Vals = arg2.getValue();
-    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<String, DimensionAndMetricValueExtractor>();
 
-    String dimension = dimensionSpec.getOutputName();
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
       retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
     }
@@ -99,15 +98,16 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
 
       if (arg1Val != null) {
         // size of map = aggregator + topNDim + postAgg (If sorting is done on post agg field)
-        Map<String, Object> retVal = new LinkedHashMap<String, Object>(aggregations.size() + 2);
+        Map<String, Object> retVal = new LinkedHashMap<>(aggregations.size() + 2);
 
         retVal.put(dimension, dimensionValue);
         for (AggregatorFactory factory : aggregations) {
           final String metricName = factory.getName();
           retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
         }
-        for (PostAggregator postAgg : postAggregations) {
-          retVal.put(postAgg.getName(), postAgg.compute(retVal));
+
+        for (PostAggregator pf : postAggregations) {
+          retVal.put(pf.getName(), pf.compute(retVal));
         }
 
         retVals.put(dimensionValue, new DimensionAndMetricValueExtractor(retVal));
