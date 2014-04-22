@@ -145,12 +145,12 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
-        Long cardinality = config.jsonMapper.readValue(
+        final Long cardinality = config.jsonMapper.readValue(
             Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
         {
         }
         );
-        int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
+        final int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
 
         List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
         if (numberOfShards == 1) {
