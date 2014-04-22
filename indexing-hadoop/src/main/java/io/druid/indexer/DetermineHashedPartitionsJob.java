@@ -348,7 +348,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
 
       if (config.get("mapred.job.tracker").equals("local") || determineIntervals) {
-        return 1;
+        return 0;
       } else {
         return reducerLookup.get(interval);
       }
