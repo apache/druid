@@ -49,4 +49,7 @@ public interface PartitionsSpec
   @JsonIgnore
   public boolean isDeterminingPartitions();
 
+  @JsonProperty
+  public int getNumShards();
+
 }

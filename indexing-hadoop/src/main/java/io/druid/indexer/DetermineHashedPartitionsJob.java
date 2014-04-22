@@ -37,6 +37,7 @@ import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,6 +46,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -65,7 +67,6 @@ import java.util.Set;
  */
 public class DetermineHashedPartitionsJob implements Jobby
 {
-  private static final int MAX_SHARDS = 128;
   private static final Logger log = new Logger(DetermineHashedPartitionsJob.class);
   private final HadoopDruidIndexerConfig config;
 
@@ -98,8 +99,11 @@ public class DetermineHashedPartitionsJob implements Jobby
       groupByJob.setOutputKeyClass(NullWritable.class);
       groupByJob.setOutputValueClass(NullWritable.class);
       groupByJob.setOutputFormatClass(SequenceFileOutputFormat.class);
+      groupByJob.setPartitionerClass(DetermineHashedPartitionsPartitioner.class);
       if (!config.getSegmentGranularIntervals().isPresent()) {
         groupByJob.setNumReduceTasks(1);
+      } else {
+        groupByJob.setNumReduceTasks(config.getSegmentGranularIntervals().get().size());
       }
       JobHelper.setupClasspath(config, groupByJob);
 
@@ -124,9 +128,6 @@ public class DetermineHashedPartitionsJob implements Jobby
       if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
         fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
-        if (!fileSystem.exists(intervalInfoPath)) {
-          throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
-        }
         List<Interval> intervals = config.jsonMapper.readValue(
             Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
         {
@@ -144,37 +145,25 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
-        if (fileSystem.exists(partitionInfoPath)) {
-          Long cardinality = config.jsonMapper.readValue(
-              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-          {
-          }
-          );
-          int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
-
-          if (numberOfShards > MAX_SHARDS) {
-            throw new ISE(
-                "Number of shards [%d] exceed the maximum limit of [%d], either targetPartitionSize is too low or data volume is too high",
-                numberOfShards,
-                MAX_SHARDS
-            );
-          }
-
-          List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-          if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
-          } else {
-            for (int i = 0; i < numberOfShards; ++i) {
-              actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
-              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
-            }
-          }
-
-          shardSpecs.put(bucket, actualSpecs);
-
-        } else {
-          log.info("Path[%s] didn't exist!?", partitionInfoPath);
+        final Long cardinality = config.jsonMapper.readValue(
+            Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
+        {
         }
+        );
+        final int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
+
+        List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
+        if (numberOfShards == 1) {
+          actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+        } else {
+          for (int i = 0; i < numberOfShards; ++i) {
+            actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
+            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+          }
+        }
+
+        shardSpecs.put(bucket, actualSpecs);
+
       }
       config.setShardSpecs(shardSpecs);
       log.info(
@@ -319,13 +308,6 @@ public class DetermineHashedPartitionsJob implements Jobby
       }
     }
 
-    private byte[] getDataBytes(BytesWritable writable)
-    {
-      byte[] rv = new byte[writable.getLength()];
-      System.arraycopy(writable.getBytes(), 0, rv, 0, writable.getLength());
-      return rv;
-    }
-
     @Override
     public void run(Context context)
         throws IOException, InterruptedException
@@ -353,6 +335,50 @@ public class DetermineHashedPartitionsJob implements Jobby
       }
     }
   }
+
+  public static class DetermineHashedPartitionsPartitioner
+      extends Partitioner<LongWritable, BytesWritable> implements Configurable
+  {
+    private Configuration config;
+    private boolean determineIntervals;
+    private Map<LongWritable, Integer> reducerLookup;
+
+    @Override
+    public int getPartition(LongWritable interval, BytesWritable text, int numPartitions)
+    {
+
+      if (config.get("mapred.job.tracker").equals("local") || determineIntervals) {
+        return 0;
+      } else {
+        return reducerLookup.get(interval);
+      }
+    }
+
+    @Override
+    public Configuration getConf()
+    {
+      return config;
+    }
+
+    @Override
+    public void setConf(Configuration config)
+    {
+      this.config = config;
+      HadoopDruidIndexerConfig hadoopConfig = HadoopDruidIndexerConfigBuilder.fromConfiguration(config);
+      if (hadoopConfig.getSegmentGranularIntervals().isPresent()) {
+        determineIntervals = false;
+        int reducerNumber = 0;
+        ImmutableMap.Builder<LongWritable, Integer> builder = ImmutableMap.builder();
+        for (Interval interval : hadoopConfig.getSegmentGranularIntervals().get()) {
+          builder.put(new LongWritable(interval.getStartMillis()), reducerNumber++);
+        }
+        reducerLookup = builder.build();
+      } else {
+        determineIntervals = true;
+      }
+    }
+  }
+
 }
 
 

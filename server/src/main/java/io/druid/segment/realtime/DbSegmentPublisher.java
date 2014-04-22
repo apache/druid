@@ -25,6 +25,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -104,7 +105,7 @@ public class DbSegmentPublisher implements SegmentPublisher
                     .bind("created_date", new DateTime().toString())
                     .bind("start", segment.getInterval().getStart().toString())
                     .bind("end", segment.getInterval().getEnd().toString())
-                    .bind("partitioned", segment.getShardSpec().getPartitionNum())
+                    .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
                     .bind("version", segment.getVersion())
                     .bind("used", true)
                     .bind("payload", jsonMapper.writeValueAsString(segment))
