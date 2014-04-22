@@ -191,7 +191,6 @@ public class QueryResource
         log.error(e2, "Unable to log query [%s]!", queryString);
       }
 
-
       log.makeAlert(e, "Exception handling request")
          .addData("exception", e.toString())
          .addData("query", queryString)
