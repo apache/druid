@@ -210,7 +210,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     final Map<String, Object> values = Maps.newHashMap();
                     // put non finalized aggregators for calculating dependent post Aggregators
                     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-                      values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
+                      values.put(agg.getName(), input.getMetric(agg.getName()));
                     }
 
                     for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
