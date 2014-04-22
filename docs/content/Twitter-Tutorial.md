@@ -25,9 +25,10 @@ cd druid-services-0.X.X
 ```
 
 You should see a bunch of files:
-- run_example_server.sh
-- run_example_client.sh
-- LICENSE, config, examples, lib directories
+
+* run_example_server.sh
+* run_example_client.sh
+* LICENSE, config, examples, lib directories
 
 # Clone and Build from Source
 
@@ -49,6 +50,7 @@ LICENSE			client			eclipse_formatting.xml	index-common		merger			realtime
 ```
 
 You can find the example executables in the examples/bin directory:
+
 * run_example_server.sh
 * run_example_client.sh
 
