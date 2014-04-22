@@ -162,20 +162,4 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
         }
     );
   }
-
-  public static void main(String[] args) throws Exception
-  {
-    ExecutorService foo = Executors.newFixedThreadPool(1);
-    Future test = foo.submit(
-        new Callable<List>()
-        {
-          @Override
-          public List call() throws Exception
-          {
-            throw new ISE("");
-          }
-        }
-    );
-    System.out.println(Lists.newArrayList(test));
-  }
 }
