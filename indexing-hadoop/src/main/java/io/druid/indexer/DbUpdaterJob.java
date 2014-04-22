@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import io.druid.db.DbConnector;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -75,7 +76,7 @@ public class DbUpdaterJob implements Jobby
                       .put("created_date", new DateTime().toString())
                       .put("start", segment.getInterval().getStart().toString())
                       .put("end", segment.getInterval().getEnd().toString())
-                      .put("partitioned", segment.getShardSpec().getPartitionNum())
+                      .put("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
                       .put("version", segment.getVersion())
                       .put("used", true)
                       .put("payload", HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(segment))

@@ -57,7 +57,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     if (config.isDeterminingPartitions()) {
       jobs.add(config.getPartitionsSpec().getPartitionJob(config));
     } else {
-      int shardsPerInterval = config.getPartitionsSpec().getShardCount();
+      int shardsPerInterval = config.getPartitionsSpec().getNumShards();
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {

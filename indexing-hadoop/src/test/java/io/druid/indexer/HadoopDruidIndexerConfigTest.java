@@ -602,7 +602,7 @@ public class HadoopDruidIndexerConfigTest
           "{"
           + "\"partitionsSpec\":{"
           + "   \"type\":\"hashed\","
-          + "   \"shardCount\":2"
+          + "   \"numShards\":2"
           + " }"
           + "}",
           HadoopDruidIndexerConfig.class
@@ -634,7 +634,7 @@ public class HadoopDruidIndexerConfigTest
 
     Assert.assertEquals(
         "shardCount",
-        partitionsSpec.getShardCount(),
+        partitionsSpec.getNumShards(),
         2
     );
 

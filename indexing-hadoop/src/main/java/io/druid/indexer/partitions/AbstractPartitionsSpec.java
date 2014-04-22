@@ -26,17 +26,16 @@ import com.google.common.base.Preconditions;
 public abstract class AbstractPartitionsSpec implements PartitionsSpec
 {
   private static final double DEFAULT_OVERSIZE_THRESHOLD = 1.5;
-  private static final int MAX_SHARDS = 128;
   private final long targetPartitionSize;
   private final long maxPartitionSize;
   private final boolean assumeGrouped;
-  private final int shardCount;
+  private final int numShards;
 
   public AbstractPartitionsSpec(
       Long targetPartitionSize,
       Long maxPartitionSize,
       Boolean assumeGrouped,
-      Integer shardCount
+      Integer numShards
   )
   {
     this.targetPartitionSize = targetPartitionSize == null ? -1 : targetPartitionSize;
@@ -44,14 +43,10 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
                             ? (long) (this.targetPartitionSize * DEFAULT_OVERSIZE_THRESHOLD)
                             : maxPartitionSize;
     this.assumeGrouped = assumeGrouped == null ? false : assumeGrouped;
-    this.shardCount = shardCount == null ? -1 : shardCount;
+    this.numShards = numShards == null ? -1 : numShards;
     Preconditions.checkArgument(
-        this.targetPartitionSize == -1 || this.shardCount == -1,
+        this.targetPartitionSize == -1 || this.numShards == -1,
         "targetPartitionsSize and shardCount both cannot be set"
-    );
-    Preconditions.checkArgument(
-        this.shardCount < MAX_SHARDS,
-        "shardCount cannot be more than MAX_SHARD_COUNT[%d] ", MAX_SHARDS
     );
   }
 
@@ -80,8 +75,8 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
   }
 
   @Override
-  public int getShardCount()
+  public int getNumShards()
   {
-    return shardCount;
+    return numShards;
   }
 }

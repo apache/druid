@@ -50,6 +50,6 @@ public interface PartitionsSpec
   public boolean isDeterminingPartitions();
 
   @JsonProperty
-  public int getShardCount();
+  public int getNumShards();
 
 }
