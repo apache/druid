@@ -75,6 +75,7 @@ h2. Architecture
 h2. Experimental
 * "About Experimental Features":./About-Experimental-Features.html
 * "Geographic Queries":./GeographicQueries.html
+* "Select Query":./SelectQuery.html
 
 h2. Development
 * "Versioning":./Versioning.html
