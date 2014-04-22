@@ -249,6 +249,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+      private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
+          query.getPostAggregatorSpecs(),
+          query.getTopNMetricSpec()
+               .getMetricName(query.getDimensionSpec())
+      );
 
       @Override
       public byte[] computeCacheKey(TopNQuery query)
@@ -336,6 +341,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               while (aggIter.hasNext() && resultIter.hasNext()) {
                 final AggregatorFactory factory = aggIter.next();
                 vals.put(factory.getName(), factory.deserialize(resultIter.next()));
+              }
+
+              for (PostAggregator postAgg : postAggs) {
+                vals.put(postAgg.getName(), postAgg.compute(vals));
               }
 
               retVal.add(vals);
