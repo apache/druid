@@ -29,8 +29,7 @@ import com.google.common.io.Closeables;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.common.logger.Logger;
-import com.metamx.emitter.service.AlertEvent;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
@@ -57,7 +56,7 @@ import java.util.UUID;
 @Path("/druid/v2/")
 public class QueryResource
 {
-  private static final Logger log = new Logger(QueryResource.class);
+  private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final Joiner COMMA_JOIN = Joiner.on(",");
 
@@ -192,16 +191,11 @@ public class QueryResource
         log.error(e2, "Unable to log query [%s]!", queryString);
       }
 
-      emitter.emit(
-          new AlertEvent.Builder().build(
-              "Exception handling request",
-              ImmutableMap.<String, Object>builder()
-                          .put("exception", e.toString())
-                          .put("query", queryString)
-                          .put("peer", req.getRemoteAddr())
-                          .build()
-          )
-      );
+      log.makeAlert(e, "Exception handling request")
+         .addData("exception", e.toString())
+         .addData("query", queryString)
+         .addData("peer", req.getRemoteAddr())
+         .emit();
     }
     finally {
       resp.flushBuffer();

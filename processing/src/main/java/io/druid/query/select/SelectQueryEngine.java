@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
@@ -53,6 +54,12 @@ public class SelectQueryEngine
           public Iterator<Result<SelectResultValue>> make()
           {
             final StorageAdapter adapter = segment.asStorageAdapter();
+
+            if (adapter == null) {
+              throw new ISE(
+                  "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+              );
+            }
 
             final Iterable<String> dims;
             if (query.getDimensions() == null || query.getDimensions().isEmpty()) {

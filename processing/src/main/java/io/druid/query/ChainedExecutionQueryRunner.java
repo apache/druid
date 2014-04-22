@@ -35,8 +35,10 @@ import com.metamx.common.logger.Logger;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
@@ -110,7 +112,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   if (input == null) {
                                     throw new ISE("Input is null?! How is this possible?!");
                                   }
-                                  return Sequences.toList(input.run(query), Lists.<T>newArrayList());
+                                  Sequence<T> result = input.run(query);
+                                  if (result == null) {
+                                    throw new ISE("Got a null result! Segments are missing!");
+                                  }
+                                  return Sequences.toList(result, Lists.<T>newArrayList());
                                 }
                                 catch (Exception e) {
                                   log.error(e, "Exception with one of the sequences!");

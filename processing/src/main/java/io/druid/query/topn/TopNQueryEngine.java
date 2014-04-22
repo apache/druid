@@ -21,7 +21,7 @@ package io.druid.query.topn;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
@@ -53,6 +53,12 @@ public class TopNQueryEngine
 
   public Iterable<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter)
   {
+    if (adapter == null) {
+      throw new ISE(
+          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+      );
+    }
+
     final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
     final Filter filter = Filters.convertDimensionFilters(query.getDimensionsFilter());
     final QueryGranularity granularity = query.getGranularity();
@@ -61,10 +67,6 @@ public class TopNQueryEngine
     Preconditions.checkArgument(
         queryIntervals.size() == 1, "Can only handle a single interval, got[%s]", queryIntervals
     );
-
-    if (mapFn == null) {
-      return Lists.newArrayList();
-    }
 
     return FunctionalIterable
         .create(adapter.makeCursors(filter, queryIntervals.get(0), granularity))
@@ -84,13 +86,6 @@ public class TopNQueryEngine
 
   private Function<Cursor, Result<TopNResultValue>> getMapFn(TopNQuery query, final StorageAdapter adapter)
   {
-    if (adapter == null) {
-      log.warn(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped. Returning empty results."
-      );
-      return null;
-    }
-
     final Capabilities capabilities = adapter.getCapabilities();
     final int cardinality = adapter.getDimensionCardinality(query.getDimensionSpec().getDimension());
     int numBytesPerRecord = 0;
