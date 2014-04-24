@@ -326,26 +326,25 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       convertToMutableByteBuffer();
     }
 
+    if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
+      convertToDenseStorage();
+    }
+
     estimatedCardinality = null;
 
     if (getRegisterOffset() < other.getRegisterOffset()) {
       // "Swap" the buffers so that we are folding into the one with the higher offset
-      ByteBuffer newStorage = ByteBuffer.allocateDirect(other.storageBuffer.remaining());
-      newStorage.put(other.storageBuffer.asReadOnlyBuffer());
-      newStorage.clear();
+      final ByteBuffer tmpBuffer = ByteBuffer.allocate(storageBuffer.remaining());
+      tmpBuffer.put(storageBuffer.asReadOnlyBuffer());
+      tmpBuffer.clear();
 
-      other.storageBuffer = storageBuffer;
-      other.initPosition = initPosition;
-      storageBuffer = newStorage;
-      initPosition = 0;
+      storageBuffer.duplicate().put(other.storageBuffer.asReadOnlyBuffer());
+
+      other = HyperLogLogCollector.makeCollector(tmpBuffer);
     }
 
     final ByteBuffer otherBuffer = other.storageBuffer.asReadOnlyBuffer();
     final byte otherOffset = other.getRegisterOffset();
-
-    if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
-      convertToDenseStorage();
-    }
 
     byte myOffset = getRegisterOffset();
     short numNonZero = getNumNonZeroRegisters();
@@ -540,7 +539,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   private void convertToMutableByteBuffer()
   {
-    ByteBuffer tmpBuffer = ByteBuffer.allocateDirect(storageBuffer.remaining());
+    ByteBuffer tmpBuffer = ByteBuffer.allocate(storageBuffer.remaining());
     tmpBuffer.put(storageBuffer.asReadOnlyBuffer());
     tmpBuffer.position(0);
     storageBuffer = tmpBuffer;
@@ -549,7 +548,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   private void convertToDenseStorage()
   {
-    ByteBuffer tmpBuffer = ByteBuffer.allocateDirect(getNumBytesForDenseStorage());
+    ByteBuffer tmpBuffer = ByteBuffer.allocate(getNumBytesForDenseStorage());
     // put header
     setVersion(tmpBuffer);
     setRegisterOffset(tmpBuffer, getRegisterOffset());
