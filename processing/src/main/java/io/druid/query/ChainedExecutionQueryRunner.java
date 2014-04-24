@@ -112,11 +112,18 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   if (input == null) {
                                     throw new ISE("Input is null?! How is this possible?!");
                                   }
+
                                   Sequence<T> result = input.run(query);
                                   if (result == null) {
                                     throw new ISE("Got a null result! Segments are missing!");
                                   }
-                                  return Sequences.toList(result, Lists.<T>newArrayList());
+
+                                  List<T> retVal = Sequences.toList(result, Lists.<T>newArrayList());
+                                  if (retVal == null) {
+                                    throw new ISE("Got a null list of results! WTF?!");
+                                  }
+
+                                  return retVal;
                                 }
                                 catch (Exception e) {
                                   log.error(e, "Exception with one of the sequences!");
