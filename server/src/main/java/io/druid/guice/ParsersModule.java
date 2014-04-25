@@ -25,18 +25,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.data.input.ProtoBufInputRowParser;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
-import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
-import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
-import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
 import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class FirehoseModule implements DruidModule
+public class ParsersModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
@@ -47,13 +42,9 @@ public class FirehoseModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return Arrays.<Module>asList(
-        new SimpleModule("FirehoseModule")
+        new SimpleModule("ParsersModule")
             .registerSubtypes(
-                new NamedType(ClippedFirehoseFactory.class, "clipped"),
-                new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
-                new NamedType(IrcFirehoseFactory.class, "irc"),
-                new NamedType(LocalFirehoseFactory.class, "local"),
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                new NamedType(ProtoBufInputRowParser.class, "protobuf")
             )
     );
   }
