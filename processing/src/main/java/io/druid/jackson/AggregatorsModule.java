@@ -32,6 +32,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -66,7 +67,8 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "min", value = MinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptAggregatorFactory.class),
       @JsonSubTypes.Type(name = "histogram", value = HistogramAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "hyperUnique", value = HyperUniquesAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "hyperUnique", value = HyperUniquesAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "cardinality", value = CardinalityAggregatorFactory.class)
   })
   public static interface AggregatorFactoryMixin
   {
