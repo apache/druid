@@ -45,13 +45,12 @@ public class PeriodLoadRule extends LoadRule
       @JsonProperty("period") Period period,
       @JsonProperty("futurePeriod") Period futurePeriod,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
-      // The following two vars need to be deprecated
-      @JsonProperty("replicants") int replicants,
-      @JsonProperty("tier") String tier
+      @Deprecated @JsonProperty("replicants") int replicants,
+      @Deprecated @JsonProperty("tier") String tier
   )
   {
     this.period = period;
-    this.futurePeriod = futurePeriod == null ? Period.seconds(0) : futurePeriod;
+    this.futurePeriod = futurePeriod == null ? Period.ZERO : futurePeriod;
 
     if (tieredReplicants != null) {
       this.tieredReplicants = tieredReplicants;
