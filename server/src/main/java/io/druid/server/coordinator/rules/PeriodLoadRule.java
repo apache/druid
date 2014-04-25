@@ -37,11 +37,13 @@ public class PeriodLoadRule extends LoadRule
   private static final Logger log = new Logger(PeriodLoadRule.class);
 
   private final Period period;
+  private final Period futurePeriod;
   private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") Period period,
+      @JsonProperty("futurePeriod") Period futurePeriod,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
       // The following two vars need to be deprecated
       @JsonProperty("replicants") int replicants,
@@ -49,6 +51,7 @@ public class PeriodLoadRule extends LoadRule
   )
   {
     this.period = period;
+    this.futurePeriod = futurePeriod == null ? Period.seconds(0) : futurePeriod;
 
     if (tieredReplicants != null) {
       this.tieredReplicants = tieredReplicants;
@@ -93,7 +96,7 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
-    final Interval currInterval = new Interval(period, referenceTimestamp);
-    return currInterval.overlaps(interval) && interval.getStartMillis() >= currInterval.getStartMillis();
+    final Interval currInterval = new Interval(referenceTimestamp.minus(period), referenceTimestamp.plus(futurePeriod));
+    return currInterval.overlaps(interval);
   }
 }
