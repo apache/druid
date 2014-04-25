@@ -49,8 +49,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -219,14 +218,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           retVal,
           toolChest.makePreComputeManipulatorFn(
               query,
-              new MetricManipulationFn()
-              {
-                @Override
-                public Object manipulate(AggregatorFactory factory, Object object)
-                {
-                  return factory.deserialize(object);
-                }
-              }
+              MetricManipulatorFns.deserializing()
           )
       );
     }
