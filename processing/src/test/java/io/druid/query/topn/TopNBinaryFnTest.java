@@ -47,7 +47,7 @@ public class TopNBinaryFnTest
 {
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
-  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
+  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
   final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   final ArithmeticPostAggregator addrowsindexconstant = new ArithmeticPostAggregator(
@@ -129,15 +129,13 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "testdim", "1",
                     "rows", 3L,
-                    "index", 5L,
-                    "addrowsindexconstant", 9.0
+                    "index", 5L
                 ),
 
                 ImmutableMap.<String, Object>of(
                     "testdim", "2",
                     "rows", 4L,
-                    "index", 4L,
-                    "addrowsindexconstant", 9.0
+                    "index", 4L
                 )
             )
         )
@@ -214,14 +212,12 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "testdim", "1",
                     "rows", 3L,
-                    "index", 5L,
-                    "addrowsindexconstant", 9.0
+                    "index", 5L
                 ),
                 ImmutableMap.<String, Object>of(
                     "testdim", "2",
                     "rows", 4L,
-                    "index", 4L,
-                    "addrowsindexconstant", 9.0
+                    "index", 4L
                 )
             )
         )
@@ -298,17 +294,20 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
                     "index", 2L,
-                    "testdim", "1"
+                    "testdim", "1",
+                    "addrowsindexconstant", 3.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 4L,
-                    "testdim", "2"
+                    "testdim", "2",
+                    "addrowsindexconstant", 7.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 2L,
-                    "testdim", "3"
+                    "testdim", "3",
+                    "addrowsindexconstant", 3.0
                 )
             )
         )
@@ -320,17 +319,20 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 3L,
-                    "testdim", "1"
+                    "testdim", "1",
+                    "addrowsindexconstant", 6.0
                 ),
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 0L,
-                    "testdim", "2"
+                    "testdim", "2",
+                    "addrowsindexconstant", 3.0
                 ),
                 ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 1L,
-                    "testdim", "3"
+                    "rows", 4L,
+                    "index", 5L,
+                    "testdim", "other",
+                    "addrowsindexconstant", 10.0
                 )
             )
         )
@@ -340,6 +342,12 @@ public class TopNBinaryFnTest
         currTime,
         new TopNResultValue(
             ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(
+                    "testdim", "other",
+                    "rows", 4L,
+                    "index", 5L,
+                    "addrowsindexconstant", 10.0
+                ),
                 ImmutableMap.<String, Object>of(
                     "testdim", "1",
                     "rows", 3L,
@@ -361,7 +369,7 @@ public class TopNBinaryFnTest
         QueryGranularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("addrowsindexconstant"),
-        2,
+        3,
         aggregatorFactories,
         postAggregators
     ).apply(
@@ -427,14 +435,12 @@ public class TopNBinaryFnTest
                 ImmutableMap.<String, Object>of(
                     "testdim", "1",
                     "rows", 3L,
-                    "index", 5L,
-                    "addrowsindexconstant", 9.0
+                    "index", 5L
                 ),
                 ImmutableMap.<String, Object>of(
                     "testdim", "2",
                     "rows", 4L,
-                    "index", 4L,
-                    "addrowsindexconstant", 9.0
+                    "index", 4L
                 )
             )
         )

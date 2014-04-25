@@ -125,12 +125,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         .setUser4("search")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(query.getId());
+        .setUser9(Minutes.minutes(numMinutes).toString());
   }
 
   @Override
-  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makeMetricManipulatorFn(
+  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makePreComputeManipulatorFn(
       SearchQuery query, MetricManipulationFn fn
   )
   {
@@ -295,7 +294,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(query);
       }
 
-      final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+      final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
           runner.run(query.withLimit(config.getMaxSearchLimit())),

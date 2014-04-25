@@ -83,7 +83,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
         query,
         configSupplier.get()
     );
-    final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
+    final int priority = query.getContextPriority(0);
 
     if (Iterables.isEmpty(queryables)) {
       log.warn("No queryables found.");

@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
+import com.metamx.common.RE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -105,7 +106,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(Query<T> query)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    boolean isBySegment = query.getContextBySegment(false);
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {
@@ -121,8 +122,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType typeRef;
     if (isBySegment) {
       typeRef = types.rhs;
-    }
-    else {
+    } else {
       typeRef = types.lhs;
     }
 
@@ -203,7 +203,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(typeRef, future);
+            return new JsonParserIterator<T>(typeRef, future, url);
           }
 
           @Override
@@ -217,15 +217,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     if (!isBySegment) {
       retVal = Sequences.map(
           retVal,
-          toolChest.makeMetricManipulatorFn(
-              query, new MetricManipulationFn()
-          {
-            @Override
-            public Object manipulate(AggregatorFactory factory, Object object)
-            {
-              return factory.deserialize(object);
-            }
-          }
+          toolChest.makePreComputeManipulatorFn(
+              query,
+              new MetricManipulationFn()
+              {
+                @Override
+                public Object manipulate(AggregatorFactory factory, Object object)
+                {
+                  return factory.deserialize(object);
+                }
+              }
           )
       );
     }
@@ -239,11 +240,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     private ObjectCodec objectCodec;
     private final JavaType typeRef;
     private final Future<InputStream> future;
+    private final String url;
 
-    public JsonParserIterator(JavaType typeRef, Future<InputStream> future)
+    public JsonParserIterator(JavaType typeRef, Future<InputStream> future, String url)
     {
       this.typeRef = typeRef;
       this.future = future;
+      this.url = url;
       jp = null;
     }
 
@@ -289,20 +292,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         try {
           jp = objectMapper.getFactory().createParser(future.get());
           if (jp.nextToken() != JsonToken.START_ARRAY) {
-            throw new IAE("Next token wasn't a START_ARRAY, was[%s]", jp.getCurrentToken());
+            throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
             jp.nextToken();
             objectCodec = jp.getCodec();
           }
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
         catch (InterruptedException e) {
-          throw Throwables.propagate(e);
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
         catch (ExecutionException e) {
-          throw Throwables.propagate(e);
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
       }
     }
@@ -310,7 +313,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     @Override
     public void close() throws IOException
     {
-      if(jp != null) {
+      if (jp != null) {
         jp.close();
       }
     }

@@ -33,9 +33,7 @@ public interface TopNResultBuilder
   public TopNResultBuilder addEntry(
       String dimName,
       Object dimValIndex,
-      Object[] metricVals,
-      List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      Object[] metricVals
   );
 
   public TopNResultBuilder addEntry(

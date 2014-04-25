@@ -55,7 +55,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -116,7 +116,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     );
   }
 
-  public TimeseriesQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public TimeseriesQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TimeseriesQuery(
         getDataSource(),

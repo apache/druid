@@ -54,10 +54,8 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
     "gran": "day"
   },
   "pathSpec": {
-    "type": "granularity",
-    "dataGranularity": "hour",
-    "inputPath": "s3n:\/\/billy-bucket\/the\/data\/is\/here",
-    "filePattern": ".*"
+    "type": "static",
+    "paths" : "example/path/data.gz,example/path/moredata.gz"
   },
   "rollupSpec": {
     "aggs": [
@@ -116,6 +114,20 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 
 There are multiple types of path specification:
 
+##### `static`
+
+Is a type of data loader where a static path to where the data files are located is passed.
+
+|property|description|required?|
+|--------|-----------|---------|
+|paths|A String of input paths indicating where the raw data is located.|yes|
+
+For example, using the static input paths:
+
+```
+"paths" : "s3n://billy-bucket/the/data/is/here/data.gz, s3n://billy-bucket/the/data/is/here/moredata.gz, s3n://billy-bucket/the/data/is/here/evenmoredata.gz"
+```
+
 ##### `granularity`
 
 Is a type of data loader that expects data to be laid out in a specific path format. Specifically, it expects it to be segregated by day in this directory format `y=XXXX/m=XX/d=XX/H=XX/M=XX/S=XX` (dates are represented by lowercase, time is represented by uppercase).
@@ -155,9 +167,20 @@ For example, data for a day may be split by the dimension "last\_name" into two 
 In hashed partition type, the number of partitions is determined based on the targetPartitionSize and cardinality of input set and the data is partitioned based on the hashcode of the row.
 
 It is recommended to use Hashed partition as it is more efficient than singleDimension since it does not need to determine the dimension for creating partitions.
-Hashing also gives better distribution of data resulting in equal sized partitons and improving query performance
+Hashing also gives better distribution of data resulting in equal sized partitions and improving query performance
 
-To use this option, the indexer must be given a target partition size. It can then find a good set of partition ranges on its own.
+To use this druid to automatically determine optimal partitions indexer must be given a target partition size. It can then find a good set of partition ranges on its own.
+
+#### Configuration for disabling auto-sharding and creating Fixed number of partitions
+ Druid can be configured to NOT run determine partitions and create a fixed number of shards by specifying numShards in hashed partitionsSpec.
+ e.g This configuration will skip determining optimal partitions and always create 4 shards for every segment granular interval
+
+```json
+  "partitionsSpec": {
+     "type": "hashed"
+     "numShards": 4
+   }
+```
 
 |property|description|required?|
 |--------|-----------|---------|
@@ -165,6 +188,7 @@ To use this option, the indexer must be given a target partition size. It can th
 |targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 700MB\~1GB.|yes|
 |partitionDimension|the dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|assume input data has already been grouped on time and dimensions. This is faster, but can choose suboptimal partitions if the assumption is violated.|no|
+|numShards|provides a way to manually override druid-auto sharding and specify the number of shards to create for each segment granular interval.It is only supported by hashed partitionSpec and targetPartitionSize must be set to -1|no|
 
 ### Updater job spec
 
@@ -215,7 +239,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
       "type" : "static",
       "paths" : "data.json"
     },
-    "targetPartitionSi:qze" : 5000000,
+    "targetPartitionSize" : 5000000,
     "rollupSpec" : {
       "aggs": [{
           "type" : "count",

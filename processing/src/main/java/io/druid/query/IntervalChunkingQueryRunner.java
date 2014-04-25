@@ -50,6 +50,10 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
+    if (period.getMillis() == 0) {
+      return baseRunner.run(query);
+    }
+
     return Sequences.concat(
         FunctionalIterable
             .create(query.getIntervals())

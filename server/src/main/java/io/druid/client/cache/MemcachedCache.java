@@ -83,9 +83,7 @@ public class MemcachedCache implements Cache
                                         .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),
-        config.getMemcachedPrefix(),
-        config.getTimeout(),
-        config.getExpiration()
+        config
       );
     } catch(IOException e) {
       throw Throwables.propagate(e);
@@ -103,15 +101,16 @@ public class MemcachedCache implements Cache
   private final AtomicLong timeoutCount = new AtomicLong(0);
   private final AtomicLong errorCount = new AtomicLong(0);
 
-  MemcachedCache(MemcachedClientIF client, String memcachedPrefix, int timeout, int expiration) {
-    Preconditions.checkArgument(memcachedPrefix.length() <= MAX_PREFIX_LENGTH,
+
+  MemcachedCache(MemcachedClientIF client,  MemcachedCacheConfig config) {
+    Preconditions.checkArgument(config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
                                 "memcachedPrefix length [%d] exceeds maximum length [%d]",
-                                memcachedPrefix.length(),
+                                config.getMemcachedPrefix().length(),
                                 MAX_PREFIX_LENGTH);
-    this.timeout = timeout;
-    this.expiration = expiration;
+    this.timeout = config.getTimeout();
+    this.expiration = config.getExpiration();
     this.client = client;
-    this.memcachedPrefix = memcachedPrefix;
+    this.memcachedPrefix = config.getMemcachedPrefix();
   }
 
   @Override
@@ -278,5 +277,9 @@ public class MemcachedCache implements Cache
   private static String computeKeyHash(String memcachedPrefix, NamedKey key) {
     // hash keys to keep things under 250 characters for memcached
     return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
+  }
+
+  public boolean isLocal() {
+    return false;
   }
 }

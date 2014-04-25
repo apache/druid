@@ -26,6 +26,7 @@ import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.query.Query;
+import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
@@ -108,6 +109,12 @@ public class EmittingRequestLogger implements RequestLogger
     public String getRemoteAddr()
     {
       return request.getRemoteAddr();
+    }
+
+    @JsonProperty("queryStats")
+    public QueryStats getQueryStats()
+    {
+      return request.getQueryStats();
     }
 
     @Override

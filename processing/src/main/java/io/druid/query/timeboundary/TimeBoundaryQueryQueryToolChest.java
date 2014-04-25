@@ -119,12 +119,11 @@ public class TimeBoundaryQueryQueryToolChest
     return new ServiceMetricEvent.Builder()
         .setUser2(query.getDataSource().toString())
         .setUser4(query.getType())
-        .setUser6("false")
-        .setUser10(query.getId());
+        .setUser6("false");
   }
 
   @Override
-  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makeMetricManipulatorFn(
+  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makePreComputeManipulatorFn(
       TimeBoundaryQuery query, MetricManipulationFn fn
   )
   {

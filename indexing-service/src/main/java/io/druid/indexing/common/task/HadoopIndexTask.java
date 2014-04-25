@@ -65,11 +65,12 @@ public class HadoopIndexTask extends AbstractTask
     extensionsConfig = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
   }
 
-  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+  public static String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";
+
   @JsonIgnore
   private final HadoopIngestionSchema schema;
   @JsonIgnore
-  private final String hadoopCoordinates;
+  private final List<String> hadoopDependencyCoordinates;
 
   /**
    * @param schema is used by the HadoopDruidIndexerJob to set up the appropriate parameters
@@ -85,7 +86,8 @@ public class HadoopIndexTask extends AbstractTask
   public HadoopIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("schema") HadoopIngestionSchema schema,
-      @JsonProperty("hadoopCoordinates") String hadoopCoordinates
+      @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
+      @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates
   )
   {
     super(
@@ -102,7 +104,9 @@ public class HadoopIndexTask extends AbstractTask
     Preconditions.checkArgument(schema.getIOConfig().getMetadataUpdateSpec() == null, "updaterJobSpec must be absent");
 
     this.schema = schema;
-    this.hadoopCoordinates = (hadoopCoordinates == null ? defaultHadoopCoordinates : hadoopCoordinates);
+    this.hadoopDependencyCoordinates = hadoopDependencyCoordinates == null ? Arrays.<String>asList(
+        hadoopCoordinates == null ? DEFAULT_HADOOP_COORDINATES : hadoopCoordinates
+    ) : hadoopDependencyCoordinates;
   }
 
   @Override
@@ -134,20 +138,16 @@ public class HadoopIndexTask extends AbstractTask
   }
 
   @JsonProperty
-  public String getHadoopCoordinates()
+  public List<String> getHadoopDependencyCoordinates()
   {
-    return hadoopCoordinates;
+    return hadoopDependencyCoordinates;
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    // setup Hadoop
     final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
-    final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-        aetherClient, hadoopCoordinates
-    );
 
     final List<URL> extensionURLs = Lists.newArrayList();
     for (String coordinate : extensionsConfig.getCoordinates()) {
@@ -163,7 +163,12 @@ public class HadoopIndexTask extends AbstractTask
     final List<URL> driverURLs = Lists.newArrayList();
     driverURLs.addAll(nonHadoopURLs);
     // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-    driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+    for (String hadoopDependencyCoordinate : hadoopDependencyCoordinates) {
+      final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
+          aetherClient, hadoopDependencyCoordinate
+      );
+      driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+    }
 
     final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
     Thread.currentThread().setContextClassLoader(loader);

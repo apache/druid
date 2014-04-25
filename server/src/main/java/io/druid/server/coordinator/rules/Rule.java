@@ -26,6 +26,7 @@ import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 /**
  */
@@ -35,13 +36,17 @@ import org.joda.time.DateTime;
     @JsonSubTypes.Type(name = "loadByInterval", value = IntervalLoadRule.class),
     @JsonSubTypes.Type(name = "loadForever", value = ForeverLoadRule.class),
     @JsonSubTypes.Type(name = "dropByPeriod", value = PeriodDropRule.class),
-    @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class)
+    @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class),
+    @JsonSubTypes.Type(name = "dropForever", value = ForeverDropRule.class)
 })
+
 public interface Rule
 {
   public String getType();
 
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp);
+
+  public boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 }

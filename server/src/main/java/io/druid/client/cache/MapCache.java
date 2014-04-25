@@ -54,7 +54,6 @@ public class MapCache implements Cache
   )
   {
     this.byteCountingLRUMap = byteCountingLRUMap;
-
     this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 
     namespaceId = Maps.newHashMap();
@@ -78,7 +77,10 @@ public class MapCache implements Cache
   @Override
   public byte[] get(NamedKey key)
   {
-    final byte[] retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
+    final byte[] retVal;
+    synchronized (clearLock) {
+      retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
+    }
     if (retVal == null) {
       missCount.incrementAndGet();
     } else {
@@ -91,7 +93,7 @@ public class MapCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     synchronized (clearLock) {
-        baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
+      baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
     }
   }
 
@@ -99,7 +101,7 @@ public class MapCache implements Cache
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
     Map<NamedKey, byte[]> retVal = Maps.newHashMap();
-    for(NamedKey key : keys) {
+    for (NamedKey key : keys) {
       retVal.put(key, get(key));
     }
     return retVal;
@@ -111,7 +113,9 @@ public class MapCache implements Cache
     byte[] idBytes;
     synchronized (namespaceId) {
       idBytes = getNamespaceId(namespace);
-      if(idBytes == null) return;
+      if (idBytes == null) {
+        return;
+      }
 
       namespaceId.remove(namespace);
     }
@@ -149,5 +153,10 @@ public class MapCache implements Cache
     final ByteBuffer retVal = ByteBuffer.allocate(key.length + 4).put(idBytes).put(key);
     retVal.rewind();
     return retVal;
+  }
+
+  public boolean isLocal()
+  {
+    return true;
   }
 }

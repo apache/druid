@@ -304,7 +304,7 @@ public class Druids
     private QueryGranularity granularity;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
     private TimeseriesQueryBuilder()
     {
@@ -384,7 +384,7 @@ public class Druids
       return postAggregatorSpecs;
     }
 
-    public Map<String, String> getContext()
+    public Map<String, Object> getContext()
     {
       return context;
     }
@@ -465,7 +465,7 @@ public class Druids
       return this;
     }
 
-    public TimeseriesQueryBuilder context(Map<String, String> c)
+    public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;
@@ -505,7 +505,7 @@ public class Druids
     private QuerySegmentSpec querySegmentSpec;
     private List<String> dimensions;
     private SearchQuerySpec querySpec;
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
     public SearchQueryBuilder()
     {
@@ -660,7 +660,7 @@ public class Druids
       return this;
     }
 
-    public SearchQueryBuilder context(Map<String, String> c)
+    public SearchQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;
@@ -690,7 +690,7 @@ public class Druids
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
     public TimeBoundaryQueryBuilder()
     {
@@ -746,7 +746,7 @@ public class Druids
       return this;
     }
 
-    public TimeBoundaryQueryBuilder context(Map<String, String> c)
+    public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;

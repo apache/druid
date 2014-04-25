@@ -33,8 +33,6 @@ public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
 
   public TopNParams makeInitParams(DimensionSelector dimSelector, Cursor cursor);
 
-  public TopNResultBuilder makeResultBuilder(Parameters params);
-
   public void run(
       Parameters params,
       TopNResultBuilder resultBuilder,

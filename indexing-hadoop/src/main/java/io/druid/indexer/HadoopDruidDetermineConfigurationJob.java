@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
@@ -56,13 +57,28 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     if (config.isDeterminingPartitions()) {
       jobs.add(config.getPartitionsSpec().getPartitionJob(config));
     } else {
+      int shardsPerInterval = config.getPartitionsSpec().getNumShards();
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
-        final HadoopyShardSpec spec = new HadoopyShardSpec(new NoneShardSpec(), shardCount++);
-        shardSpecs.put(bucket, Lists.newArrayList(spec));
-        log.info("DateTime[%s], spec[%s]", bucket, spec);
+        if (shardsPerInterval > 0) {
+          List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);
+          for (int i = 0; i < shardsPerInterval; i++) {
+            specs.add(
+                new HadoopyShardSpec(
+                    new HashBasedNumberedShardSpec(i, shardsPerInterval),
+                    shardCount++
+                )
+            );
+          }
+          shardSpecs.put(bucket, specs);
+          log.info("DateTime[%s], spec[%s]", bucket, specs);
+        } else {
+          final HadoopyShardSpec spec = new HadoopyShardSpec(new NoneShardSpec(), shardCount++);
+          shardSpecs.put(bucket, Lists.newArrayList(spec));
+          log.info("DateTime[%s], spec[%s]", bucket, spec);
+        }
       }
       config.setShardSpecs(shardSpecs);
     }

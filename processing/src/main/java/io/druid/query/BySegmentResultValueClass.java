@@ -64,10 +64,44 @@ public class BySegmentResultValueClass<T>
   @Override
   public String toString()
   {
-    return "BySegmentTimeseriesResultValue{" +
+    return "BySegmentResultValue{" +
            "results=" + results +
            ", segmentId='" + segmentId + '\'' +
            ", interval='" + interval + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    BySegmentResultValueClass that = (BySegmentResultValueClass) o;
+
+    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
+      return false;
+    }
+    if (results != null ? !results.equals(that.results) : that.results != null) {
+      return false;
+    }
+    if (segmentId != null ? !segmentId.equals(that.segmentId) : that.segmentId != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = results != null ? results.hashCode() : 0;
+    result = 31 * result + (segmentId != null ? segmentId.hashCode() : 0);
+    result = 31 * result + (interval != null ? interval.hashCode() : 0);
+    return result;
   }
 }

@@ -67,4 +67,13 @@ public class JavaScriptDimFilter implements DimFilter
         .put(functionBytes)
         .array();
   }
+
+  @Override
+  public String toString()
+  {
+    return "JavaScriptDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", function='" + function + '\'' +
+           '}';
+  }
 }

@@ -85,6 +85,7 @@ public class MinAggregatorFactory implements AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
+    // handle "NaN" / "Infinity" values serialized as strings in JSON
     if (object instanceof String) {
       return Double.parseDouble((String) object);
     }

@@ -22,7 +22,6 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import io.druid.indexer.partitions.PartitionsSpec;
-import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +35,17 @@ import org.junit.Test;
 public class HadoopDruidIndexerConfigTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
+  public static <T> T jsonReadWriteRead(String s, Class<T> klass)
+  {
+    try {
+      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
 
   @Test
   public void shouldMakeHDFSCompliantSegmentOutputPath()
@@ -116,59 +126,5 @@ public class HadoopDruidIndexerConfigTest
         path.toString()
     );
 
-  }
-
-  private <T> T jsonReadWriteRead(String s, Class<T> klass)
-  {
-    try {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  public void testRandomPartitionsSpec() throws Exception
-  {
-    {
-      final HadoopDruidIndexerConfig cfg;
-
-      try {
-        cfg = jsonReadWriteRead(
-            "{"
-            + "\"partitionsSpec\":{"
-            + "   \"targetPartitionSize\":100,"
-            + "   \"type\":\"random\""
-            + " }"
-            + "}",
-            HadoopDruidIndexerConfig.class
-        );
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
-      final PartitionsSpec partitionsSpec = cfg.getPartitionsSpec();
-
-      Assert.assertEquals(
-          "isDeterminingPartitions",
-          partitionsSpec.isDeterminingPartitions(),
-          true
-      );
-
-      Assert.assertEquals(
-          "getTargetPartitionSize",
-          partitionsSpec.getTargetPartitionSize(),
-          100
-      );
-
-      Assert.assertEquals(
-          "getMaxPartitionSize",
-          partitionsSpec.getMaxPartitionSize(),
-          150
-      );
-
-      Assert.assertTrue("partitionsSpec", partitionsSpec instanceof RandomPartitionsSpec);
-    }
   }
 }

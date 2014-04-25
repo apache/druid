@@ -19,8 +19,11 @@
 
 package io.druid.examples.web;
 
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Preconditions;
 import com.google.common.io.InputSupplier;
 import com.metamx.emitter.EmittingLogger;
+import org.apache.commons.validator.routines.UrlValidator;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -31,25 +34,25 @@ import java.net.URLConnection;
 public class WebJsonSupplier implements InputSupplier<BufferedReader>
 {
   private static final EmittingLogger log = new EmittingLogger(WebJsonSupplier.class);
+  private static final UrlValidator urlValidator = new UrlValidator();
 
-  private String urlString;
   private URL url;
 
   public WebJsonSupplier(String urlString)
   {
-    this.urlString = urlString;
+    Preconditions.checkState(urlValidator.isValid(urlString));
+
     try {
       this.url = new URL(urlString);
     }
     catch (Exception e) {
-      log.error(e,"Malformed url");
+      throw Throwables.propagate(e);
     }
   }
 
   @Override
   public BufferedReader getInput() throws IOException
   {
-    URL url = new URL(urlString);
     URLConnection connection = url.openConnection();
     connection.setDoInput(true);
     return new BufferedReader(new InputStreamReader(url.openStream()));

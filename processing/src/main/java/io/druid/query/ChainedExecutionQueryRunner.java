@@ -35,8 +35,10 @@ import com.metamx.common.logger.Logger;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
@@ -83,7 +85,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
-    final int priority = Integer.parseInt(query.getContextValue("priority", "0"));
+    final int priority = query.getContextPriority(0);
 
     return new BaseSequence<T, Iterator<T>>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
@@ -110,7 +112,18 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   if (input == null) {
                                     throw new ISE("Input is null?! How is this possible?!");
                                   }
-                                  return Sequences.toList(input.run(query), Lists.<T>newArrayList());
+
+                                  Sequence<T> result = input.run(query);
+                                  if (result == null) {
+                                    throw new ISE("Got a null result! Segments are missing!");
+                                  }
+
+                                  List<T> retVal = Sequences.toList(result, Lists.<T>newArrayList());
+                                  if (retVal == null) {
+                                    throw new ISE("Got a null list of results! WTF?!");
+                                  }
+
+                                  return retVal;
                                 }
                                 catch (Exception e) {
                                   log.error(e, "Exception with one of the sequences!");

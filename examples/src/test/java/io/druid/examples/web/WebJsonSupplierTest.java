@@ -22,15 +22,14 @@ package io.druid.examples.web;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 
 public class WebJsonSupplierTest
 {
-  @Test(expected = IOException.class)
+  @Test(expected = IllegalStateException.class)
   public void checkInvalidUrl() throws Exception
   {
-
     String invalidURL = "http://invalid.url.";
     WebJsonSupplier supplier = new WebJsonSupplier(invalidURL);
-    supplier.getInput();
   }
 }

@@ -24,6 +24,7 @@ import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
@@ -63,7 +64,11 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;
     this.aggregations = aggregatorSpecs;
-    this.postAggregations = postAggregatorSpecs;
+
+    this.postAggregations = AggregatorUtil.pruneDependentPostAgg(
+        postAggregatorSpecs,
+        topNMetricSpec.getMetricName(dimSpec)
+    );
 
     this.dimension = dimSpec.getOutputName();
     this.comparator = topNMetricSpec.getComparator(aggregatorSpecs, postAggregatorSpecs);
@@ -79,7 +84,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       return merger.getResult(arg1, comparator);
     }
 
-    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<String, DimensionAndMetricValueExtractor>();
+    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();
 
     TopNResultValue arg1Vals = arg1.getValue();
     TopNResultValue arg2Vals = arg2.getValue();
@@ -92,7 +97,8 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       DimensionAndMetricValueExtractor arg1Val = retVals.get(dimensionValue);
 
       if (arg1Val != null) {
-        Map<String, Object> retVal = new LinkedHashMap<String, Object>();
+        // size of map = aggregator + topNDim + postAgg (If sorting is done on post agg field)
+        Map<String, Object> retVal = new LinkedHashMap<>(aggregations.size() + 2);
 
         retVal.put(dimension, dimensionValue);
         for (AggregatorFactory factory : aggregations) {
@@ -117,7 +123,14 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       timestamp = gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis()));
     }
 
-    TopNResultBuilder bob = topNMetricSpec.getResultBuilder(timestamp, dimSpec, threshold, comparator);
+    TopNResultBuilder bob = topNMetricSpec.getResultBuilder(
+        timestamp,
+        dimSpec,
+        threshold,
+        comparator,
+        aggregations,
+        postAggregations
+    );
     for (DimensionAndMetricValueExtractor extractor : retVals.values()) {
       bob.addEntry(extractor);
     }

@@ -31,17 +31,18 @@ public class HashedPartitionsSpec extends AbstractPartitionsSpec
 {
   public static HashedPartitionsSpec makeDefaultHashedPartitionsSpec()
   {
-    return new HashedPartitionsSpec(null, null, null);
+    return new HashedPartitionsSpec(null, null, null, null);
   }
 
   @JsonCreator
   public HashedPartitionsSpec(
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
       @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
-      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped,
+      @JsonProperty("numShards") @Nullable Integer numShards
   )
   {
-    super(targetPartitionSize, maxPartitionSize, assumeGrouped);
+    super(targetPartitionSize, maxPartitionSize, assumeGrouped, numShards);
   }
 
   @Override

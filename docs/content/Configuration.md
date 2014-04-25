@@ -4,7 +4,7 @@ layout: doc_page
 
 # Configuring Druid
 
-This describes the basic server configuration that is loaded by all the server processes; the same file is loaded by all. See also the json "specFile" descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
+This describes the basic server configuration that is loaded by all Druid server processes; the same file is loaded by all. See also the JSON "specFile" descriptions in [Realtime](Realtime.html) and [Batch-ingestion](Batch-ingestion.html).
 
 ## JVM Configuration Best Practices
 
@@ -26,7 +26,7 @@ Note: as a future item, we’d like to consolidate all of the various configurat
 
 ### Emitter Module
 
-The Druid servers emit various metrics and alerts via something we call an Emitter. There are two emitter implementations included with the code, one that just logs to log4j and one that does POSTs of JSON events to a server. The properties for using the logging emitter are described below.
+The Druid servers emit various metrics and alerts via something we call an Emitter. There are two emitter implementations included with the code, one that just logs to log4j ("logging", which is used by default if no emitter is specified) and one that does POSTs of JSON events to a server ("http"). The properties for using the logging emitter are described below.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -47,7 +47,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |`druid.emitter.http.timeOut`|The timeout for data reads.|PT5M|
 |`druid.emitter.http.flushMillis`|How often to internal message buffer is flushed (data is sent).|60000|
 |`druid.emitter.http.flushCount`|How many messages can the internal message buffer hold before flushing (sending).|500|
-|`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to.|none|
+|`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none|
 
 ### Http Client Module
 
@@ -56,7 +56,7 @@ This is the HTTP client used by [Broker](Broker.html) nodes.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time nodes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|5|
-|`druid.broker.http.readTimeout`|The timeout for data reads.|none|
+|`druid.broker.http.readTimeout`|The timeout for data reads.|PT15M|
 
 ### Curator Module
 
@@ -64,17 +64,17 @@ Druid uses [Curator](http://curator.incubator.apache.org/) for all [Zookeeper](h
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.zk.service.host`|The Zookeeper hosts to connect to.|none|
-|`druid.zk.service.sessionTimeoutMs`|Zookeeper session timeout.|30000|
+|`druid.zk.service.host`|The ZooKeeper hosts to connect to. This is a REQUIRED property and therefore a host address must be supplied.|none|
+|`druid.zk.service.sessionTimeoutMs`|ZooKeeper session timeout, in milliseconds.|30000|
 |`druid.curator.compress`|Boolean flag for whether or not created Znodes should be compressed.|false|
 
 ### Announcer Module
 
-The announcer module is used to announce and unannounce Znodes in Zookeeper (using Curator).
+The announcer module is used to announce and unannounce Znodes in ZooKeeper (using Curator).
 
-#### Zookeeper Paths
+#### ZooKeeper Paths
 
-See [Zookeeper](Zookeeper.html).
+See [ZooKeeper](ZooKeeper.html).
 
 #### Data Segment Announcer
 
@@ -84,11 +84,11 @@ Data segment announcers are used to announce segments.
 |--------|-----------|-------|
 |`druid.announcer.type`|Choices: legacy or batch. The type of data segment announcer to use.|legacy|
 
-#### Single Data Segment Announcer
+##### Single Data Segment Announcer
 
 In legacy Druid, each segment served by a node would be announced as an individual Znode.
 
-#### Batch Data Segment Announcer
+##### Batch Data Segment Announcer
 
 In current Druid, multiple data segments may be announced under the same Znode.
 
@@ -105,16 +105,8 @@ This module contains query processing functionality.
 |--------|-----------|-------|
 |`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
 |`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
-|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, this means that even under heavy load there will still be one core available to do background tasks like talking with ZK and pulling down segments.|1|
+|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
 
-### AWS Module
-
-This module is used to interact with S3.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.s3.accessKey`|The access key to use to access S3.|none|
-|`druid.s3.secretKey`|The secret key to use to access S3.|none|
 
 ### Metrics Module
 
@@ -123,7 +115,15 @@ The metrics module is used to track Druid metrics.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`|How often metrics are emitted.|PT1m|
-|`druid.monitoring.monitors`|List of Druid monitors.|none|
+|`druid.monitoring.monitors`|Sets list of Druid monitors used by a node. Each monitor is specified as `com.metamx.metrics.<monitor-name>` (see below for names and more information). For example, you can specify monitors for a Broker with `druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]`.|none (no monitors)|
+
+The following monitors are available:
+
+* CacheMonitor &ndash; Emits metrics (to logs) about the segment results cache for Historical and Broker nodes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.
+* SysMonitor &ndash; This uses the [SIGAR library](http://www.hyperic.com/products/sigar) to report on various system activities and statuses.
+* ServerMonitor &ndash; Reports statistics on Historical nodes.
+* JvmMonitor &ndash; Reports JVM-related statistics.
+* RealtimeMetricsMonitor &ndash; Reports statistics on Realtime nodes.
 
 ### Server Module
 
@@ -137,22 +137,24 @@ This module is used for Druid server nodes.
 
 ### Storage Node Module
 
-This module is used by nodes that store data (historical and real-time nodes).
+This module is used by nodes that store data (Historical and Realtime).
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.maxSize`|The maximum number of bytes worth of segments that the node wants assigned to it. This is not a limit that the historical nodes actually enforce, they just publish it to the coordinator and trust the coordinator to do the right thing|0|
-|`druid.server.tier`|Druid server host port.|none|
+|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the node wants assigned to it. This is not a limit that Historical nodes actually enforce, just a value published to the Coordinator node so it can plan accordingly.|0|
+|`druid.server.tier`| A string to name the distribution tier that the storage node belongs to. Many of the [rules Coordinator nodes use](Rule-Configuration.html) to manage segments can be keyed on tiers. |  `_default_tier` |
+|`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which nodes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
+
 
 #### Segment Cache
 
-Druid storage nodes maintain information about segments they have already downloaded.
+Druid storage nodes maintain information about segments they have already downloaded, and a disk cache to store that data.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.segmentCache.locations`|Segments assigned to a historical node are first stored on the local file system and then served by the historical node. These locations define where that local cache resides|none|
+|`druid.segmentCache.locations`|Segments assigned to a Historical node are first stored on the local file system (in a disk cache) and then served by the Historical node. These locations define where that local cache resides. | none (no caching) |
 |`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a node is no longer serving a segment.|true|
-|`druid.segmentCache.infoDir`|Historical nodes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
+|`druid.segmentCache.infoDir`|Historical nodes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
 
 ### Jetty Server Module
 
@@ -193,7 +195,7 @@ This module is required by nodes that can serve queries.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.chunkPeriod`|Long interval queries may be broken into shorter interval queries.|P1M|
+|`druid.query.chunkPeriod`|Long-interval queries (of any type) may be broken into shorter interval queries, reducing the impact on resources. Use ISO 8601 periods. For example, if this property is set to `P1M` (one month), then a query covering a year would be broken into 12 smaller queries. |0 (off)|
 
 #### GroupBy Query Config
 
@@ -210,17 +212,28 @@ This module is required by nodes that can serve queries.
 |--------|-----------|-------|
 |`druid.query.search.maxSearchLimit`|Maximum number of search results to return.|1000|
 
+
 ### Discovery Module
 
 The discovery module is used for service discovery.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.discovery.curator.path`|Services announce themselves under this Zookeeper path.|/druid/discovery|
+|`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|/druid/discovery|
+
+
+#### Indexing Service Discovery Module
+
+This module is used to find the [Indexing Service](Indexing-Service.html) using Curator service discovery.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |overlord|
+
 
 ### Server Inventory View Module
 
-This module is used to read announcements of segments in Zookeeper. The configs are identical to the Announcer Module.
+This module is used to read announcements of segments in ZooKeeper. The configs are identical to the Announcer Module.
 
 ### Database Connector Module
 
@@ -228,7 +241,6 @@ These properties specify the jdbc connection and other configuration around the 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.db.connector.pollDuration`|The jdbc connection URI.|none|
 |`druid.db.connector.user`|The username to connect with.|none|
 |`druid.db.connector.password`|The password to connect with.|none|
 |`druid.db.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
@@ -250,13 +262,6 @@ The Jackson Config manager reads and writes config entries from the Druid config
 |--------|-----------|-------|
 |`druid.manager.config.pollDuration`|How often the manager polls the config table for updates.|PT1m|
 
-### Indexing Service Discovery Module
-
-This module is used to find the [Indexing Service](Indexing-Service.html) using Curator service discovery.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node.|none|
 
 ### DataSegment Pusher/Puller Module
 
@@ -289,6 +294,16 @@ This deep storage is used to interface with Amazon's S3.
 |`druid.storage.disableAcl`|Boolean flag for ACL.|false|
 |`druid.storage.archiveBucket`|S3 bucket name for archiving when running the indexing-service *archive task*.|none|
 |`druid.storage.archiveBaseKey`|S3 object key prefix for archiving.|none|
+
+#### AWS Module
+
+This module is used to interact with S3.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.s3.accessKey`|The access key to use to access S3.|none|
+|`druid.s3.secretKey`|The secret key to use to access S3.|none|
+
 
 #### HDFS Deep Storage
 

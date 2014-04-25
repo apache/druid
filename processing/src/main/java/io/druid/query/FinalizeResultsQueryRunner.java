@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.FinalizeMetricManipulationFn;
+import io.druid.query.aggregation.IdentityMetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulationFn;
 
 import javax.annotation.Nullable;
@@ -48,62 +49,55 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query)
   {
-    final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment"));
-    final boolean shouldFinalize = Boolean.parseBoolean(query.getContextValue("finalize", "true"));
+    final boolean isBySegment = query.getContextBySegment(false);
+    final boolean shouldFinalize = query.getContextFinalize(true);
+
+    final Query<T> queryToRun;
+    final Function<T, T> finalizerFn;
+    final MetricManipulationFn metricManipulationFn;
+
     if (shouldFinalize) {
-      Function<T, T> finalizerFn;
-      if (isBySegment) {
-        finalizerFn = new Function<T, T>()
-        {
-          final Function<T, T> baseFinalizer = toolChest.makeMetricManipulatorFn(
-              query,
-              new MetricManipulationFn()
-              {
-                @Override
-                public Object manipulate(AggregatorFactory factory, Object object)
-                {
-                  return factory.finalizeComputation(factory.deserialize(object));
-                }
-              }
-          );
+      queryToRun = query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false));
+      metricManipulationFn = new FinalizeMetricManipulationFn();
 
-          @Override
-          @SuppressWarnings("unchecked")
-          public T apply(@Nullable T input)
-          {
-            Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
-            BySegmentResultValueClass<T> resultsClass = result.getValue();
-
-            return (T) new Result<BySegmentResultValueClass>(
-                result.getTimestamp(),
-                new BySegmentResultValueClass(
-                    Lists.transform(resultsClass.getResults(), baseFinalizer),
-                    resultsClass.getSegmentId(),
-                    resultsClass.getInterval()
-                )
-            );
-          }
-        };
-      }
-      else {
-        finalizerFn = toolChest.makeMetricManipulatorFn(
-            query,
-            new MetricManipulationFn()
-            {
-              @Override
-              public Object manipulate(AggregatorFactory factory, Object object)
-              {
-                return factory.finalizeComputation(object);
-              }
-            }
-        );
-      }
-
-      return Sequences.map(
-          baseRunner.run(query.withOverriddenContext(ImmutableMap.of("finalize", "false"))),
-          finalizerFn
-      );
+    } else {
+      queryToRun = query;
+      metricManipulationFn = new IdentityMetricManipulationFn();
     }
-    return baseRunner.run(query);
+    if (isBySegment) {
+      finalizerFn = new Function<T, T>()
+      {
+        final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
+            query,
+            metricManipulationFn
+        );
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public T apply(@Nullable T input)
+        {
+          Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
+          BySegmentResultValueClass<T> resultsClass = result.getValue();
+
+          return (T) new Result<BySegmentResultValueClass>(
+              result.getTimestamp(),
+              new BySegmentResultValueClass(
+                  Lists.transform(resultsClass.getResults(), baseFinalizer),
+                  resultsClass.getSegmentId(),
+                  resultsClass.getInterval()
+              )
+          );
+        }
+      };
+    } else {
+      finalizerFn = toolChest.makePostComputeManipulatorFn(query, metricManipulationFn);
+    }
+
+
+    return Sequences.map(
+        baseRunner.run(queryToRun),
+        finalizerFn
+    );
+
   }
 }

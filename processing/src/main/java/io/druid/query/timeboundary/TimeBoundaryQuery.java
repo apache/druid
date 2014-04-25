@@ -54,7 +54,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public TimeBoundaryQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -78,7 +78,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   }
 
   @Override
-  public TimeBoundaryQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public TimeBoundaryQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TimeBoundaryQuery(
         getDataSource(),

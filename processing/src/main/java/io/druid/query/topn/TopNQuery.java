@@ -62,7 +62,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -178,7 +178,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
-  public TopNQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public TopNQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TopNQuery(
         getDataSource(),

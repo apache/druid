@@ -20,16 +20,11 @@
 package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.aggregation.post.ArithmeticPostAggregator;
-import io.druid.query.aggregation.post.ConstantPostAggregator;
-import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -43,20 +38,9 @@ public class TimeseriesBinaryFnTest
 {
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
-  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
-  final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
-  final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
-  final ArithmeticPostAggregator addRowsIndexConstant = new ArithmeticPostAggregator(
-      "addRowsIndexConstant",
-      "+",
-      Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
-  );
   final List<AggregatorFactory> aggregatorFactories = Arrays.asList(
       rowsCount,
       indexLongSum
-  );
-  final List<PostAggregator> postAggregators = Arrays.<PostAggregator>asList(
-      addRowsIndexConstant
   );
   final DateTime currTime = new DateTime();
 
@@ -87,16 +71,14 @@ public class TimeseriesBinaryFnTest
         new TimeseriesResultValue(
             ImmutableMap.<String, Object>of(
                 "rows", 3L,
-                "index", 5L,
-                "addRowsIndexConstant", 9.0
+                "index", 5L
             )
         )
     );
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         QueryGranularity.ALL,
-        aggregatorFactories,
-        postAggregators
+        aggregatorFactories
     ).apply(
         result1,
         result2
@@ -131,16 +113,14 @@ public class TimeseriesBinaryFnTest
         new TimeseriesResultValue(
             ImmutableMap.<String, Object>of(
                 "rows", 3L,
-                "index", 5L,
-                "addRowsIndexConstant", 9.0
+                "index", 5L
             )
         )
     );
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         QueryGranularity.DAY,
-        aggregatorFactories,
-        postAggregators
+        aggregatorFactories
     ).apply(
         result1,
         result2
@@ -166,8 +146,7 @@ public class TimeseriesBinaryFnTest
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         QueryGranularity.ALL,
-        aggregatorFactories,
-        postAggregators
+        aggregatorFactories
     ).apply(
         result1,
         result2
@@ -202,16 +181,14 @@ public class TimeseriesBinaryFnTest
         new TimeseriesResultValue(
             ImmutableMap.<String, Object>of(
                 "rows", 3L,
-                "index", 5L,
-                "addRowsIndexConstant", 9.0
+                "index", 5L
             )
         )
     );
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         QueryGranularity.ALL,
-        aggregatorFactories,
-        postAggregators
+        aggregatorFactories
     ).apply(
         result1,
         result2

@@ -63,7 +63,7 @@ public class DatabaseRuleManager
   public static void createDefaultRule(
       final IDBI dbi,
       final String ruleTable,
-      final String defaultTier,
+      final String defaultDatasourceName,
       final ObjectMapper jsonMapper
   )
   {
@@ -74,13 +74,15 @@ public class DatabaseRuleManager
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              List<Map<String, Object>> existing = handle.select(
-                  String.format(
-                      "SELECT id from %s where datasource='%s';",
-                      ruleTable,
-                      defaultTier
+              List<Map<String, Object>> existing = handle
+                  .createQuery(
+                      String.format(
+                          "SELECT id from %s where datasource=:dataSource;",
+                          ruleTable
+                      )
                   )
-              );
+                  .bind("dataSource", defaultDatasourceName)
+                  .list();
 
               if (!existing.isEmpty()) {
                 return null;
@@ -101,8 +103,8 @@ public class DatabaseRuleManager
                       ruleTable
                   )
               )
-                    .bind("id", String.format("%s_%s", defaultTier, version))
-                    .bind("dataSource", defaultTier)
+                    .bind("id", String.format("%s_%s", defaultDatasourceName, version))
+                    .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsString(defaultRules))
                     .execute();
@@ -159,7 +161,7 @@ public class DatabaseRuleManager
 
       this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
 
-      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultTier(), jsonMapper);
+      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultRule(), jsonMapper);
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
@@ -274,8 +276,8 @@ public class DatabaseRuleManager
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));
     }
-    if (theRules.get(config.get().getDefaultTier()) != null) {
-      retVal.addAll(theRules.get(config.get().getDefaultTier()));
+    if (theRules.get(config.get().getDefaultRule()) != null) {
+      retVal.addAll(theRules.get(config.get().getDefaultRule()));
     }
     return retVal;
   }

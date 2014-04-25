@@ -127,12 +127,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         .setUser4("Select")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString())
-        .setUser10(query.getId());
+        .setUser9(Minutes.minutes(numMinutes).toString());
   }
 
   @Override
-  public Function<Result<SelectResultValue>, Result<SelectResultValue>> makeMetricManipulatorFn(
+  public Function<Result<SelectResultValue>, Result<SelectResultValue>> makePreComputeManipulatorFn(
       final SelectQuery query, final MetricManipulationFn fn
   )
   {
@@ -171,10 +170,9 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-
         final Set<String> metrics = Sets.newTreeSet();
         if (query.getMetrics() != null) {
-          dimensions.addAll(query.getMetrics());
+          metrics.addAll(query.getMetrics());
         }
 
         final byte[][] metricBytes = new byte[metrics.size()][];

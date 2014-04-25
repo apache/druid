@@ -21,7 +21,9 @@ package io.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -30,23 +32,23 @@ import java.util.Map;
 
 public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 {
-
   private final ColumnIncluderator toInclude;
   private final boolean merge;
 
   @JsonCreator
   public SegmentMetadataQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("toInclude") ColumnIncluderator toInclude,
       @JsonProperty("merge") Boolean merge,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(new TableDataSource(dataSource), querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, context);
 
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
+    Preconditions.checkArgument(dataSource instanceof TableDataSource, "SegmentMetadataQuery only supports table datasource");
   }
 
   @JsonProperty
@@ -74,10 +76,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   }
 
   @Override
-  public Query<SegmentAnalysis> withOverriddenContext(Map<String, String> contextOverride)
+  public Query<SegmentAnalysis> withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new SegmentMetadataQuery(
-        ((TableDataSource)getDataSource()).getName(),
+        getDataSource(),
         getQuerySegmentSpec(), toInclude, merge, computeOverridenContext(contextOverride)
     );
   }
@@ -86,7 +88,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public Query<SegmentAnalysis> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return new SegmentMetadataQuery(
-        ((TableDataSource)getDataSource()).getName(),
+        getDataSource(),
         spec, toInclude, merge, getContext());
   }
 

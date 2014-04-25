@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -36,11 +37,11 @@ public class HyperLogLogCollectorTest
 {
 
   private final HashFunction fn = Hashing.murmur3_128();
-  private final Random random = new Random();
 
   @Test
   public void testFolding() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -70,17 +71,29 @@ public class HyperLogLogCollectorTest
     }
   }
 
-  //  @Test
+
+  /**
+   * This is a very long running test, disabled by default.
+   * It is meant to catch issues when combining a large numer of HLL objects.
+   *
+   * It compares adding all the values to one HLL vs.
+   * splitting up values into HLLs of 100 values each, and folding those HLLs into a single main HLL.
+   *
+   * When reaching very large cardinalities (>> 50,000,000), offsets are mismatched between the main HLL and the ones
+   * with 100 values, requiring  a floating max as described in
+   * http://druid.io/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
+   */
+  @Ignore @Test
   public void testHighCardinalityRollingFold() throws Exception
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
     final HyperLogLogCollector simple = HyperLogLogCollector.makeLatestCollector();
 
-    int count;
     MessageDigest md = MessageDigest.getInstance("SHA-1");
     HyperLogLogCollector tmp = HyperLogLogCollector.makeLatestCollector();
 
-    for (count = 0; count < 5000000; ++count) {
+    int count;
+    for (count = 0; count < 100_000_000; ++count) {
       md.update(Integer.toString(count).getBytes());
 
       byte[] hashed = fn.hashBytes(md.digest()).asBytes();
@@ -110,14 +123,14 @@ public class HyperLogLogCollectorTest
     Assert.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
   }
 
-  //@Test
+  @Ignore @Test
   public void testHighCardinalityRollingFold2() throws Exception
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
     int count;
     long start = System.currentTimeMillis();
 
-    for (count = 0; count < 5000000; ++count) {
+    for (count = 0; count < 50_000_000; ++count) {
       HyperLogLogCollector theCollector = HyperLogLogCollector.makeLatestCollector();
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
@@ -141,6 +154,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testFoldingByteBuffers() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -173,6 +187,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testFoldingReadOnlyByteBuffers() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -208,6 +223,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testFoldingReadOnlyByteBuffersWithArbitraryPosition() throws Exception
   {
+    final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
       HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
@@ -469,9 +485,11 @@ public class HyperLogLogCollectorTest
     return retVal;
   }
 
-  //@Test // This test can help when finding potential combinations that are weird, but it's non-deterministic
+  @Ignore @Test // This test can help when finding potential combinations that are weird, but it's non-deterministic
   public void testFoldingwithDifferentOffsets() throws Exception
   {
+    // final Random random = new Random(37); // this seed will cause this test to fail because of slightly larger errors
+    final Random random = new Random(0);
     for (int j = 0; j < 10; j++) {
       HyperLogLogCollector smallVals = HyperLogLogCollector.makeLatestCollector();
       HyperLogLogCollector bigVals = HyperLogLogCollector.makeLatestCollector();
@@ -498,9 +516,10 @@ public class HyperLogLogCollectorTest
     }
   }
 
-  //@Test
+  @Ignore @Test
   public void testFoldingwithDifferentOffsets2() throws Exception
   {
+    final Random random = new Random(0);
     MessageDigest md = MessageDigest.getInstance("SHA-1");
 
     for (int j = 0; j < 1; j++) {
@@ -619,6 +638,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testSparseEstimation() throws Exception
   {
+    final Random random = new Random(0);
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
     for (int i = 0; i < 100; ++i) {
@@ -729,6 +749,54 @@ public class HyperLogLogCollectorTest
     }
   }
 
+  @Test
+  public void testMaxOverflow() {
+    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    collector.add((short)23, (byte)16);
+    Assert.assertEquals(23, collector.getMaxOverflowRegister());
+    Assert.assertEquals(16, collector.getMaxOverflowValue());
+    Assert.assertEquals(0, collector.getRegisterOffset());
+    Assert.assertEquals(0, collector.getNumNonZeroRegisters());
+
+    collector.add((short)56, (byte)17);
+    Assert.assertEquals(56, collector.getMaxOverflowRegister());
+    Assert.assertEquals(17, collector.getMaxOverflowValue());
+
+    collector.add((short)43, (byte)16);
+    Assert.assertEquals(56, collector.getMaxOverflowRegister());
+    Assert.assertEquals(17, collector.getMaxOverflowValue());
+    Assert.assertEquals(0, collector.getRegisterOffset());
+    Assert.assertEquals(0, collector.getNumNonZeroRegisters());
+  }
+
+  @Test
+  public void testMergeMaxOverflow() {
+    // no offset
+    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    collector.add((short)23, (byte)16);
+
+    HyperLogLogCollector other = HyperLogLogCollector.makeLatestCollector();
+    collector.add((short)56, (byte)17);
+
+    collector.fold(other);
+    Assert.assertEquals(56, collector.getMaxOverflowRegister());
+    Assert.assertEquals(17, collector.getMaxOverflowValue());
+
+    // different offsets
+    // fill up all the buckets so we reach a registerOffset of 49
+    collector = HyperLogLogCollector.makeLatestCollector();
+    fillBuckets(collector, (byte) 0, (byte) 49);
+    collector.add((short)23, (byte)65);
+
+    other = HyperLogLogCollector.makeLatestCollector();
+    fillBuckets(other, (byte) 0, (byte) 43);
+    other.add((short)47, (byte)67);
+
+    collector.fold(other);
+    Assert.assertEquals(47, collector.getMaxOverflowRegister());
+    Assert.assertEquals(67, collector.getMaxOverflowValue());
+  }
+
 
   private static void fillBuckets(HyperLogLogCollector collector, byte startOffset, byte endOffset)
   {
@@ -743,7 +811,7 @@ public class HyperLogLogCollectorTest
   }
 
   // Provides a nice printout of error rates as a function of cardinality
-  //@Test
+  @Ignore @Test
   public void showErrorRate() throws Exception
   {
     HashFunction fn = Hashing.murmur3_128();

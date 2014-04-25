@@ -70,11 +70,18 @@ public interface Query<T>
 
   public Duration getDuration();
 
-  public String getContextValue(String key);
+  public <ContextType> ContextType getContextValue(String key);
 
-  public String getContextValue(String key, String defaultValue);
+  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
-  public Query<T> withOverriddenContext(Map<String, String> contextOverride);
+  // For backwards compatibility
+  @Deprecated public int getContextPriority(int defaultValue);
+  @Deprecated public boolean getContextBySegment(boolean defaultValue);
+  @Deprecated public boolean getContextPopulateCache(boolean defaultValue);
+  @Deprecated public boolean getContextUseCache(boolean defaultValue);
+  @Deprecated public boolean getContextFinalize(boolean defaultValue);
+
+  public Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
 
