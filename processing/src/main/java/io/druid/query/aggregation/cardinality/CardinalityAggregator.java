@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.cardinality;
 
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -52,24 +51,23 @@ public class CardinalityAggregator implements Aggregator
       final DimensionSelector selector = selectorList.get(k);
       final IndexedInts row = selector.getRow();
       final int size = row.size();
+      // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
       if (size == 1) {
         final String value = selector.lookupName(row.get(0));
         hasher.putString(value != null ? value : NULL_STRING);
-      } else if (size == 0) {
-        // nothing to add to hasher
-      } else {
+      } else if (size != 0) {
         final String[] values = new String[size];
         for (int i = 0; i < size; ++i) {
           final String value = selector.lookupName(row.get(i));
           values[i] = value != null ? value : NULL_STRING;
         }
+        // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
         for (int i = 0; i < size; ++i) {
           if(i != 0) {
             hasher.putChar(SEPARATOR);
           }
-          final String value = values[i];
-          hasher.putString(value);
+          hasher.putString(values[i]);
         }
       }
     }
@@ -95,7 +93,7 @@ public class CardinalityAggregator implements Aggregator
   )
   {
     this.name = name;
-    this.selectorList = Lists.newArrayList(selectorList);
+    this.selectorList = selectorList;
     this.collector = HyperLogLogCollector.makeLatestCollector();
     this.byRow = byRow;
   }

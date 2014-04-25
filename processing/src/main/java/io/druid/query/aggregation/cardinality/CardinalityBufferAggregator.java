@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation.cardinality;
 
-import com.google.common.collect.Lists;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.DimensionSelector;
@@ -39,7 +38,7 @@ public class CardinalityBufferAggregator implements BufferAggregator
       boolean byRow
   )
   {
-    this.selectorList = Lists.newArrayList(selectorList);
+    this.selectorList = selectorList;
     this.byRow = byRow;
   }
 
