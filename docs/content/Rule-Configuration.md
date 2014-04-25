@@ -23,6 +23,7 @@ Interval load rules are of the form:
 
 * `type` - this should always be "loadByInterval"
 * `interval` - A JSON Object representing ISO-8601 Intervals
+* `replicants` - number of replicants to load
 * `tier` - the configured historical node tier
 
 ### Period Load Rule
@@ -33,15 +34,23 @@ Period load rules are of the form:
 {
   "type" : "loadByPeriod",
   "period" : "P1M",
-  "tier" : "hot"
+  "futurePeriod": "P0D",
+  "tieredReplicants" : {
+    "hot" : 2,
+    "_default" : 1
+  }
 }
 ```
 
 * `type` - this should always be "loadByPeriod"
-* `period` - A JSON Object representing ISO-8601 Periods
-* `tier` - the configured historical node tier
+* `period` - ISO-8601 period of past data to load
+* `futurePeriod` - ISO-8601 period of future data to load
+* `tieredReplicants` - a map of String to Integer for the number of replicants in each tier
+* `replicants` - (deprecated, use `tieredReplicants`) number of replicants to load
+* `tier` - (deprecated, use `tieredReplicants`) historical node tier to load in
 
-The interval of a segment will be compared against the specified period. The rule matches if the period overlaps the interval.
+The interval of a segment will be compared against the specified periods.
+The rule matches if (now - period, now + futurePeriod) overlaps the segment interval.
 
 Drop Rules
 ----------
