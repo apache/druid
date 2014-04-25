@@ -99,7 +99,7 @@ Computes the cardinality of a set of Druid dimensions, using HyperLogLog to esti
 
 #### Cardinality by value
 
-When setting `byRow = false` (the default) it computes the cardinality of the set composed of the union of all dimension values for all the given dimensions.
+When setting `byRow` to `false` (the default) it computes the cardinality of the set composed of the union of all dimension values for all the given dimensions.
 
 * For a single dimension, this is equivalent to
 
@@ -110,7 +110,7 @@ SELECT COUNT(DISCTINCT(dimension)) FROM <datasource>
 * For multiple dimensions, this is equivalent to something akin to
 
 ```sql
-SELECT COUNT(DISTINCT(value))) FROM (
+SELECT COUNT(DISTINCT(value)) FROM (
   SELECT dim_1 as value FROM <datasource>
   UNION
   SELECT dim_2 as value FROM <datasource>
@@ -121,11 +121,11 @@ SELECT COUNT(DISTINCT(value))) FROM (
 
 #### Cardinality by row
 
-When setting `byRow = true` it computes the cardinality by row, i.e. the cardinality of distinct dimension combinations
+When setting `byRow` to `true` it computes the cardinality by row, i.e. the cardinality of distinct dimension combinations
 This is equivalent to something akin to
 
 ```sql
-SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 GROUP BY DIM1, DIM2, DIM3 ) FROM <datasource>
+SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 FROM <datasource> GROUP BY DIM1, DIM2, DIM3
 ```
 
 **Example**
