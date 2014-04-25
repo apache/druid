@@ -73,6 +73,12 @@ public class PeriodLoadRule extends LoadRule
     return period;
   }
 
+  @JsonProperty
+  public Period getFuturePeriod()
+  {
+    return futurePeriod;
+  }
+
   @Override
   @JsonProperty
   public Map<String, Integer> getTieredReplicants()
