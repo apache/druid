@@ -59,7 +59,7 @@ public class CardinalityBufferAggregator implements BufferAggregator
             + HyperLogLogCollector.getLatestNumBytesForDenseStorage()
         )
     );
-    if(byRow) {
+    if (byRow) {
       CardinalityAggregator.hashRow(selectorList, collector);
     } else {
       CardinalityAggregator.hashValues(selectorList, collector);

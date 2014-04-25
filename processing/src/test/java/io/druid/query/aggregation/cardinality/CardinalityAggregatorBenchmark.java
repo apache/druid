@@ -42,10 +42,13 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
   ByteBuffer buf;
   int pos;
 
-  @Param({"1", "5"}) int multivaluedSized;
-  @Param({"true", "false"}) boolean byRow;
+  @Param({"1", "5"})
+  int multivaluedSized;
+  @Param({"true", "false"})
+  boolean byRow;
 
-  protected void setUp() {
+  protected void setUp()
+  {
     Iterable<String[]> values = FluentIterable
         .from(ContiguousSet.create(Range.closedOpen(0, 500), DiscreteDomain.integers()))
         .transform(
@@ -54,13 +57,14 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
               @Override
               public String[] apply(Integer input)
               {
-                if(multivaluedSized == 1) {
+                if (multivaluedSized == 1) {
                   return new String[]{input.toString()};
-                }
-                else {
+                } else {
                   String[] res = new String[multivaluedSized];
                   String value = input.toString();
-                  for(int i = 0; i < multivaluedSized; ++i) res[i] = value + i;
+                  for (int i = 0; i < multivaluedSized; ++i) {
+                    res[i] = value + i;
+                  }
                   return res;
                 }
               }
@@ -96,15 +100,15 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
     agg.init(buf, pos);
   }
 
-  public Object timeBufferAggregate(int reps) throws Exception {
+  public Object timeBufferAggregate(int reps) throws Exception
+  {
     for (int i = 0; i < reps; ++i) {
       agg.aggregate(buf, pos);
 
       for (final DimensionSelector selector : selectorList) {
-        if(i % (MAX - 1) == 0) {
+        if (i % (MAX - 1) == 0) {
           ((CardinalityAggregatorTest.TestDimensionSelector) selector).reset();
-        }
-        else {
+        } else {
           ((CardinalityAggregatorTest.TestDimensionSelector) selector).increment();
         }
       }
@@ -114,11 +118,13 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
 
   @Override
-  protected void tearDown() {
+  protected void tearDown()
+  {
 
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception
+  {
     Runner.main(CardinalityAggregatorBenchmark.class, args);
   }
 }

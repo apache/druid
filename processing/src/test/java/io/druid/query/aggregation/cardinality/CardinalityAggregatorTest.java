@@ -66,26 +66,26 @@ public class CardinalityAggregatorTest
       this.column = Lists.newArrayList(
           Iterables.transform(
               values, new Function<String[], Integer[]>()
-          {
-            @Nullable
-            @Override
-            public Integer[] apply(@Nullable String[] input)
-            {
-              return Iterators.toArray(
-                  Iterators.transform(
-                      Iterators.forArray(input), new Function<String, Integer>()
-                  {
-                    @Nullable
-                    @Override
-                    public Integer apply(@Nullable String input)
-                    {
-                      return ids.get(input);
-                    }
-                  }
-                  ), Integer.class
-              );
-            }
-          }
+              {
+                @Nullable
+                @Override
+                public Integer[] apply(@Nullable String[] input)
+                {
+                  return Iterators.toArray(
+                      Iterators.transform(
+                          Iterators.forArray(input), new Function<String, Integer>()
+                          {
+                            @Nullable
+                            @Override
+                            public Integer apply(@Nullable String input)
+                            {
+                              return ids.get(input);
+                            }
+                          }
+                      ), Integer.class
+                  );
+                }
+              }
           )
       );
     }
@@ -159,25 +159,36 @@ public class CardinalityAggregatorTest
       "a", "b", "c", "a", "a", null, "b", "b", "b", "b", "a", "a"
   );
   private static final List<String[]> values2 = dimensionValues(
-      "a", "b", "c", "x", "a", "e", "b", new String[]{null, "x"}, new String[]{"x", null}, new String[]{"y", "x"}, new String[]{"x", "y"}, new String[] {"x", "y", "a"}
+      "a",
+      "b",
+      "c",
+      "x",
+      "a",
+      "e",
+      "b",
+      new String[]{null, "x"},
+      new String[]{"x", null},
+      new String[]{"y", "x"},
+      new String[]{"x", "y"},
+      new String[]{"x", "y", "a"}
   );
 
   private static List<String[]> dimensionValues(Object... values)
   {
     return Lists.transform(
         Lists.newArrayList(values), new Function<Object, String[]>()
-    {
-      @Nullable
-      @Override
-      public String[] apply(@Nullable Object input)
-      {
-        if (input instanceof String[]) {
-          return (String[]) input;
-        } else {
-          return new String[]{(String) input};
+        {
+          @Nullable
+          @Override
+          public String[] apply(@Nullable Object input)
+          {
+            if (input instanceof String[]) {
+              return (String[]) input;
+            } else {
+              return new String[]{(String) input};
+            }
+          }
         }
-      }
-    }
     );
   }
 
@@ -309,7 +320,7 @@ public class CardinalityAggregatorTest
   @Test
   public void testCombineRows()
   {
-    List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector)dim1);
+    List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
 
     CardinalityAggregator agg1 = new CardinalityAggregator("billy", selector1, true);
@@ -340,8 +351,8 @@ public class CardinalityAggregatorTest
   @Test
   public void testCombineValues()
   {
-    List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector)dim1);
-    List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector)dim2);
+    List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
+    List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
 
     CardinalityAggregator agg1 = new CardinalityAggregator("billy", selector1, false);
     CardinalityAggregator agg2 = new CardinalityAggregator("billy", selector2, false);

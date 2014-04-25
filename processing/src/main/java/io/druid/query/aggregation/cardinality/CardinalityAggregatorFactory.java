@@ -103,14 +103,14 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
         Iterables.filter(
             Iterables.transform(
                 fieldNames, new Function<String, DimensionSelector>()
-            {
-              @Nullable
-              @Override
-              public DimensionSelector apply(@Nullable String input)
-              {
-                return columnFactory.makeDimensionSelector(input);
-              }
-            }
+                {
+                  @Nullable
+                  @Override
+                  public DimensionSelector apply(@Nullable String input)
+                  {
+                    return columnFactory.makeDimensionSelector(input);
+                  }
+                }
             ), Predicates.notNull()
         )
     );

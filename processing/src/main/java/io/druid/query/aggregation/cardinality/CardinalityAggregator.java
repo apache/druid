@@ -45,8 +45,8 @@ public class CardinalityAggregator implements Aggregator
   {
     final Hasher hasher = hashFn.newHasher();
     for (int k = 0; k < selectorList.size(); ++k) {
-      if(k != 0) {
-        hasher.putByte((byte)0);
+      if (k != 0) {
+        hasher.putByte((byte) 0);
       }
       final DimensionSelector selector = selectorList.get(k);
       final IndexedInts row = selector.getRow();
@@ -64,7 +64,7 @@ public class CardinalityAggregator implements Aggregator
         // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
         for (int i = 0; i < size; ++i) {
-          if(i != 0) {
+          if (i != 0) {
             hasher.putChar(SEPARATOR);
           }
           hasher.putString(values[i]);
@@ -101,7 +101,7 @@ public class CardinalityAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    if(byRow) {
+    if (byRow) {
       hashRow(selectorList, collector);
     } else {
       hashValues(selectorList, collector);
