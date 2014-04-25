@@ -82,7 +82,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
     final boolean useCache = query.getContextUseCache(true)
         && strategy != null
-        && cacheConfig.isPopulateCache();
+        && cacheConfig.isUseCache();
 
     final Cache.NamedKey key;
     if(strategy != null && (useCache || populateCache)) {
