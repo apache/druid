@@ -281,7 +281,6 @@ public class IncrementalIndex implements Iterable<Row>
                     );
                   }
                 }
-
             );
       }
 
@@ -562,10 +561,15 @@ public class IncrementalIndex implements Iterable<Row>
         while (retVal == 0 && valsIndex < lhsVals.length) {
           final String lhsVal = lhsVals[valsIndex];
           final String rhsVal = rhsVals[valsIndex];
-          if(lhsVal == null && rhsVal == null) return 0;
-          else if(lhsVal == null) return -1;
-          else if(rhsVal == null) return 1;
-          else retVal = lhsVal.compareTo(rhsVal);
+          if (lhsVal == null && rhsVal == null) {
+            return 0;
+          } else if (lhsVal == null) {
+            return -1;
+          } else if (rhsVal == null) {
+            return 1;
+          } else {
+            retVal = lhsVal.compareTo(rhsVal);
+          }
           ++valsIndex;
         }
         ++index;
@@ -581,16 +585,16 @@ public class IncrementalIndex implements Iterable<Row>
              "timestamp=" + new DateTime(timestamp) +
              ", dims=" + Lists.transform(
           Arrays.asList(dims), new Function<String[], Object>()
-      {
-        @Override
-        public Object apply(@Nullable String[] input)
-        {
-          if (input == null || input.length == 0) {
-            return Arrays.asList("null");
+          {
+            @Override
+            public Object apply(@Nullable String[] input)
+            {
+              if (input == null || input.length == 0) {
+                return Arrays.asList("null");
+              }
+              return Arrays.asList(input);
+            }
           }
-          return Arrays.asList(input);
-        }
-      }
       ) +
              '}';
     }
@@ -619,7 +623,7 @@ public class IncrementalIndex implements Iterable<Row>
     public String get(@Nullable String value)
     {
       final String retVal;
-      if(value == null) {
+      if (value == null) {
         retVal = poorMansInterning.get(NULL_STRING);
       } else {
         retVal = poorMansInterning.get(value);
@@ -646,7 +650,9 @@ public class IncrementalIndex implements Iterable<Row>
 
     public synchronized void add(@Nullable String value)
     {
-      if(value == null) value = NULL_STRING;
+      if (value == null) {
+        value = NULL_STRING;
+      }
       poorMansInterning.put(value, value);
       falseIds.put(value, falseIds.size());
     }
@@ -654,7 +660,9 @@ public class IncrementalIndex implements Iterable<Row>
     public int getSortedId(@Nullable String value)
     {
       assertSorted();
-      if(value == null) value = NULL_STRING;
+      if (value == null) {
+        value = NULL_STRING;
+      }
       return Arrays.binarySearch(sortedVals, value);
     }
 
