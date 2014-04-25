@@ -19,7 +19,17 @@
 
 package io.druid.cli;
 
+import com.google.api.client.util.Lists;
+import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 import io.airlift.command.Command;
+import io.airlift.command.Option;
+import io.druid.indexing.common.task.HadoopIndexTask;
+import io.druid.initialization.Initialization;
+import io.druid.server.initialization.ExtensionsConfig;
+import io.tesla.aether.internal.DefaultTeslaAether;
+
+import java.util.List;
 
 
 @Command(
@@ -28,8 +38,40 @@ import io.airlift.command.Command;
 )
 public class PullDependencies implements Runnable
 {
+  @Option(name = "-c",
+          title = "coordinate",
+          description = "extra dependencies to pull down (e.g. hadoop coordinates)",
+          required = false)
+  public List<String> coordinates;
+
+  @Option(name = "--no-default-hadoop",
+          description = "don't pull down the default HadoopIndexTask dependencies",
+          required = false)
+  public boolean noDefaultHadoop;
+
+  @Inject
+  public ExtensionsConfig extensionsConfig = null;
+
   @Override
-  public void run() {
-    // dependencies are pulled down as a side-effect of Guice injection
+  public void run()
+  {
+    // Druid dependencies are pulled down as a side-effect of Guice injection. Extra dependencies are pulled down as
+    // a side-effect of getting class loaders.
+    final List<String> allCoordinates = Lists.newArrayList();
+    if (coordinates != null) {
+      allCoordinates.addAll(coordinates);
+    }
+    if (!noDefaultHadoop) {
+      allCoordinates.add(HadoopIndexTask.DEFAULT_HADOOP_COORDINATES);
+    }
+    try {
+      final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
+      for (final String coordinate : allCoordinates) {
+        Initialization.getClassLoaderForCoordinates(aetherClient, coordinate);
+      }
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

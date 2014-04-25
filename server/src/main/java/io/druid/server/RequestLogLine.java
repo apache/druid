@@ -35,12 +35,14 @@ public class RequestLogLine
   private final DateTime timestamp;
   private final String remoteAddr;
   private final Query query;
+  private final QueryStats queryStats;
 
-  public RequestLogLine(DateTime timestamp, String remoteAddr, Query query)
+  public RequestLogLine(DateTime timestamp, String remoteAddr, Query query, QueryStats queryStats)
   {
     this.timestamp = timestamp;
     this.remoteAddr = remoteAddr;
     this.query = query;
+    this.queryStats = queryStats;
   }
 
   public String getLine(ObjectMapper objectMapper) throws JsonProcessingException
@@ -49,7 +51,8 @@ public class RequestLogLine
         Arrays.asList(
             timestamp,
             remoteAddr,
-            objectMapper.writeValueAsString(query)
+            objectMapper.writeValueAsString(query),
+            objectMapper.writeValueAsString(queryStats)
         )
     );
   }
@@ -70,5 +73,11 @@ public class RequestLogLine
   public String getRemoteAddr()
   {
     return remoteAddr;
+  }
+
+  @JsonProperty("queryStats")
+  public QueryStats getQueryStats()
+  {
+    return queryStats;
   }
 }

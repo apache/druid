@@ -578,7 +578,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public Function<T, T> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn)
+    public Function<T, T> makePreComputeManipulatorFn(QueryType query, MetricManipulationFn fn)
     {
       return Functions.identity();
     }

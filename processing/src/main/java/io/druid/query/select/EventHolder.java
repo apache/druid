@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
+import com.metamx.common.ISE;
 import org.joda.time.DateTime;
 
 import java.util.Map;
@@ -50,7 +51,14 @@ public class EventHolder
 
   public DateTime getTimestamp()
   {
-    return (DateTime) event.get(timestampKey);
+    Object retVal = event.get(timestampKey);
+    if (retVal instanceof String) {
+      return new DateTime(retVal);
+    } else if (retVal instanceof DateTime) {
+      return (DateTime) retVal;
+    } else {
+      throw new ISE("Do not understand format [%s]", retVal.getClass());
+    }
   }
 
   @JsonProperty

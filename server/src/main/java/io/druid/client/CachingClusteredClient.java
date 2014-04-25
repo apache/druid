@@ -31,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
@@ -62,7 +63,6 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -125,24 +125,24 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<DateTime, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.USE_CACHE, "true"))
+    final boolean useCache = query.getContextUseCache(true)
                              && strategy != null
                              && cacheConfig.isUseCache();
-    final boolean populateCache = Boolean.parseBoolean(query.getContextValue(CacheConfig.POPULATE_CACHE, "true"))
+    final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null && cacheConfig.isPopulateCache();
-    final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    final boolean isBySegment = query.getContextBySegment(false);
 
 
     ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final String priority = query.getContextValue("priority", "0");
+    final int priority = query.getContextPriority(0);
     contextBuilder.put("priority", priority);
 
     if (populateCache) {
-      contextBuilder.put(CacheConfig.POPULATE_CACHE, "false");
-      contextBuilder.put("bySegment", "true");
+      contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
+      contextBuilder.put("bySegment", true);
     }
-    contextBuilder.put("intermediate", "true");
+    contextBuilder.put("intermediate", true);
 
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 
@@ -333,27 +333,31 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                         clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec)),
                         new Function<Object, Sequence<T>>()
                         {
-                          private final Function<T, Object> prepareForCache = strategy.prepareForCache();
+                          private final Function<T, Object> cacheFn = strategy.prepareForCache();
 
                           @Override
                           public Sequence<T> apply(Object input)
                           {
                             Result<Object> result = (Result<Object>) input;
                             final BySegmentResultValueClass<T> value = (BySegmentResultValueClass<T>) result.getValue();
-                            String segmentIdentifier = value.getSegmentId();
-                            final Iterable<T> segmentResults = value.getResults();
 
-                            CachePopulator cachePopulator = cachePopulatorMap.get(
-                                String.format("%s_%s", segmentIdentifier, value.getInterval())
-                            );
-                            if (cachePopulator != null) {
-                              cachePopulator.populate(Iterables.transform(segmentResults, prepareForCache));
-                            }
+                            final List<Object> cacheData = Lists.newLinkedList();
 
-                            return Sequences.simple(
-                                Iterables.transform(
-                                    segmentResults,
-                                    toolChest.makeMetricManipulatorFn(
+                            return Sequences.withEffect(
+                                Sequences.map(
+                                    Sequences.map(
+                                        Sequences.simple(value.getResults()),
+                                        new Function<T, T>()
+                                        {
+                                          @Override
+                                          public T apply(T input)
+                                          {
+                                            cacheData.add(cacheFn.apply(input));
+                                            return input;
+                                          }
+                                        }
+                                    ),
+                                    toolChest.makePreComputeManipulatorFn(
                                         rewrittenQuery,
                                         new MetricManipulationFn()
                                         {
@@ -364,7 +368,21 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                           }
                                         }
                                     )
-                                )
+                                ),
+                                new Runnable()
+                                {
+                                  @Override
+                                  public void run()
+                                  {
+                                    CachePopulator cachePopulator = cachePopulatorMap.get(
+                                        String.format("%s_%s", value.getSegmentId(), value.getInterval())
+                                    );
+                                    if (cachePopulator != null) {
+                                      cachePopulator.populate(cacheData);
+                                    }
+                                  }
+                                },
+                                MoreExecutors.sameThreadExecutor()
                             );
                           }
                         }

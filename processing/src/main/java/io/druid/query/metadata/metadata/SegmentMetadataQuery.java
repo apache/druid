@@ -32,7 +32,6 @@ import java.util.Map;
 
 public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 {
-
   private final ColumnIncluderator toInclude;
   private final boolean merge;
 

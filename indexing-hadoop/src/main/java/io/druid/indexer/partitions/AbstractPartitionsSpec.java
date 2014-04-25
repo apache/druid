@@ -20,6 +20,7 @@
 package io.druid.indexer.partitions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 
 public abstract class AbstractPartitionsSpec implements PartitionsSpec
@@ -28,11 +29,13 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
   private final long targetPartitionSize;
   private final long maxPartitionSize;
   private final boolean assumeGrouped;
+  private final int numShards;
 
   public AbstractPartitionsSpec(
       Long targetPartitionSize,
       Long maxPartitionSize,
-      Boolean assumeGrouped
+      Boolean assumeGrouped,
+      Integer numShards
   )
   {
     this.targetPartitionSize = targetPartitionSize == null ? -1 : targetPartitionSize;
@@ -40,6 +43,11 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
                             ? (long) (this.targetPartitionSize * DEFAULT_OVERSIZE_THRESHOLD)
                             : maxPartitionSize;
     this.assumeGrouped = assumeGrouped == null ? false : assumeGrouped;
+    this.numShards = numShards == null ? -1 : numShards;
+    Preconditions.checkArgument(
+        this.targetPartitionSize == -1 || this.numShards == -1,
+        "targetPartitionsSize and shardCount both cannot be set"
+    );
   }
 
   @JsonProperty
@@ -64,5 +72,11 @@ public abstract class AbstractPartitionsSpec implements PartitionsSpec
   public boolean isDeterminingPartitions()
   {
     return targetPartitionSize > 0;
+  }
+
+  @Override
+  public int getNumShards()
+  {
+    return numShards;
   }
 }

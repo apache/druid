@@ -21,6 +21,8 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -46,8 +48,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.UUID;
 
 /**
+ * This class does async query processing and should be merged with QueryResource at some point
  */
 @WebServlet(asyncSupported = true)
 public class AsyncQueryForwardingServlet extends HttpServlet
@@ -55,6 +59,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final String DISPATCHED = "dispatched";
+  private static final Joiner COMMA_JOIN = Joiner.on(",");
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -62,7 +67,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   private final RoutingDruidClient routingDruidClient;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final QueryIDProvider idProvider;
 
   public AsyncQueryForwardingServlet(
       @Json ObjectMapper jsonMapper,
@@ -70,8 +74,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       QueryHostFinder hostFinder,
       RoutingDruidClient routingDruidClient,
       ServiceEmitter emitter,
-      RequestLogger requestLogger,
-      QueryIDProvider idProvider
+      RequestLogger requestLogger
   )
   {
     this.jsonMapper = jsonMapper;
@@ -80,7 +83,116 @@ public class AsyncQueryForwardingServlet extends HttpServlet
     this.routingDruidClient = routingDruidClient;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.idProvider = idProvider;
+  }
+
+  @Override
+  protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
+      throws ServletException, IOException
+  {
+    OutputStream out = null;
+    AsyncContext ctx = null;
+
+    try {
+      ctx = req.startAsync(req, resp);
+      final AsyncContext asyncContext = ctx;
+
+      if (req.getAttribute(DISPATCHED) != null) {
+        return;
+      }
+
+      out = resp.getOutputStream();
+      final OutputStream outputStream = out;
+
+      final String host = hostFinder.getDefaultHost();
+
+      final HttpResponseHandler<OutputStream, OutputStream> responseHandler = new HttpResponseHandler<OutputStream, OutputStream>()
+      {
+        @Override
+        public ClientResponse<OutputStream> handleResponse(HttpResponse response)
+        {
+          resp.setStatus(response.getStatus().getCode());
+          resp.setContentType("application/json");
+
+          try {
+            ChannelBuffer buf = response.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
+          }
+
+          return ClientResponse.finished(outputStream);
+        }
+
+        @Override
+        public ClientResponse<OutputStream> handleChunk(
+            ClientResponse<OutputStream> clientResponse, HttpChunk chunk
+        )
+        {
+          try {
+            ChannelBuffer buf = chunk.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
+          }
+          return clientResponse;
+        }
+
+        @Override
+        public ClientResponse<OutputStream> done(ClientResponse<OutputStream> clientResponse)
+        {
+          final OutputStream obj = clientResponse.getObj();
+          try {
+            resp.flushBuffer();
+            outputStream.close();
+          }
+          catch (Exception e) {
+            throw Throwables.propagate(e);
+          }
+          finally {
+            asyncContext.complete();
+          }
+
+          return ClientResponse.finished(obj);
+        }
+      };
+
+      asyncContext.start(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              routingDruidClient.get(makeUrl(host, req), responseHandler);
+            }
+          }
+      );
+
+      asyncContext.dispatch();
+      req.setAttribute(DISPATCHED, true);
+    }
+    catch (Exception e) {
+      if (!resp.isCommitted()) {
+        resp.setStatus(500);
+        resp.resetBuffer();
+
+        if (out == null) {
+          out = resp.getOutputStream();
+        }
+
+        if (ctx != null) {
+          ctx.complete();
+        }
+
+        out.write((e.getMessage() == null) ? "Exception null".getBytes(UTF8) : e.getMessage().getBytes(UTF8));
+        out.write("\n".getBytes(UTF8));
+      }
+
+      resp.flushBuffer();
+    }
   }
 
   @Override
@@ -94,31 +206,30 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
     final boolean isSmile = "application/smile".equals(req.getContentType());
 
-    ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
+    final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
 
     OutputStream out = null;
+    AsyncContext ctx = null;
 
     try {
-      final AsyncContext ctx = req.startAsync(req, resp);
+      ctx = req.startAsync(req, resp);
+      final AsyncContext asyncContext = ctx;
 
       if (req.getAttribute(DISPATCHED) != null) {
         return;
       }
 
-      req.setAttribute(DISPATCHED, true);
-      resp.setStatus(200);
-      resp.setContentType("application/x-javascript");
-
       query = objectMapper.readValue(req.getInputStream(), Query.class);
       queryId = query.getId();
       if (queryId == null) {
-        queryId = idProvider.next(query);
+        queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
 
-      requestLogger.log(
-          new RequestLogLine(new DateTime(), req.getRemoteAddr(), query)
-      );
+      if (log.isDebugEnabled()) {
+        log.debug("Got query [%s]", query);
+      }
+
       out = resp.getOutputStream();
       final OutputStream outputStream = out;
 
@@ -132,14 +243,16 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         @Override
         public ClientResponse<OutputStream> handleResponse(HttpResponse response)
         {
-          byte[] bytes = getContentBytes(response.getContent());
-          if (bytes.length > 0) {
-            try {
-              outputStream.write(bytes);
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
+          resp.setStatus(response.getStatus().getCode());
+          resp.setContentType("application/x-javascript");
+
+          try {
+            ChannelBuffer buf = response.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
           }
           return ClientResponse.finished(outputStream);
         }
@@ -149,14 +262,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             ClientResponse<OutputStream> clientResponse, HttpChunk chunk
         )
         {
-          byte[] bytes = getContentBytes(chunk.getContent());
-          if (bytes.length > 0) {
-            try {
-              clientResponse.getObj().write(bytes);
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
+          try {
+            ChannelBuffer buf = chunk.getContent();
+            buf.readBytes(outputStream, buf.readableBytes());
+          }
+          catch (Exception e) {
+            asyncContext.complete();
+            throw Throwables.propagate(e);
           }
           return clientResponse;
         }
@@ -166,13 +278,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         {
           final long requestTime = System.currentTimeMillis() - start;
 
-          log.info("Request time: %d", requestTime);
+          log.debug("Request time: %d", requestTime);
 
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setUser2(theQuery.getDataSource().getName())
                   .setUser4(theQuery.getType())
-                  .setUser5(theQuery.getIntervals().get(0).toString())
+                  .setUser5(COMMA_JOIN.join(theQuery.getIntervals()))
                   .setUser6(String.valueOf(theQuery.hasFilters()))
                   .setUser7(req.getRemoteAddr())
                   .setUser8(theQueryId)
@@ -182,6 +294,15 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
           final OutputStream obj = clientResponse.getObj();
           try {
+            requestLogger.log(
+                new RequestLogLine(
+                    new DateTime(),
+                    req.getRemoteAddr(),
+                    theQuery,
+                    new QueryStats(ImmutableMap.<String, Object>of("request/time", requestTime, "success", true))
+                )
+            );
+
             resp.flushBuffer();
             outputStream.close();
           }
@@ -189,30 +310,26 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             throw Throwables.propagate(e);
           }
           finally {
-            ctx.dispatch();
+            asyncContext.complete();
           }
 
           return ClientResponse.finished(obj);
         }
-
-        private byte[] getContentBytes(ChannelBuffer content)
-        {
-          byte[] contentBytes = new byte[content.readableBytes()];
-          content.readBytes(contentBytes);
-          return contentBytes;
-        }
       };
 
-      ctx.start(
+      asyncContext.start(
           new Runnable()
           {
             @Override
             public void run()
             {
-              routingDruidClient.run(host, theQuery, responseHandler);
+              routingDruidClient.post(makeUrl(host, req), theQuery, responseHandler);
             }
           }
       );
+
+      asyncContext.dispatch();
+      req.setAttribute(DISPATCHED, true);
     }
     catch (Exception e) {
       if (!resp.isCommitted()) {
@@ -229,10 +346,39 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
       resp.flushBuffer();
 
+      if (ctx != null) {
+        ctx.complete();
+      }
+
+      try {
+        requestLogger.log(
+            new RequestLogLine(
+                new DateTime(),
+                req.getRemoteAddr(),
+                query,
+                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", e.toString()))
+            )
+        );
+      }
+      catch (Exception e2) {
+        log.error(e2, "Unable to log query [%s]!", query);
+      }
+
       log.makeAlert(e, "Exception handling request")
          .addData("query", query)
          .addData("peer", req.getRemoteAddr())
          .emit();
     }
+  }
+
+  private String makeUrl(final String host, final HttpServletRequest req)
+  {
+    final String queryString = req.getQueryString();
+    final String requestURI = req.getRequestURI() == null ? "" : req.getRequestURI();
+
+    if (queryString == null) {
+      return String.format("http://%s%s", host, requestURI);
+    }
+    return String.format("http://%s%s?%s", host, requestURI, queryString);
   }
 }

@@ -122,7 +122,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
   {
     synchronized (lock) {
       if (!ruleManager.isStarted() || !started) {
-        return null;
+        return getDefaultLookup();
       }
     }
 
@@ -157,7 +157,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       }
 
       if (baseRule == null) {
-        return null;
+        return getDefaultLookup();
       }
 
       // in the baseRule, find the broker of highest priority
@@ -170,26 +170,33 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     }
 
     if (brokerServiceName == null) {
-      log.makeAlert(
+      log.error(
           "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
           query.getDataSource(),
           query.getIntervals(),
           tierConfig.getDefaultBrokerServiceName()
-      ).emit();
+      );
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 
     ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
 
     if (retVal == null) {
-      log.makeAlert(
+      log.error(
           "WTF?! No selector found for brokerServiceName[%s]. Using default selector for[%s]",
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
-      ).emit();
+      );
       retVal = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
     }
 
+    return new Pair<>(brokerServiceName, retVal);
+  }
+
+  public Pair<String, ServerDiscoverySelector> getDefaultLookup()
+  {
+    final String brokerServiceName = tierConfig.getDefaultBrokerServiceName();
+    final ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
     return new Pair<>(brokerServiceName, retVal);
   }
 }

@@ -47,7 +47,9 @@ public interface TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   );
 
   public byte[] getCacheKey();
@@ -55,4 +57,6 @@ public interface TopNMetricSpec
   public <T> TopNMetricSpecBuilder<T> configureOptimizer(TopNMetricSpecBuilder<T> builder);
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector);
+
+  public String getMetricName(DimensionSpec dimSpec);
 }

@@ -99,4 +99,13 @@ public class SpatialDimFilter implements DimFilter
     result = 31 * result + (bound != null ? bound.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "SpatialDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", bound=" + bound +
+           '}';
+  }
 }

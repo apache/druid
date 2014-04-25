@@ -22,6 +22,7 @@
 package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -38,8 +39,8 @@ public class TimeBoundaryQueryTest
   public void testQuerySerialization() throws IOException
   {
     Query query = Druids.newTimeBoundaryQueryBuilder()
-        .dataSource("testing")
-        .build();
+                        .dataSource("testing")
+                        .build();
 
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
@@ -47,4 +48,79 @@ public class TimeBoundaryQueryTest
     Assert.assertEquals(query, serdeQuery);
   }
 
+  @Test
+  public void testContextSerde() throws Exception
+  {
+    final TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                          .dataSource("foo")
+                                          .intervals("2013/2014")
+                                          .context(
+                                              ImmutableMap.<String, Object>of(
+                                                  "priority",
+                                                  1,
+                                                  "useCache",
+                                                  true,
+                                                  "populateCache",
+                                                  true,
+                                                  "finalize",
+                                                  true
+                                              )
+                                          ).build();
+
+    final ObjectMapper mapper = new DefaultObjectMapper();
+
+    final TimeBoundaryQuery serdeQuery = mapper.readValue(
+        mapper.writeValueAsBytes(
+            mapper.readValue(
+                mapper.writeValueAsString(
+                    query
+                ), TimeBoundaryQuery.class
+            )
+        ), TimeBoundaryQuery.class
+    );
+
+
+    Assert.assertEquals(1, serdeQuery.getContextValue("priority"));
+    Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
+    Assert.assertEquals(true, serdeQuery.getContextValue("populateCache"));
+    Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
+  }
+
+  @Test
+  public void testContextSerde2() throws Exception
+  {
+    final TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                          .dataSource("foo")
+                                          .intervals("2013/2014")
+                                          .context(
+                                              ImmutableMap.<String, Object>of(
+                                                  "priority",
+                                                  "1",
+                                                  "useCache",
+                                                  "true",
+                                                  "populateCache",
+                                                  "true",
+                                                  "finalize",
+                                                  "true"
+                                              )
+                                          ).build();
+
+    final ObjectMapper mapper = new DefaultObjectMapper();
+
+    final TimeBoundaryQuery serdeQuery = mapper.readValue(
+        mapper.writeValueAsBytes(
+            mapper.readValue(
+                mapper.writeValueAsString(
+                    query
+                ), TimeBoundaryQuery.class
+            )
+        ), TimeBoundaryQuery.class
+    );
+
+
+    Assert.assertEquals("1", serdeQuery.getContextValue("priority"));
+    Assert.assertEquals("true", serdeQuery.getContextValue("useCache"));
+    Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
+    Assert.assertEquals("true", serdeQuery.getContextValue("finalize"));
+  }
 }

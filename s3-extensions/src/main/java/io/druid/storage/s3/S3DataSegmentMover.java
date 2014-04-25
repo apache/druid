@@ -30,6 +30,7 @@ import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.jets3t.service.ServiceException;
+import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
@@ -41,13 +42,16 @@ public class S3DataSegmentMover implements DataSegmentMover
   private static final Logger log = new Logger(S3DataSegmentMover.class);
 
   private final RestS3Service s3Client;
+  private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentMover(
-      RestS3Service s3Client
+      RestS3Service s3Client,
+      S3DataSegmentPusherConfig config
   )
   {
     this.s3Client = s3Client;
+    this.config = config;
   }
 
   @Override
@@ -124,7 +128,11 @@ public class S3DataSegmentMover implements DataSegmentMover
                       targetS3Bucket,
                       targetS3Path
                   );
-                  s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, new S3Object(targetS3Path), false);
+                  final S3Object target = new S3Object(targetS3Path);
+                  if(!config.getDisableAcl()) {
+                    target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+                  }
+                  s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, target, false);
                 }
               } else {
                 // ensure object exists in target location

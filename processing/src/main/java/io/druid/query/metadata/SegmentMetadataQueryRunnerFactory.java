@@ -104,47 +104,47 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
   )
   {
     return new ConcatQueryRunner<SegmentAnalysis>(
-            Sequences.map(
-                Sequences.simple(queryRunners),
-                new Function<QueryRunner<SegmentAnalysis>, QueryRunner<SegmentAnalysis>>()
+        Sequences.map(
+            Sequences.simple(queryRunners),
+            new Function<QueryRunner<SegmentAnalysis>, QueryRunner<SegmentAnalysis>>()
+            {
+              @Override
+              public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
+              {
+                return new QueryRunner<SegmentAnalysis>()
                 {
                   @Override
-                  public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
+                  public Sequence<SegmentAnalysis> run(final Query<SegmentAnalysis> query)
                   {
-                    return new QueryRunner<SegmentAnalysis>()
-                    {
-                      @Override
-                      public Sequence<SegmentAnalysis> run(final Query<SegmentAnalysis> query)
-                      {
 
-                        Future<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
-                            new Callable<Sequence<SegmentAnalysis>>()
-                            {
-                              @Override
-                              public Sequence<SegmentAnalysis> call() throws Exception
-                              {
-                                return new ExecutorExecutingSequence<SegmentAnalysis>(
-                                    input.run(query),
-                                    queryExecutor
-                                );
-                              }
-                            }
-                        );
-                        try {
-                          return future.get();
+                    Future<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
+                        new Callable<Sequence<SegmentAnalysis>>()
+                        {
+                          @Override
+                          public Sequence<SegmentAnalysis> call() throws Exception
+                          {
+                            return new ExecutorExecutingSequence<SegmentAnalysis>(
+                                input.run(query),
+                                queryExecutor
+                            );
+                          }
                         }
-                        catch (InterruptedException e) {
-                          throw Throwables.propagate(e);
-                        }
-                        catch (ExecutionException e) {
-                          throw Throwables.propagate(e);
-                        }
-                      }
-                    };
+                    );
+                    try {
+                      return future.get();
+                    }
+                    catch (InterruptedException e) {
+                      throw Throwables.propagate(e);
+                    }
+                    catch (ExecutionException e) {
+                      throw Throwables.propagate(e);
+                    }
                   }
-                }
-            )
-        );
+                };
+              }
+            }
+        )
+    );
   }
 
   @Override

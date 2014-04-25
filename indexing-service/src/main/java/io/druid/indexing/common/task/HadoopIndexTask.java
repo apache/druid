@@ -66,7 +66,8 @@ public class HadoopIndexTask extends AbstractTask
     extensionsConfig = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
   }
 
-  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+  public static String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";
+
   @JsonIgnore
   private final HadoopDruidIndexerSchema schema;
   @JsonIgnore
@@ -102,7 +103,7 @@ public class HadoopIndexTask extends AbstractTask
 
     this.schema = schema;
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates == null ? Arrays.<String>asList(
-        hadoopCoordinates == null ? defaultHadoopCoordinates : hadoopCoordinates
+        hadoopCoordinates == null ? DEFAULT_HADOOP_COORDINATES : hadoopCoordinates
     ) : hadoopDependencyCoordinates;
   }
 

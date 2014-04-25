@@ -80,10 +80,12 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   )
   {
-    return new TopNLexicographicResultBuilder(timestamp, dimSpec, threshold, previousStop, comparator);
+    return new TopNLexicographicResultBuilder(timestamp, dimSpec, threshold, previousStop, comparator, aggFactories);
   }
 
   @Override
@@ -109,6 +111,12 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)
   {
     selector.setAggregateAllMetrics(true);
+  }
+
+  @Override
+  public String getMetricName(DimensionSpec dimSpec)
+  {
+    return dimSpec.getOutputName();
   }
 
   @Override

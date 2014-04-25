@@ -33,10 +33,11 @@ public class HashedPartitionsSpec extends AbstractPartitionsSpec
   public HashedPartitionsSpec(
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
       @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
-      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped,
+      @JsonProperty("numShards") @Nullable Integer numShards
   )
   {
-    super(targetPartitionSize, maxPartitionSize, assumeGrouped);
+    super(targetPartitionSize, maxPartitionSize, assumeGrouped, numShards);
   }
 
   @Override

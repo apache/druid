@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.83-SNAPSHOT</version>
+        <version>0.6.102-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -58,6 +58,11 @@
             <artifactId>twitter4j-stream</artifactId>
             <version>3.0.3</version>
         </dependency>
+        <dependency>
+            <groupId>commons-validator</groupId>
+            <artifactId>commons-validator</artifactId>
+            <version>1.4.0</version>
+        </dependency>
 
         <!-- For tests! -->
         <dependency>
@@ -82,14 +87,14 @@
                                 ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
                             </outputFile>
                             <filters>
-                              <filter>
-                                <artifact>*:*</artifact>
-                                <excludes>
-                                  <exclude>META-INF/*.SF</exclude>
-                                  <exclude>META-INF/*.DSA</exclude>
-                                  <exclude>META-INF/*.RSA</exclude>
-                                </excludes>
-                              </filter>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
                             </filters>
                         </configuration>
                     </execution>

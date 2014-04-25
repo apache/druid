@@ -106,7 +106,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(Query<T> query)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    boolean isBySegment = query.getContextBySegment(false);
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {
@@ -122,8 +122,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType typeRef;
     if (isBySegment) {
       typeRef = types.rhs;
-    }
-    else {
+    } else {
       typeRef = types.lhs;
     }
 
@@ -218,15 +217,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     if (!isBySegment) {
       retVal = Sequences.map(
           retVal,
-          toolChest.makeMetricManipulatorFn(
-              query, new MetricManipulationFn()
-          {
-            @Override
-            public Object manipulate(AggregatorFactory factory, Object object)
-            {
-              return factory.deserialize(object);
-            }
-          }
+          toolChest.makePreComputeManipulatorFn(
+              query,
+              new MetricManipulationFn()
+              {
+                @Override
+                public Object manipulate(AggregatorFactory factory, Object object)
+                {
+                  return factory.deserialize(object);
+                }
+              }
           )
       );
     }
@@ -313,7 +313,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     @Override
     public void close() throws IOException
     {
-      if(jp != null) {
+      if (jp != null) {
         jp.close();
       }
     }

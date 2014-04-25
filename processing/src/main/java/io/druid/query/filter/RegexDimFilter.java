@@ -69,4 +69,13 @@ public class RegexDimFilter implements DimFilter
         .put(patternBytes)
         .array();
   }
+
+  @Override
+  public String toString()
+  {
+    return "RegexDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", pattern='" + pattern + '\'' +
+           '}';
+  }
 }

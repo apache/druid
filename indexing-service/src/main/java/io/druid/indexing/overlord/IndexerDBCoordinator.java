@@ -33,6 +33,7 @@ import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
@@ -193,7 +194,7 @@ public class IndexerDBCoordinator
               .bind("created_date", new DateTime().toString())
               .bind("start", segment.getInterval().getStart().toString())
               .bind("end", segment.getInterval().getEnd().toString())
-              .bind("partitioned", segment.getShardSpec().getPartitionNum())
+              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
               .bind("version", segment.getVersion())
               .bind("used", true)
               .bind("payload", jsonMapper.writeValueAsString(segment))
