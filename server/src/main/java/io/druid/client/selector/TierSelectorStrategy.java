@@ -19,19 +19,21 @@
 
 package io.druid.client.selector;
 
-import com.google.common.collect.Iterators;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.timeline.DataSegment;
 
-import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 
-public class RandomServerSelectorStrategy implements ServerSelectorStrategy
+/**
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HighestPriorityTierSelectorStrategy.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "highestPriority", value = HighestPriorityTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "lowestPriority", value = LowestPriorityTierSelectorStrategy.class)
+})
+public interface TierSelectorStrategy
 {
-  private static final Random random = new Random();
-
-  @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
-  {
-    return Iterators.get(servers.iterator(), random.nextInt(servers.size()));
-  }
+  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
 }

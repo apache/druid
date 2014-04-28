@@ -37,11 +37,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   private final Set<QueryableDruidServer> servers = Sets.newHashSet();
 
   private final DataSegment segment;
-  private final ServerSelectorStrategy strategy;
+  private final TierSelectorStrategy strategy;
 
   public ServerSelector(
       DataSegment segment,
-      ServerSelectorStrategy strategy
+      TierSelectorStrategy strategy
   )
   {
     this.segment = segment;

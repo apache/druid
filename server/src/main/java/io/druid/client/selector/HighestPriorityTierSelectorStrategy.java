@@ -19,19 +19,25 @@
 
 package io.druid.client.selector;
 
-import com.google.common.collect.Iterators;
-import io.druid.timeline.DataSegment;
+import com.google.inject.Inject;
 
-import java.util.Random;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
-public class RandomServerSelectorStrategy implements ServerSelectorStrategy
+/**
+ */
+public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
-  private static final Random random = new Random();
+  @Inject
+  public HighestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  {
+    super(serverSelectorStrategy);
+  }
 
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public Map.Entry<Integer, Set<QueryableDruidServer>> getServers(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers)
   {
-    return Iterators.get(servers.iterator(), random.nextInt(servers.size()));
+    return prioritizedServers.pollLastEntry();
   }
 }

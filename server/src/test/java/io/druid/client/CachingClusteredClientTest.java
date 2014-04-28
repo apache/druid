@@ -38,6 +38,7 @@ import com.metamx.common.guava.nary.TrinaryFn;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
+import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
@@ -152,7 +153,7 @@ public class CachingClusteredClientTest
           "*",
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
-              new ConstantPostAggregator("constant", 2, 2 )
+              new ConstantPostAggregator("constant", 2, 2)
           )
       ),
       new ArithmeticPostAggregator(
@@ -160,7 +161,7 @@ public class CachingClusteredClientTest
           "/",
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
-              new ConstantPostAggregator("constant", 2, 2 )
+              new ConstantPostAggregator("constant", 2, 2)
           )
       )
   );
@@ -585,7 +586,8 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public  void testTopNOnPostAggMetricCaching() {
+  public void testTopNOnPostAggMetricCaching()
+  {
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .dimension(TOP_DIM)
@@ -914,7 +916,10 @@ public class CachingClusteredClientTest
         );
         serverExpectations.get(lastServer).addExpectation(expectation);
 
-        ServerSelector selector = new ServerSelector(expectation.getSegment(), new RandomServerSelectorStrategy());
+        ServerSelector selector = new ServerSelector(
+            expectation.getSegment(),
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        );
         selector.addServer(new QueryableDruidServer(lastServer, null));
 
         final PartitionChunk<ServerSelector> chunk;
@@ -1097,16 +1102,16 @@ public class CachingClusteredClientTest
               (DateTime) objects[i],
               new TimeseriesResultValue(
                   ImmutableMap.<String, Object>builder()
-                      .put("rows", objects[i + 1])
-                      .put("imps", objects[i + 2])
-                      .put("impers", objects[i + 2])
-                      .put("avg_imps_per_row",avg_impr)
-                      .put("avg_imps_per_row_half",avg_impr / 2)
-                      .put("avg_imps_per_row_double",avg_impr * 2)
-                      .build()
-                  )
+                              .put("rows", objects[i + 1])
+                              .put("imps", objects[i + 2])
+                              .put("impers", objects[i + 2])
+                              .put("avg_imps_per_row", avg_impr)
+                              .put("avg_imps_per_row_half", avg_impr / 2)
+                              .put("avg_imps_per_row_double", avg_impr * 2)
+                              .build()
               )
-          );
+          )
+      );
     }
     return retVal;
   }
@@ -1186,14 +1191,14 @@ public class CachingClusteredClientTest
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
             ImmutableMap.<String, Object>builder()
-                .put(TOP_DIM, objects[index])
-                .put("rows", rows)
-                .put("imps", imps)
-                .put("impers", imps)
-                .put("avg_imps_per_row", imps / rows)
-                .put("avg_imps_per_row_double", ((imps * 2) / rows))
-                .put("avg_imps_per_row_half", (imps / (rows * 2)))
-                .build()
+                        .put(TOP_DIM, objects[index])
+                        .put("rows", rows)
+                        .put("imps", imps)
+                        .put("impers", imps)
+                        .put("avg_imps_per_row", imps / rows)
+                        .put("avg_imps_per_row_double", ((imps * 2) / rows))
+                        .put("avg_imps_per_row_half", (imps / (rows * 2)))
+                        .build()
         );
         index += 3;
       }
