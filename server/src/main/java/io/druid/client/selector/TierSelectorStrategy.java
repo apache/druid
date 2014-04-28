@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.timeline.DataSegment;
 
+import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -31,9 +32,12 @@ import java.util.TreeMap;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HighestPriorityTierSelectorStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "highestPriority", value = HighestPriorityTierSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "lowestPriority", value = LowestPriorityTierSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "lowestPriority", value = LowestPriorityTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "custom", value = CustomTierSelectorStrategy.class)
 })
 public interface TierSelectorStrategy
 {
+  public Comparator<Integer> getComparator();
+
   public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment);
 }

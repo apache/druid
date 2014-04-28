@@ -79,7 +79,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public QueryableDruidServer pick()
   {
     synchronized (this) {
-      TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers = Maps.newTreeMap();
+      final TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers = new TreeMap<>(strategy.getComparator());
       for (QueryableDruidServer server : servers) {
         Set<QueryableDruidServer> theServers = prioritizedServers.get(server.getServer().getPriority());
         if (theServers == null) {

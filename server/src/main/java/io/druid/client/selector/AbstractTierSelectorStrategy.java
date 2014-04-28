@@ -22,6 +22,7 @@ package io.druid.client.selector;
 import com.metamx.common.ISE;
 import io.druid.timeline.DataSegment;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -37,14 +38,12 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
     this.serverSelectorStrategy = serverSelectorStrategy;
   }
 
-  public abstract Map.Entry<Integer, Set<QueryableDruidServer>> getServers(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers);
-
   @Override
   public QueryableDruidServer pick(
       TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment
   )
   {
-    final Map.Entry<Integer, Set<QueryableDruidServer>> priorityServers = getServers(prioritizedServers);
+    final Map.Entry<Integer, Set<QueryableDruidServer>> priorityServers = prioritizedServers.pollFirstEntry();
 
     if (priorityServers == null) {
       return null;

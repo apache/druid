@@ -19,33 +19,20 @@
 
 package io.druid.client.selector;
 
-import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
 
-import java.util.Comparator;
+import java.util.List;
 
 /**
  */
-public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
+public class CustomTierSelectorStrategyConfig
 {
-  private static final Comparator<Integer> comparator = new Comparator<Integer>()
-  {
-    @Override
-    public int compare(Integer o1, Integer o2)
-    {
-      return Ints.compare(o1, o2);
-    }
-  };
+  @JsonProperty
+  private List<Integer> priorities = Lists.newArrayList();
 
-  @Inject
-  public LowestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  public List<Integer> getPriorities()
   {
-    super(serverSelectorStrategy);
-  }
-
-  @Override
-  public Comparator<Integer> getComparator()
-  {
-    return comparator;
+    return priorities;
   }
 }

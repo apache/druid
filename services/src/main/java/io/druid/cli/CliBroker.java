@@ -31,6 +31,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
 import io.druid.client.cache.CacheProvider;
+import io.druid.client.selector.CustomTierSelectorStrategyConfig;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.curator.discovery.DiscoveryModule;
@@ -85,6 +86,7 @@ public class CliBroker extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.select.tier", TierSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.select.server", ServerSelectorStrategy.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);

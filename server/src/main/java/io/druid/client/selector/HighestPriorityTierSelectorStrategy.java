@@ -19,16 +19,24 @@
 
 package io.druid.client.selector;
 
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.Comparator;
 
 /**
  */
 public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  private static final Comparator<Integer> comparator = new Comparator<Integer>()
+  {
+    @Override
+    public int compare(Integer o1, Integer o2)
+    {
+      return -Ints.compare(o1, o2);
+    }
+  };
+
   @Inject
   public HighestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
   {
@@ -36,8 +44,8 @@ public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStr
   }
 
   @Override
-  public Map.Entry<Integer, Set<QueryableDruidServer>> getServers(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers)
+  public Comparator<Integer> getComparator()
   {
-    return prioritizedServers.pollLastEntry();
+    return comparator;
   }
 }
