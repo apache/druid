@@ -58,7 +58,7 @@ Run the following command:
 ```bash
 % $WHIRR_HOME/bin/whirr launch-cluster --config $WHIRR_HOME/recipes/druid.properties
 ```
-If Whirr starts without an errors, you should see the following message:
+If Whirr starts without any errors, you should see the following message:
 
     Running on provider aws-ec2 using identity <your-aws-id-here>
     
@@ -71,7 +71,7 @@ If both the instance and the Druid cluster launch successfully, a few minutes la
     
 The final message will contain login information for the instance.
 
-Note that the Whirr will return an exception if any of the nodes fail to launch, and the cluster will be destroyed. To destroy the cluster manually, run the following command:
+Note that Whirr will return an exception if any of the nodes fail to launch, and the cluster will be destroyed. To destroy the cluster manually, run the following command:
 
 ```bash
 % $WHIRR_HOME/bin/whirr destroy-cluster --config $WHIRR_HOME/recipes/druid.properties
