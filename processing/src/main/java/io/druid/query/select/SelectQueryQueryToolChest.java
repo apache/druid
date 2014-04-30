@@ -42,6 +42,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
@@ -123,7 +124,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(query.getDataSource().getMetricName())
         .setUser4("Select")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -277,7 +278,12 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(QueryRunner<Result<SelectResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<SelectResultValue>>(runner, config.getChunkPeriod());
+    return new UnionQueryRunner<Result<SelectResultValue>>(
+        new IntervalChunkingQueryRunner<Result<SelectResultValue>>(
+            runner,
+            config.getChunkPeriod()
+        )
+    );
   }
 
   public Ordering<Result<SelectResultValue>> getOrdering()

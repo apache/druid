@@ -45,6 +45,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.SearchHit;
@@ -121,7 +122,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(query.getDataSource().getMetricName())
         .setUser4("search")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -258,7 +259,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, config.getChunkPeriod()),
+        new UnionQueryRunner<Result<SearchResultValue>>(
+            new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, config.getChunkPeriod())
+        ),
         config
     );
   }

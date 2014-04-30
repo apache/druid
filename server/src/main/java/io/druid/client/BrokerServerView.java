@@ -20,6 +20,7 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -237,17 +238,7 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
-    String table;
-    while (dataSource instanceof QueryDataSource) {
-      dataSource = ((QueryDataSource) dataSource).getQuery().getDataSource();
-    }
-
-    if (dataSource instanceof TableDataSource) {
-      table = ((TableDataSource) dataSource).getName();
-    } else {
-      throw new UnsupportedOperationException("Unsupported data source type: " + dataSource.getClass().getSimpleName());
-    }
-
+    String table = Iterables.getOnlyElement(dataSource.getNames());
     synchronized (lock) {
       return timelines.get(table);
     }

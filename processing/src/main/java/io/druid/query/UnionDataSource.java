@@ -18,45 +18,61 @@
  * This file Copyright (C) 2014 N3TWORK, Inc. and contributed to the Druid project
  * under the Druid Corporate Contributor License Agreement.
  */
+
 package io.druid.query;
+
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
-@JsonTypeName("table")
-public class TableDataSource implements DataSource
+public class UnionDataSource implements DataSource
 {
   @JsonProperty
-  private final String name;
+  private final List<DataSource> dataSources;
 
   @JsonCreator
-  public TableDataSource(@JsonProperty("name") String name)
+  public UnionDataSource(@JsonProperty("dataSources") List<DataSource> dataSources)
   {
-    this.name = (name == null ? null : name.toLowerCase());
-  }
-
-  @JsonProperty
-  public String getName(){
-    return name;
+    Preconditions.checkNotNull(dataSources, "datasources cannot be null for uniondatasource");
+    this.dataSources = dataSources;
   }
 
   @Override
-  public List<String> getNames()
+  public Iterable<String> getNames()
   {
-    return Lists.newArrayList(name);
+   return Iterables.concat(Iterables.transform(dataSources, new Function<DataSource, Iterable<String>>()
+   {
+     @Override
+     public Iterable<String> apply(DataSource input)
+     {
+       return input.getNames();
+     }
+   }));
   }
 
   @Override
   public String getMetricName()
   {
-    return name;
+    SortedSet<String> str = new TreeSet<>();
+    for(DataSource ds : dataSources){
+      str.add(ds.getMetricName());
+    }
+    return str.toString();
   }
 
-  public String toString() { return name; }
+  @JsonProperty
+  public List<DataSource> getDataSources(){
+    return dataSources;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -64,13 +80,13 @@ public class TableDataSource implements DataSource
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TableDataSource)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    TableDataSource that = (TableDataSource) o;
+    UnionDataSource that = (UnionDataSource) o;
 
-    if (!name.equals(that.name)) {
+    if (!dataSources.equals(that.dataSources)) {
       return false;
     }
 
@@ -80,6 +96,6 @@ public class TableDataSource implements DataSource
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    return dataSources.hashCode();
   }
 }

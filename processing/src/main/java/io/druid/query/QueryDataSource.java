@@ -24,6 +24,9 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.Lists;
+
+import java.util.List;
 
 @JsonTypeName("query")
 public class QueryDataSource implements DataSource
@@ -38,9 +41,15 @@ public class QueryDataSource implements DataSource
   }
 
   @Override
-  public String getName()
+  public Iterable<String> getNames()
   {
-    return query.getDataSource().getName();
+    return query.getDataSource().getNames();
+  }
+
+  @Override
+  public String getMetricName()
+  {
+    return query.getDataSource().getMetricName();
   }
 
   @JsonProperty

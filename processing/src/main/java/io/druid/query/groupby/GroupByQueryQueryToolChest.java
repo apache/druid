@@ -41,6 +41,7 @@ import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
+import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -163,7 +164,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(query.getDataSource().getMetricName())
         .setUser3(String.format("%,d dims", query.getDimensions().size()))
         .setUser4("groupBy")
         .setUser5(Joiner.on(",").join(query.getIntervals()))
@@ -202,7 +203,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
   {
-    return new SubqueryQueryRunner<Row>(
-        new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod()));
+    return new UnionQueryRunner<Row>(
+        new SubqueryQueryRunner<Row>(
+            new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod())
+        )
+    );
   }
 }

@@ -20,6 +20,7 @@
 package io.druid.query.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -41,7 +42,7 @@ public class SegmentMetadataQueryTest
                       + "}";
     Query query = mapper.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
-    Assert.assertEquals("test_ds", query.getDataSource().getName());
+    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
     Assert.assertEquals(new Interval("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"), query.getIntervals().get(0));
 
     // test serialize and deserialize

@@ -131,7 +131,7 @@ public class QueryResource
 
       emitter.emit(
           new ServiceMetricEvent.Builder()
-              .setUser2(query.getDataSource().toString())
+              .setUser2(query.getDataSource().getMetricName())
               .setUser4(query.getType())
               .setUser5(COMMA_JOIN.join(query.getIntervals()))
               .setUser6(String.valueOf(query.hasFilters()))

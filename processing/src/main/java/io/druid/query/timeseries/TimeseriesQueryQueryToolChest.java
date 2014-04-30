@@ -42,6 +42,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
@@ -122,7 +123,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(query.getDataSource().getMetricName())
         .setUser4("timeseries")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -229,7 +230,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, config.getChunkPeriod());
+    return new UnionQueryRunner<Result<TimeseriesResultValue>>(
+        new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(
+            runner,
+            config.getChunkPeriod()
+        )
+    );
   }
 
   public Ordering<Result<TimeseriesResultValue>> getOrdering()
