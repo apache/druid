@@ -53,8 +53,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -359,14 +358,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                     ),
                                     toolChest.makePreComputeManipulatorFn(
                                         rewrittenQuery,
-                                        new MetricManipulationFn()
-                                        {
-                                          @Override
-                                          public Object manipulate(AggregatorFactory factory, Object object)
-                                          {
-                                            return factory.deserialize(object);
-                                          }
-                                        }
+                                        MetricManipulatorFns.deserializing()
                                     )
                                 ),
                                 new Runnable()

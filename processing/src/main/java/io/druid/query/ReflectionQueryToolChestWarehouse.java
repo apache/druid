@@ -21,6 +21,7 @@ package io.druid.query;
 
 /**
  */
+@Deprecated
 public class ReflectionQueryToolChestWarehouse implements QueryToolChestWarehouse
 {
   ReflectionLoaderThingy<QueryToolChest> loader = ReflectionLoaderThingy.create(QueryToolChest.class);
