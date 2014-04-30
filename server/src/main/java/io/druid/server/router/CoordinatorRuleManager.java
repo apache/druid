@@ -30,8 +30,8 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import com.metamx.http.client.response.FullResponseHandler;
+import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.selector.Server;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServerDiscoverySelector;
@@ -39,6 +39,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.server.coordinator.rules.Rule;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import java.net.URL;
@@ -60,7 +61,7 @@ public class CoordinatorRuleManager
   private final Supplier<TieredBrokerConfig> config;
   private final ServerDiscoverySelector selector;
 
-  private final StatusResponseHandler responseHandler;
+  private final FullResponseHandler responseHandler;
   private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
 
   private volatile ScheduledExecutorService exec;
@@ -82,7 +83,7 @@ public class CoordinatorRuleManager
     this.config = config;
     this.selector = selector;
 
-    this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+    this.responseHandler = new FullResponseHandler(Charsets.UTF_8);
     this.rules = new AtomicReference<>(
         new ConcurrentHashMap<String, List<Rule>>()
     );
@@ -137,6 +138,7 @@ public class CoordinatorRuleManager
     return started;
   }
 
+  @SuppressWarnings("unchecked")
   public void poll()
   {
     try {
@@ -145,11 +147,19 @@ public class CoordinatorRuleManager
         return;
       }
 
-      StatusResponseHolder response = httpClient.get(new URL(url))
-                                                .go(responseHandler)
-                                                .get();
+      FullResponseHolder response = httpClient.get(new URL(url))
+                                              .go(responseHandler)
+                                              .get();
 
-      ConcurrentHashMap<String, List<Rule>> newRules = new ConcurrentHashMap<String, List<Rule>>(
+      if (response.getStatus().equals(HttpResponseStatus.FOUND)) {
+        url = response.getResponse().getHeader("Location");
+        log.info("Redirecting rule request to [%s]", url);
+        response = httpClient.get(new URL(url))
+                             .go(responseHandler)
+                             .get();
+      }
+
+      ConcurrentHashMap<String, List<Rule>> newRules = new ConcurrentHashMap<>(
           (Map<String, List<Rule>>) jsonMapper.readValue(
               response.getContent(), new TypeReference<Map<String, List<Rule>>>()
           {
