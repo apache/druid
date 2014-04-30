@@ -313,10 +313,12 @@ public class RealtimePlumber implements Plumber
             final Interval interval = sink.getInterval();
 
             for (FireHydrant hydrant : sink) {
-              if (!hydrant.hasSwapped()) {
-                log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                final int rowCount = persistHydrant(hydrant, schema, interval);
-                metrics.incrementRowOutputCount(rowCount);
+              synchronized (hydrant) {
+                if (!hydrant.hasSwapped()) {
+                  log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
+                  final int rowCount = persistHydrant(hydrant, schema, interval);
+                  metrics.incrementRowOutputCount(rowCount);
+                }
               }
             }
 
