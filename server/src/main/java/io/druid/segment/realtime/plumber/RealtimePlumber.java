@@ -313,10 +313,12 @@ public class RealtimePlumber implements Plumber
             final Interval interval = sink.getInterval();
 
             for (FireHydrant hydrant : sink) {
-              if (!hydrant.hasSwapped()) {
-                log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                final int rowCount = persistHydrant(hydrant, schema, interval);
-                metrics.incrementRowOutputCount(rowCount);
+              synchronized (hydrant) {
+                if (!hydrant.hasSwapped()) {
+                  log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
+                  final int rowCount = persistHydrant(hydrant, schema, interval);
+                  metrics.incrementRowOutputCount(rowCount);
+                }
               }
             }
 
@@ -449,10 +451,11 @@ public class RealtimePlumber implements Plumber
 
   protected void shutdownExecutors()
   {
-    // scheduledExecutor is shutdown here, but persistExecutor is shutdown when the
+    // scheduledExecutor is shutdown here, but mergeExecutor is shutdown when the
     // ServerView sends it a new segment callback
     if (scheduledExecutor != null) {
       scheduledExecutor.shutdown();
+      persistExecutor.shutdown();
     }
   }
 
@@ -715,7 +718,7 @@ public class RealtimePlumber implements Plumber
   private void registerServerViewCallback()
   {
     serverView.registerSegmentCallback(
-        persistExecutor,
+        mergeExecutor,
         new ServerView.BaseSegmentCallback()
         {
           @Override
@@ -723,7 +726,7 @@ public class RealtimePlumber implements Plumber
           {
             if (stopped) {
               log.info("Unregistering ServerViewCallback");
-              persistExecutor.shutdown();
+              mergeExecutor.shutdown();
               return ServerView.CallbackAction.UNREGISTER;
             }
 
@@ -732,7 +735,9 @@ public class RealtimePlumber implements Plumber
             }
 
             log.debug("Checking segment[%s] on server[%s]", segment, server);
-            if (schema.getDataSource().equals(segment.getDataSource())) {
+            if (schema.getDataSource().equals(segment.getDataSource())
+                && schema.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
+                ) {
               final Interval interval = segment.getInterval();
               for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
                 final Long sinkKey = entry.getKey();
