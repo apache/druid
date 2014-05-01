@@ -43,6 +43,9 @@ public class UnionDataSource implements DataSource
   public UnionDataSource(@JsonProperty("dataSources") List<DataSource> dataSources)
   {
     Preconditions.checkNotNull(dataSources, "datasources cannot be null for uniondatasource");
+    for(DataSource ds : dataSources){
+      Preconditions.checkArgument(ds instanceof TableDataSource, "Union DataSource only supports TableDatasource");
+    }
     this.dataSources = dataSources;
   }
 

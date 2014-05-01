@@ -40,7 +40,7 @@ public class PagingSpec
       @JsonProperty("threshold") int threshold
   )
   {
-    this.pagingIdentifiers = pagingIdentifiers;
+    this.pagingIdentifiers = pagingIdentifiers == null ? new LinkedHashMap<String, Integer>() : pagingIdentifiers;
     this.threshold = threshold;
   }
 

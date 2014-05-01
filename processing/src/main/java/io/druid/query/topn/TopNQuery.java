@@ -167,7 +167,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
   {
     return new TopNQuery(
-        getDataSource(),
+        dataSource,
         dimensionSpec,
         topNMetricSpec,
         threshold,
