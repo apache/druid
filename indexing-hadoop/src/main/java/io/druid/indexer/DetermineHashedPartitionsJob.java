@@ -128,7 +128,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
         fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
-        if (!fileSystem.exists(intervalInfoPath)) {
+        if (!Utils.exists(groupByJob, fileSystem, intervalInfoPath)) {
           throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
         }
         List<Interval> intervals = config.jsonMapper.readValue(
@@ -148,7 +148,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
-        if (fileSystem.exists(partitionInfoPath)) {
+        if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
           Long cardinality = config.jsonMapper.readValue(
             Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
         {

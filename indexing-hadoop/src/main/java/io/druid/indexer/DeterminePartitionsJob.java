@@ -215,7 +215,7 @@ public class DeterminePartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
         }
-        if (fileSystem.exists(partitionInfoPath)) {
+        if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
           List<ShardSpec> specs = config.jsonMapper.readValue(
               Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
           {
