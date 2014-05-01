@@ -94,7 +94,7 @@ public class Utils
 
   public static InputStream openInputStream(JobContext job, Path inputPath) throws IOException
   {
-    return openInputStream(inputPath, inputPath.getFileSystem(job.getConfiguration()));
+    return openInputStream(job, inputPath, inputPath.getFileSystem(job.getConfiguration()));
   }
 
   public static boolean exists(JobContext job, FileSystem fs, Path inputPath) throws IOException
@@ -108,9 +108,18 @@ public class Utils
     }
   }
 
-  public static InputStream openInputStream(Path inputPath, final FileSystem fileSystem) throws IOException
+  public static InputStream openInputStream(JobContext job, Path inputPath, final FileSystem fileSystem)
+      throws IOException
   {
-    return fileSystem.open(inputPath);
+    if (!FileOutputFormat.getCompressOutput(job)) {
+      return fileSystem.open(inputPath);
+    } else {
+      Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
+      CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
+      inputPath = new Path(inputPath.toString() + codec.getDefaultExtension());
+
+      return codec.createInputStream(fileSystem.open(inputPath));
+    }
   }
 
   public static Map<String, Object> getStats(JobContext job, Path statsPath)
