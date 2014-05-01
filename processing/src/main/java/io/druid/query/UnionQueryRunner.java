@@ -40,7 +40,6 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
-      System.out.println("Breaking into Single Source" + dataSource.getMetricName());
       return Sequences.concat(
           Iterables.transform(
               ((UnionDataSource) dataSource).getDataSources(),
@@ -49,7 +48,6 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                 @Override
                 public Sequence<T> apply(DataSource singleSource)
                 {
-                  System.out.println("Running with Single Source" + singleSource.getNames());
                   return baseRunner.run(
                       query.withDataSource(singleSource)
                   );
