@@ -101,4 +101,12 @@ public class UnionDataSource implements DataSource
   {
     return dataSources.hashCode();
   }
+
+  @Override
+  public String toString()
+  {
+    return "UnionDataSource{" +
+           "dataSources=" + dataSources +
+           '}';
+  }
 }
