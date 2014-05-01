@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,9 +19,18 @@
 
 package io.druid.query;
 
-import java.util.concurrent.Callable;
-
-public interface PrioritizedCallable<V> extends Callable<V>
+public abstract class AbstractPrioritizedCallable<V> implements PrioritizedCallable<V>
 {
-  public int getPriority();
+  private final int priority;
+
+  public AbstractPrioritizedCallable(int priority)
+  {
+    this.priority = priority;
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return priority;
+  }
 }

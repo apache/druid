@@ -97,7 +97,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
               public Future<Boolean> apply(final QueryRunner<Row> input)
               {
                 return exec.submit(
-                    new PrioritizedCallable<Boolean>(priority)
+                    new AbstractPrioritizedCallable<Boolean>(priority)
                     {
                       @Override
                       public Boolean call() throws Exception
