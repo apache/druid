@@ -45,7 +45,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
-import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -55,7 +54,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -81,6 +79,14 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   )
   {
     this.config = config;
+  }
+
+  private static List<PostAggregator> prunePostAggregators(TopNQuery query)
+  {
+    return AggregatorUtil.pruneDependentPostAgg(
+        query.getPostAggregatorSpecs(),
+        query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
+    );
   }
 
   @Override
@@ -371,12 +377,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public QueryRunner<Result<TopNResultValue>> preMergeQueryDecoration(QueryRunner<Result<TopNResultValue>> runner)
   {
-    return new UnionQueryRunner<Result<TopNResultValue>>(
-        new IntervalChunkingQueryRunner<Result<TopNResultValue>>(
-            runner,
-            config
-                .getChunkPeriod()
-        )
+    return new IntervalChunkingQueryRunner<Result<TopNResultValue>>(
+        runner,
+        config.getChunkPeriod()
     );
   }
 
@@ -474,13 +477,5 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           }
       );
     }
-  }
-
-  private static List<PostAggregator> prunePostAggregators(TopNQuery query)
-  {
-    return AggregatorUtil.pruneDependentPostAgg(
-        query.getPostAggregatorSpecs(),
-        query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
-    );
   }
 }

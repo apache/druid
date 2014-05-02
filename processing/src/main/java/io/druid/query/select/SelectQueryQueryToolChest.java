@@ -42,7 +42,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
-import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
@@ -278,11 +277,10 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(QueryRunner<Result<SelectResultValue>> runner)
   {
-    return new UnionQueryRunner<Result<SelectResultValue>>(
-        new IntervalChunkingQueryRunner<Result<SelectResultValue>>(
-            runner,
-            config.getChunkPeriod()
-        )
+    return new IntervalChunkingQueryRunner<Result<SelectResultValue>>(
+        runner,
+        config.getChunkPeriod()
+
     );
   }
 

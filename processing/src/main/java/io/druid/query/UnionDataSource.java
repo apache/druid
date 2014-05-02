@@ -37,15 +37,12 @@ import java.util.TreeSet;
 public class UnionDataSource implements DataSource
 {
   @JsonProperty
-  private final List<DataSource> dataSources;
+  private final List<TableDataSource> dataSources;
 
   @JsonCreator
-  public UnionDataSource(@JsonProperty("dataSources") List<DataSource> dataSources)
+  public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
   {
-    Preconditions.checkNotNull(dataSources, "datasources cannot be null for uniondatasource");
-    for(DataSource ds : dataSources){
-      Preconditions.checkArgument(ds instanceof TableDataSource, "Union DataSource only supports TableDatasource");
-    }
+    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for unionDataSource");
     this.dataSources = dataSources;
   }
 
@@ -73,7 +70,7 @@ public class UnionDataSource implements DataSource
   }
 
   @JsonProperty
-  public List<DataSource> getDataSources(){
+  public List<TableDataSource> getDataSources(){
     return dataSources;
   }
 

@@ -45,7 +45,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
-import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.SearchHit;
@@ -259,9 +258,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        new UnionQueryRunner<Result<SearchResultValue>>(
-            new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, config.getChunkPeriod())
-        ),
+        new IntervalChunkingQueryRunner<Result<SearchResultValue>>(runner, config.getChunkPeriod()),
         config
     );
   }

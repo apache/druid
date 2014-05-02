@@ -42,7 +42,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
-import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
@@ -230,11 +229,10 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return new UnionQueryRunner<Result<TimeseriesResultValue>>(
-        new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(
-            runner,
-            config.getChunkPeriod()
-        )
+    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(
+        runner,
+        config.getChunkPeriod()
+
     );
   }
 

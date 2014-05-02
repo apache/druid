@@ -41,7 +41,6 @@ import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
-import io.druid.query.UnionQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -203,10 +202,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
   {
-    return new UnionQueryRunner<Row>(
-        new SubqueryQueryRunner<Row>(
-            new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod())
-        )
+    return new SubqueryQueryRunner<Row>(
+        new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod())
     );
   }
 }

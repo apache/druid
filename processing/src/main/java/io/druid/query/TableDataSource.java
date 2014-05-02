@@ -45,7 +45,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public List<String> getNames()
+  public Iterable<String> getNames()
   {
     return Lists.newArrayList(name);
   }
