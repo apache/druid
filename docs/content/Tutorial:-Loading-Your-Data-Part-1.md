@@ -42,7 +42,7 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutiroal%3A-The-Druid-Cluster.html).
+At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutorial%3A-The-Druid-Cluster.html).
 
 Let's start from our usual starting point in the tarball directory.
 
@@ -136,7 +136,7 @@ Indexing the Data
 To index the data and build a Druid segment, we are going to need to submit a task to the indexing service. This task should already exist:
 
 ```
-examples/indexing/index_task.json
+examples/indexing/wikipedia_index_task.json
 ```
 
 Open up the file to see the following:

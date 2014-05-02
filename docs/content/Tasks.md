@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 # Tasks
-Tasks are run on middle managers and always operate on a single data source.
+Tasks are run on middle managers and always operate on a single data source. Tasks are submitted using [POST requests](Indexing-Service.html).
 
 There are several different types of tasks.
 
@@ -50,13 +50,13 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
-|id|The task ID.|no|
-|granularitySpec|Specifies the segment chunks that the task will process. `type` is always "uniform"; `gran` sets the granularity of the chunks ("DAY" means all segments containing timestamps in the same day, while `intervals` sets the interval that the chunks will cover.|yes|
+|id|The task ID. If this is not explicitly specified, Druid generates the task ID using the name of the task file and date-time stamp. |no|
+|granularitySpec|Specifies the segment chunks that the task will process. `type` is always "uniform"; `gran` sets the granularity of the chunks ("DAY" means all segments containing timestamps in the same day), while `intervals` sets the interval that the chunks will cover.|yes|
 |spatialDimensions|Dimensions to build spatial indexes over. See [Geographic Queries](GeographicQueries.html).|no|
-|aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html)|yes|
-|indexGranularity|The rollup granularity for timestamps.|no|
+|aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html).|yes|
+|indexGranularity|The rollup granularity for timestamps. See [Realtime Ingestion](Realtime-ingestion.html) for more information. |no|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|no|
-|firehose|The input source of data. For more info, see [Firehose](Firehose.html)|yes|
+|firehose|The input source of data. For more info, see [Firehose](Firehose.html).|yes|
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|no|
 
 ### Index Hadoop Task
@@ -74,14 +74,14 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 |--------|-----------|---------|
 |type|The task type, this should always be "index_hadoop".|yes|
 |config|A Hadoop Index Config. See [Batch Ingestion](Batch-ingestion.html)|yes|
-|hadoopCoordinates|The Maven \<groupId\>:\<artifactId\>:\<version\> of Hadoop to use. The default is "org.apache.hadoop:hadoop-core:1.0.3".|no|
+|hadoopCoordinates|The Maven \<groupId\>:\<artifactId\>:\<version\> of Hadoop to use. The default is "org.apache.hadoop:hadoop-client:2.3.0".|no|
 
 
 The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
 
 #### Using your own Hadoop distribution
 
-Druid is compiled against Apache hadoop-core 1.0.3. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-core 1.0.3, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution.
+Druid is compiled against Apache hadoop-client 2.3.0. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-client 2.3.0, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution.
 
 #### Resolving dependency conflicts running HadoopIndexTask
 
@@ -163,7 +163,7 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 |availabilityGroup|String|An uniqueness identifier for the task. Tasks with the same availability group will always run on different middle managers. Used mainly for replication. |yes|
 |requiredCapacity|Integer|How much middle manager capacity this task will take.|yes|
 
-For schema, fireDepartmentConfig, windowPeriod, segmentGranularity, and rejectionPolicy, see the [realtime-ingestion doc](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
+For schema, windowPeriod, segmentGranularity, and other configuration information, see [Realtime Ingestion](Realtime-ingestion.html). For firehose configuration, see [Firehose](Firehose.html).
 
 
 Segment Merging Tasks
@@ -175,6 +175,7 @@ Append tasks append a list of segments together into a single segment (one after
 
 ```json
 {
+    "type": "append",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -187,6 +188,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
 
 ```json
 {
+    "type": "merge",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -202,6 +204,7 @@ Delete tasks create empty segments with no data. The grammar is:
 
 ```json
 {
+    "type": "delete",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -214,6 +217,7 @@ Kill tasks delete all information about a segment and removes it from deep stora
 
 ```json
 {
+    "type": "kill",
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>
@@ -229,6 +233,7 @@ These tasks convert segments from an existing older index version to the latest 
 
 ```json
 {
+    "type": "version_converter",
     "id": <task_id>,
     "groupId" : <task_group_id>,
     "dataSource": <task_datasource>,
@@ -243,6 +248,7 @@ These tasks start, sleep for a time and are used only for testing. The available
 
 ```json
 {
+    "type": "noop",
     "id": <optional_task_id>,
     "interval" : <optional_segment_interval>,
     "runTime" : <optional_millis_to_sleep>,

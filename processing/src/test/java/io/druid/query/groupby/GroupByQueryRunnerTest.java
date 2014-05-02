@@ -35,6 +35,7 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -45,6 +46,8 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
@@ -61,7 +64,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -179,38 +181,117 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithTimeZone()
+  public void testGroupByWithUniques()
   {
-    DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
-
-    GroupByQuery query = GroupByQuery.builder()
+    GroupByQuery query = GroupByQuery
+        .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.qualityUniques
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow(
+            "2011-04-01",
+            "rows",
+            26L,
+            "uniques",
+            QueryRunnerTestHelper.UNIQUES_9
+        )
+    );
+
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithDimExtractionFn()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
-            Lists.newArrayList(
-                (DimensionSpec) new DefaultDimensionSpec(
+            Lists.<DimensionSpec>newArrayList(
+                new ExtractionDimensionSpec(
                     "quality",
-                    "alias"
+                    "alias",
+                    new RegexDimExtractionFn("(\\w{1})")
                 )
             )
         )
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory(
-                    "idx",
-                    "index"
-                )
+                new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(
-            new PeriodGranularity(
-                new Period("P1D"),
-                null,
-                tz
-            )
-        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
+        createExpectedRow("2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
+        createExpectedRow("2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
+        createExpectedRow("2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
+        createExpectedRow("2011-04-01", "alias", "m", "rows", 3L, "idx", 2870L),
+        createExpectedRow("2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
+        createExpectedRow("2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
+        createExpectedRow("2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
+
+        createExpectedRow("2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
+        createExpectedRow("2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
+        createExpectedRow("2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
+        createExpectedRow("2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
+        createExpectedRow("2011-04-02", "alias", "m", "rows", 3L, "idx", 2447L),
+        createExpectedRow("2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
+        createExpectedRow("2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
+        createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
+    );
+
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithTimeZone()
+  {
+    DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(QueryRunnerTestHelper.dataSource)
+                                     .setInterval("2011-03-31T00:00:00-07:00/2011-04-02T00:00:00-07:00")
+                                     .setDimensions(
+                                         Lists.newArrayList(
+                                             (DimensionSpec) new DefaultDimensionSpec(
+                                                 "quality",
+                                                 "alias"
+                                             )
+                                         )
+                                     )
+                                     .setAggregatorSpecs(
+                                         Arrays.<AggregatorFactory>asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory(
+                                                 "idx",
+                                                 "index"
+                                             )
+                                         )
+                                     )
+                                     .setGranularity(
+                                         new PeriodGranularity(
+                                             new Period("P1D"),
+                                             null,
+                                             tz
+                                         )
+                                     )
+                                     .build();
 
     List<Row> expectedResults = Arrays.asList(
         createExpectedRow(new DateTime("2011-03-31", tz), "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -949,8 +1030,14 @@ public class GroupByQueryRunnerTest
 
   private Iterable<Row> runQuery(GroupByQuery query)
   {
-    QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
-    Sequence<Row> queryResult = toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)).run(query);
+
+    QueryToolChest toolChest = factory.getToolchest();
+    QueryRunner theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)),
+        toolChest
+    );
+
+    Sequence<Row> queryResult = theRunner.run(query);
     return Sequences.toList(queryResult, Lists.<Row>newArrayList());
   }
 

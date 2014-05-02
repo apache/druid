@@ -41,18 +41,25 @@ import java.util.List;
  */
 @Command(
     name = "hadoop",
-    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/0.6.73/Batch-ingestion.html for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/latest/Batch-ingestion.html for a description."
 )
 public class CliHadoopIndexer implements Runnable
 {
+
+  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-client:2.3.0";
+
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
   @Option(name = "hadoop",
-          description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-core:1.0.3")
-  private String hadoopCoordinates = "org.apache.hadoop:hadoop-core:1.0.3";
+          description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-client:2.3.0")
+  private String hadoopCoordinates = defaultHadoopCoordinates;
+
+  @Option(name = "hadoopDependencies",
+          description = "The maven coordinates to the version of hadoop and all dependencies to run with. Defaults to using org.apache.hadoop:hadoop-client:2.3.0")
+  private List<String> hadoopDependencyCoordinates = Arrays.<String>asList(defaultHadoopCoordinates);
 
   @Inject
   private ExtensionsConfig extensionsConfig = null;
@@ -63,9 +70,6 @@ public class CliHadoopIndexer implements Runnable
   {
     try {
       final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
-      final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-          aetherClient, hadoopCoordinates
-      );
 
       final List<URL> extensionURLs = Lists.newArrayList();
       for (String coordinate : extensionsConfig.getCoordinates()) {
@@ -81,7 +85,12 @@ public class CliHadoopIndexer implements Runnable
       final List<URL> driverURLs = Lists.newArrayList();
       driverURLs.addAll(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-      driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      for (String coordinate : hadoopDependencyCoordinates) {
+        final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
+            aetherClient, coordinate
+        );
+        driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      }
 
       final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
       Thread.currentThread().setContextClassLoader(loader);

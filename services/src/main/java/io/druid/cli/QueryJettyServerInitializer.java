@@ -38,16 +38,13 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
   @Override
   public void initialize(Server server, Injector injector)
   {
-    final ServletContextHandler queries = new ServletContextHandler(ServletContextHandler.SESSIONS);
-    queries.setResourceBase("/");
-
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
     root.addFilter(GzipFilter.class, "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{queries, root, new DefaultHandler()});
+    handlerList.setHandlers(new Handler[]{root, new DefaultHandler()});
     server.setHandler(handlerList);
   }
 }

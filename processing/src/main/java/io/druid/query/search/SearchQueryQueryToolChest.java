@@ -129,7 +129,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makeMetricManipulatorFn(
+  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makePreComputeManipulatorFn(
       SearchQuery query, MetricManipulationFn fn
   )
   {
@@ -294,7 +294,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(query);
       }
 
-      final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+      final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
           runner.run(query.withLimit(config.getMaxSearchLimit())),

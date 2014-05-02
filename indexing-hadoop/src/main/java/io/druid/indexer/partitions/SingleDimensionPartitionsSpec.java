@@ -41,7 +41,7 @@ public class SingleDimensionPartitionsSpec extends AbstractPartitionsSpec
       @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
   )
   {
-    super(targetPartitionSize, maxPartitionSize, assumeGrouped);
+    super(targetPartitionSize, maxPartitionSize, assumeGrouped, null);
     this.partitionDimension = partitionDimension;
   }
 

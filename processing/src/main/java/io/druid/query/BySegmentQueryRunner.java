@@ -53,7 +53,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
   @SuppressWarnings("unchecked")
   public Sequence<T> run(final Query<T> query)
   {
-    if (Boolean.parseBoolean(query.getContextValue("bySegment"))) {
+    if (query.getContextBySegment(false)) {
       final Sequence<T> baseSequence = base.run(query);
       return new Sequence<T>()
       {

@@ -31,4 +31,12 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig
   {
     return 1024 * 1024 * 1024;
   }
+
+  @Override @Config(value = "${base_path}.numThreads")
+  public int getNumThreads()
+  {
+    // default to leaving one core for background tasks
+    final int processors = Runtime.getRuntime().availableProcessors();
+    return processors > 1 ? processors - 1 : processors;
+  }
 }

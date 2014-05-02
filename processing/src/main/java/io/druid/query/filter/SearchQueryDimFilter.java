@@ -64,9 +64,18 @@ public class SearchQueryDimFilter implements DimFilter
     final byte[] queryBytes = query.getCacheKey();
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + queryBytes.length)
-        .put(DimFilterCacheHelper.SEARCH_QUERY_TYPE_ID)
-        .put(dimensionBytes)
-        .put(queryBytes)
-        .array();
+                     .put(DimFilterCacheHelper.SEARCH_QUERY_TYPE_ID)
+                     .put(dimensionBytes)
+                     .put(queryBytes)
+                     .array();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SearchQueryDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", query=" + query +
+           '}';
   }
 }

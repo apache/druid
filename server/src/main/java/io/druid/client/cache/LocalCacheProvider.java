@@ -29,7 +29,7 @@ public class LocalCacheProvider implements CacheProvider
 {
   @JsonProperty
   @Min(0)
-  private long sizeInBytes = 10485760;
+  private long sizeInBytes = 0;
 
   @JsonProperty
   @Min(0)
@@ -38,7 +38,6 @@ public class LocalCacheProvider implements CacheProvider
   @JsonProperty
   @Min(0)
   private int logEvictionCount = 0;
-
 
   @Override
   public Cache get()

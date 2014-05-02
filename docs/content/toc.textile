@@ -22,12 +22,6 @@ h2. Configuration
 * "Broker":Broker-Config.html
 * "Indexing Service":Indexing-Service-Config.html
 
-h2. Operations
-* "Extending Druid":./Modules.html
-* "Cluster Setup":./Cluster-setup.html
-* "Booting a Production Cluster":./Booting-a-production-cluster.html
-* "Performance FAQ":./Performance-FAQ.html
-
 h2. Data Ingestion
 * "Realtime":./Realtime-ingestion.html
 * "Batch":./Batch-ingestion.html
@@ -35,6 +29,12 @@ h2. Data Ingestion
 ** "Tasks":./Tasks.html
 * "Data Formats":./Data_formats.html
 * "Ingestion FAQ":./Ingestion-FAQ.html
+
+h2. Operations
+* "Extending Druid":./Modules.html
+* "Cluster Setup":./Cluster-setup.html
+* "Booting a Production Cluster":./Booting-a-production-cluster.html
+* "Performance FAQ":./Performance-FAQ.html
 
 h2. Querying
 * "Querying":./Querying.html
@@ -75,6 +75,7 @@ h2. Architecture
 h2. Experimental
 * "About Experimental Features":./About-Experimental-Features.html
 * "Geographic Queries":./GeographicQueries.html
+* "Select Query":./SelectQuery.html
 
 h2. Development
 * "Versioning":./Versioning.html

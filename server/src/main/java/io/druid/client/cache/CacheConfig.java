@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,37 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server;
+package io.druid.client.cache;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import io.druid.guice.annotations.Self;
-import io.druid.query.Query;
-import org.joda.time.DateTime;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.concurrent.atomic.AtomicLong;
-
-@Singleton
-public class QueryIDProvider
+public class CacheConfig
 {
-  private final String host;
-  private final AtomicLong id = new AtomicLong();
+  public static String USE_CACHE = "useCache";
+  public static String POPULATE_CACHE = "populateCache";
+  @JsonProperty
+  private boolean useCache = true;
+  @JsonProperty
+  private boolean populateCache = true;
 
-  @Inject
-  public QueryIDProvider(@Self DruidNode node)
+  public boolean isPopulateCache()
   {
-    host = node.getHost();
+    return populateCache;
   }
 
-  public String next(Query query)
+  public boolean isUseCache()
   {
-    return String.format(
-        "%s_%s_%s_%s_%s",
-        query.getDataSource(),
-        query.getDuration(),
-        host,
-        new DateTime(),
-        id.incrementAndGet()
-    );
+    return useCache;
   }
 }

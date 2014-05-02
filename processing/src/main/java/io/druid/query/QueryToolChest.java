@@ -44,8 +44,16 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * @return
    */
   public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences);
+
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
-  public abstract Function<ResultType, ResultType> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn);
+
+  public abstract Function<ResultType, ResultType> makePreComputeManipulatorFn(QueryType query, MetricManipulationFn fn);
+
+  public Function<ResultType, ResultType> makePostComputeManipulatorFn(QueryType query, MetricManipulationFn fn)
+  {
+    return makePreComputeManipulatorFn(query, fn);
+  }
+
   public abstract TypeReference<ResultType> getResultTypeReference();
 
   public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query) {

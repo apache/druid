@@ -17,39 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.server;
 
-import java.nio.ByteBuffer;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Map;
 
 /**
  */
-public class NoopBufferAggregator implements BufferAggregator
+public class QueryStats
 {
-  @Override
-  public void init(ByteBuffer buf, int position)
+  private final Map<String, Object> stats;
+
+  public QueryStats(Map<String, Object> stats)
   {
+    this.stats = stats;
   }
 
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
+  @JsonValue
+  public Map<String, Object> getStats()
   {
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    return null;
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return 0;
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
+    return stats;
   }
 }

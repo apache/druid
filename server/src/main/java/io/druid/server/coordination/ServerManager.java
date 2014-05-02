@@ -19,6 +19,7 @@
 
 package io.druid.server.coordination;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Ordering;
@@ -28,8 +29,12 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.CachingQueryRunner;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.collections.CountingMap;
 import io.druid.guice.annotations.Processing;
+import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -44,7 +49,6 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.TableDataSource;
-import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.ReferenceCountingSegment;
@@ -70,24 +74,27 @@ import java.util.concurrent.ExecutorService;
 public class ServerManager implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(ServerManager.class);
-
   private final Object lock = new Object();
-
   private final SegmentLoader segmentLoader;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
   private final ExecutorService exec;
-
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSources;
   private final CountingMap<String> dataSourceSizes = new CountingMap<String>();
   private final CountingMap<String> dataSourceCounts = new CountingMap<String>();
+  private final Cache cache;
+  private final ObjectMapper objectMapper;
+  private final CacheConfig cacheConfig;
 
   @Inject
   public ServerManager(
       SegmentLoader segmentLoader,
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
-      @Processing ExecutorService exec
+      @Processing ExecutorService exec,
+      @Smile ObjectMapper objectMapper,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.segmentLoader = segmentLoader;
@@ -95,8 +102,11 @@ public class ServerManager implements QuerySegmentWalker
     this.emitter = emitter;
 
     this.exec = exec;
+    this.cache = cache;
+    this.objectMapper = objectMapper;
 
     this.dataSources = new HashMap<>();
+    this.cacheConfig = cacheConfig;
   }
 
   public Map<String, Long> getDataSourceSizes()
@@ -122,7 +132,9 @@ public class ServerManager implements QuerySegmentWalker
    * Load a single segment.
    *
    * @param segment segment to load
+   *
    * @return true if the segment was newly loaded, false if it was already loaded
+   *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
   public boolean loadSegment(final DataSegment segment) throws SegmentLoadingException
@@ -130,10 +142,12 @@ public class ServerManager implements QuerySegmentWalker
     final Segment adapter;
     try {
       adapter = segmentLoader.getSegment(segment);
-    } catch (SegmentLoadingException e) {
+    }
+    catch (SegmentLoadingException e) {
       try {
         segmentLoader.cleanup(segment);
-      } catch (SegmentLoadingException e1) {
+      }
+      catch (SegmentLoadingException e1) {
         // ignore
       }
       throw e;
@@ -205,11 +219,12 @@ public class ServerManager implements QuerySegmentWalker
         try {
           log.info("Attempting to close segment %s", segment.getIdentifier());
           oldQueryable.close();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
           log.makeAlert(e, "Exception closing segment")
-              .addData("dataSource", dataSource)
-              .addData("segmentId", segment.getIdentifier())
-              .emit();
+             .addData("dataSource", dataSource)
+             .addData("segmentId", segment.getIdentifier())
+             .emit();
         }
       } else {
         log.info(
@@ -241,7 +256,8 @@ public class ServerManager implements QuerySegmentWalker
     String dataSourceName;
     try {
       dataSourceName = ((TableDataSource) query.getDataSource()).getName();
-    } catch (ClassCastException e) {
+    }
+    catch (ClassCastException e) {
       throw new UnsupportedOperationException("Subqueries are only supported in the broker");
     }
 
@@ -287,13 +303,12 @@ public class ServerManager implements QuerySegmentWalker
                                 factory,
                                 toolChest,
                                 input.getObject(),
-                                new SpecificSegmentSpec(
-                                    new SegmentDescriptor(
-                                        holder.getInterval(),
-                                        holder.getVersion(),
-                                        input.getChunkNumber()
-                                    )
+                                new SegmentDescriptor(
+                                    holder.getInterval(),
+                                    holder.getVersion(),
+                                    input.getChunkNumber()
                                 )
+
                             );
                           }
                         }
@@ -316,8 +331,8 @@ public class ServerManager implements QuerySegmentWalker
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       log.makeAlert("Unknown query type, [%s]", query.getClass())
-          .addData("dataSource", query.getDataSource())
-          .emit();
+         .addData("dataSource", query.getDataSource())
+         .emit();
       return new NoopQueryRunner<T>();
     }
 
@@ -326,7 +341,8 @@ public class ServerManager implements QuerySegmentWalker
     String dataSourceName;
     try {
       dataSourceName = ((TableDataSource) query.getDataSource()).getName();
-    } catch (ClassCastException e) {
+    }
+    catch (ClassCastException e) {
       throw new UnsupportedOperationException("Subqueries are only supported in the broker");
     }
 
@@ -360,7 +376,7 @@ public class ServerManager implements QuerySegmentWalker
 
                 final ReferenceCountingSegment adapter = chunk.getObject();
                 return Arrays.asList(
-                    buildAndDecorateQueryRunner(factory, toolChest, adapter, new SpecificSegmentSpec(input))
+                    buildAndDecorateQueryRunner(factory, toolChest, adapter, input)
                 );
               }
             }
@@ -376,9 +392,10 @@ public class ServerManager implements QuerySegmentWalker
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
       final ReferenceCountingSegment adapter,
-      final QuerySegmentSpec segmentSpec
+      final SegmentDescriptor segmentDescriptor
   )
   {
+    SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     return new SpecificSegmentQueryRunner<T>(
         new MetricsEmittingQueryRunner<T>(
             emitter,
@@ -393,7 +410,15 @@ public class ServerManager implements QuerySegmentWalker
             new BySegmentQueryRunner<T>(
                 adapter.getIdentifier(),
                 adapter.getDataInterval().getStart(),
-                new ReferenceCountingSegmentQueryRunner<T>(factory, adapter)
+                new CachingQueryRunner<T>(
+                    adapter.getIdentifier(),
+                    segmentDescriptor,
+                    objectMapper,
+                    cache,
+                    toolChest,
+                    new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
+                    cacheConfig
+                )
             )
         ).withWaitMeasuredFromNow(),
         segmentSpec

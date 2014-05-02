@@ -24,7 +24,12 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CacheMonitor;
+import io.druid.client.cache.CacheProvider;
 import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
@@ -34,6 +39,7 @@ import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.metrics.MetricsModule;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -42,7 +48,7 @@ import java.util.List;
  */
 @Command(
     name = "historical",
-    description = "Runs a Historical node, see http://druid.io/docs/0.6.73/Historical.html for a description"
+    description = "Runs a Historical node, see http://druid.io/docs/latest/Historical.html for a description"
 )
 public class CliHistorical extends ServerRunnable
 {
@@ -73,6 +79,11 @@ public class CliHistorical extends ServerRunnable
 
             LifecycleModule.register(binder, ZkCoordinator.class);
             LifecycleModule.register(binder, Server.class);
+
+            binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
+            JsonConfigProvider.bind(binder, "druid.historical.cache", CacheProvider.class);
+            JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
+            MetricsModule.register(binder, CacheMonitor.class);
           }
         }
     );

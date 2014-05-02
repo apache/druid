@@ -49,7 +49,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.servlet.ServletException;
@@ -154,13 +154,11 @@ public class JettyServerModule extends JerseyServletModule
     threadPool.setMinThreads(config.getNumThreads());
     threadPool.setMaxThreads(config.getNumThreads());
 
-    final Server server = new Server();
-    server.setThreadPool(threadPool);
+    final Server server = new Server(threadPool);
 
-    SelectChannelConnector connector = new SelectChannelConnector();
+    ServerConnector connector = new ServerConnector(server);
     connector.setPort(node.getPort());
-    connector.setMaxIdleTime(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
-    connector.setStatsOn(true);
+    connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
 
     server.setConnectors(new Connector[]{connector});
 

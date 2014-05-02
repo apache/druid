@@ -122,6 +122,12 @@ public class LoadRuleTest
       {
         return true;
       }
+
+      @Override
+      public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
+      {
+        return true;
+      }
     };
 
     DruidCluster druidCluster = new DruidCluster(
@@ -211,6 +217,12 @@ public class LoadRuleTest
 
       @Override
       public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
+      {
+        return true;
+      }
+
+      @Override
+      public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
       {
         return true;
       }

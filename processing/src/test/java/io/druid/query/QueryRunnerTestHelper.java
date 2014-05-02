@@ -25,6 +25,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
@@ -60,6 +61,7 @@ public class QueryRunnerTestHelper
   public static final String indexMetric = "index";
   public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
+  public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
@@ -72,8 +74,26 @@ public class QueryRunnerTestHelper
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator addRowsIndexConstant =
       new ArithmeticPostAggregator(
-          "addRowsIndexConstant", "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
+          addRowsIndexConstantMetric, "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
       );
+  // dependent on AddRowsIndexContact postAgg
+  public static final ArithmeticPostAggregator dependentPostAgg = new ArithmeticPostAggregator(
+      dependentPostAggMetric,
+      "+",
+      Lists.newArrayList(
+          constant,
+          new FieldAccessPostAggregator(addRowsIndexConstantMetric, addRowsIndexConstantMetric),
+          new FieldAccessPostAggregator("rows", "rows")
+      )
+  );
+
+  public static final String hyperUniqueFinalizingPostAggMetric = "hyperUniqueFinalizingPostAggMetric";
+  public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
+      hyperUniqueFinalizingPostAggMetric,
+      "+",
+      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1, 1))
+  );
+
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
       rowsCount,
       indexDoubleSum,
@@ -151,7 +171,10 @@ public class QueryRunnerTestHelper
   )
   {
     return new FinalizeResultsQueryRunner<T>(
-        factory.createRunner(adapter),
+        new BySegmentQueryRunner<T>(
+            segmentId, adapter.getDataInterval().getStart(),
+            factory.createRunner(adapter)
+        ),
         factory.getToolchest()
     );
   }
