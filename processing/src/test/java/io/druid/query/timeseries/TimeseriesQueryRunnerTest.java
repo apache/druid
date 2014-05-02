@@ -1170,7 +1170,7 @@ public class TimeseriesQueryRunnerTest
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-        .context(ImmutableMap.of("skipEmptyBuckets", "true"))
+        .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", "true"))
         .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList();
