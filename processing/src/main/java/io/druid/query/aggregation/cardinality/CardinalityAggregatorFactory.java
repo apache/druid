@@ -21,7 +21,6 @@ package io.druid.query.aggregation.cardinality;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -30,9 +29,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.NoopAggregator;
-import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -78,7 +76,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     List<DimensionSelector> selectors = makeDimensionSelectors(columnFactory);
 
     if (selectors.isEmpty()) {
-      return new NoopAggregator(name);
+      return Aggregators.noopAggregator();
     }
 
     return new CardinalityAggregator(name, selectors, byRow);
@@ -91,7 +89,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
     List<DimensionSelector> selectors = makeDimensionSelectors(columnFactory);
 
     if (selectors.isEmpty()) {
-      return new NoopBufferAggregator();
+      return Aggregators.noopBufferAggregator();
     }
 
     return new CardinalityBufferAggregator(selectors, byRow);
@@ -103,14 +101,14 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
         Iterables.filter(
             Iterables.transform(
                 fieldNames, new Function<String, DimensionSelector>()
-                {
-                  @Nullable
-                  @Override
-                  public DimensionSelector apply(@Nullable String input)
-                  {
-                    return columnFactory.makeDimensionSelector(input);
-                  }
-                }
+            {
+              @Nullable
+              @Override
+              public DimensionSelector apply(@Nullable String input)
+              {
+                return columnFactory.makeDimensionSelector(input);
+              }
+            }
             ), Predicates.notNull()
         )
     );
