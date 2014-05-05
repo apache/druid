@@ -76,32 +76,45 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     return service;
   }
 
-  protected static final int DEFAULT_PRIORITY = 0;
-
   private final ListeningExecutorService delegate;
   private final BlockingQueue<Runnable> delegateQueue;
+  private final boolean allowRegularTasks;
+  private final int defaultPriority;
 
   public PrioritizedExecutorService(
       ThreadPoolExecutor threadPoolExecutor
   )
   {
+    this(threadPoolExecutor, false, 0);
+  }
+
+  public PrioritizedExecutorService(
+      ThreadPoolExecutor threadPoolExecutor,
+      boolean allowRegularTasks,
+      int defaultPriority
+  )
+  {
     this.delegate = MoreExecutors.listeningDecorator(Preconditions.checkNotNull(threadPoolExecutor));
     this.delegateQueue = threadPoolExecutor.getQueue();
+    this.allowRegularTasks = allowRegularTasks;
+    this.defaultPriority = defaultPriority;
   }
 
   @Override protected <T> PrioritizedListenableFutureTask<T> newTaskFor(Runnable runnable, T value) {
+    Preconditions.checkArgument(allowRegularTasks || runnable instanceof PrioritizedRunnable, "task does not implement PrioritizedRunnable");
     return PrioritizedListenableFutureTask.create(ListenableFutureTask.create(runnable, value),
                                                   runnable instanceof PrioritizedRunnable
                                                   ? ((PrioritizedRunnable) runnable).getPriority()
-                                                  : DEFAULT_PRIORITY
+                                                  : defaultPriority
     );
   }
 
   @Override protected <T> PrioritizedListenableFutureTask<T> newTaskFor(Callable<T> callable) {
+    Preconditions.checkArgument(allowRegularTasks || callable instanceof PrioritizedCallable, "task does not implement PrioritizedCallable");
     return PrioritizedListenableFutureTask.create(
         ListenableFutureTask.create(callable), callable instanceof PrioritizedCallable
                                                ? ((PrioritizedCallable) callable).getPriority()
-                                               : DEFAULT_PRIORITY
+                                               : defaultPriority
     );
   }
 
