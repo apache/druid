@@ -117,7 +117,7 @@ public class TimeBoundaryQueryQueryToolChest
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
   {
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().getMetricName())
+        .setUser2(query.getDataSource().toShortString())
         .setUser4(query.getType())
         .setUser6("false");
   }

@@ -163,7 +163,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().getMetricName())
+        .setUser2(query.getDataSource().toShortString())
         .setUser3(String.format("%,d dims", query.getDimensions().size()))
         .setUser4("groupBy")
         .setUser5(Joiner.on(",").join(query.getIntervals()))

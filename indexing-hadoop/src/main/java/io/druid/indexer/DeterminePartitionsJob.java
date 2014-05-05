@@ -762,6 +762,8 @@ public class DeterminePartitionsJob implements Jobby
         log.info("  %s", HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(shardSpec));
       }
 
+      System.out.println(HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(chosenShardSpecs));
+
       try {
         HadoopDruidIndexerConfig.jsonMapper
                                 .writerWithType(

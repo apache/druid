@@ -22,10 +22,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Sequence;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -104,7 +101,7 @@ public class DataSourceTest
         Lists.newArrayList("ds1", "ds2"),
         Lists.newArrayList(dataSource.getNames())
     );
-    Assert.assertEquals(Lists.newArrayList("ds1", "ds2").toString(), dataSource.getMetricName());
+    Assert.assertEquals(Lists.newArrayList("ds1", "ds2").toString(), dataSource.toShortString());
 
     final DataSource serde = jsonMapper.readValue(jsonMapper.writeValueAsString(dataSource), DataSource.class);
     Assert.assertEquals(dataSource, serde);

@@ -27,9 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -60,11 +58,11 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public String getMetricName()
+  public String toShortString()
   {
     SortedSet<String> str = new TreeSet<>();
     for(DataSource ds : dataSources){
-      str.add(ds.getMetricName());
+      str.add(ds.toShortString());
     }
     return str.toString();
   }

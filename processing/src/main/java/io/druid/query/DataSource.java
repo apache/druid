@@ -39,5 +39,5 @@ public interface DataSource
 {
   public Iterable<String> getNames();
 
-  public String getMetricName();
+  public String toShortString();
 }

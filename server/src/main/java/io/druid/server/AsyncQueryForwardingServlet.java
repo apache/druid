@@ -282,7 +282,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
           emitter.emit(
               new ServiceMetricEvent.Builder()
-                  .setUser2(theQuery.getDataSource().getMetricName())
+                  .setUser2(theQuery.getDataSource().toShortString())
                   .setUser4(theQuery.getType())
                   .setUser5(COMMA_JOIN.join(theQuery.getIntervals()))
                   .setUser6(String.valueOf(theQuery.hasFilters()))

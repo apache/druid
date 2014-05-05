@@ -51,7 +51,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public String getMetricName()
+  public String toShortString()
   {
     return name;
   }

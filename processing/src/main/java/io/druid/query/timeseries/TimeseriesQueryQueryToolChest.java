@@ -122,7 +122,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().getMetricName())
+        .setUser2(query.getDataSource().toShortString())
         .setUser4("timeseries")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
