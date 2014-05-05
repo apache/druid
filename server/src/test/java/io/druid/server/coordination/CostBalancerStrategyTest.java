@@ -32,7 +32,6 @@ import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
@@ -47,12 +46,11 @@ public class CostBalancerStrategyTest
    * Create Druid cluster with 10 servers having 100 segments each, and 1 server with 98 segment
    * Cost Balancer Strategy should assign the next segment to the server with less segments.
    */
-  @Before
-  public void setup(){
-
+  public void setupDummyCluster(int serverCount, int maxSegments)
+  {
     // Create 10 servers with current size being 3K & max size being 10K
     // Each having having 100 segments
-    for (int i = 0 ; i < 10; i++){
+    for (int i = 0; i < serverCount; i++) {
       LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
       DruidServer druidServer = EasyMock.createMock(DruidServer.class);
       EasyMock.expect(druidServer.getName()).andReturn("DruidServer_Name_" + i).anyTimes();
@@ -61,11 +59,12 @@ public class CostBalancerStrategyTest
 
       EasyMock.expect(druidServer.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
       Map<String, DataSegment> segments = Maps.newHashMap();
-      for (int j = 0; j < 100; j ++){
+      for (int j = 0; j < maxSegments; j++) {
         DataSegment segment = getSegment(j);
         segments.put(segment.getIdentifier(), segment);
         EasyMock.expect(druidServer.getSegment(segment.getIdentifier())).andReturn(segment).anyTimes();
       }
+
       EasyMock.expect(druidServer.getSegments()).andReturn(segments).anyTimes();
 
       EasyMock.replay(druidServer);
@@ -81,7 +80,7 @@ public class CostBalancerStrategyTest
 
     EasyMock.expect(druidServer.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
     Map<String, DataSegment> segments = Maps.newHashMap();
-    for (int j = 0; j < 98; j ++){
+    for (int j = 0; j < (maxSegments - 2); j++) {
       DataSegment segment = getSegment(j);
       segments.put(segment.getIdentifier(), segment);
       EasyMock.expect(druidServer.getSegment(segment.getIdentifier())).andReturn(segment).anyTimes();
@@ -96,27 +95,55 @@ public class CostBalancerStrategyTest
    * Returns segment with dummy id and size 100
    *
    * @param index
+   *
    * @return segment
    */
-  private DataSegment getSegment(int index){
-    DataSegment segment = EasyMock.createMock(DataSegment.class);
-    EasyMock.expect(segment.getInterval()).andReturn(day).anyTimes();
-    EasyMock.expect(segment.getIdentifier()).andReturn("DUMMY_SEGID_" + index).anyTimes();
-    EasyMock.expect(segment.getDataSource()).andReturn("DUMMY").anyTimes();
-    EasyMock.expect(segment.getSize()).andReturn(index * 100L).anyTimes();
-    EasyMock.replay(segment);
+  private DataSegment getSegment(int index)
+  {
+    // Not using EasyMock as it hampers the performance of multithreads.
+    DataSegment segment = new DataSegment(
+        "DUMMY", day, String.valueOf(index), Maps.<String, Object>newConcurrentMap(),
+        Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, index * 100L
+    );
     return segment;
   }
 
   @Test
-  public void testCostBalancerMultithreadStrategy() throws InterruptedException {
+  public void testCostBalancerMultithreadStrategy() throws InterruptedException
+  {
+    setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
 
-    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 8);
+    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 1);
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
+
+  @Test
+  public void testPerf() throws InterruptedException
+  {
+    setupDummyCluster(100, 500);
+    DataSegment segment = getSegment(1000);
+
+    BalancerStrategy singleThreadStrategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 1);
+    long start = System.currentTimeMillis();
+    singleThreadStrategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    long end = System.currentTimeMillis();
+    long latencySingleThread = end - start;
+
+    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 4);
+    start = System.currentTimeMillis();
+    strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    end = System.currentTimeMillis();
+    long latencyMultiThread = end - start;
+
+    System.err.println("Latency - Single Threaded (ms): " + latencySingleThread);
+    System.err.println("Latency - Multi Threaded (ms): " + latencyMultiThread);
+
+    Assert.assertTrue("Latency of multi-thread strategy should always be less than single thread.", latencyMultiThread < latencySingleThread);
+  }
+
 
 
 }
