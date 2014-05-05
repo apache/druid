@@ -19,19 +19,33 @@
 
 package io.druid.client.selector;
 
-import com.google.common.collect.Iterators;
-import io.druid.timeline.DataSegment;
+import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
 
-import java.util.Random;
-import java.util.Set;
+import java.util.Comparator;
 
-public class RandomServerSelectorStrategy implements ServerSelectorStrategy
+/**
+ */
+public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
-  private static final Random random = new Random();
+  private static final Comparator<Integer> comparator = new Comparator<Integer>()
+  {
+    @Override
+    public int compare(Integer o1, Integer o2)
+    {
+      return Ints.compare(o1, o2);
+    }
+  };
+
+  @Inject
+  public LowestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  {
+    super(serverSelectorStrategy);
+  }
 
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public Comparator<Integer> getComparator()
   {
-    return Iterators.get(servers.iterator(), random.nextInt(servers.size()));
+    return comparator;
   }
 }

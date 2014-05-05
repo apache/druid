@@ -19,19 +19,20 @@
 
 package io.druid.client.selector;
 
-import com.google.common.collect.Iterators;
-import io.druid.timeline.DataSegment;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
 
-import java.util.Random;
-import java.util.Set;
+import java.util.List;
 
-public class RandomServerSelectorStrategy implements ServerSelectorStrategy
+/**
+ */
+public class CustomTierSelectorStrategyConfig
 {
-  private static final Random random = new Random();
+  @JsonProperty
+  private List<Integer> priorities = Lists.newArrayList();
 
-  @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  public List<Integer> getPriorities()
   {
-    return Iterators.get(servers.iterator(), random.nextInt(servers.size()));
+    return priorities;
   }
 }

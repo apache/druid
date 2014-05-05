@@ -28,6 +28,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.RequestBuilder;
 import io.druid.client.selector.ConnectionCountServerSelectorStrategy;
+import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.jackson.DefaultObjectMapper;
@@ -87,7 +88,7 @@ public class DirectDruidClientTest
             0,
             0L
         ),
-        new ConnectionCountServerSelectorStrategy()
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
 
     DirectDruidClient client1 = new DirectDruidClient(
