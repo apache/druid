@@ -59,14 +59,6 @@ import java.util.TreeSet;
 @Path("/druid/coordinator/v1/datasources")
 public class DatasourcesResource
 {
-  private static Map<String, Object> makeSimpleDatasource(DruidDataSource input)
-  {
-    return new ImmutableMap.Builder<String, Object>()
-        .put("name", input.getName())
-        .put("properties", input.getProperties())
-        .build();
-  }
-
   private final InventoryView serverInventoryView;
   private final DatabaseSegmentManager databaseSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
@@ -145,58 +137,7 @@ public class DatasourcesResource
       return Response.ok(dataSource).build();
     }
 
-    Map<String, Object> tiers = Maps.newHashMap();
-    Map<String, Object> segments = Maps.newHashMap();
-    Map<String, Map<String, Object>> retVal = ImmutableMap.of(
-        "tiers", tiers,
-        "segments", segments
-    );
-
-    int totalSegmentCount = 0;
-    long totalSegmentSize = 0;
-    long minTime = Long.MAX_VALUE;
-    long maxTime = Long.MIN_VALUE;
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
-
-      if (druidDataSource == null) {
-        continue;
-      }
-
-      long dataSourceSegmentSize = 0;
-      for (DataSegment dataSegment : druidDataSource.getSegments()) {
-        dataSourceSegmentSize += dataSegment.getSize();
-        if (dataSegment.getInterval().getStartMillis() < minTime) {
-          minTime = dataSegment.getInterval().getStartMillis();
-        }
-        if (dataSegment.getInterval().getEndMillis() > maxTime) {
-          maxTime = dataSegment.getInterval().getEndMillis();
-        }
-      }
-
-      // segment stats
-      totalSegmentCount += druidDataSource.getSegments().size();
-      totalSegmentSize += dataSourceSegmentSize;
-
-      // tier stats
-      Map<String, Object> tierStats = (Map) tiers.get(druidServer.getTier());
-      if (tierStats == null) {
-        tierStats = Maps.newHashMap();
-        tiers.put(druidServer.getTier(), tierStats);
-      }
-      int segmentCount = MapUtils.getInt(tierStats, "segmentCount", 0);
-      tierStats.put("segmentCount", segmentCount + druidDataSource.getSegments().size());
-
-      long segmentSize = MapUtils.getLong(tierStats, "size", 0L);
-      tierStats.put("size", segmentSize + dataSourceSegmentSize);
-    }
-
-    segments.put("count", totalSegmentCount);
-    segments.put("size", totalSegmentSize);
-    segments.put("minTime", new DateTime(minTime));
-    segments.put("maxTime", new DateTime(maxTime));
-
-    return Response.ok(retVal).build();
+    return Response.ok(getSimpleDatasource(dataSourceName)).build();
   }
 
   @POST
@@ -281,7 +222,7 @@ public class DatasourcesResource
     }
 
     if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
+      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Object> properties = retVal.get(dataSegment.getInterval());
         if (properties == null) {
@@ -569,5 +510,68 @@ public class DatasourcesResource
     }
 
     return new Pair<>(theSegment, servers);
+  }
+
+  private Map<String, Object> makeSimpleDatasource(DruidDataSource input)
+  {
+    return new ImmutableMap.Builder<String, Object>()
+        .put("name", input.getName())
+        .put("properties", getSimpleDatasource(input.getName()))
+        .build();
+  }
+
+  private Map<String, Map<String, Object>> getSimpleDatasource(String dataSourceName)
+  {
+    Map<String, Object> tiers = Maps.newHashMap();
+    Map<String, Object> segments = Maps.newHashMap();
+    Map<String, Map<String, Object>> retVal = ImmutableMap.of(
+        "tiers", tiers,
+        "segments", segments
+    );
+
+    int totalSegmentCount = 0;
+    long totalSegmentSize = 0;
+    long minTime = Long.MAX_VALUE;
+    long maxTime = Long.MIN_VALUE;
+    for (DruidServer druidServer : serverInventoryView.getInventory()) {
+      DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
+
+      if (druidDataSource == null) {
+        continue;
+      }
+
+      long dataSourceSegmentSize = 0;
+      for (DataSegment dataSegment : druidDataSource.getSegments()) {
+        dataSourceSegmentSize += dataSegment.getSize();
+        if (dataSegment.getInterval().getStartMillis() < minTime) {
+          minTime = dataSegment.getInterval().getStartMillis();
+        }
+        if (dataSegment.getInterval().getEndMillis() > maxTime) {
+          maxTime = dataSegment.getInterval().getEndMillis();
+        }
+      }
+
+      // segment stats
+      totalSegmentCount += druidDataSource.getSegments().size();
+      totalSegmentSize += dataSourceSegmentSize;
+
+      // tier stats
+      Map<String, Object> tierStats = (Map) tiers.get(druidServer.getTier());
+      if (tierStats == null) {
+        tierStats = Maps.newHashMap();
+        tiers.put(druidServer.getTier(), tierStats);
+      }
+      int segmentCount = MapUtils.getInt(tierStats, "segmentCount", 0);
+      tierStats.put("segmentCount", segmentCount + druidDataSource.getSegments().size());
+
+      long segmentSize = MapUtils.getLong(tierStats, "size", 0L);
+      tierStats.put("size", segmentSize + dataSourceSegmentSize);
+    }
+
+    segments.put("count", totalSegmentCount);
+    segments.put("size", totalSegmentSize);
+    segments.put("minTime", new DateTime(minTime));
+    segments.put("maxTime", new DateTime(maxTime));
+    return retVal;
   }
 }
