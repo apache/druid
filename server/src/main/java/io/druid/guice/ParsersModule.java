@@ -17,12 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.guice;
 
-import java.util.Collection;
-import java.util.Map;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import io.druid.data.input.ProtoBufInputRowParser;
+import io.druid.initialization.DruidModule;
 
-public interface EventReceiver
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ */
+public class ParsersModule implements DruidModule
 {
-  public void addAll(Collection<Map<String, Object>> events);
+  @Override
+  public void configure(Binder binder)
+  {
+  }
+
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return Arrays.<Module>asList(
+        new SimpleModule("ParsersModule")
+            .registerSubtypes(
+                new NamedType(ProtoBufInputRowParser.class, "protobuf")
+            )
+    );
+  }
 }

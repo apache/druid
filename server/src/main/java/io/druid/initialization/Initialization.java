@@ -47,6 +47,7 @@ import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
+import io.druid.guice.ParsersModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
@@ -327,7 +328,8 @@ public class Initialization
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
         new LocalDataStorageDruidModule(),
-        new FirehoseModule()
+        new FirehoseModule(),
+        new ParsersModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);

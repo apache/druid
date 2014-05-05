@@ -17,17 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.segment.realtime.firehose;
 
-import com.google.common.base.Optional;
+import java.util.Collection;
+import java.util.Map;
 
-/**
- */
-public interface ChatHandlerProvider
+public interface EventReceiver
 {
-  public void register(final String key, ChatHandler handler);
-
-  public void unregister(final String key);
-
-  public Optional<ChatHandler> get(final String key);
+  public void addAll(Collection<Map<String, Object>> events);
 }
