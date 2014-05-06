@@ -27,10 +27,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 public class UnionDataSource implements DataSource
 {
@@ -45,30 +44,24 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public Iterable<String> getNames()
+  public List<String> getNames()
   {
-   return Iterables.concat(Iterables.transform(dataSources, new Function<DataSource, Iterable<String>>()
-   {
-     @Override
-     public Iterable<String> apply(DataSource input)
-     {
-       return input.getNames();
-     }
-   }));
-  }
-
-  @Override
-  public String toShortString()
-  {
-    SortedSet<String> str = new TreeSet<>();
-    for(DataSource ds : dataSources){
-      str.add(ds.toShortString());
-    }
-    return str.toString();
+    return Lists.transform(
+        dataSources,
+        new Function<TableDataSource, String>()
+        {
+          @Override
+          public String apply(TableDataSource input)
+          {
+            return Iterables.getOnlyElement(input.getNames());
+          }
+        }
+    );
   }
 
   @JsonProperty
-  public List<TableDataSource> getDataSources(){
+  public List<TableDataSource> getDataSources()
+  {
     return dataSources;
   }
 

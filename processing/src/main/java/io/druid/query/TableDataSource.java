@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Lists;
 
+import java.util.Arrays;
 import java.util.List;
 
 @JsonTypeName("table")
@@ -45,15 +46,9 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public Iterable<String> getNames()
+  public List<String> getNames()
   {
-    return Lists.newArrayList(name);
-  }
-
-  @Override
-  public String toShortString()
-  {
-    return name;
+    return Arrays.asList(name);
   }
 
   public String toString() { return name; }

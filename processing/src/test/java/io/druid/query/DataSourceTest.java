@@ -101,7 +101,6 @@ public class DataSourceTest
         Lists.newArrayList("ds1", "ds2"),
         Lists.newArrayList(dataSource.getNames())
     );
-    Assert.assertEquals(Lists.newArrayList("ds1", "ds2").toString(), dataSource.toShortString());
 
     final DataSource serde = jsonMapper.readValue(jsonMapper.writeValueAsString(dataSource), DataSource.class);
     Assert.assertEquals(dataSource, serde);

@@ -322,11 +322,6 @@ public class ServerManager implements QuerySegmentWalker
 
   private String getDataSourceName(DataSource dataSource)
   {
-    Preconditions.checkArgument(
-        dataSource instanceof TableDataSource,
-        "Subqueries and Unions are only supported in the broker"
-    );
-
     return Iterables.getOnlyElement(dataSource.getNames());
   }
 

@@ -37,6 +37,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
@@ -138,7 +139,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toShortString())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4(String.format("topN/%s/%s", query.getThreshold(), query.getDimensionSpec().getDimension()))
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))

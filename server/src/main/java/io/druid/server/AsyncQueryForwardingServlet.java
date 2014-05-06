@@ -31,6 +31,7 @@ import com.metamx.http.client.response.HttpResponseHandler;
 import io.druid.client.RoutingDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
@@ -282,7 +283,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
           emitter.emit(
               new ServiceMetricEvent.Builder()
-                  .setUser2(theQuery.getDataSource().toShortString())
+                  .setUser2(DataSourceUtil.getMetricName(theQuery.getDataSource()))
                   .setUser4(theQuery.getType())
                   .setUser5(COMMA_JOIN.join(theQuery.getIntervals()))
                   .setUser6(String.valueOf(theQuery.hasFilters()))

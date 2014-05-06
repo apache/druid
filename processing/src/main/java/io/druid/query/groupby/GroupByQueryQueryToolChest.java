@@ -35,6 +35,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.query.DataSource;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryDataSource;
@@ -163,7 +164,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toShortString())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser3(String.format("%,d dims", query.getDimensions().size()))
         .setUser4("groupBy")
         .setUser5(Joiner.on(",").join(query.getIntervals()))
