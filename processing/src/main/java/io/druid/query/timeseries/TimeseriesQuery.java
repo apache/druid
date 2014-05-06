@@ -116,6 +116,20 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     );
   }
 
+  @Override
+  public Query<Result<TimeseriesResultValue>> withDataSource(DataSource dataSource)
+  {
+    return new TimeseriesQuery(
+        dataSource,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
   public TimeseriesQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TimeseriesQuery(

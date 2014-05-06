@@ -97,6 +97,16 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     );
   }
 
+  @Override
+  public Query<Result<TimeBoundaryResultValue>> withDataSource(DataSource dataSource)
+  {
+    return new TimeBoundaryQuery(
+        dataSource,
+        getQuerySegmentSpec(),
+        getContext()
+    );
+  }
+
   public byte[] getCacheKey()
   {
     return ByteBuffer.allocate(1)

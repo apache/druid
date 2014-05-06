@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -153,13 +154,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
   {
     QueryRunner<T> queryRunner = null;
-    String queryDataSource;
-    try {
-        queryDataSource = ((TableDataSource)query.getDataSource()).getName();
-    }
-    catch (ClassCastException e) {
-        throw new IllegalArgumentException("Subqueries are not welcome here");
-    }
+    final String queryDataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
       final Task task = taskRunnerWorkItem.getTask();

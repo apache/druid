@@ -18,40 +18,52 @@
  * This file Copyright (C) 2014 N3TWORK, Inc. and contributed to the Druid project
  * under the Druid Corporate Contributor License Agreement.
  */
+
 package io.druid.query;
+
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import java.util.Arrays;
 import java.util.List;
 
-@JsonTypeName("table")
-public class TableDataSource implements DataSource
+public class UnionDataSource implements DataSource
 {
   @JsonProperty
-  private final String name;
+  private final List<TableDataSource> dataSources;
 
   @JsonCreator
-  public TableDataSource(@JsonProperty("name") String name)
+  public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
   {
-    this.name = (name == null ? null : name.toLowerCase());
-  }
-
-  @JsonProperty
-  public String getName(){
-    return name;
+    Preconditions.checkNotNull(dataSources, "dataSources cannot be null for unionDataSource");
+    this.dataSources = dataSources;
   }
 
   @Override
   public List<String> getNames()
   {
-    return Arrays.asList(name);
+    return Lists.transform(
+        dataSources,
+        new Function<TableDataSource, String>()
+        {
+          @Override
+          public String apply(TableDataSource input)
+          {
+            return Iterables.getOnlyElement(input.getNames());
+          }
+        }
+    );
   }
 
-  public String toString() { return name; }
+  @JsonProperty
+  public List<TableDataSource> getDataSources()
+  {
+    return dataSources;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -59,13 +71,13 @@ public class TableDataSource implements DataSource
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TableDataSource)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    TableDataSource that = (TableDataSource) o;
+    UnionDataSource that = (UnionDataSource) o;
 
-    if (!name.equals(that.name)) {
+    if (!dataSources.equals(that.dataSources)) {
       return false;
     }
 
@@ -75,6 +87,14 @@ public class TableDataSource implements DataSource
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    return dataSources.hashCode();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "UnionDataSource{" +
+           "dataSources=" + dataSources +
+           '}';
   }
 }

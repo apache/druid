@@ -21,7 +21,9 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
@@ -252,14 +254,7 @@ public class ServerManager implements QuerySegmentWalker
     if (!(dataSource instanceof TableDataSource)) {
       throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
     }
-
-    String dataSourceName;
-    try {
-      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
-    }
-    catch (ClassCastException e) {
-      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
-    }
+    String dataSourceName = getDataSourceName(dataSource);
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
 
@@ -325,6 +320,11 @@ public class ServerManager implements QuerySegmentWalker
     return new FinalizeResultsQueryRunner<T>(toolChest.mergeResults(factory.mergeRunners(exec, adapters)), toolChest);
   }
 
+  private String getDataSourceName(DataSource dataSource)
+  {
+    return Iterables.getOnlyElement(dataSource.getNames());
+  }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
@@ -338,13 +338,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    String dataSourceName;
-    try {
-      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
-    }
-    catch (ClassCastException e) {
-      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
-    }
+    String dataSourceName = getDataSourceName(query.getDataSource());
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
 

@@ -1,5 +1,6 @@
 /*
  * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -14,28 +15,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
- * This file Copyright (C) 2014 N3TWORK, Inc. and contributed to the Druid project
- * under the Druid Corporate Contributor License Agreement.
  */
 
 package io.druid.query;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import java.util.List;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME,
-              include = JsonTypeInfo.As.PROPERTY,
-              property = "type",
-              defaultImpl = LegacyDataSource.class)
-@JsonSubTypes({
-                  @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
-                  @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
-                  @JsonSubTypes.Type(value = UnionDataSource.class, name = "union")
-              })
-public interface DataSource
+public class DataSourceUtil
 {
-  public List<String> getNames();
+  public static String getMetricName(DataSource dataSource)
+  {
+    final List<String> names = dataSource.getNames();
+    return names.size() == 1 ? names.get(0) : names.toString();
+  }
 }

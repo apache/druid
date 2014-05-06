@@ -34,6 +34,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryConfig;
@@ -123,7 +124,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4("Select")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -277,7 +278,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(QueryRunner<Result<SelectResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<SelectResultValue>>(runner, config.getChunkPeriod());
+    return new IntervalChunkingQueryRunner<Result<SelectResultValue>>(
+        runner,
+        config.getChunkPeriod()
+
+    );
   }
 
   public Ordering<Result<SelectResultValue>> getOrdering()

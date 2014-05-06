@@ -120,6 +120,21 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     );
   }
 
+  @Override
+  public Query<Result<SelectResultValue>> withDataSource(DataSource dataSource)
+  {
+    return new SelectQuery(
+        dataSource,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        dimensions,
+        metrics,
+        pagingSpec,
+        getContext()
+    );
+  }
+
   public SelectQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new SelectQuery(

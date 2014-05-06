@@ -93,6 +93,17 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   }
 
   @Override
+  public Query<SegmentAnalysis> withDataSource(DataSource dataSource)
+  {
+    return new SegmentMetadataQuery(
+        dataSource,
+        getQuerySegmentSpec(),
+        toInclude,
+        merge,
+        getContext());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) return true;

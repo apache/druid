@@ -21,6 +21,7 @@ package io.druid.segment.realtime;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.inject.Inject;
@@ -126,18 +127,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
   private <T> String getDataSourceName(Query<T> query)
   {
-    DataSource dataSource = query.getDataSource();
-    if (!(dataSource instanceof TableDataSource)) {
-      throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
-    }
-
-    String dataSourceName;
-    try {
-      dataSourceName = ((TableDataSource) query.getDataSource()).getName();
-    } catch (ClassCastException e) {
-      throw new UnsupportedOperationException("Subqueries are only supported in the broker");
-    }
-    return dataSourceName;
+    return Iterables.getOnlyElement(query.getDataSource().getNames());
   }
 
 
