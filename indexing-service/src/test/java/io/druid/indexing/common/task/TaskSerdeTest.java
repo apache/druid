@@ -397,6 +397,7 @@ public class TaskSerdeTest
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
+        null,
         new HadoopIngestionSpec(
             null, null, null,
             "foo",
