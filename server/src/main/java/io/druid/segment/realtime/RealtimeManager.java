@@ -31,7 +31,6 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
-import io.druid.query.DataSource;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -41,9 +40,8 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.TableDataSource;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.Sink;
 import org.joda.time.DateTime;
@@ -138,7 +136,7 @@ public class RealtimeManager implements QuerySegmentWalker
     private final FireDepartment fireDepartment;
     private final FireDepartmentMetrics metrics;
 
-    private volatile RealtimeDriverConfig config = null;
+    private volatile RealtimeTuningConfig config = null;
     private volatile Firehose firehose = null;
     private volatile Plumber plumber = null;
     private volatile boolean normalExit = true;
@@ -154,7 +152,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
     public void init() throws IOException
     {
-      config = fireDepartment.getDriverConfig();
+      config = fireDepartment.getTuningConfig();
 
       synchronized (this) {
         try {

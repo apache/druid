@@ -30,7 +30,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
@@ -76,7 +76,7 @@ public class FireDepartmentTest
                 null, null, null, null, null, null, null, null, null, null, null, null, 0
             )
         ),
-        new RealtimeDriverConfig(
+        new RealtimeTuningConfig(
             null, null, null, null, null, null, null, null
         ),
         null, null, null, null

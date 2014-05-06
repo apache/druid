@@ -28,7 +28,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
@@ -48,7 +48,7 @@ public class FlushingPlumber extends RealtimePlumber
   private static final EmittingLogger log = new EmittingLogger(FlushingPlumber.class);
 
   private final DataSchema schema;
-  private final RealtimeDriverConfig config;
+  private final RealtimeTuningConfig config;
   private final Duration flushDuration;
 
   private volatile ScheduledExecutorService flushScheduledExec = null;
@@ -57,7 +57,7 @@ public class FlushingPlumber extends RealtimePlumber
   public FlushingPlumber(
       Duration flushDuration,
       DataSchema schema,
-      RealtimeDriverConfig config,
+      RealtimeTuningConfig config,
       FireDepartmentMetrics metrics,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,

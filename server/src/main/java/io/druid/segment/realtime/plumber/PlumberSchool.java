@@ -23,10 +23,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.Granularity;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-
-import java.io.File;
 
 /**
  */
@@ -42,7 +40,7 @@ public interface PlumberSchool
    *
    * @return returns a plumber
    */
-  public Plumber findPlumber(DataSchema schema, RealtimeDriverConfig config, FireDepartmentMetrics metrics);
+  public Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
 
   @Deprecated
   public Granularity getSegmentGranularity();

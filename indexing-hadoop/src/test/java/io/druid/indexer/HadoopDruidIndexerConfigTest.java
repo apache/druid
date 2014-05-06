@@ -21,7 +21,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,7 +49,7 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void shouldMakeHDFSCompliantSegmentOutputPath()
   {
-    HadoopIngestionSchema schema;
+    HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -63,7 +62,7 @@ public class HadoopDruidIndexerConfigTest
           + " },"
           + "\"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\""
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -71,8 +70,8 @@ public class HadoopDruidIndexerConfigTest
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withDriverConfig(
-            schema.getDriverConfig()
+        schema.withTuningConfig(
+            schema.getTuningConfig()
                   .withVersion(
                       "some:brand:new:version"
                   )
@@ -90,7 +89,7 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -103,7 +102,7 @@ public class HadoopDruidIndexerConfigTest
           + " },"
           + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -111,8 +110,8 @@ public class HadoopDruidIndexerConfigTest
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withDriverConfig(
-            schema.getDriverConfig()
+        schema.withTuningConfig(
+            schema.getTuningConfig()
                   .withVersion(
                       "some:brand:new:version"
                   )

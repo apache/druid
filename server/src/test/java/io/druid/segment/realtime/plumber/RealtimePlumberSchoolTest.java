@@ -33,7 +33,6 @@ import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -42,7 +41,7 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -126,7 +125,7 @@ public class RealtimePlumberSchoolTest
 
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
 
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
         null,
         null,
@@ -153,7 +152,7 @@ public class RealtimePlumberSchoolTest
         0
     );
 
-    plumber = realtimePlumberSchool.findPlumber(schema, driverConfig, new FireDepartmentMetrics());
+    plumber = realtimePlumberSchool.findPlumber(schema, tuningConfig, new FireDepartmentMetrics());
   }
 
   @After

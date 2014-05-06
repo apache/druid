@@ -34,7 +34,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
@@ -48,7 +48,6 @@ import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -95,7 +94,7 @@ public class RealtimeManagerTest
         {
           @Override
           public Plumber findPlumber(
-              DataSchema schema, RealtimeDriverConfig config, FireDepartmentMetrics metrics
+              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
           )
           {
             return plumber;
@@ -108,7 +107,7 @@ public class RealtimeManagerTest
           }
         }
     );
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
         new Period("P1Y"),
         null,
@@ -118,14 +117,14 @@ public class RealtimeManagerTest
         null,
         null
     );
-    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, driverConfig, new DateTime().toString()));
+    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));
 
     realtimeManager = new RealtimeManager(
         Arrays.<FireDepartment>asList(
             new FireDepartment(
                 schema,
                 ioConfig,
-                driverConfig,
+                tuningConfig,
                 null, null, null, null
             )
         ),

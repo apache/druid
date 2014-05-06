@@ -44,10 +44,10 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.DriverConfig;
+import io.druid.segment.indexing.IngestionSpec;
+import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.IOConfig;
-import io.druid.segment.indexing.IngestionSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -72,7 +72,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(IndexTask.class);
 
-  private static String makeId(String id, IndexIngestionSchema ingestionSchema, String dataSource)
+  private static String makeId(String id, IndexIngestionSpec ingestionSchema, String dataSource)
   {
     if (id == null) {
       return String.format("index_%s_%s", makeDataSource(ingestionSchema, dataSource), new DateTime().toString());
@@ -81,7 +81,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     return id;
   }
 
-  private static String makeDataSource(IndexIngestionSchema ingestionSchema, String dataSource)
+  private static String makeDataSource(IndexIngestionSpec ingestionSchema, String dataSource)
   {
     if (ingestionSchema != null) {
       return ingestionSchema.getDataSchema().getDataSource();
@@ -90,7 +90,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
   }
 
-  private static Interval makeInterval(IndexIngestionSchema ingestionSchema, GranularitySpec granularitySpec)
+  private static Interval makeInterval(IndexIngestionSpec ingestionSchema, GranularitySpec granularitySpec)
   {
     GranularitySpec spec;
     if (ingestionSchema != null) {
@@ -106,12 +106,12 @@ public class IndexTask extends AbstractFixedIntervalTask
   }
 
   @JsonIgnore
-  private final IndexIngestionSchema ingestionSchema;
+  private final IndexIngestionSpec ingestionSchema;
 
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("schema") IndexIngestionSchema ingestionSchema,
+      @JsonProperty("schema") IndexIngestionSpec ingestionSchema,
       // Backwards Compatible
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("granularitySpec") final GranularitySpec granularitySpec,
@@ -132,7 +132,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     if (ingestionSchema != null) {
       this.ingestionSchema = ingestionSchema;
     } else { // Backwards Compatible
-      this.ingestionSchema = new IndexIngestionSchema(
+      this.ingestionSchema = new IndexIngestionSpec(
           new DataSchema(
               dataSource,
               firehoseFactory.getParser(),
@@ -140,7 +140,7 @@ public class IndexTask extends AbstractFixedIntervalTask
               granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
           ),
           new IndexIOConfig(firehoseFactory),
-          new IndexDriverConfig(targetPartitionSize, rowFlushBoundary)
+          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary)
       );
     }
   }
@@ -152,7 +152,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   }
 
   @JsonProperty("schema")
-  public IndexIngestionSchema getIngestionSchema()
+  public IndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
   }
@@ -161,7 +161,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    final int targetPartitionSize = ingestionSchema.getDriverConfig().getTargetPartitionSize();
+    final int targetPartitionSize = ingestionSchema.getTuningConfig().getTargetPartitionSize();
 
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Set<DataSegment> segments = Sets.newHashSet();
@@ -355,7 +355,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     );
 
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-    final int rowFlushBoundary = ingestionSchema.getDriverConfig().getRowFlushBoundary();
+    final int rowFlushBoundary = ingestionSchema.getTuningConfig().getRowFlushBoundary();
 
     // We need to track published segments.
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
@@ -384,7 +384,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         version,
         wrappedDataSegmentPusher,
         tmpDir
-    ).findPlumber(schema, new RealtimeDriverConfig(null, null, null, null, null, null, null, shardSpec), metrics);
+    ).findPlumber(schema, new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec), metrics);
 
     // rowFlushBoundary for this job
     final int myRowFlushBoundary = rowFlushBoundary > 0
@@ -463,24 +463,24 @@ public class IndexTask extends AbstractFixedIntervalTask
     return interval.contains(inputRow.getTimestampFromEpoch()) && shardSpec.isInChunk(inputRow);
   }
 
-  public static class IndexIngestionSchema extends IngestionSchema<IndexIOConfig, IndexDriverConfig>
+  public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>
   {
     private final DataSchema dataSchema;
     private final IndexIOConfig ioConfig;
-    private final IndexDriverConfig driverConfig;
+    private final IndexTuningConfig tuningConfig;
 
     @JsonCreator
-    public IndexIngestionSchema(
+    public IndexIngestionSpec(
         @JsonProperty("dataSchema") DataSchema dataSchema,
         @JsonProperty("ioConfig") IndexIOConfig ioConfig,
-        @JsonProperty("driverConfig") IndexDriverConfig driverConfig
+        @JsonProperty("tuningConfig") IndexTuningConfig tuningConfig
     )
     {
-      super(dataSchema, ioConfig, driverConfig);
+      super(dataSchema, ioConfig, tuningConfig);
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.driverConfig = driverConfig;
+      this.tuningConfig = tuningConfig;
     }
 
     @Override
@@ -498,10 +498,10 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
 
     @Override
-    @JsonProperty("driverConfig")
-    public IndexDriverConfig getDriverConfig()
+    @JsonProperty("tuningConfig")
+    public IndexTuningConfig getTuningConfig()
     {
-      return driverConfig;
+      return tuningConfig;
     }
   }
 
@@ -526,13 +526,13 @@ public class IndexTask extends AbstractFixedIntervalTask
   }
 
   @JsonTypeName("index")
-  public static class IndexDriverConfig implements DriverConfig
+  public static class IndexTuningConfig implements TuningConfig
   {
     private final int targetPartitionSize;
     private final int rowFlushBoundary;
 
     @JsonCreator
-    public IndexDriverConfig(
+    public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary
     )

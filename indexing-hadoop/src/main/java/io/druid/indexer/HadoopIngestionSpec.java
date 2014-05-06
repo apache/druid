@@ -33,7 +33,7 @@ import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.IngestionSchema;
+import io.druid.segment.indexing.IngestionSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.DateTime;
@@ -44,17 +44,17 @@ import java.util.Map;
 
 /**
  */
-public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, HadoopDriverConfig>
+public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTuningConfig>
 {
   private final DataSchema dataSchema;
   private final HadoopIOConfig ioConfig;
-  private final HadoopDriverConfig driverConfig;
+  private final HadoopTuningConfig tuningConfig;
 
   @JsonCreator
-  public HadoopIngestionSchema(
+  public HadoopIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") HadoopIOConfig ioConfig,
-      @JsonProperty("driverConfig") HadoopDriverConfig driverConfig,
+      @JsonProperty("tuningConfig") HadoopTuningConfig tuningConfig,
       // All deprecated
       final @JsonProperty("dataSource") String dataSource,
       final @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
@@ -82,12 +82,12 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
       final @JsonProperty("targetPartitionSize") Long targetPartitionSize
   )
   {
-    super(dataSchema, ioConfig, driverConfig);
+    super(dataSchema, ioConfig, tuningConfig);
 
     if (dataSchema != null) {
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.driverConfig = driverConfig == null ? HadoopDriverConfig.makeDefaultDriverConfig() : driverConfig;
+      this.tuningConfig = tuningConfig == null ? HadoopTuningConfig.makeDefaultTuningConfig() : tuningConfig;
     } else { // Backwards compatibility
       TimestampSpec theTimestampSpec = (timestampSpec == null)
                                        ? new TimestampSpec(timestampColumn, timestampFormat)
@@ -153,7 +153,7 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
           segmentOutputPath
       );
 
-      this.driverConfig = new HadoopDriverConfig(
+      this.tuningConfig = new HadoopTuningConfig(
           workingPath,
           version,
           thePartitionSpec,
@@ -182,19 +182,19 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
     return ioConfig;
   }
 
-  @JsonProperty("driverConfig")
+  @JsonProperty("tuningConfig")
   @Override
-  public HadoopDriverConfig getDriverConfig()
+  public HadoopTuningConfig getTuningConfig()
   {
-    return driverConfig;
+    return tuningConfig;
   }
 
-  public HadoopIngestionSchema withDataSchema(DataSchema schema)
+  public HadoopIngestionSpec withDataSchema(DataSchema schema)
   {
-    return new HadoopIngestionSchema(
+    return new HadoopIngestionSpec(
         schema,
         ioConfig,
-        driverConfig,
+        tuningConfig,
         null,
         null,
         null,
@@ -221,12 +221,12 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
     );
   }
 
-  public HadoopIngestionSchema withIOConfig(HadoopIOConfig config)
+  public HadoopIngestionSpec withIOConfig(HadoopIOConfig config)
   {
-    return new HadoopIngestionSchema(
+    return new HadoopIngestionSpec(
         dataSchema,
         config,
-        driverConfig,
+        tuningConfig,
         null,
         null,
         null,
@@ -253,9 +253,9 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
     );
   }
 
-  public HadoopIngestionSchema withDriverConfig(HadoopDriverConfig config)
+  public HadoopIngestionSpec withTuningConfig(HadoopTuningConfig config)
   {
-    return new HadoopIngestionSchema(
+    return new HadoopIngestionSpec(
         dataSchema,
         ioConfig,
         config,

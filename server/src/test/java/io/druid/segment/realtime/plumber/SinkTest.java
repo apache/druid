@@ -27,7 +27,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireHydrant;
 import junit.framework.Assert;
@@ -54,7 +54,7 @@ public class SinkTest
 
     final Interval interval = new Interval("2013-01-01/2013-01-02");
     final String version = new DateTime().toString();
-    RealtimeDriverConfig driverConfig = new RealtimeDriverConfig(
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
         new Period("P1Y"),
         null,
@@ -64,7 +64,7 @@ public class SinkTest
         null,
         null
     );
-    final Sink sink = new Sink(interval, schema, driverConfig, version);
+    final Sink sink = new Sink(interval, schema, tuningConfig, version);
 
     sink.add(
         new InputRow()

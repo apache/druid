@@ -24,22 +24,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public abstract class IngestionSchema<IOConfigType extends IOConfig, DriverConfigType extends DriverConfig>
+public abstract class IngestionSpec<IOConfigType extends IOConfig, TuningConfigType extends TuningConfig>
 {
   private final DataSchema dataSchema;
   private final IOConfigType ioConfig;
-  private final DriverConfigType driverConfig;
+  private final TuningConfigType tuningConfig;
 
   @JsonCreator
-  public IngestionSchema(
+  public IngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") IOConfigType ioConfig,
-      @JsonProperty("driverConfig") DriverConfigType driverConfig
+      @JsonProperty("tuningConfig") TuningConfigType tuningConfig
   )
   {
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
-    this.driverConfig = driverConfig;
+    this.tuningConfig = tuningConfig;
   }
 
   @JsonProperty("dataSchema")
@@ -54,9 +54,9 @@ public abstract class IngestionSchema<IOConfigType extends IOConfig, DriverConfi
     return ioConfig;
   }
 
-  @JsonProperty("driverConfig")
-  public DriverConfigType getDriverConfig()
+  @JsonProperty("tuningConfig")
+  public TuningConfigType getTuningConfig()
   {
-    return driverConfig;
+    return tuningConfig;
   }
 }

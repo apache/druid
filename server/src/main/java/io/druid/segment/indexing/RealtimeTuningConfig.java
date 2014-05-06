@@ -34,7 +34,7 @@ import java.io.File;
 
 /**
  */
-public class RealtimeDriverConfig implements DriverConfig
+public class RealtimeTuningConfig implements TuningConfig
 {
   private static final int defaultMaxRowsInMemory = 500000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
@@ -46,9 +46,9 @@ public class RealtimeDriverConfig implements DriverConfig
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
 
   // Might make sense for this to be a builder
-  public static RealtimeDriverConfig makeDefaultDriverConfig()
+  public static RealtimeTuningConfig makeDefaultTuningConfig()
   {
-    return new RealtimeDriverConfig(
+    return new RealtimeTuningConfig(
         defaultMaxRowsInMemory,
         defaultIntermediatePersistPeriod,
         defaultWindowPeriod,
@@ -70,7 +70,7 @@ public class RealtimeDriverConfig implements DriverConfig
   private final ShardSpec shardSpec;
 
   @JsonCreator
-  public RealtimeDriverConfig(
+  public RealtimeTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
@@ -143,9 +143,9 @@ public class RealtimeDriverConfig implements DriverConfig
     return shardSpec;
   }
 
-  public RealtimeDriverConfig withVersioningPolicy(VersioningPolicy policy)
+  public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
-    return new RealtimeDriverConfig(
+    return new RealtimeTuningConfig(
         maxRowsInMemory,
         intermediatePersistPeriod,
         windowPeriod,
@@ -157,9 +157,9 @@ public class RealtimeDriverConfig implements DriverConfig
     );
   }
 
-  public RealtimeDriverConfig withBasePersistDirectory(File dir)
+  public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
-    return new RealtimeDriverConfig(
+    return new RealtimeTuningConfig(
         maxRowsInMemory,
         intermediatePersistPeriod,
         windowPeriod,

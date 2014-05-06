@@ -28,7 +28,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
@@ -94,7 +94,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   @Override
   public Plumber findPlumber(
       final DataSchema schema,
-      final RealtimeDriverConfig config,
+      final RealtimeTuningConfig config,
       final FireDepartmentMetrics metrics
   )
   {

@@ -298,7 +298,7 @@ public class IndexGeneratorJob implements Jobby
         int numRows = index.add(inputRow);
         ++lineCount;
 
-        if (numRows >= config.getSchema().getDriverConfig().getRowFlushBoundary()) {
+        if (numRows >= config.getSchema().getTuningConfig().getRowFlushBoundary()) {
           log.info(
               "%,d lines to %,d rows in %,d millis",
               lineCount - runningTotalLineCount,
@@ -452,7 +452,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getSchema().getDriverConfig().getVersion(),
+          config.getSchema().getTuningConfig().getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,

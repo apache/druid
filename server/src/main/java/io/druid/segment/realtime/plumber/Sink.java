@@ -33,9 +33,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -55,14 +54,14 @@ public class Sink implements Iterable<FireHydrant>
 
   private final Interval interval;
   private final DataSchema schema;
-  private final RealtimeDriverConfig config;
+  private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
 
   public Sink(
       Interval interval,
       DataSchema schema,
-      RealtimeDriverConfig config,
+      RealtimeTuningConfig config,
       String version
   )
   {
@@ -77,7 +76,7 @@ public class Sink implements Iterable<FireHydrant>
   public Sink(
       Interval interval,
       DataSchema schema,
-      RealtimeDriverConfig config,
+      RealtimeTuningConfig config,
       String version,
       List<FireHydrant> hydrants
   )

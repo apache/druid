@@ -36,7 +36,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -71,7 +71,7 @@ public class RealtimePlumber implements Plumber
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
 
   private final DataSchema schema;
-  private final RealtimeDriverConfig config;
+  private final RealtimeTuningConfig config;
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
@@ -94,7 +94,7 @@ public class RealtimePlumber implements Plumber
 
   public RealtimePlumber(
       DataSchema schema,
-      RealtimeDriverConfig config,
+      RealtimeTuningConfig config,
       FireDepartmentMetrics metrics,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
@@ -125,7 +125,7 @@ public class RealtimePlumber implements Plumber
     return schema;
   }
 
-  public RealtimeDriverConfig getConfig()
+  public RealtimeTuningConfig getConfig()
   {
     return config;
   }

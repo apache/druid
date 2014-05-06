@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
-import io.druid.segment.indexing.DriverConfig;
+import io.druid.segment.indexing.TuningConfig;
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -34,15 +34,15 @@ import java.util.Map;
 /**
  */
 @JsonTypeName("hadoop")
-public class HadoopDriverConfig implements DriverConfig
+public class HadoopTuningConfig implements TuningConfig
 {
   private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
   private static final int defaultRowFlushBoundary = 80000;
 
-  public static HadoopDriverConfig makeDefaultDriverConfig()
+  public static HadoopTuningConfig makeDefaultTuningConfig()
   {
-    return new HadoopDriverConfig(
+    return new HadoopTuningConfig(
         null,
         new DateTime().toString(),
         defaultPartitionsSpec,
@@ -68,7 +68,7 @@ public class HadoopDriverConfig implements DriverConfig
   private final Map<String, String> jobProperties;
 
   @JsonCreator
-  public HadoopDriverConfig(
+  public HadoopTuningConfig(
       final @JsonProperty("workingPath") String workingPath,
       final @JsonProperty("version") String version,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
@@ -155,9 +155,9 @@ public class HadoopDriverConfig implements DriverConfig
     return jobProperties;
   }
 
-  public HadoopDriverConfig withWorkingPath(String path)
+  public HadoopTuningConfig withWorkingPath(String path)
   {
-    return new HadoopDriverConfig(
+    return new HadoopTuningConfig(
         path,
         version,
         partitionsSpec,
@@ -171,9 +171,9 @@ public class HadoopDriverConfig implements DriverConfig
     );
   }
 
-  public HadoopDriverConfig withVersion(String ver)
+  public HadoopTuningConfig withVersion(String ver)
   {
-    return new HadoopDriverConfig(
+    return new HadoopTuningConfig(
         workingPath,
         ver,
         partitionsSpec,
@@ -187,9 +187,9 @@ public class HadoopDriverConfig implements DriverConfig
     );
   }
 
-  public HadoopDriverConfig withShardSpecs(Map<DateTime, List<HadoopyShardSpec>> specs)
+  public HadoopTuningConfig withShardSpecs(Map<DateTime, List<HadoopyShardSpec>> specs)
   {
-    return new HadoopDriverConfig(
+    return new HadoopTuningConfig(
         workingPath,
         version,
         partitionsSpec,

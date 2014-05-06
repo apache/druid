@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.IngestionSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.IngestionSpec;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
@@ -44,11 +44,11 @@ import java.io.IOException;
  * realtime stream of data.  The Plumber directs each drop of water from the firehose into the correct sink and makes
  * sure that the sinks don't overflow.
  */
-public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDriverConfig>
+public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuningConfig>
 {
   private final DataSchema dataSchema;
   private final RealtimeIOConfig ioConfig;
-  private final RealtimeDriverConfig driverConfig;
+  private final RealtimeTuningConfig tuningConfig;
 
   private final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
 
@@ -56,7 +56,7 @@ public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDr
   public FireDepartment(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") RealtimeIOConfig ioConfig,
-      @JsonProperty("driverConfig") RealtimeDriverConfig driverConfig,
+      @JsonProperty("tuningConfig") RealtimeTuningConfig tuningConfig,
       // Backwards Compatability
       @JsonProperty("schema") Schema schema,
       @JsonProperty("config") FireDepartmentConfig config,
@@ -64,7 +64,7 @@ public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDr
       @JsonProperty("plumber") PlumberSchool plumberSchool
   )
   {
-    super(dataSchema, ioConfig, driverConfig);
+    super(dataSchema, ioConfig, tuningConfig);
 
     // Backwards compatibility
     if (dataSchema == null) {
@@ -88,7 +88,7 @@ public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDr
           firehoseFactory,
           plumberSchool
       );
-      this.driverConfig = new RealtimeDriverConfig(
+      this.tuningConfig = new RealtimeTuningConfig(
           config.getMaxRowsInMemory(),
           config.getIntermediatePersistPeriod(),
           ((RealtimePlumberSchool) plumberSchool).getWindowPeriod(),
@@ -104,7 +104,7 @@ public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDr
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.driverConfig = driverConfig == null ? RealtimeDriverConfig.makeDefaultDriverConfig() : driverConfig;
+      this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig() : tuningConfig;
     }
   }
 
@@ -127,16 +127,16 @@ public class FireDepartment extends IngestionSchema<RealtimeIOConfig, RealtimeDr
     return ioConfig;
   }
 
-  @JsonProperty("driverConfig")
+  @JsonProperty("tuningConfig")
   @Override
-  public RealtimeDriverConfig getDriverConfig()
+  public RealtimeTuningConfig getTuningConfig()
   {
-    return driverConfig;
+    return tuningConfig;
   }
 
   public Plumber findPlumber()
   {
-    return ioConfig.getPlumberSchool().findPlumber(dataSchema, driverConfig, metrics);
+    return ioConfig.getPlumberSchool().findPlumber(dataSchema, tuningConfig, metrics);
   }
 
   public Firehose connect() throws IOException

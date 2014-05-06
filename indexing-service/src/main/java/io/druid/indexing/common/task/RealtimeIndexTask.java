@@ -44,7 +44,7 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeDriverConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
@@ -82,7 +82,7 @@ public class RealtimeIndexTask extends AbstractTask
       return String.format(
           "index_realtime_%s_%d_%s",
           fireDepartment.getDataSchema().getDataSource(),
-          fireDepartment.getDriverConfig().getShardSpec().getPartitionNum(),
+          fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
           new DateTime().toString()
       );
     }
@@ -94,7 +94,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @JsonIgnore
-  private final FireDepartment schema;
+  private final FireDepartment spec;
 
   @JsonIgnore
   private volatile Plumber plumber = null;
@@ -106,9 +106,9 @@ public class RealtimeIndexTask extends AbstractTask
   public RealtimeIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
-      @JsonProperty("config") FireDepartment fireDepartment,
+      @JsonProperty("spec") FireDepartment fireDepartment,
       // Backwards compatible, to be deprecated
-      @JsonProperty("schema") Schema schema,
+      @JsonProperty("schema") Schema spec,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
@@ -118,24 +118,24 @@ public class RealtimeIndexTask extends AbstractTask
   )
   {
     super(
-        id == null ? makeTaskId(fireDepartment, schema) : id,
-        String.format("index_realtime_%s", makeDatasource(fireDepartment, schema)),
-        taskResource == null ? new TaskResource(makeTaskId(fireDepartment, schema), 1) : taskResource,
-        makeDatasource(fireDepartment, schema)
+        id == null ? makeTaskId(fireDepartment, spec) : id,
+        String.format("index_realtime_%s", makeDatasource(fireDepartment, spec)),
+        taskResource == null ? new TaskResource(makeTaskId(fireDepartment, spec), 1) : taskResource,
+        makeDatasource(fireDepartment, spec)
     );
 
     if (fireDepartment != null) {
-      this.schema = fireDepartment;
+      this.spec = fireDepartment;
     } else {
-      this.schema = new FireDepartment(
+      this.spec = new FireDepartment(
           new DataSchema(
-              schema.getDataSource(),
+              spec.getDataSource(),
               firehoseFactory == null ? null : firehoseFactory.getParser(),
-              schema.getAggregators(),
-              new UniformGranularitySpec(segmentGranularity, schema.getIndexGranularity(), null, segmentGranularity)
+              spec.getAggregators(),
+              new UniformGranularitySpec(segmentGranularity, spec.getIndexGranularity(), null, segmentGranularity)
           ),
           new RealtimeIOConfig(firehoseFactory, null),
-          new RealtimeDriverConfig(
+          new RealtimeTuningConfig(
               fireDepartmentConfig == null ? null : fireDepartmentConfig.getMaxRowsInMemory(),
               fireDepartmentConfig == null ? null : fireDepartmentConfig.getIntermediatePersistPeriod(),
               windowPeriod,
@@ -143,7 +143,7 @@ public class RealtimeIndexTask extends AbstractTask
               null,
               rejectionPolicyFactory,
               maxPendingPersists,
-              schema.getShardSpec()
+              spec.getShardSpec()
           ),
           null, null, null, null
       );
@@ -197,8 +197,8 @@ public class RealtimeIndexTask extends AbstractTask
     boolean normalExit = true;
 
     // Set up firehose
-    final Period intermediatePersistPeriod = schema.getDriverConfig().getIntermediatePersistPeriod();
-    final Firehose firehose = schema.getIOConfig().getFirehoseFactory().connect(schema.getDataSchema().getParser());
+    final Period intermediatePersistPeriod = spec.getTuningConfig().getIntermediatePersistPeriod();
+    final Firehose firehose = spec.getIOConfig().getFirehoseFactory().connect(spec.getDataSchema().getParser());
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
@@ -279,16 +279,16 @@ public class RealtimeIndexTask extends AbstractTask
       }
     };
 
-    DataSchema dataSchema = schema.getDataSchema();
-    RealtimeIOConfig realtimeIOConfig = schema.getIOConfig();
-    RealtimeDriverConfig driverConfig = schema.getDriverConfig()
+    DataSchema dataSchema = spec.getDataSchema();
+    RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
+    RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
                                               .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
                                               .withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,
         realtimeIOConfig,
-        driverConfig,
+        tuningConfig,
         null,
         null,
         null,
@@ -317,7 +317,7 @@ public class RealtimeIndexTask extends AbstractTask
         0
     );
 
-    this.plumber = plumberSchool.findPlumber(dataSchema, driverConfig, fireDepartment.getMetrics());
+    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());
 
     try {
       plumber.startJob();
@@ -354,7 +354,7 @@ public class RealtimeIndexTask extends AbstractTask
 
           int currCount = sink.add(inputRow);
           fireDepartment.getMetrics().incrementProcessed();
-          if (currCount >= driverConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+          if (currCount >= tuningConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
@@ -390,10 +390,10 @@ public class RealtimeIndexTask extends AbstractTask
     return TaskStatus.success(getId());
   }
 
-  @JsonProperty("config")
+  @JsonProperty("spec")
   public FireDepartment getRealtimeIngestionSchema()
   {
-    return schema;
+    return spec;
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher

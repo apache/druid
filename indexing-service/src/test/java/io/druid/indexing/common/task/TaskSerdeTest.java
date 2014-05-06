@@ -28,7 +28,7 @@ import io.druid.data.input.impl.JSONDataSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
-import io.druid.indexer.HadoopIngestionSchema;
+import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -220,7 +220,7 @@ public class TaskSerdeTest
     Assert.assertEquals(
         new Period("PT10M"),
         task.getRealtimeIngestionSchema()
-            .getDriverConfig().getWindowPeriod()
+            .getTuningConfig().getWindowPeriod()
     );
     Assert.assertEquals(
         Granularity.HOUR,
@@ -233,8 +233,8 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
     Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
     Assert.assertEquals(
-        task.getRealtimeIngestionSchema().getDriverConfig().getWindowPeriod(),
-        task2.getRealtimeIngestionSchema().getDriverConfig().getWindowPeriod()
+        task.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod(),
+        task2.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod()
     );
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
@@ -397,7 +397,7 @@ public class TaskSerdeTest
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
-        new HadoopIngestionSchema(
+        new HadoopIngestionSpec(
             null, null, null,
             "foo",
             new TimestampSpec("timestamp", "auto"),
@@ -441,6 +441,9 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getSchema().getDriverConfig().getJobProperties(), task2.getSchema().getDriverConfig().getJobProperties());
+    Assert.assertEquals(
+        task.getSpec().getTuningConfig().getJobProperties(),
+        task2.getSpec().getTuningConfig().getJobProperties()
+    );
   }
 }

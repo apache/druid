@@ -29,22 +29,18 @@ import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class HadoopIngestionSchemaTest
+public class HadoopIngestionSpecTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testGranularitySpec()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -55,7 +51,7 @@ public class HadoopIngestionSchemaTest
           + "   \"intervals\":[\"2012-01-01/P1D\"]"
           + " }"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -81,7 +77,7 @@ public class HadoopIngestionSchemaTest
   public void testGranularitySpecLegacy()
   {
     // Deprecated and replaced by granularitySpec, but still supported
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -89,7 +85,7 @@ public class HadoopIngestionSchemaTest
           + "\"segmentGranularity\":\"day\","
           + "\"intervals\":[\"2012-02-01/P1D\"]"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -116,7 +112,7 @@ public class HadoopIngestionSchemaTest
   {
     boolean thrown = false;
     try {
-      final HadoopIngestionSchema schema = jsonReadWriteRead(
+      final HadoopIngestionSpec schema = jsonReadWriteRead(
           "{"
           + "\"segmentGranularity\":\"day\","
           + "\"intervals\":[\"2012-02-01/P1D\"],"
@@ -126,7 +122,7 @@ public class HadoopIngestionSchemaTest
           + "   \"intervals\":[\"2012-01-01/P1D\"]"
           + " }"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -139,7 +135,7 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testPartitionsSpecAutoDimension()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -148,14 +144,14 @@ public class HadoopIngestionSchemaTest
           + "   \"targetPartitionSize\":100"
           + " }"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getDriverConfig().getPartitionsSpec();
+    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
     Assert.assertEquals(
         "isDeterminingPartitions",
@@ -178,7 +174,7 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testPartitionsSpecSpecificDimensionLegacy()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -188,14 +184,14 @@ public class HadoopIngestionSchemaTest
           + "   \"partitionDimension\":\"foo\""
           + " }"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getDriverConfig().getPartitionsSpec();
+    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
     Assert.assertEquals(
         "isDeterminingPartitions",
@@ -226,7 +222,7 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testPartitionsSpecLegacy()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -234,14 +230,14 @@ public class HadoopIngestionSchemaTest
           + "\"targetPartitionSize\":100,"
           + "\"partitionDimension\":\"foo\""
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getDriverConfig().getPartitionsSpec();
+    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
     Assert.assertEquals(
         "isDeterminingPartitions",
@@ -272,7 +268,7 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testPartitionsSpecMaxPartitionSize()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
@@ -283,14 +279,14 @@ public class HadoopIngestionSchemaTest
           + "   \"partitionDimension\":\"foo\""
           + " }"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-    final PartitionsSpec partitionsSpec = schema.getDriverConfig().getPartitionsSpec();
+    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
     Assert.assertEquals(
         "isDeterminingPartitions",
@@ -323,14 +319,14 @@ public class HadoopIngestionSchemaTest
   {
     boolean thrown = false;
     try {
-      final HadoopIngestionSchema schema = jsonReadWriteRead(
+      final HadoopIngestionSpec schema = jsonReadWriteRead(
           "{"
           + "\"targetPartitionSize\":100,"
           + "\"partitionsSpec\":{"
           + "   \"targetPartitionSize\":100"
           + " }"
           + "}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -343,7 +339,7 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testDbUpdaterJobSpec() throws Exception
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     schema = jsonReadWriteRead(
         "{"
@@ -355,7 +351,7 @@ public class HadoopIngestionSchemaTest
         + "    \"segmentTable\" : \"segments\"\n"
         + "  }"
         + "}",
-        HadoopIngestionSchema.class
+        HadoopIngestionSpec.class
     );
 
     final DbUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
@@ -371,12 +367,12 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testDefaultSettings()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
           "{}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -385,19 +381,19 @@ public class HadoopIngestionSchemaTest
 
     Assert.assertEquals(
         "cleanupOnFailure",
-        schema.getDriverConfig().isCleanupOnFailure(),
+        schema.getTuningConfig().isCleanupOnFailure(),
         true
     );
 
     Assert.assertEquals(
         "overwriteFiles",
-        schema.getDriverConfig().isOverwriteFiles(),
+        schema.getTuningConfig().isOverwriteFiles(),
         false
     );
 
     Assert.assertEquals(
         "isDeterminingPartitions",
-        schema.getDriverConfig().getPartitionsSpec().isDeterminingPartitions(),
+        schema.getTuningConfig().getPartitionsSpec().isDeterminingPartitions(),
         false
     );
   }
@@ -405,12 +401,12 @@ public class HadoopIngestionSchemaTest
   @Test
   public void testNoCleanupOnFailure()
   {
-    final HadoopIngestionSchema schema;
+    final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
           "{\"cleanupOnFailure\":false}",
-          HadoopIngestionSchema.class
+          HadoopIngestionSpec.class
       );
     }
     catch (Exception e) {
@@ -419,7 +415,7 @@ public class HadoopIngestionSchemaTest
 
     Assert.assertEquals(
         "cleanupOnFailure",
-        schema.getDriverConfig().isCleanupOnFailure(),
+        schema.getTuningConfig().isCleanupOnFailure(),
         false
     );
   }
@@ -436,7 +432,7 @@ public class HadoopIngestionSchemaTest
 
   public void testRandomPartitionsSpec() throws Exception{
     {
-      final HadoopIngestionSchema schema;
+      final HadoopIngestionSpec schema;
 
       try {
         schema = jsonReadWriteRead(
@@ -446,14 +442,14 @@ public class HadoopIngestionSchemaTest
             + "   \"type\":\"random\""
             + " }"
             + "}",
-            HadoopIngestionSchema.class
+            HadoopIngestionSpec.class
         );
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
       }
 
-      final PartitionsSpec partitionsSpec = schema.getDriverConfig().getPartitionsSpec();
+      final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
 
       Assert.assertEquals(
           "isDeterminingPartitions",
