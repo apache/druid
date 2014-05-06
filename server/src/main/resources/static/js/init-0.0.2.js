@@ -100,8 +100,8 @@ $(document).ready(function() {
   }
 
   // Execution stuff
-  $.get('/info/coordinator', function(data) {
-    $("#coordinator").html('Current Cluster Coordinator: ' + data.host);
+  $.get('/druid/coordinator/v1/leader', function(data) {
+    $("#coordinator").html('Current Cluster Coordinator Leader: ' + data.host);
   });
 
   $('#move_segment').submit(function() {
@@ -118,57 +118,10 @@ $(document).ready(function() {
       });
     }
 
-/*
-    $.ajax({
-      url:"/coordinator/move",
-      type: "POST",
-      data: JSON.stringify(data),
-      contentType:"application/json; charset=utf-8",
-      dataType:"json",
-      error: function(xhr, status, error) {
-        alert(error + ": " + xhr.responseText);
-      },
-      success: function(data, status, xhr) {
-        for (seg in CONSOLE.selected_segments) {
-          CONSOLE.selected_segments[seg].children('.server_host').text($('#move_segment > .to').val());
-        }
-      }
-    });
-*/
     return false;
   });
 
-
-/*$
-  ('#drop_segment').submit(function() {
-    var data = [];
-
-    if ($.isEmptyObject(CONSOLE.selected_segments)) {
-      alert("Please select at least one segment");
-    }
-    for (seg in CONSOLE.selected_segments) {
-      data.push({
-        'segmentName' : seg,
-        'from' : CONSOLE.selected_segments[seg]
-      });
-    }
-
-    $.ajax({
-      url:"/coordinator/drop",
-      type: "POST",
-      data: JSON.stringify(data),
-      contentType:"application/json; charset=utf-8",
-      dataType:"json",
-      error: function(xhr, status, error) {
-        alert(error + ": " + xhr.responseText);
-      }
-    });
-
-    return false;
-  });
-*/
-
-  $.get('/info/cluster', function(data) {
+  $.get('/druid/coordinator/v1/servers?full', function(data) {
     $('.loading').hide();
     
     initTables(data);
@@ -176,26 +129,5 @@ $(document).ready(function() {
     var oTable = [];
     initDataTable($('#servers'), oTable);
     initDataTable($('#segments'), oTable);
-
-    // init select segments
-    /*$("#segments tbody").click(function(event) {
-      var el = $(event.target.parentNode);
-      var key = el.children('.segment_name').text();
-      if (el.is("tr")) {
-        if (el.hasClass('row_selected')) {
-          el.removeClass('row_selected');
-          delete CONSOLE.selected_segments[key];
-        } else {
-          el.addClass('row_selected');
-          CONSOLE.selected_segments[key] = el;
-        }
-
-        var html ="";
-        for (segment in CONSOLE.selected_segments) {
-          html += segment + ' on ' + CONSOLE.selected_segments[segment].children('.server_host').text() + '<br/>';
-        }
-        $('#selected_segments').html(html);
-      }
-    });*/
   });
 });

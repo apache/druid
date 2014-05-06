@@ -1,7 +1,8 @@
 ---
 layout: doc_page
 ---
-These types of queries take a groupBy query object and return an array of JSON objects where each object represents a grouping asked for by the query. Note: If you only want to do straight aggreagates for some time range, we highly recommend using [TimeseriesQueries](TimeseriesQuery.html) instead. The performance will be substantially better.
+# groupBy Queries
+These types of queries take a groupBy query object and return an array of JSON objects where each object represents a grouping asked for by the query. Note: If you only want to do straight aggregates for some time range, we highly recommend using [TimeseriesQueries](TimeseriesQuery.html) instead. The performance will be substantially better.
 An example groupBy query object is shown below:
 
 ``` json
@@ -47,7 +48,7 @@ There are 9 main parts to a groupBy query:
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "groupBy"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
-|dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
+|dataSource|A String defining the data source to query, very similar to a table in a relational database, or a [DataSource](DataSource.html) structure.|yes|
 |dimensions|A JSON list of dimensions to do the groupBy over|yes|
 |orderBy|See [OrderBy](OrderBy.html).|no|
 |having|See [Having](Having.html).|no|

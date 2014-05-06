@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -51,9 +52,9 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   @JsonCreator
   public TimeBoundaryQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -77,7 +78,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   }
 
   @Override
-  public TimeBoundaryQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public TimeBoundaryQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TimeBoundaryQuery(
         getDataSource(),

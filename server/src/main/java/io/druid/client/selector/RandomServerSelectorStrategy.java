@@ -20,17 +20,36 @@
 package io.druid.client.selector;
 
 import com.google.common.collect.Iterators;
+import com.metamx.common.ISE;
+import io.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class RandomServerSelectorStrategy implements ServerSelectorStrategy
 {
   private static final Random random = new Random();
 
   @Override
-  public QueryableDruidServer pick(Set<QueryableDruidServer> servers)
+  public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment)
   {
-    return Iterators.get(servers.iterator(), random.nextInt(servers.size()));
+    final Map.Entry<Integer, Set<QueryableDruidServer>> highestPriorityServers = prioritizedServers.pollLastEntry();
+
+    if (highestPriorityServers == null) {
+      return null;
+    }
+
+    final Set<QueryableDruidServer> servers = highestPriorityServers.getValue();
+    final int size = servers.size();
+    switch (size) {
+      case 0:
+        throw new ISE("[%s] Something hella weird going on here. We should not be here", segment.getIdentifier());
+      case 1:
+        return highestPriorityServers.getValue().iterator().next();
+      default:
+        return Iterators.get(servers.iterator(), random.nextInt(size));
+    }
   }
 }

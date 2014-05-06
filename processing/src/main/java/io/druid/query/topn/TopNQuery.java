@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -52,7 +53,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
   @JsonCreator
   public TopNQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("dimension") DimensionSpec dimensionSpec,
       @JsonProperty("metric") TopNMetricSpec topNMetricSpec,
       @JsonProperty("threshold") int threshold,
@@ -61,7 +62,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -177,7 +178,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
-  public TopNQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public TopNQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TopNQuery(
         getDataSource(),
@@ -207,5 +208,43 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+
+    TopNQuery topNQuery = (TopNQuery) o;
+
+    if (threshold != topNQuery.threshold) return false;
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(topNQuery.aggregatorSpecs) : topNQuery.aggregatorSpecs != null)
+      return false;
+    if (dimFilter != null ? !dimFilter.equals(topNQuery.dimFilter) : topNQuery.dimFilter != null) return false;
+    if (dimensionSpec != null ? !dimensionSpec.equals(topNQuery.dimensionSpec) : topNQuery.dimensionSpec != null)
+      return false;
+    if (granularity != null ? !granularity.equals(topNQuery.granularity) : topNQuery.granularity != null) return false;
+    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(topNQuery.postAggregatorSpecs) : topNQuery.postAggregatorSpecs != null)
+      return false;
+    if (topNMetricSpec != null ? !topNMetricSpec.equals(topNQuery.topNMetricSpec) : topNQuery.topNMetricSpec != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + (dimensionSpec != null ? dimensionSpec.hashCode() : 0);
+    result = 31 * result + (topNMetricSpec != null ? topNMetricSpec.hashCode() : 0);
+    result = 31 * result + threshold;
+    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
+    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
+    result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
+    result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
+    return result;
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -31,14 +32,14 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
-import io.druid.server.coordinator.rules.PeriodLoadRule;
+import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -62,7 +63,7 @@ public class DatabaseRuleManager
   public static void createDefaultRule(
       final IDBI dbi,
       final String ruleTable,
-      final String defaultTier,
+      final String defaultDatasourceName,
       final ObjectMapper jsonMapper
   )
   {
@@ -73,23 +74,26 @@ public class DatabaseRuleManager
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              List<Map<String, Object>> existing = handle.select(
-                  String.format(
-                      "SELECT id from %s where datasource='%s';",
-                      ruleTable,
-                      defaultTier
+              List<Map<String, Object>> existing = handle
+                  .createQuery(
+                      String.format(
+                          "SELECT id from %s where datasource=:dataSource;",
+                          ruleTable
+                      )
                   )
-              );
+                  .bind("dataSource", defaultDatasourceName)
+                  .list();
 
               if (!existing.isEmpty()) {
                 return null;
               }
 
               final List<Rule> defaultRules = Arrays.<Rule>asList(
-                  new PeriodLoadRule(
-                      new Period("P5000Y"),
-                      2,
-                      "_default_tier"
+                  new ForeverLoadRule(
+                      ImmutableMap.<String, Integer>of(
+                          DruidServer.DEFAULT_TIER,
+                          DruidServer.DEFAULT_NUM_REPLICANTS
+                      )
                   )
               );
               final String version = new DateTime().toString();
@@ -99,8 +103,8 @@ public class DatabaseRuleManager
                       ruleTable
                   )
               )
-                    .bind("id", String.format("%s_%s", defaultTier, version))
-                    .bind("dataSource", defaultTier)
+                    .bind("id", String.format("%s_%s", defaultDatasourceName, version))
+                    .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
                     .bind("payload", jsonMapper.writeValueAsString(defaultRules))
                     .execute();
@@ -157,7 +161,7 @@ public class DatabaseRuleManager
 
       this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
 
-      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultTier(), jsonMapper);
+      createDefaultRule(dbi, getRulesTable(), config.get().getDefaultRule(), jsonMapper);
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
           new Duration(0),
@@ -261,7 +265,8 @@ public class DatabaseRuleManager
 
   public List<Rule> getRules(final String dataSource)
   {
-    return rules.get().get(dataSource);
+    List<Rule> retVal = rules.get().get(dataSource);
+    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
   }
 
   public List<Rule> getRulesWithDefault(final String dataSource)
@@ -271,8 +276,8 @@ public class DatabaseRuleManager
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));
     }
-    if (theRules.get(config.get().getDefaultTier()) != null) {
-      retVal.addAll(theRules.get(config.get().getDefaultTier()));
+    if (theRules.get(config.get().getDefaultRule()) != null) {
+      retVal.addAll(theRules.get(config.get().getDefaultRule()));
     }
     return retVal;
   }

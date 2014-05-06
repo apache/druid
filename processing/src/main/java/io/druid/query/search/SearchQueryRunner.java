@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
-*/
+ */
 public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
   private static final EmittingLogger log = new EmittingLogger(SearchQueryRunner.class);
@@ -99,12 +99,10 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
           ConciseSet set = new ConciseSet();
           set.add(0);
           baseFilter = ImmutableConciseSet.newImmutableFromMutable(set);
-        }
-        else {
+        } else {
           baseFilter = ImmutableConciseSet.complement(new ImmutableConciseSet(), index.getNumRows());
         }
-      }
-      else {
+      } else {
         baseFilter = filter.goConcise(new ColumnSelectorBitmapIndexSelector(index));
       }
 
@@ -133,49 +131,52 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     final StorageAdapter adapter = segment.asStorageAdapter();
-    if (adapter != null) {
-      Iterable<String> dimsToSearch;
-      if (dimensions == null || dimensions.isEmpty()) {
-        dimsToSearch = adapter.getAvailableDimensions();
-      } else {
-        dimsToSearch = dimensions;
+
+    if (adapter == null) {
+      log.makeAlert("WTF!? Unable to process search query on segment.")
+         .addData("segment", segment.getIdentifier())
+         .addData("query", query).emit();
+      throw new ISE(
+          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+      );
+    }
+
+    Iterable<String> dimsToSearch;
+    if (dimensions == null || dimensions.isEmpty()) {
+      dimsToSearch = adapter.getAvailableDimensions();
+    } else {
+      dimsToSearch = dimensions;
+    }
+
+    final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
+
+    final Iterable<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
+    for (Cursor cursor : cursors) {
+      Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+      for (String dim : dimsToSearch) {
+        dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
       }
 
-      final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
-
-      final Iterable<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
-      for (Cursor cursor : cursors) {
-        Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-        for (String dim : dimsToSearch) {
-          dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
-        }
-
-        while (!cursor.isDone()) {
-          for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
-            final DimensionSelector selector = entry.getValue();
-            final IndexedInts vals = selector.getRow();
-            for (int i = 0; i < vals.size(); ++i) {
-              final String dimVal = selector.lookupName(vals.get(i));
-              if (searchQuerySpec.accept(dimVal)) {
-                retVal.add(new SearchHit(entry.getKey(), dimVal));
-                if (retVal.size() >= limit) {
-                  return makeReturnResult(limit, retVal);
-                }
+      while (!cursor.isDone()) {
+        for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
+          final DimensionSelector selector = entry.getValue();
+          final IndexedInts vals = selector.getRow();
+          for (int i = 0; i < vals.size(); ++i) {
+            final String dimVal = selector.lookupName(vals.get(i));
+            if (searchQuerySpec.accept(dimVal)) {
+              retVal.add(new SearchHit(entry.getKey(), dimVal));
+              if (retVal.size() >= limit) {
+                return makeReturnResult(limit, retVal);
               }
             }
           }
-
-          cursor.advance();
         }
-      }
 
-      return makeReturnResult(limit, retVal);
+        cursor.advance();
+      }
     }
 
-    log.makeAlert("WTF!? Unable to process search query on segment.")
-       .addData("segment", segment.getIdentifier())
-       .addData("query", query);
-    return Sequences.empty();
+    return makeReturnResult(limit, retVal);
   }
 
   private Sequence<Result<SearchResultValue>> makeReturnResult(int limit, TreeSet<SearchHit> retVal)

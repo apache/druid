@@ -139,6 +139,10 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
+    // handle "NaN" / "Infinity" values serialized as strings in JSON
+    if (object instanceof String) {
+      return Double.parseDouble((String) object);
+    }
     return object;
   }
 
@@ -316,5 +320,36 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         }
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    JavaScriptAggregatorFactory that = (JavaScriptAggregatorFactory) o;
+
+    if (compiledScript != null ? !compiledScript.equals(that.compiledScript) : that.compiledScript != null)
+      return false;
+    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) return false;
+    if (fnAggregate != null ? !fnAggregate.equals(that.fnAggregate) : that.fnAggregate != null) return false;
+    if (fnCombine != null ? !fnCombine.equals(that.fnCombine) : that.fnCombine != null) return false;
+    if (fnReset != null ? !fnReset.equals(that.fnReset) : that.fnReset != null) return false;
+    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (fieldNames != null ? fieldNames.hashCode() : 0);
+    result = 31 * result + (fnAggregate != null ? fnAggregate.hashCode() : 0);
+    result = 31 * result + (fnReset != null ? fnReset.hashCode() : 0);
+    result = 31 * result + (fnCombine != null ? fnCombine.hashCode() : 0);
+    result = 31 * result + (compiledScript != null ? compiledScript.hashCode() : 0);
+    return result;
   }
 }

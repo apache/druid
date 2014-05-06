@@ -51,7 +51,8 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(
                CliCoordinator.class, CliHistorical.class, CliBroker.class,
-               CliRealtime.class, CliOverlord.class, CliMiddleManager.class
+               CliRealtime.class, CliOverlord.class, CliMiddleManager.class,
+               CliBridge.class, CliRouter.class
            );
 
     builder.withGroup("example")

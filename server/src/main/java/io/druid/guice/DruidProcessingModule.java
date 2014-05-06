@@ -26,20 +26,20 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
-import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.MetricsEmittingExecutorService;
+import io.druid.query.PrioritizedExecutorService;
 import io.druid.server.DruidProcessingConfig;
+import io.druid.server.VMUtils;
 
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -58,10 +58,17 @@ public class DruidProcessingModule implements Module
   @Provides
   @Processing
   @ManageLifecycle
-  public ExecutorService getProcessingExecutorService(ExecutorServiceConfig config, ServiceEmitter emitter)
+  public ExecutorService getProcessingExecutorService(
+      ExecutorServiceConfig config,
+      ServiceEmitter emitter,
+      Lifecycle lifecycle
+  )
   {
     return new MetricsEmittingExecutorService(
-        Executors.newFixedThreadPool(config.getNumThreads(), Execs.makeThreadFactory(config.getFormatString())),
+        PrioritizedExecutorService.create(
+            lifecycle,
+            config
+        ),
         emitter,
         new ServiceMetricEvent.Builder()
     );
@@ -73,37 +80,26 @@ public class DruidProcessingModule implements Module
   public StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     try {
-      Class<?> vmClass = Class.forName("sun.misc.VM");
-      Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
+      long maxDirectMemory = VMUtils.getMaxDirectMemory();
 
-      if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {
-        log.info("Cannot determine maxDirectMemory from[%s]", maxDirectMemoryObj);
-      } else {
-        long maxDirectMemory = ((Number) maxDirectMemoryObj).longValue();
-
-        final long memoryNeeded = (long) config.intermediateComputeSizeBytes() * (config.getNumThreads() + 1);
-        if (maxDirectMemory < memoryNeeded) {
-          throw new ProvisionException(
-              String.format(
-                  "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize or druid.computation.buffer.size: "
-                  + "maxDirectMemory[%,d], memoryNeeded[%,d], druid.computation.buffer.size[%,d], numThreads[%,d]",
-                  maxDirectMemory, memoryNeeded, config.intermediateComputeSizeBytes(), config.getNumThreads()
-              )
-          );
-        }
+      final long memoryNeeded = (long) config.intermediateComputeSizeBytes() * (config.getNumThreads() + 1);
+      if (maxDirectMemory < memoryNeeded) {
+        throw new ProvisionException(
+            String.format(
+                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.computation.buffer.size, or druid.processing.numThreads: "
+                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.computation.buffer.size[%,d] * ( druid.processing.numThreads[%,d] + 1 )",
+                maxDirectMemory,
+                memoryNeeded,
+                config.intermediateComputeSizeBytes(),
+                config.getNumThreads()
+            )
+        );
       }
+    } catch(UnsupportedOperationException e) {
+      log.info(e.getMessage());
     }
-    catch (ClassNotFoundException e) {
-      log.info("No VM class, cannot do memory check.");
-    }
-    catch (NoSuchMethodException e) {
-      log.info("VM.maxDirectMemory doesn't exist, cannot do memory check.");
-    }
-    catch (InvocationTargetException e) {
-      log.warn(e, "static method shouldn't throw this");
-    }
-    catch (IllegalAccessException e) {
-      log.warn(e, "public method, shouldn't throw this");
+    catch(RuntimeException e) {
+      log.warn(e, e.getMessage());
     }
 
     return new IntermediateProcessingBufferPool(config.intermediateComputeSizeBytes());

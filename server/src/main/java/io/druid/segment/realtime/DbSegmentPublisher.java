@@ -22,8 +22,10 @@ package io.druid.segment.realtime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -40,6 +42,7 @@ public class DbSegmentPublisher implements SegmentPublisher
   private final ObjectMapper jsonMapper;
   private final DbTablesConfig config;
   private final IDBI dbi;
+  private final String statement;
 
   @Inject
   public DbSegmentPublisher(
@@ -51,6 +54,20 @@ public class DbSegmentPublisher implements SegmentPublisher
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbi = dbi;
+
+    if (DbConnector.isPostgreSQL(dbi)) {
+      this.statement = String.format(
+          "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+          config.getSegmentsTable()
+      );
+    } else {
+      this.statement = String.format(
+          "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+          config.getSegmentsTable()
+      );
+    }
   }
 
   public void publishSegment(final DataSegment segment) throws IOException
@@ -82,28 +99,13 @@ public class DbSegmentPublisher implements SegmentPublisher
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              String statement;
-              if (!handle.getConnection().getMetaData().getDatabaseProductName().contains("PostgreSQL")) {
-                statement = String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getSegmentsTable()
-                );
-              } else {
-                statement = String.format(
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                    config.getSegmentsTable()
-                );
-              }
-
               handle.createStatement(statement)
                     .bind("id", segment.getIdentifier())
                     .bind("dataSource", segment.getDataSource())
                     .bind("created_date", new DateTime().toString())
                     .bind("start", segment.getInterval().getStart().toString())
                     .bind("end", segment.getInterval().getEnd().toString())
-                    .bind("partitioned", segment.getShardSpec().getPartitionNum())
+                    .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
                     .bind("version", segment.getVersion())
                     .bind("used", true)
                     .bind("payload", jsonMapper.writeValueAsString(segment))

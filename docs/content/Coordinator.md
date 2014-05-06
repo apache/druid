@@ -1,97 +1,15 @@
 ---
 layout: doc_page
 ---
-Coordinator
-===========
+Coordinator Node
+================
+For Coordinator Node Configuration, see [Coordinator Configuration](Coordinator-Config.html).
 
 The Druid coordinator node is primarily responsible for segment management and distribution. More specifically, the Druid coordinator node communicates to historical nodes to load or drop segments based on configurations. The Druid coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
 
 The Druid coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the broker and historical nodes, the Druid coordinator maintains a connection to a Zookeeper cluster for current cluster information. The coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
 
 Before any unassigned segments are serviced by historical nodes, the available historical nodes for each tier are first sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always assigned to the nodes with least capacity to maintain a level of balance between nodes. The coordinator does not directly communicate with a historical node when assigning it a new segment; instead the coordinator creates some temporary information about the new segment under load queue path of the historical node. Once this request is seen, the historical node will load the segment and begin servicing it.
-
-Quick Start
------------
-Run:
-
-```
-io.druid.cli.Main server coordinator
-```
-
-With the following JVM configuration:
-
-```
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
-
-druid.host=localhost
-druid.service=coordinator
-druid.port=8082
-
-druid.zk.service.host=localhost
-
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
-
-druid.coordinator.startDelay=PT60s
-```
-
-JVM Configuration
------------------
-
-The coordinator module uses several of the default modules in [Configuration](Configuration.html) and has the following set of configurations as well:
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.coordinator.period`|The run period for the coordinator. The coordinator’s operates by maintaining the current state of the world in memory and periodically looking at the set of segments available and segments being served to make decisions about whether any changes need to be made to the data topology. This property sets the delay between each of these runs.|PT60S|
-|`druid.coordinator.period.indexingPeriod`|How often to send indexing tasks to the indexing service. Only applies if merge or conversion is turned on.|PT1800S (30 mins)|
-|`druid.coordinator.startDelay`|The operation of the Coordinator works on the assumption that it has an up-to-date view of the state of the world when it runs, the current ZK interaction code, however, is written in a way that doesn’t allow the Coordinator to know for a fact that it’s done loading the current state of the world. This delay is a hack to give it enough time to believe that it has all the data.|PT300S|
-|`druid.coordinator.merge.on`|Boolean flag for whether or not the coordinator should try and merge small segments into a more optimal segment size.|PT300S|
-|`druid.coordinator.conversion.on`|Boolean flag for converting old segment indexing versions to the latest segment indexing version.|false|
-|`druid.coordinator.load.timeout`|The timeout duration for when the coordinator assigns a segment to a historical node.|15 minutes|
-|`druid.manager.segment.pollDuration`|The duration between polls the Coordinator does for updates to the set of active segments. Generally defines the amount of lag time it can take for the coordinator to notice new segments.|PT1M|
-|`druid.manager.rules.pollDuration`|The duration between polls the Coordinator does for updates to the set of active rules. Generally defines the amount of lag time it can take for the coordinator to notice rules.|PT1M|
-|`druid.manager.rules.defaultTier`|The default tier from which default rules will be loaded from.|_default|
-
-Dynamic Configuration
----------------------
-
-The coordinator has dynamic configuration to change certain behaviour on the fly. The coordinator a JSON spec object from the Druid [MySQL](MySQL.html) config table. This object is detailed below:
-
-It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the overlord via a POST request at:
-
-```
-http://<COORDINATOR_IP>:<PORT>/coordinator/config
-```
-
-A sample worker setup spec is shown below:
-
-```json
-{
-  "millisToWaitBeforeDeleting": 900000,
-  "mergeBytesLimit": 100000000L,
-  "mergeSegmentsLimit" : 1000,
-  "maxSegmentsToMove": 5,
-  "replicantLifetime": 15,
-  "replicationThrottleLimit": 10,
-  "emitBalancingStats": false
-}
-```
-
-Issuing a GET request at the same URL will return the spec that is currently in place. A description of the config setup spec is shown below.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`millisToWaitBeforeDeleting`|How long does the coordinator need to be active before it can start deleting segments.|90000 (15 mins)|
-|`mergeBytesLimit`|The maximum number of bytes to merge (for segments).|100000000L|
-|`mergeSegmentsLimit`|The maximum number of segments that can be in a single merge [task](Tasks.html).|Integer.MAX_VALUE|
-|`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
-|`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
-|`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
-|`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
 
 ### Running
 
@@ -102,7 +20,7 @@ io.druid.cli.Main server coordinator
 Rules
 -----
 
-Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different historical node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The coordinator loads a set of rules from the database. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule
+Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different historical node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The coordinator loads a set of rules from the database. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
 
 For more information on rules, see [Rule Configuration](Rule-Configuration.html).
 

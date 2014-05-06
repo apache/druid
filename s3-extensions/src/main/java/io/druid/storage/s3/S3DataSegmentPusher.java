@@ -89,7 +89,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
               toPush.setBucketName(outputBucket);
               toPush.setKey(s3Path);
               if (!config.getDisableAcl()) {
-                toPush.setAcl(AccessControlList.REST_CANNED_AUTHENTICATED_READ);
+                toPush.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
               }
 
               log.info("Pushing %s.", toPush);

@@ -3,60 +3,10 @@ layout: doc_page
 ---
 Broker
 ======
+For Broker Node Configuration, see [Broker Configuration](Broker-Config.html).
 
 The Broker is the node to route queries to if you want to run a distributed cluster. It understands the metadata published to ZooKeeper about what segments exist on what nodes and routes queries such that they hit the right nodes. This node also merges the result sets from all of the individual nodes together.
 On start up, Realtime nodes announce themselves and the segments they are serving in Zookeeper. 
-
-Quick Start
------------
-Run:
-
-```
-io.druid.cli.Main server broker
-```
-
-With the following JVM configuration:
-
-```
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
-
-druid.host=localhost
-druid.service=broker
-druid.port=8080
-
-druid.zk.service.host=localhost
-```
-
-JVM Configuration
------------------
-
-The broker module uses several of the default modules in [Configuration](Configuration.html) and has the following set of configurations as well:
-
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.broker.cache.type`|`local`, `memcache`|The type of cache to use for queries.|`local`|
-|`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to compute nodes. `random` choose randomly, `connectionCount` picks the node with the fewest number of active connections to|`random`|
-
-#### Local Cache
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.broker.cache.sizeInBytes`|Maximum size of the cache. If this is zero, cache is disabled.|0|
-|`druid.broker.cache.initialSize`|The initial size of the cache in bytes.|500000|
-|`druid.broker.cache.logEvictionCount`|If this is non-zero, there will be an eviction of entries.|0|
-
-#### Memcache
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.broker.cache.expiration`|Memcache [expiration time ](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
-|`druid.broker.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcache.|500|
-|`druid.broker.cache.hosts`|Memcache hosts.|none|
-|`druid.broker.cache.maxObjectSize`|Maximum object size in bytes for a Memcache object.|52428800 (50 MB)|
-|`druid.broker.cache.memcachedPrefix`|Key prefix for all keys in Memcache.|druid|
 
 Running
 -------
@@ -64,7 +14,6 @@ Running
 ```
 io.druid.cli.Main server broker
 ```
-
 
 Forwarding Queries
 ------------------

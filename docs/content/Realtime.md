@@ -1,54 +1,44 @@
 ---
 layout: doc_page
 ---
-Realtime Nodes 
-========
+Real-time Node
+==============
+For Real-time Node Configuration, see [Realtime Configuration](Realtime-Config.html).
+
+For Real-time Ingestion, see [Realtime Ingestion](Realtime-ingestion.html).
 
 Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and transfer these segments off to [Historical](Historical.html) nodes. They use ZooKeeper to monitor the transfer and MySQL to store metadata about the transfered segment. Once transfered, segments are forgotten by the Realtime nodes.
 
-
-Quick Start
------------
-Run:
+### Running
 
 ```
 io.druid.cli.Main server realtime
 ```
+Segment Propagation
+-------------------
 
-With the following JVM configuration:
+The segment propagation diagram for real-time data ingestion can be seen below:
 
-```
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
+![Segment Propagation](../img/segmentPropagation.png "Segment Propagation")
 
-druid.host=localhost
-druid.service=realtime
-druid.port=8083
+You can read about the various components shown in this diagram under the Architecture section (see the menu on the left).
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.52"]
+### Firehose
 
+See [Firehose](Firehose.html).
 
-druid.zk.service.host=localhost
+### Plumber
 
-# The realtime config file.
-druid.realtime.specFile=/path/to/specFile
+See [Plumber](Plumber.html)
 
-# Choices: db (hand off segments), noop (do not hand off segments).
-druid.publish.type=db
+Extending the code
+------------------
 
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
+Realtime integration is intended to be extended in two ways:
 
-druid.processing.buffer.sizeBytes=100000000
-```
+1.  Connect to data streams from varied systems ([Firehose](https://github.com/druid-io/druid-api/blob/master/src/main/java/io/druid/data/input/FirehoseFactory.java))
+2.  Adjust the publishing strategy to match your needs ([Plumber](https://github.com/metamx/druid/blob/master/server/src/main/java/io/druid/segment/realtime/plumber/PlumberSchool.java))
 
-The realtime module also uses several of the default modules in [Configuration](Configuration.html). For more information on the realtime spec file (or configuration file), see [realtime ingestion](Realtime-ingestion.html) page.
+The expectations are that the former will be very common and something that users of Druid will do on a fairly regular basis. Most users will probably never have to deal with the latter form of customization. Indeed, we hope that all potential use cases can be packaged up as part of Druid proper without requiring proprietary customization.
 
-
-Requirements
-------------
-
-Realtime nodes currently require a Kafka cluster to sit in front of them and collect results. There’s [more configuration](Tutorial\:-Loading-Your-Data-Part-2.md#set-up-kafka) required for these as well.
+Given those expectations, adding a firehose is straightforward and completely encapsulated inside of the interface. Adding a plumber is more involved and requires understanding of how the system works to get right, it’s not impossible, but it’s not intended that individuals new to Druid will be able to do it immediately.

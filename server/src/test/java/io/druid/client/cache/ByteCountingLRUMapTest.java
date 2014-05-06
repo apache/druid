@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 
 /**
  */
@@ -65,6 +66,18 @@ public class ByteCountingLRUMapTest
     assertMapValues(2, 101, 2);
     Assert.assertEquals(ByteBuffer.wrap(eightyEightVal), ByteBuffer.wrap(map.get(tenKey)));
     Assert.assertEquals(oneByte, ByteBuffer.wrap(map.get(twoByte)));
+
+    Iterator<ByteBuffer> it = map.keySet().iterator();
+    while(it.hasNext()) {
+      ByteBuffer buf = it.next();
+      if(buf.remaining() == 10) {
+        it.remove();
+      }
+    }
+    assertMapValues(1, 3, 2);
+
+    map.remove(twoByte);
+    assertMapValues(0, 0, 2);
   }
 
   private void assertMapValues(final int size, final int numBytes, final int evictionCount)

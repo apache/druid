@@ -19,10 +19,11 @@
 
 package io.druid.query.topn;
 
-import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import io.druid.collections.StupidPool;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
@@ -56,7 +57,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     this.bufferPool = bufferPool;
   }
 
-
   @Override
   public TopNParams makeInitParams(
       DimensionSelector dimSelector, Cursor cursor
@@ -66,54 +66,26 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   }
 
   @Override
-  public TopNResultBuilder makeResultBuilder(TopNParams params)
-  {
-    return query.getTopNMetricSpec().getResultBuilder(
-        params.getCursor().getTime(), query.getDimensionSpec(), query.getThreshold(), comparator
-    );
-  }
-
-  @Override
   public void run(
       TopNParams params, TopNResultBuilder resultBuilder, int[] ints
   )
   {
-    final TopNResultBuilder singleMetricResultBuilder = makeResultBuilder(params);
-    final String metric = ((NumericTopNMetricSpec) query.getTopNMetricSpec()).getMetric();
+    final String metric = query.getTopNMetricSpec().getMetricName(query.getDimensionSpec());
+    Pair<List<AggregatorFactory>, List<PostAggregator>> condensedAggPostAggPair = AggregatorUtil.condensedAggregators(
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs(),
+        metric
+    );
 
-    // Find either the aggregator or post aggregator to do the topN over
-    List<AggregatorFactory> condensedAggs = Lists.newArrayList();
-    for (AggregatorFactory aggregatorSpec : query.getAggregatorSpecs()) {
-      if (aggregatorSpec.getName().equalsIgnoreCase(metric)) {
-        condensedAggs.add(aggregatorSpec);
-        break;
-      }
-    }
-    List<PostAggregator> condensedPostAggs = Lists.newArrayList();
-    if (condensedAggs.isEmpty()) {
-      for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-        if (postAggregator.getName().equalsIgnoreCase(metric)) {
-          condensedPostAggs.add(postAggregator);
-
-          // Add all dependent metrics
-          for (AggregatorFactory aggregatorSpec : query.getAggregatorSpecs()) {
-            if (postAggregator.getDependentFields().contains(aggregatorSpec.getName())) {
-              condensedAggs.add(aggregatorSpec);
-            }
-          }
-          break;
-        }
-      }
-    }
-    if (condensedAggs.isEmpty() && condensedPostAggs.isEmpty()) {
+    if (condensedAggPostAggPair.lhs.isEmpty() && condensedAggPostAggPair.rhs.isEmpty()) {
       throw new ISE("WTF! Can't find the metric to do topN over?");
     }
-
     // Run topN for only a single metric
     TopNQuery singleMetricQuery = new TopNQueryBuilder().copy(query)
-                                                        .aggregators(condensedAggs)
-                                                        .postAggregators(condensedPostAggs)
+                                                        .aggregators(condensedAggPostAggPair.lhs)
+                                                        .postAggregators(condensedAggPostAggPair.rhs)
                                                         .build();
+    final TopNResultBuilder singleMetricResultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, singleMetricQuery);
 
     PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;

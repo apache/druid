@@ -72,9 +72,9 @@ public class ArbitraryGranularitySpec implements GranularitySpec
 
   @Override
   @JsonProperty("intervals")
-  public SortedSet<Interval> bucketIntervals()
+  public Optional<SortedSet<Interval>> bucketIntervals()
   {
-    return intervals;
+    return Optional.of((SortedSet<Interval>) intervals);
   }
 
   @Override

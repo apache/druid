@@ -132,8 +132,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
              .addData("provisioningCount", currentlyProvisioning.size())
              .emit();
 
-          List<String> nodeIps = autoScalingStrategy.idToIpLookup(Lists.newArrayList(currentlyProvisioning));
-          autoScalingStrategy.terminate(nodeIps);
+          autoScalingStrategy.terminateWithIds(Lists.newArrayList(currentlyProvisioning));
           currentlyProvisioning.clear();
         }
       }
@@ -298,22 +297,29 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           createValidWorkerPredicate(config, workerSetupData)
       );
       final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config, workerSetupData);
+      final int minWorkerCount = workerSetupData.getMinNumWorkers();
+      final int maxWorkerCount = workerSetupData.getMaxNumWorkers();
+
+      if (minWorkerCount > maxWorkerCount) {
+        log.error("Huh? minWorkerCount[%d] > maxWorkerCount[%d]. I give up!", minWorkerCount, maxWorkerCount);
+        return;
+      }
 
       if (targetWorkerCount < 0) {
         // Initialize to size of current worker pool, subject to pool size limits
         targetWorkerCount = Math.max(
             Math.min(
                 zkWorkers.size(),
-                workerSetupData.getMaxNumWorkers()
+                maxWorkerCount
             ),
-            workerSetupData.getMinNumWorkers()
+            minWorkerCount
         );
         log.info(
             "Starting with a target of %,d workers (current = %,d, min = %,d, max = %,d).",
             targetWorkerCount,
             validWorkers.size(),
-            workerSetupData.getMinNumWorkers(),
-            workerSetupData.getMaxNumWorkers()
+            minWorkerCount,
+            maxWorkerCount
         );
       }
 
@@ -321,36 +327,37 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
                                     && currentlyTerminating.isEmpty()
                                     && validWorkers.size() == targetWorkerCount;
       final boolean shouldScaleUp = atSteadyState
-                                    && hasTaskPendingBeyondThreshold(pendingTasks)
-                                    && targetWorkerCount < workerSetupData.getMaxNumWorkers();
+                                    && targetWorkerCount < maxWorkerCount
+                                    && (hasTaskPendingBeyondThreshold(pendingTasks)
+                                        || targetWorkerCount < minWorkerCount);
       final boolean shouldScaleDown = atSteadyState
-                                      && Iterables.any(validWorkers, isLazyWorker)
-                                      && targetWorkerCount > workerSetupData.getMinNumWorkers();
+                                      && targetWorkerCount > minWorkerCount
+                                      && Iterables.any(validWorkers, isLazyWorker);
       if (shouldScaleUp) {
-        targetWorkerCount++;
+        targetWorkerCount = Math.max(targetWorkerCount + 1, minWorkerCount);
         log.info(
             "I think we should scale up to %,d workers (current = %,d, min = %,d, max = %,d).",
             targetWorkerCount,
             validWorkers.size(),
-            workerSetupData.getMinNumWorkers(),
-            workerSetupData.getMaxNumWorkers()
+            minWorkerCount,
+            maxWorkerCount
         );
       } else if (shouldScaleDown) {
-        targetWorkerCount--;
+        targetWorkerCount = Math.min(targetWorkerCount - 1, maxWorkerCount);
         log.info(
             "I think we should scale down to %,d workers (current = %,d, min = %,d, max = %,d).",
             targetWorkerCount,
             validWorkers.size(),
-            workerSetupData.getMinNumWorkers(),
-            workerSetupData.getMaxNumWorkers()
+            minWorkerCount,
+            maxWorkerCount
         );
       } else {
         log.info(
             "Our target is %,d workers, and I'm okay with that (current = %,d, min = %,d, max = %,d).",
             targetWorkerCount,
             validWorkers.size(),
-            workerSetupData.getMinNumWorkers(),
-            workerSetupData.getMaxNumWorkers()
+            minWorkerCount,
+            maxWorkerCount
         );
       }
     }

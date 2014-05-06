@@ -64,7 +64,7 @@ public abstract class AbstractTask implements Task
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
     this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.dataSource = Preconditions.checkNotNull(dataSource.toLowerCase(), "dataSource");
   }
 
   @JsonProperty

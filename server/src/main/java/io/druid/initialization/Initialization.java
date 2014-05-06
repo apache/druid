@@ -36,7 +36,6 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DataSegmentPusherPullerModule;
 import io.druid.guice.DbConnectorModule;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidProcessingModule;
@@ -47,6 +46,7 @@ import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
@@ -107,9 +107,10 @@ public class Initialization
   /**
    * @param clazz Module class
    * @param <T>
+   *
    * @return Returns the set of modules loaded.
    */
-  public static<T> Set<T> getLoadedModules(Class<T> clazz)
+  public static <T> Set<T> getLoadedModules(Class<T> clazz)
   {
     Set<T> retVal = extensionsMap.get(clazz);
     if (retVal == null) {
@@ -190,22 +191,29 @@ public class Initialization
           )
       );
 
-      final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
-      List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
-      for (Artifact artifact : artifacts) {
-        if (!exclusions.contains(artifact.getGroupId())) {
-          urls.add(artifact.getFile().toURI().toURL());
-        } else {
-          log.debug("Skipped Artifact[%s]", artifact);
+      try {
+        final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
+
+        List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
+        for (Artifact artifact : artifacts) {
+          if (!exclusions.contains(artifact.getGroupId())) {
+            urls.add(artifact.getFile().toURI().toURL());
+          } else {
+            log.debug("Skipped Artifact[%s]", artifact);
+          }
         }
-      }
 
-      for (URL url : urls) {
-        log.info("Added URL[%s]", url);
-      }
+        for (URL url : urls) {
+          log.info("Added URL[%s]", url);
+        }
 
-      loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader());
-      loadersMap.put(coordinate, loader);
+        loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader());
+        loadersMap.put(coordinate, loader);
+      }
+      catch (Exception e) {
+        log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
+        throw Throwables.propagate(e);
+      }
     }
     return loader;
   }
@@ -232,9 +240,9 @@ public class Initialization
         URI u = new URI(uri);
         Repository r = new Repository(uri);
 
-        if(u.getUserInfo() != null) {
+        if (u.getUserInfo() != null) {
           String[] auth = u.getUserInfo().split(":", 2);
-          if(auth.length == 2) {
+          if (auth.length == 2) {
             r.setUsername(auth[0]);
             r.setPassword(auth[1]);
           } else {
@@ -247,7 +255,7 @@ public class Initialization
         }
         remoteRepositories.add(r);
       }
-      catch(URISyntaxException e) {
+      catch (URISyntaxException e) {
         throw Throwables.propagate(e);
       }
     }
@@ -261,28 +269,30 @@ public class Initialization
 
     PrintStream oldOut = System.out;
     try {
-      System.setOut(new PrintStream(
-          new OutputStream()
-          {
-            @Override
-            public void write(int b) throws IOException
-            {
+      System.setOut(
+          new PrintStream(
+              new OutputStream()
+              {
+                @Override
+                public void write(int b) throws IOException
+                {
 
-            }
+                }
 
-            @Override
-            public void write(byte[] b) throws IOException
-            {
+                @Override
+                public void write(byte[] b) throws IOException
+                {
 
-            }
+                }
 
-            @Override
-            public void write(byte[] b, int off, int len) throws IOException
-            {
+                @Override
+                public void write(byte[] b, int off, int len) throws IOException
+                {
 
-            }
-          }
-      ));
+                }
+              }
+          )
+      );
       return new DefaultTeslaAether(
           config.getLocalRepository(),
           remoteRepositories.toArray(new Repository[remoteRepositories.size()])
@@ -316,7 +326,7 @@ public class Initialization
         new DbConnectorModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
-        new DataSegmentPusherPullerModule(),
+        new LocalDataStorageDruidModule(),
         new FirehoseModule()
     );
 

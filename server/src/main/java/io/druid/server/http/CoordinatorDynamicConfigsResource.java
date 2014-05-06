@@ -32,7 +32,7 @@ import javax.ws.rs.core.Response;
 
 /**
  */
-@Path("/coordinator/config")
+@Path("/druid/coordinator/v1/config")
 public class CoordinatorDynamicConfigsResource
 {
   private final JacksonConfigManager manager;

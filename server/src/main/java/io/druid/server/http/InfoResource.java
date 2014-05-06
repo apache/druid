@@ -19,6 +19,9 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
@@ -34,11 +37,13 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -57,6 +62,7 @@ import java.util.TreeSet;
 
 /**
  */
+@Deprecated
 @Path("/info")
 public class InfoResource
 {
@@ -102,6 +108,7 @@ public class InfoResource
   private final DatabaseRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
 
+  private final ObjectMapper jsonMapper;
 
   @Inject
   public InfoResource(
@@ -110,7 +117,8 @@ public class InfoResource
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
       @Nullable
-      IndexingServiceClient indexingServiceClient
+      IndexingServiceClient indexingServiceClient,
+      ObjectMapper jsonMapper
   )
   {
     this.coordinator = coordinator;
@@ -118,6 +126,7 @@ public class InfoResource
     this.databaseSegmentManager = databaseSegmentManager;
     this.databaseRuleManager = databaseRuleManager;
     this.indexingServiceClient = indexingServiceClient;
+    this.jsonMapper = jsonMapper;
   }
 
   @GET
@@ -347,9 +356,49 @@ public class InfoResource
   @Produces("application/json")
   public Response getRules()
   {
-    return Response.status(Response.Status.OK)
-                   .entity(databaseRuleManager.getAllRules())
-                   .build();
+    // FUGLY, backwards compatibility
+    // This will def. be removed as part of the next release
+    return Response.ok().entity(
+        Maps.transformValues(
+            databaseRuleManager.getAllRules(),
+            new Function<List<Rule>, Object>()
+            {
+              @Override
+              public Object apply(List<Rule> rules)
+              {
+                return Lists.transform(
+                    rules,
+                    new Function<Rule, Object>()
+                    {
+                      @Override
+                      public Object apply(Rule rule)
+                      {
+                        if (rule instanceof LoadRule) {
+                          Map<String, Object> newRule = jsonMapper.convertValue(
+                              rule, new TypeReference<Map<String, Object>>()
+                          {
+                          }
+                          );
+                          Set<String> tiers = Sets.newHashSet(((LoadRule) rule).getTieredReplicants().keySet());
+                          tiers.remove(DruidServer.DEFAULT_TIER);
+                          String tier = DruidServer.DEFAULT_TIER;
+                          if (!tiers.isEmpty()) {
+                            tier = tiers.iterator().next();
+                          }
+
+                          newRule.put("tier", tier);
+                          newRule.put("replicants", ((LoadRule) rule).getNumReplicants(tier));
+
+                          return newRule;
+                        }
+                        return rule;
+                      }
+                    }
+                );
+              }
+            }
+        )
+    ).build();
   }
 
   @GET
@@ -411,6 +460,22 @@ public class InfoResource
         )
     ).build();
   }
+
+  @GET
+  @Path("/datasources/{dataSourceName}")
+  @Produces("application/json")
+  public Response getTheDataSource(
+      @PathParam("dataSourceName") final String dataSourceName
+  )
+  {
+    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    if (dataSource == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+
+    return Response.ok(dataSource).build();
+  }
+
 
   @DELETE
   @Path("/datasources/{dataSourceName}")

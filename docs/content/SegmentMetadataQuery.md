@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Segment Metadata Queries
 Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment
@@ -14,7 +15,7 @@ Segment metadata queries return per segment information about:
 {
   "queryType":"segmentMetadata",
   "dataSource":"sample_datasource",
-  "intervals":["2013-01-01/2014-01-01"],
+  "intervals":["2013-01-01/2014-01-01"]
 }
 ```
 

@@ -1,3 +1,4 @@
+
 /*
  * Druid - a distributed column store.
  * Copyright (C) 2012, 2013  Metamarkets Group Inc.
@@ -38,6 +39,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.TimestampColumnSelector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
@@ -88,6 +90,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public Iterable<String> getAvailableMetrics()
+  {
+    return index.getMetricNames();
+  }
+
+  @Override
   public int getDimensionCardinality(String dimension)
   {
     IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
@@ -118,7 +126,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Iterable<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
+    if (index.isEmpty()) {
+      return ImmutableList.of();
+    }
+
     Interval actualIntervalTmp = interval;
+
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
     if (!actualIntervalTmp.overlaps(dataInterval)) {
@@ -206,6 +219,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
 
                       @Override
+                      public void advanceTo(int offset)
+                      {
+                        int count = 0;
+                        while (count < offset && !isDone()) {
+                          advance();
+                          count++;
+                        }
+                      }
+
+                      @Override
                       public boolean isDone()
                       {
                         return done;
@@ -218,23 +241,35 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         if (numAdvanced == -1) {
                           numAdvanced = 0;
-                          while (baseIter.hasNext()) {
-                            currEntry.set(baseIter.next());
-                            if (filterMatcher.matches()) {
-                              return;
-                            }
-
-                            numAdvanced++;
-                          }
                         } else {
                           Iterators.advance(baseIter, numAdvanced);
-                          if (baseIter.hasNext()) {
-                            currEntry.set(baseIter.next());
-                          }
                         }
 
-                        done = cursorMap.size() == 0 || !baseIter.hasNext();
+                        boolean foundMatched = false;
+                        while (baseIter.hasNext()) {
+                          currEntry.set(baseIter.next());
+                          if (filterMatcher.matches()) {
+                            foundMatched = true;
+                            break;
+                          }
 
+                          numAdvanced++;
+                        }
+
+                        done = !foundMatched && (cursorMap.size() == 0 || !baseIter.hasNext());
+                      }
+
+                      @Override
+                      public TimestampColumnSelector makeTimestampColumnSelector()
+                      {
+                        return new TimestampColumnSelector()
+                        {
+                          @Override
+                          public long getTimestamp()
+                          {
+                            return currEntry.getKey().getTimestamp();
+                          }
+                        };
                       }
 
                       @Override

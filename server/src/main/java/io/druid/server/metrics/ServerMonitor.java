@@ -59,7 +59,8 @@ public class ServerMonitor extends AbstractMonitor
                                                                                  .setUser2(serverConfig.getTier());
 
       emitter.emit(builder.build("server/segment/used", used));
-      emitter.emit(builder.build("server/segment/usedPercent", used / (double) serverConfig.getMaxSize()));
+      final double usedPercent = serverConfig.getMaxSize() == 0 ? 0 : used / (double) serverConfig.getMaxSize();
+      emitter.emit(builder.build("server/segment/usedPercent", usedPercent));
     }
 
     for (Map.Entry<String, Long> entry : serverManager.getDataSourceCounts().entrySet()) {
@@ -74,7 +75,8 @@ public class ServerMonitor extends AbstractMonitor
 
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setUser2(serverConfig.getTier());
     emitter.emit(builder.build("server/segment/totalUsed", totalUsed));
-    emitter.emit(builder.build("server/segment/totalUsedPercent", totalUsed / (double) serverConfig.getMaxSize()));
+    final double totalUsedPercent = serverConfig.getMaxSize() == 0 ? 0 : totalUsed / (double) serverConfig.getMaxSize();
+    emitter.emit(builder.build("server/segment/totalUsedPercent", totalUsedPercent));
     emitter.emit(builder.build("server/segment/totalCount", totalCount));
 
     return true;

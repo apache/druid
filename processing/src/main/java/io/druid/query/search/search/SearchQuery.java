@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
+import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
@@ -49,7 +50,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 
   @JsonCreator
   public SearchQuery(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("limit") int limit,
@@ -57,7 +58,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("searchDimensions") List<String> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
-      @JsonProperty("context") Map<String, String> context
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -111,7 +112,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @Override
-  public SearchQuery withOverriddenContext(Map<String, String> contextOverrides)
+  public SearchQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new SearchQuery(
         getDataSource(),
@@ -181,13 +182,45 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   public String toString()
   {
     return "SearchQuery{" +
-           "dataSource='" + getDataSource() + '\'' +
-           ", dimFilter=" + dimFilter +
-           ", granularity='" + granularity + '\'' +
-           ", dimensions=" + dimensions +
-           ", querySpec=" + querySpec +
-           ", querySegmentSpec=" + getQuerySegmentSpec() +
-           ", limit=" + limit +
-           '}';
+        "dataSource='" + getDataSource() + '\'' +
+        ", dimFilter=" + dimFilter +
+        ", granularity='" + granularity + '\'' +
+        ", dimensions=" + dimensions +
+        ", querySpec=" + querySpec +
+        ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", limit=" + limit +
+        '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+
+    SearchQuery that = (SearchQuery) o;
+
+    if (limit != that.limit) return false;
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
+    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) return false;
+    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
+    result = 31 * result + (sortSpec != null ? sortSpec.hashCode() : 0);
+    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
+    result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
+    result = 31 * result + (querySpec != null ? querySpec.hashCode() : 0);
+    result = 31 * result + limit;
+    return result;
   }
 }

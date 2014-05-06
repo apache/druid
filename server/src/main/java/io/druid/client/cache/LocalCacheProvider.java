@@ -39,7 +39,6 @@ public class LocalCacheProvider implements CacheProvider
   @Min(0)
   private int logEvictionCount = 0;
 
-
   @Override
   public Cache get()
   {

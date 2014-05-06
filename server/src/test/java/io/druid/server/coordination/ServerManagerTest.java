@@ -37,7 +37,10 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.LocalCacheProvider;
 import io.druid.granularity.QueryGranularity;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Druids;
 import io.druid.query.NoopQueryRunner;
@@ -136,7 +139,8 @@ public class ServerManagerTest
           }
         },
         new NoopServiceEmitter(),
-        serverManagerExec
+        serverManagerExec, new DefaultObjectMapper(), new LocalCacheProvider().get(),
+        new CacheConfig()
     );
 
     loadQueryable("test", "1", new Interval("P1d/2011-04-01"));
@@ -574,7 +578,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public Function<T, T> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn)
+    public Function<T, T> makePreComputeManipulatorFn(QueryType query, MetricManipulationFn fn)
     {
       return Functions.identity();
     }
@@ -592,9 +596,7 @@ public class ServerManagerTest
   {
     private final String version;
     private final Interval interval;
-
     private final Object lock = new Object();
-
     private volatile boolean closed = false;
 
     SegmentForTesting(

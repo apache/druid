@@ -21,7 +21,9 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Duration;
@@ -34,29 +36,29 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T> implements Query<T>
 {
-  private final String dataSource;
-  private final Map<String, String> context;
+  public static String QUERYID = "queryId";
+  private final DataSource dataSource;
+  private final Map<String, Object> context;
   private final QuerySegmentSpec querySegmentSpec;
-
   private volatile Duration duration;
 
   public BaseQuery(
-      String dataSource,
+      DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      Map<String, String> context
+      Map<String, Object> context
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource can't be null");
     Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
 
-    this.dataSource = dataSource.toLowerCase();
+    this.dataSource = dataSource;
     this.context = context;
     this.querySegmentSpec = querySegmentSpec;
   }
 
   @JsonProperty
   @Override
-  public String getDataSource()
+  public DataSource getDataSource()
   {
     return dataSource;
   }
@@ -101,33 +103,146 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @JsonProperty
-  public Map<String, String> getContext()
+  public Map<String, Object> getContext()
   {
     return context;
   }
 
   @Override
-  public String getContextValue(String key)
+  public <ContextType> ContextType getContextValue(String key)
   {
-    return context == null ? null : context.get(key);
+    return context == null ? null : (ContextType) context.get(key);
   }
 
   @Override
-  public String getContextValue(String key, String defaultValue)
+  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
   {
-    String retVal = getContextValue(key);
+    ContextType retVal = getContextValue(key);
     return retVal == null ? defaultValue : retVal;
   }
 
-  protected Map<String, String> computeOverridenContext(Map<String, String> overrides)
+  @Override
+  public int getContextPriority(int defaultValue)
   {
-    Map<String, String> overridden = Maps.newTreeMap();
-    final Map<String, String> context = getContext();
+    if (context == null) {
+      return defaultValue;
+    }
+    Object val = context.get("priority");
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Integer.parseInt((String) val);
+    } else if (val instanceof Integer) {
+      return (int) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
+
+  @Override
+  public boolean getContextBySegment(boolean defaultValue)
+  {
+    return parseBoolean("bySegment", defaultValue);
+  }
+
+  @Override
+  public boolean getContextPopulateCache(boolean defaultValue)
+  {
+    return parseBoolean("populateCache", defaultValue);
+  }
+
+  @Override
+  public boolean getContextUseCache(boolean defaultValue)
+  {
+    return parseBoolean("useCache", defaultValue);
+  }
+
+  @Override
+  public boolean getContextFinalize(boolean defaultValue)
+  {
+    return parseBoolean("finalize", defaultValue);
+  }
+
+  private boolean parseBoolean(String key, boolean defaultValue)
+  {
+    if (context == null) {
+      return defaultValue;
+    }
+    Object val = context.get(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Boolean) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+    }
+  }
+
+  protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
+  {
+    Map<String, Object> overridden = Maps.newTreeMap();
+    final Map<String, Object> context = getContext();
     if (context != null) {
       overridden.putAll(context);
     }
     overridden.putAll(overrides);
 
     return overridden;
+  }
+
+  @Override
+  public String getId()
+  {
+    return (String) getContextValue(QUERYID);
+  }
+
+  @Override
+  public Query withId(String id)
+  {
+    return withOverriddenContext(ImmutableMap.<String, Object>of(QUERYID, id));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    BaseQuery baseQuery = (BaseQuery) o;
+
+    if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) {
+      return false;
+    }
+    if (dataSource != null ? !dataSource.equals(baseQuery.dataSource) : baseQuery.dataSource != null) {
+      return false;
+    }
+    if (duration != null ? !duration.equals(baseQuery.duration) : baseQuery.duration != null) {
+      return false;
+    }
+    if (querySegmentSpec != null
+        ? !querySegmentSpec.equals(baseQuery.querySegmentSpec)
+        : baseQuery.querySegmentSpec != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dataSource != null ? dataSource.hashCode() : 0;
+    result = 31 * result + (context != null ? context.hashCode() : 0);
+    result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
+    result = 31 * result + (duration != null ? duration.hashCode() : 0);
+    return result;
   }
 }

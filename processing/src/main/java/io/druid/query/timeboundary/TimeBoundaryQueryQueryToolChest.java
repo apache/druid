@@ -78,7 +78,7 @@ public class TimeBoundaryQueryQueryToolChest
               public boolean apply(T input)
               {
                 return input.getInterval().overlaps(first.getInterval()) || input.getInterval()
-                                                                                 .overlaps(second.getInterval());
+                    .overlaps(second.getInterval());
               }
             }
         )
@@ -117,13 +117,13 @@ public class TimeBoundaryQueryQueryToolChest
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
   {
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4(query.getType())
         .setUser6("false");
   }
 
   @Override
-  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makeMetricManipulatorFn(
+  public Function<Result<TimeBoundaryResultValue>, Result<TimeBoundaryResultValue>> makePreComputeManipulatorFn(
       TimeBoundaryQuery query, MetricManipulationFn fn
   )
   {
@@ -145,9 +145,9 @@ public class TimeBoundaryQueryQueryToolChest
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
         return ByteBuffer.allocate(2)
-                         .put(TIMEBOUNDARY_QUERY)
-                         .put(query.getCacheKey())
-                         .array();
+            .put(TIMEBOUNDARY_QUERY)
+            .put(query.getCacheKey())
+            .array();
       }
 
       @Override

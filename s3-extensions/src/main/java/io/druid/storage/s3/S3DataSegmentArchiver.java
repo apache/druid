@@ -29,23 +29,41 @@ import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSegmentArchiver
 {
-  private final S3DataSegmentArchiverConfig config;
+  private final S3DataSegmentArchiverConfig archiveConfig;
+  private final S3DataSegmentPusherConfig restoreConfig;
 
   @Inject
   public S3DataSegmentArchiver(
     RestS3Service s3Client,
-    S3DataSegmentArchiverConfig config
+    S3DataSegmentArchiverConfig archiveConfig,
+    S3DataSegmentPusherConfig restoreConfig
   )
   {
-    super(s3Client);
-    this.config = config;
+    super(s3Client, restoreConfig);
+    this.archiveConfig = archiveConfig;
+    this.restoreConfig = restoreConfig;
   }
 
   @Override
   public DataSegment archive(DataSegment segment) throws SegmentLoadingException
   {
-    String targetS3Bucket = config.getArchiveBucket();
-    String targetS3BaseKey = config.getArchiveBaseKey();
+    String targetS3Bucket = archiveConfig.getArchiveBucket();
+    String targetS3BaseKey = archiveConfig.getArchiveBaseKey();
+
+    return move(
+        segment,
+        ImmutableMap.<String, Object>of(
+            "bucket", targetS3Bucket,
+            "baseKey", targetS3BaseKey
+        )
+    );
+  }
+
+  @Override
+  public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+  {
+    String targetS3Bucket = restoreConfig.getBucket();
+    String targetS3BaseKey = restoreConfig.getBaseKey();
 
     return move(
         segment,

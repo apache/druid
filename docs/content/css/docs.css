@@ -54,3 +54,7 @@
 .doc-content table code {
    background-color: transparent;
 }
+
+td, th {
+  padding: 5px;
+}

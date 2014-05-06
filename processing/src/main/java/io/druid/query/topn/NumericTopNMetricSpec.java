@@ -121,10 +121,12 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
       DateTime timestamp,
       DimensionSpec dimSpec,
       int threshold,
-      Comparator comparator
+      Comparator comparator,
+      List<AggregatorFactory> aggFactories,
+      List<PostAggregator> postAggs
   )
   {
-    return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator);
+    return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator, aggFactories, postAggs);
   }
 
   @Override
@@ -151,10 +153,35 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public String getMetricName(DimensionSpec dimSpec)
+  {
+    return metric;
+  }
+
+  @Override
   public String toString()
   {
     return "NumericTopNMetricSpec{" +
            "metric='" + metric + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    NumericTopNMetricSpec that = (NumericTopNMetricSpec) o;
+
+    if (metric != null ? !metric.equals(that.metric) : that.metric != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return metric != null ? metric.hashCode() : 0;
   }
 }

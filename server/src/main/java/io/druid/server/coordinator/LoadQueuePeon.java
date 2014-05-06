@@ -19,6 +19,7 @@
 
 package io.druid.server.coordinator;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -103,6 +104,7 @@ public class LoadQueuePeon
     this.config = config;
   }
 
+  @JsonProperty
   public Set<DataSegment> getSegmentsToLoad()
   {
     return new ConcurrentSkipListSet<DataSegment>(
@@ -120,6 +122,7 @@ public class LoadQueuePeon
     );
   }
 
+  @JsonProperty
   public Set<DataSegment> getSegmentsToDrop()
   {
     return new ConcurrentSkipListSet<DataSegment>(

@@ -147,7 +147,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(query.getDataSource().toString())
         .setUser4(query.getType())
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -155,7 +155,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
-  public Function<SegmentAnalysis, SegmentAnalysis> makeMetricManipulatorFn(
+  public Function<SegmentAnalysis, SegmentAnalysis> makePreComputeManipulatorFn(
       SegmentMetadataQuery query, MetricManipulationFn fn
   )
   {
@@ -178,9 +178,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
         return ByteBuffer.allocate(1 + includerBytes.length)
-                         .put(SEGMENT_METADATA_CACHE_PREFIX)
-                         .put(includerBytes)
-                         .array();
+            .put(SEGMENT_METADATA_CACHE_PREFIX)
+            .put(includerBytes)
+            .array();
       }
 
       @Override

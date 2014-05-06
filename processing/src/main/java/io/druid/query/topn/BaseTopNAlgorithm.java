@@ -28,6 +28,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -78,8 +79,6 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     while (numProcessed < cardinality) {
       final int numToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
 
-      params.getCursor().reset();
-
       DimValSelector theDimValSelector;
       if (!hasDimValSelector) {
         theDimValSelector = makeDimValSelector(params, numProcessed, numToProcess);
@@ -96,6 +95,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       closeAggregators(aggregatesStore);
 
       numProcessed += numToProcess;
+      params.getCursor().reset();
     }
   }
 
@@ -230,5 +230,19 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       return Pair.of(startIndex, endIndex);
     }
+  }
+
+  public static TopNResultBuilder makeResultBuilder(TopNParams params, TopNQuery query)
+  {
+    Comparator comparator = query.getTopNMetricSpec()
+                                 .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
+    return query.getTopNMetricSpec().getResultBuilder(
+        params.getCursor().getTime(),
+        query.getDimensionSpec(),
+        query.getThreshold(),
+        comparator,
+        query.getAggregatorSpecs(),
+        query.getPostAggregatorSpecs()
+    );
   }
 }

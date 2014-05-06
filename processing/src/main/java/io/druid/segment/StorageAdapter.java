@@ -17,7 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment;import io.druid.segment.data.Indexed;
+package io.druid.segment;
+
+import io.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -28,6 +30,7 @@ public interface StorageAdapter extends CursorFactory
   public String getSegmentIdentifier();
   public Interval getInterval();
   public Indexed<String> getAvailableDimensions();
+  public Iterable<String> getAvailableMetrics();
   public int getDimensionCardinality(String dimension);
   public DateTime getMinTime();
   public DateTime getMaxTime();

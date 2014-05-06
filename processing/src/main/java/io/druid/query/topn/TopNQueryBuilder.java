@@ -21,6 +21,8 @@ package io.druid.query.topn;
 
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.DataSource;
+import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -58,7 +60,7 @@ import java.util.Map;
  */
 public class TopNQueryBuilder
 {
-  private String dataSource;
+  private DataSource dataSource;
   private DimensionSpec dimensionSpec;
   private TopNMetricSpec topNMetricSpec;
   private int threshold;
@@ -67,11 +69,11 @@ public class TopNQueryBuilder
   private QueryGranularity granularity;
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
-  private Map<String, String> context;
+  private Map<String, Object> context;
 
   public TopNQueryBuilder()
   {
-    dataSource = "";
+    dataSource = null;
     dimensionSpec = null;
     topNMetricSpec = null;
     threshold = 0;
@@ -83,7 +85,7 @@ public class TopNQueryBuilder
     context = null;
   }
 
-  public String getDataSource()
+  public DataSource getDataSource()
   {
     return dataSource;
   }
@@ -128,7 +130,7 @@ public class TopNQueryBuilder
     return postAggregatorSpecs;
   }
 
-  public Map<String, String> getContext()
+  public Map<String, Object> getContext()
   {
     return context;
   }
@@ -152,7 +154,7 @@ public class TopNQueryBuilder
   public TopNQueryBuilder copy(TopNQuery query)
   {
     return new TopNQueryBuilder()
-        .dataSource(query.getDataSource())
+        .dataSource(query.getDataSource().toString())
         .dimension(query.getDimensionSpec())
         .metric(query.getTopNMetricSpec())
         .threshold(query.getThreshold())
@@ -180,6 +182,12 @@ public class TopNQueryBuilder
   }
 
   public TopNQueryBuilder dataSource(String d)
+  {
+    dataSource = new TableDataSource(d);
+    return this;
+  }
+
+  public TopNQueryBuilder dataSource(DataSource d)
   {
     dataSource = d;
     return this;
@@ -282,7 +290,7 @@ public class TopNQueryBuilder
     return this;
   }
 
-  public TopNQueryBuilder context(Map<String, String> c)
+  public TopNQueryBuilder context(Map<String, Object> c)
   {
     context = c;
     return this;

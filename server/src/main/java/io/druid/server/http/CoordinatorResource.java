@@ -19,21 +19,24 @@
 
 package io.druid.server.http;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import io.druid.server.coordinator.DruidCoordinator;
-import io.druid.server.coordinator.LoadPeonCallback;
+import io.druid.server.coordinator.LoadQueuePeon;
+import io.druid.timeline.DataSegment;
 
-import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 /**
  */
-@Path("/coordinator")
+@Path("/druid/coordinator/v1")
 public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
@@ -46,74 +49,115 @@ public class CoordinatorResource
     this.coordinator = coordinator;
   }
 
-  @POST
-  @Path("/move")
-  @Consumes("application/json")
-  public Response moveSegment(List<SegmentToMove> segmentsToMove)
+  @GET
+  @Path("/leader")
+  @Produces("application/json")
+  public Response getLeader()
   {
-    Response resp = Response.status(Response.Status.OK).build();
-    for (SegmentToMove segmentToMove : segmentsToMove) {
-      try {
-        coordinator.moveSegment(
-            segmentToMove.getFromServer(),
-            segmentToMove.getToServer(),
-            segmentToMove.getSegmentName(),
-            new LoadPeonCallback()
-            {
-              @Override
-              protected void execute()
-              {
-                return;
-              }
-            }
-        );
-      }
-      catch (Exception e) {
-        resp = Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(e.getMessage())
-            .build();
-        break;
-      }
-    }
-    return resp;
-  }
-
-  @POST
-  @Path("/drop")
-  @Consumes("application/json")
-  public Response dropSegment(List<SegmentToDrop> segmentsToDrop)
-  {
-    Response resp = Response.status(Response.Status.OK).build();
-    for (SegmentToDrop segmentToDrop : segmentsToDrop) {
-      try {
-        coordinator.dropSegment(
-            segmentToDrop.getFromServer(), segmentToDrop.getSegmentName(), new LoadPeonCallback()
-        {
-          @Override
-          protected void execute()
-          {
-            return;
-          }
-        }
-        );
-      }
-      catch (Exception e) {
-        resp = Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(e.getMessage())
-            .build();
-        break;
-      }
-    }
-    return resp;
+    return Response.ok(coordinator.getCurrentLeader()).build();
   }
 
   @GET
   @Path("/loadstatus")
   @Produces("application/json")
-  public Response getLoadStatus()
+  public Response getLoadStatus(
+      @QueryParam("simple") String simple,
+      @QueryParam("full") String full
+  )
   {
+    if (simple != null) {
+      return Response.ok(coordinator.getSegmentAvailability()).build();
+    }
+
+    if (full != null) {
+      return Response.ok(coordinator.getReplicationStatus()).build();
+    }
     return Response.ok(coordinator.getLoadStatus()).build();
+  }
+
+  @GET
+  @Path("/loadqueue")
+  @Produces("application/json")
+  public Response getLoadQueue(
+      @QueryParam("simple") String simple,
+      @QueryParam("simple") String full
+  )
+  {
+    if (simple != null) {
+      return Response.ok(
+          Maps.transformValues(
+              coordinator.getLoadManagementPeons(),
+              new Function<LoadQueuePeon, Object>()
+              {
+                @Override
+                public Object apply(LoadQueuePeon input)
+                {
+                  long loadSize = 0;
+                  for (DataSegment dataSegment : input.getSegmentsToLoad()) {
+                    loadSize += dataSegment.getSize();
+                  }
+
+                  long dropSize = 0;
+                  for (DataSegment dataSegment : input.getSegmentsToDrop()) {
+                    dropSize += dataSegment.getSize();
+                  }
+
+                  return new ImmutableMap.Builder<>()
+                      .put("segmentsToLoad", input.getSegmentsToLoad().size())
+                      .put("segmentsToDrop", input.getSegmentsToDrop().size())
+                      .put("segmentsToLoadSize", loadSize)
+                      .put("segmentsToDropSize", dropSize)
+                      .build();
+                }
+              }
+          )
+      ).build();
+    }
+
+    if (full != null) {
+      return Response.ok(coordinator.getLoadManagementPeons()).build();
+    }
+
+    return Response.ok(
+        Maps.transformValues(
+            coordinator.getLoadManagementPeons(),
+            new Function<LoadQueuePeon, Object>()
+            {
+              @Override
+              public Object apply(LoadQueuePeon input)
+              {
+                return new ImmutableMap.Builder<>()
+                    .put(
+                        "segmentsToLoad",
+                        Collections2.transform(
+                            input.getSegmentsToLoad(),
+                            new Function<DataSegment, Object>()
+                            {
+                              @Override
+                              public String apply(DataSegment segment)
+                              {
+                                return segment.getIdentifier();
+                              }
+                            }
+                        )
+                    )
+                    .put(
+                        "segmentsToDrop", Collections2.transform(
+                        input.getSegmentsToDrop(),
+                        new Function<DataSegment, Object>()
+                        {
+                          @Override
+                          public String apply(DataSegment segment)
+                          {
+                            return segment.getIdentifier();
+                          }
+                        }
+                    )
+                    )
+                    .build();
+              }
+            }
+        )
+    ).build();
   }
 }

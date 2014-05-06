@@ -19,20 +19,20 @@
 
 package io.druid.server.coordinator.rules;
 
+import com.google.api.client.util.Maps;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadPeonCallback;
-import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.ReplicationThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -42,58 +42,78 @@ import java.util.Map;
 public abstract class LoadRule implements Rule
 {
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
+  private static final String assignedCount = "assignedCount";
+  private static final String droppedCount = "droppedCount";
 
   @Override
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
   {
     CoordinatorStats stats = new CoordinatorStats();
 
-    int expectedReplicants = getReplicants();
-    int totalReplicants = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier(), getTier());
-    int clusterReplicants = params.getSegmentReplicantLookup().getClusterReplicants(segment.getIdentifier(), getTier());
+    final Map<String, Integer> loadStatus = Maps.newHashMap();
 
-    MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(getTier());
-    if (serverQueue == null) {
-      log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", getTier()).emit();
-      return stats;
+    int totalReplicantsInCluster = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
+    for (Map.Entry<String, Integer> entry : getTieredReplicants().entrySet()) {
+      final String tier = entry.getKey();
+      final int expectedReplicantsInTier = entry.getValue();
+      final int totalReplicantsInTier = params.getSegmentReplicantLookup()
+                                              .getTotalReplicants(segment.getIdentifier(), tier);
+      final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
+                                         .getLoadedReplicants(segment.getIdentifier(), tier);
+
+      final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(tier);
+      if (serverQueue == null) {
+        log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
+        return stats;
+      }
+
+      final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
+      final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
+      final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
+      if (params.getAvailableSegments().contains(segment)) {
+        CoordinatorStats assignStats = assign(
+            params.getReplicationManager(),
+            tier,
+            totalReplicantsInCluster,
+            expectedReplicantsInTier,
+            totalReplicantsInTier,
+            strategy,
+            serverHolderList,
+            segment
+        );
+        stats.accumulate(assignStats);
+        totalReplicantsInCluster += assignStats.getPerTierStats().get(assignedCount).get(tier).get();
+      }
+
+      loadStatus.put(tier, expectedReplicantsInTier - loadedReplicantsInTier);
     }
+    // Remove over-replication
+    stats.accumulate(drop(loadStatus, segment, params));
 
-    final List<ServerHolder> serverHolderList = new ArrayList<ServerHolder>(serverQueue);
-    final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
-    final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
-    if (params.getAvailableSegments().contains(segment)) {
-      stats.accumulate(
-          assign(
-              params.getReplicationManager(),
-              expectedReplicants,
-              totalReplicants,
-              strategy,
-              serverHolderList,
-              segment
-          )
-      );
-    }
-
-    stats.accumulate(drop(expectedReplicants, clusterReplicants, segment, params));
 
     return stats;
   }
 
   private CoordinatorStats assign(
       final ReplicationThrottler replicationManager,
-      final int expectedReplicants,
-      int totalReplicants,
+      final String tier,
+      final int totalReplicantsInCluster,
+      final int expectedReplicantsInTier,
+      final int totalReplicantsInTier,
       final BalancerStrategy strategy,
       final List<ServerHolder> serverHolderList,
       final DataSegment segment
   )
   {
     final CoordinatorStats stats = new CoordinatorStats();
+    stats.addToTieredStat(assignedCount, tier, 0);
 
-    while (totalReplicants < expectedReplicants) {
-      boolean replicate = totalReplicants > 0;
+    int currReplicantsInTier = totalReplicantsInTier;
+    int currTotalReplicantsInCluster = totalReplicantsInCluster;
+    while (currReplicantsInTier < expectedReplicantsInTier) {
+      boolean replicate = currTotalReplicantsInCluster > 0;
 
-      if (replicate && !replicationManager.canCreateReplicant(getTier())) {
+      if (replicate && !replicationManager.canCreateReplicant(tier)) {
         break;
       }
 
@@ -101,17 +121,17 @@ public abstract class LoadRule implements Rule
 
       if (holder == null) {
         log.warn(
-            "Not enough %s servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
-            getTier(),
+            "Not enough [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
+            tier,
             segment.getIdentifier(),
-            expectedReplicants
+            expectedReplicantsInTier
         );
         break;
       }
 
       if (replicate) {
         replicationManager.registerReplicantCreation(
-            getTier(), segment.getIdentifier(), holder.getServer().getHost()
+            tier, segment.getIdentifier(), holder.getServer().getHost()
         );
       }
 
@@ -120,10 +140,10 @@ public abstract class LoadRule implements Rule
           new LoadPeonCallback()
           {
             @Override
-            protected void execute()
+            public void execute()
             {
               replicationManager.unregisterReplicantCreation(
-                  getTier(),
+                  tier,
                   segment.getIdentifier(),
                   holder.getServer().getHost()
               );
@@ -131,38 +151,44 @@ public abstract class LoadRule implements Rule
           }
       );
 
-      stats.addToTieredStat("assignedCount", getTier(), 1);
-      ++totalReplicants;
+      stats.addToTieredStat(assignedCount, tier, 1);
+      ++currReplicantsInTier;
+      ++currTotalReplicantsInCluster;
     }
 
     return stats;
   }
 
   private CoordinatorStats drop(
-      int expectedReplicants,
-      int clusterReplicants,
+      final Map<String, Integer> loadStatus,
       final DataSegment segment,
       final DruidCoordinatorRuntimeParams params
   )
   {
     CoordinatorStats stats = new CoordinatorStats();
-    final ReplicationThrottler replicationManager = params.getReplicationManager();
 
     if (!params.hasDeletionWaitTimeElapsed()) {
       return stats;
     }
 
-    // Make sure we have enough actual replicants in the cluster before doing anything
-    if (clusterReplicants < expectedReplicants) {
-      return stats;
+    // Make sure we have enough loaded replicants in the correct tiers in the cluster before doing anything
+    for (Integer leftToLoad : loadStatus.values()) {
+      if (leftToLoad > 0) {
+        return stats;
+      }
     }
 
-    Map<String, Integer> replicantsByType = params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier());
+    final ReplicationThrottler replicationManager = params.getReplicationManager();
 
-    for (Map.Entry<String, Integer> entry : replicantsByType.entrySet()) {
-      String tier = entry.getKey();
-      int actualNumReplicantsForType = entry.getValue();
-      int expectedNumReplicantsForType = getReplicants(tier);
+    // Find all instances of this segment across tiers
+    Map<String, Integer> replicantsByTier = params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier());
+
+    for (Map.Entry<String, Integer> entry : replicantsByTier.entrySet()) {
+      final String tier = entry.getKey();
+      int loadedNumReplicantsForTier = entry.getValue();
+      int expectedNumReplicantsForTier = getNumReplicants(tier);
+
+      stats.addToTieredStat(droppedCount, tier, 0);
 
       MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().get(tier);
       if (serverQueue == null) {
@@ -171,7 +197,7 @@ public abstract class LoadRule implements Rule
       }
 
       List<ServerHolder> droppedServers = Lists.newArrayList();
-      while (actualNumReplicantsForType > expectedNumReplicantsForType) {
+      while (loadedNumReplicantsForTier > expectedNumReplicantsForTier) {
         final ServerHolder holder = serverQueue.pollLast();
         if (holder == null) {
           log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
@@ -179,14 +205,14 @@ public abstract class LoadRule implements Rule
         }
 
         if (holder.isServingSegment(segment)) {
-          if (expectedNumReplicantsForType > 0) { // don't throttle unless we are removing extra replicants
-            if (!replicationManager.canDestroyReplicant(getTier())) {
+          if (expectedNumReplicantsForTier > 0) { // don't throttle unless we are removing extra replicants
+            if (!replicationManager.canDestroyReplicant(tier)) {
               serverQueue.add(holder);
               break;
             }
 
             replicationManager.registerReplicantTermination(
-                getTier(),
+                tier,
                 segment.getIdentifier(),
                 holder.getServer().getHost()
             );
@@ -197,18 +223,18 @@ public abstract class LoadRule implements Rule
               new LoadPeonCallback()
               {
                 @Override
-                protected void execute()
+                public void execute()
                 {
                   replicationManager.unregisterReplicantTermination(
-                      getTier(),
+                      tier,
                       segment.getIdentifier(),
                       holder.getServer().getHost()
                   );
                 }
               }
           );
-          --actualNumReplicantsForType;
-          stats.addToTieredStat("droppedCount", tier, 1);
+          --loadedNumReplicantsForTier;
+          stats.addToTieredStat(droppedCount, tier, 1);
         }
         droppedServers.add(holder);
       }
@@ -218,9 +244,7 @@ public abstract class LoadRule implements Rule
     return stats;
   }
 
-  public abstract int getReplicants();
+  public abstract Map<String, Integer> getTieredReplicants();
 
-  public abstract int getReplicants(String tier);
-
-  public abstract String getTier();
+  public abstract int getNumReplicants(String tier);
 }

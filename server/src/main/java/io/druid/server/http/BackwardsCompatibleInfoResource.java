@@ -19,6 +19,7 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
@@ -31,6 +32,7 @@ import javax.ws.rs.Path;
 
 /**
  */
+@Deprecated
 @Path("/static/info")
 public class BackwardsCompatibleInfoResource extends InfoResource
 {
@@ -40,9 +42,17 @@ public class BackwardsCompatibleInfoResource extends InfoResource
       InventoryView serverInventoryView,
       DatabaseSegmentManager databaseSegmentManager,
       DatabaseRuleManager databaseRuleManager,
-      @Nullable IndexingServiceClient indexingServiceClient
+      @Nullable IndexingServiceClient indexingServiceClient,
+      ObjectMapper jsonMapper
   )
   {
-    super(coordinator, serverInventoryView, databaseSegmentManager, databaseRuleManager, indexingServiceClient);
+    super(
+        coordinator,
+        serverInventoryView,
+        databaseSegmentManager,
+        databaseRuleManager,
+        indexingServiceClient,
+        jsonMapper
+    );
   }
 }

@@ -20,6 +20,7 @@
 package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
@@ -40,6 +41,12 @@ public class TimeseriesQueryEngine
 {
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
+    if (adapter == null) {
+      throw new ISE(
+          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+      );
+    }
+
     return new BaseSequence<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>(
         new BaseSequence.IteratorMaker<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>()
         {
@@ -72,10 +79,6 @@ public class TimeseriesQueryEngine
 
                     for (Aggregator aggregator : aggregators) {
                       bob.addMetric(aggregator);
-                    }
-
-                    for (PostAggregator postAgg : postAggregatorSpecs) {
-                      bob.addMetric(postAgg);
                     }
 
                     Result<TimeseriesResultValue> retVal = bob.build();

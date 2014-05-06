@@ -44,6 +44,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
@@ -53,6 +54,15 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanup;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.rules.LoadRule;
+import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -63,7 +73,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -85,10 +94,6 @@ public class DruidCoordinator
 
   private final Object lock = new Object();
 
-  private volatile boolean started = false;
-  private volatile boolean leader = false;
-  private volatile AtomicReference<CoordinatorDynamicConfig> dynamicConfigs;
-
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
@@ -104,6 +109,12 @@ public class DruidCoordinator
   private final AtomicReference<LeaderLatch> leaderLatch;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
+
+  private volatile boolean started = false;
+  private volatile int leaderCounter = 0;
+  private volatile boolean leader = false;
+  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+
 
   @Inject
   public DruidCoordinator(
@@ -174,13 +185,68 @@ public class DruidCoordinator
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
     this.leaderLatch = new AtomicReference<>(null);
-    this.dynamicConfigs = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
   public boolean isLeader()
   {
     return leader;
+  }
+
+  public Map<String, LoadQueuePeon> getLoadManagementPeons()
+  {
+    return loadManagementPeons;
+  }
+
+  public Map<String, CountingMap<String>> getReplicationStatus()
+  {
+    final Map<String, CountingMap<String>> retVal = Maps.newHashMap();
+
+    if (segmentReplicantLookup == null) {
+      return retVal;
+    }
+
+    final DateTime now = new DateTime();
+    for (DataSegment segment : getAvailableDataSegments()) {
+      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+      for (Rule rule : rules) {
+        if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
+          for (Map.Entry<String, Integer> entry : ((LoadRule) rule).getTieredReplicants().entrySet()) {
+            CountingMap<String> dataSourceMap = retVal.get(entry.getKey());
+            if (dataSourceMap == null) {
+              dataSourceMap = new CountingMap<>();
+              retVal.put(entry.getKey(), dataSourceMap);
+            }
+
+            int diff = Math.max(
+                entry.getValue() - segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), entry.getKey()),
+                0
+            );
+            dataSourceMap.add(segment.getDataSource(), diff);
+          }
+          break;
+        }
+      }
+    }
+
+    return retVal;
+  }
+
+
+  public CountingMap<String> getSegmentAvailability()
+  {
+    final CountingMap<String> retVal = new CountingMap<>();
+
+    if (segmentReplicantLookup == null) {
+      return retVal;
+    }
+
+    for (DataSegment segment : getAvailableDataSegments()) {
+      int available = (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) ? 0 : 1;
+      retVal.add(segment.getDataSource(), 1 - available);
+    }
+
+    return retVal;
   }
 
   public Map<String, Double> getLoadStatus()
@@ -230,7 +296,11 @@ public class DruidCoordinator
 
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
-    return dynamicConfigs.get();
+    return configManager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class,
+        new CoordinatorDynamicConfig.Builder().build()
+    ).get();
   }
 
   public void removeSegment(DataSegment segment)
@@ -323,7 +393,7 @@ public class DruidCoordinator
           new LoadPeonCallback()
           {
             @Override
-            protected void execute()
+            public void execute()
             {
               try {
                 if (curator.checkExists().forPath(toServedSegPath) != null &&
@@ -483,6 +553,7 @@ public class DruidCoordinator
 
       log.info("I am the leader of the coordinators, all must bow!");
       try {
+        leaderCounter++;
         leader = true;
         databaseSegmentManager.start();
         databaseRuleManager.start();
@@ -490,11 +561,6 @@ public class DruidCoordinator
         serviceAnnouncer.announce(self);
 
         final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
-        dynamicConfigs = configManager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class,
-            new CoordinatorDynamicConfig.Builder().build()
-        );
         coordinatorRunnables.add(Pair.of(new CoordinatorHistoricalManagerRunnable(), config.getCoordinatorPeriod()));
         if (indexingServiceClient != null) {
           coordinatorRunnables.add(
@@ -512,6 +578,7 @@ public class DruidCoordinator
           );
         }
 
+        final int startingLeaderCounter = leaderCounter;
         for (final Pair<? extends CoordinatorRunnable, Duration> coordinatorRunnable : coordinatorRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
@@ -524,10 +591,10 @@ public class DruidCoordinator
                 @Override
                 public ScheduledExecutors.Signal call()
                 {
-                  if (leader) {
+                  if (leader && startingLeaderCounter == leaderCounter) {
                     theRunnable.run();
                   }
-                  if (leader) { // (We might no longer be coordinator)
+                  if (leader && startingLeaderCounter == leaderCounter) { // (We might no longer be leader)
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;
@@ -560,6 +627,8 @@ public class DruidCoordinator
   {
     synchronized (lock) {
       try {
+        leaderCounter++;
+
         log.info("I am no longer the leader...");
 
         for (String server : loadManagementPeons.keySet()) {
@@ -687,12 +756,11 @@ public class DruidCoordinator
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
-                                    .withStartTime(startTime)
-                                    .withDatasources(databaseSegmentManager.getInventory())
-                                    .withDynamicConfigs(dynamicConfigs.get())
-                                    .withEmitter(emitter)
-                                    .build();
-
+                                         .withStartTime(startTime)
+                                         .withDatasources(databaseSegmentManager.getInventory())
+                                         .withDynamicConfigs(getDynamicConfigs())
+                                         .withEmitter(emitter)
+                                         .build();
 
         for (DruidCoordinatorHelper helper : helpers) {
           params = helper.run(params);
@@ -724,10 +792,10 @@ public class DruidCoordinator
                           {
                             @Override
                             public boolean apply(
-                                @Nullable DruidServer input
+                                DruidServer input
                             )
                             {
-                              return input.getType().equalsIgnoreCase("historical");
+                              return input.isAssignable();
                             }
                           }
                       );
@@ -757,14 +825,14 @@ public class DruidCoordinator
                     cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
                   }
 
-                  SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
+                  segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  final Set<String> disdappearedServers = Sets.newHashSet(loadManagementPeons.keySet());
+                  final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
                   for (DruidServer server : servers) {
-                    disdappearedServers.remove(server.getName());
+                    disappeared.remove(server.getName());
                   }
-                  for (String name : disdappearedServers) {
+                  for (String name : disappeared) {
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
                     peon.stop();
@@ -776,7 +844,6 @@ public class DruidCoordinator
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
-                               .withDynamicConfigs(dynamicConfigs.get())
                                .build();
                 }
               },
