@@ -28,6 +28,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -93,7 +94,7 @@ import java.io.IOException;
  * For more information on RabbitMQ high availability please see:
  * <a href="http://www.rabbitmq.com/ha.html">http://www.rabbitmq.com/ha.html</a>.
  */
-public class RabbitMQFirehoseFactory implements FirehoseFactory
+public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
   private static final Logger log = new Logger(RabbitMQFirehoseFactory.class);
 
@@ -119,14 +120,18 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
+    final StringInputRowParser stringParser = (StringInputRowParser) firehoseParser;
+
     ConnectionOptions lyraOptions = new ConnectionOptions(this.connectionFactory);
     Config lyraConfig = new Config()
-        .withRecoveryPolicy(new RetryPolicy()
-            .withMaxRetries(config.getMaxRetries())
-            .withRetryInterval(Duration.seconds(config.getRetryIntervalSeconds()))
-            .withMaxDuration(Duration.seconds(config.getMaxDurationSeconds())));
+        .withRecoveryPolicy(
+            new RetryPolicy()
+                .withMaxRetries(config.getMaxRetries())
+                .withRetryInterval(Duration.seconds(config.getRetryIntervalSeconds()))
+                .withMaxDuration(Duration.seconds(config.getMaxDurationSeconds()))
+        );
 
     String queue = config.getQueue();
     String exchange = config.getExchange();
@@ -138,26 +143,30 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
 
     final Connection connection = Connections.create(lyraOptions, lyraConfig);
 
-    connection.addShutdownListener(new ShutdownListener()
-    {
-      @Override
-      public void shutdownCompleted(ShutdownSignalException cause)
-      {
-        log.warn(cause, "Connection closed!");
-      }
-    });
+    connection.addShutdownListener(
+        new ShutdownListener()
+        {
+          @Override
+          public void shutdownCompleted(ShutdownSignalException cause)
+          {
+            log.warn(cause, "Connection closed!");
+          }
+        }
+    );
 
     final Channel channel = connection.createChannel();
     channel.queueDeclare(queue, durable, exclusive, autoDelete, null);
     channel.queueBind(queue, exchange, routingKey);
-    channel.addShutdownListener(new ShutdownListener()
-    {
-      @Override
-      public void shutdownCompleted(ShutdownSignalException cause)
-      {
-        log.warn(cause, "Channel closed!");
-      }
-    });
+    channel.addShutdownListener(
+        new ShutdownListener()
+        {
+          @Override
+          public void shutdownCompleted(ShutdownSignalException cause)
+          {
+            log.warn(cause, "Channel closed!");
+          }
+        }
+    );
 
     // We create a QueueingConsumer that will not auto-acknowledge messages since that
     // happens on commit().
@@ -212,7 +221,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
           return null;
         }
 
-        return parser.parse(new String(delivery.getBody()));
+        return stringParser.parse(new String(delivery.getBody()));
       }
 
       @Override
@@ -252,5 +261,11 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
         connection.close();
       }
     };
+  }
+
+  @Override
+  public ByteBufferInputRowParser getParser()
+  {
+    return parser;
   }
 }

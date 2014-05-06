@@ -21,20 +21,19 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.Granularity;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Period;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -48,6 +47,8 @@ public class FlushingPlumber extends RealtimePlumber
 {
   private static final EmittingLogger log = new EmittingLogger(FlushingPlumber.class);
 
+  private final DataSchema schema;
+  private final RealtimeTuningConfig config;
   private final Duration flushDuration;
 
   private volatile ScheduledExecutorService flushScheduledExec = null;
@@ -55,39 +56,31 @@ public class FlushingPlumber extends RealtimePlumber
 
   public FlushingPlumber(
       Duration flushDuration,
-      Period windowPeriod,
-      File basePersistDirectory,
-      IndexGranularity segmentGranularity,
-      Schema schema,
+      DataSchema schema,
+      RealtimeTuningConfig config,
       FireDepartmentMetrics metrics,
-      RejectionPolicy rejectionPolicy,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService,
-      VersioningPolicy versioningPolicy,
-      int maxPendingPersists
+      ExecutorService queryExecutorService
   )
   {
     super(
-        windowPeriod,
-        basePersistDirectory,
-        segmentGranularity,
         schema,
+        config,
         metrics,
-        rejectionPolicy,
         emitter,
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
-        versioningPolicy,
         null,
         null,
-        null,
-        maxPendingPersists
+        null
     );
 
     this.flushDuration = flushDuration;
+    this.schema = schema;
+    this.config = config;
   }
 
   @Override
@@ -138,26 +131,33 @@ public class FlushingPlumber extends RealtimePlumber
 
   private void startFlushThread()
   {
-    final long truncatedNow = getSegmentGranularity().truncate(new DateTime()).getMillis();
-    final long windowMillis = getWindowPeriod().toStandardDuration().getMillis();
+    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
+    final long windowMillis = config.getWindowPeriod().toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
         new DateTime().plus(
-            new Duration(System.currentTimeMillis(), getSegmentGranularity().increment(truncatedNow) + windowMillis)
+            new Duration(
+                System.currentTimeMillis(),
+                schema.getGranularitySpec().getSegmentGranularity().increment(truncatedNow).getMillis() + windowMillis
+            )
         )
     );
 
     ScheduledExecutors
         .scheduleAtFixedRate(
             flushScheduledExec,
-            new Duration(System.currentTimeMillis(), getSegmentGranularity().increment(truncatedNow) + windowMillis),
-            new Duration(truncatedNow, getSegmentGranularity().increment(truncatedNow)),
+            new Duration(
+                System.currentTimeMillis(),
+                schema.getGranularitySpec().getSegmentGranularity().increment(truncatedNow).getMillis() + windowMillis
+            ),
+            new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
                 String.format(
                     "%s-flusher-%d",
                     getSchema().getDataSource(),
-                    getSchema().getShardSpec().getPartitionNum()
+                    getConfig().getShardSpec().getPartitionNum()
                 )
             )
             {
@@ -169,7 +169,7 @@ public class FlushingPlumber extends RealtimePlumber
                   return ScheduledExecutors.Signal.STOP;
                 }
 
-                long minTimestamp = getSegmentGranularity().truncate(
+                long minTimestamp = segmentGranularity.truncate(
                     getRejectionPolicy().getCurrMaxTime().minus(windowMillis)
                 ).getMillis();
 

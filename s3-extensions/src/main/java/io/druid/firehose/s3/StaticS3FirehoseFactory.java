@@ -27,7 +27,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
@@ -51,7 +53,7 @@ import java.util.zip.GZIPInputStream;
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory implements FirehoseFactory
+public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
@@ -88,7 +90,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
     Preconditions.checkNotNull(s3Client, "null s3Client");
 
@@ -119,8 +121,9 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
 
             try {
               final InputStream innerInputStream = s3Client.getObject(
-                  new S3Bucket(s3Bucket), s3Object.getKey())
-                      .getDataInputStream();
+                  new S3Bucket(s3Bucket), s3Object.getKey()
+              )
+                                                           .getDataInputStream();
 
               final InputStream outerInputStream = s3Object.getKey().endsWith(".gz")
                                                    ? new GZIPInputStream(innerInputStream)
@@ -150,7 +153,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
             throw new UnsupportedOperationException();
           }
         },
-        parser
+        (StringInputRowParser) firehoseParser
     );
   }
 }

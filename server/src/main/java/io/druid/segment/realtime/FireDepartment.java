@@ -21,48 +21,91 @@ package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
+import com.google.common.base.Preconditions;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.IngestionSpec;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 
 /**
  * A Fire Department has a Firehose and a Plumber.
- *
+ * <p/>
  * This is a metaphor for a realtime stream (Firehose) and a coordinator of sinks (Plumber). The Firehose provides the
  * realtime stream of data.  The Plumber directs each drop of water from the firehose into the correct sink and makes
  * sure that the sinks don't overflow.
  */
-public class FireDepartment
+public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuningConfig>
 {
-  @JsonProperty("schema")
-  private final Schema schema;
-
-  @JsonProperty
-  private final FireDepartmentConfig config;
-
-  @JsonProperty
-  private final FirehoseFactory firehoseFactory;
-
-  @JsonProperty
-  private final PlumberSchool plumberSchool;
+  private final DataSchema dataSchema;
+  private final RealtimeIOConfig ioConfig;
+  private final RealtimeTuningConfig tuningConfig;
 
   private final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
 
   @JsonCreator
   public FireDepartment(
-    @JsonProperty("schema") Schema schema,
-    @JsonProperty("config") FireDepartmentConfig config,
-    @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-    @JsonProperty("plumber") PlumberSchool plumberSchool
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("ioConfig") RealtimeIOConfig ioConfig,
+      @JsonProperty("tuningConfig") RealtimeTuningConfig tuningConfig,
+      // Backwards Compatability
+      @JsonProperty("schema") Schema schema,
+      @JsonProperty("config") FireDepartmentConfig config,
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("plumber") PlumberSchool plumberSchool
   )
   {
-    this.schema = schema;
-    this.config = config;
-    this.firehoseFactory = firehoseFactory;
-    this.plumberSchool = plumberSchool;
+    super(dataSchema, ioConfig, tuningConfig);
+
+    // Backwards compatibility
+    if (dataSchema == null) {
+      Preconditions.checkNotNull(schema, "schema");
+      Preconditions.checkNotNull(config, "config");
+      Preconditions.checkNotNull(firehoseFactory, "firehoseFactory");
+      Preconditions.checkNotNull(plumberSchool, "plumberSchool");
+
+      this.dataSchema = new DataSchema(
+          schema.getDataSource(),
+          firehoseFactory.getParser(),
+          schema.getAggregators(),
+          new UniformGranularitySpec(
+              plumberSchool.getSegmentGranularity(),
+              schema.getIndexGranularity(),
+              Lists.<Interval>newArrayList(),
+              plumberSchool.getSegmentGranularity()
+          )
+      );
+      this.ioConfig = new RealtimeIOConfig(
+          firehoseFactory,
+          plumberSchool
+      );
+      this.tuningConfig = new RealtimeTuningConfig(
+          config.getMaxRowsInMemory(),
+          config.getIntermediatePersistPeriod(),
+          ((RealtimePlumberSchool) plumberSchool).getWindowPeriod(),
+          ((RealtimePlumberSchool) plumberSchool).getBasePersistDirectory(),
+          ((RealtimePlumberSchool) plumberSchool).getVersioningPolicy(),
+          ((RealtimePlumberSchool) plumberSchool).getRejectionPolicyFactory(),
+          ((RealtimePlumberSchool) plumberSchool).getMaxPendingPersists(),
+          schema.getShardSpec()
+      );
+    } else {
+      Preconditions.checkNotNull(dataSchema, "dataSchema");
+      Preconditions.checkNotNull(ioConfig, "ioConfig");
+
+      this.dataSchema = dataSchema;
+      this.ioConfig = ioConfig;
+      this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig() : tuningConfig;
+    }
   }
 
   /**
@@ -70,24 +113,35 @@ public class FireDepartment
    *
    * @return the Schema for this feed.
    */
-  public Schema getSchema()
+  @JsonProperty("dataSchema")
+  @Override
+  public DataSchema getDataSchema()
   {
-    return schema;
+    return dataSchema;
   }
 
-  public FireDepartmentConfig getConfig()
+  @JsonProperty("ioConfig")
+  @Override
+  public RealtimeIOConfig getIOConfig()
   {
-    return config;
+    return ioConfig;
+  }
+
+  @JsonProperty("tuningConfig")
+  @Override
+  public RealtimeTuningConfig getTuningConfig()
+  {
+    return tuningConfig;
   }
 
   public Plumber findPlumber()
   {
-    return plumberSchool.findPlumber(schema, metrics);
+    return ioConfig.getPlumberSchool().findPlumber(dataSchema, tuningConfig, metrics);
   }
 
   public Firehose connect() throws IOException
   {
-    return firehoseFactory.connect();
+    return ioConfig.getFirehoseFactory().connect(dataSchema.getParser());
   }
 
   public FireDepartmentMetrics getMetrics()

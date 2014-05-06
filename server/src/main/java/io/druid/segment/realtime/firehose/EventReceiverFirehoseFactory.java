@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit;
  * Builds firehoses that accept events through the {@link io.druid.segment.realtime.firehose.EventReceiver} interface. Can also register these
  * firehoses with an {@link io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider}.
  */
-public class EventReceiverFirehoseFactory implements FirehoseFactory
+public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
 {
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
   private static final int DEFAULT_BUFFER_SIZE = 100000;
@@ -79,11 +79,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(MapInputRowParser firehoseParser) throws IOException
   {
     log.info("Connecting firehose: %s", serviceName);
 
-    final EventReceiverFirehose firehose = new EventReceiverFirehose();
+    final EventReceiverFirehose firehose = new EventReceiverFirehose(firehoseParser);
 
     if (chatHandlerProvider.isPresent()) {
       log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
@@ -119,15 +119,17 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory
   public class EventReceiverFirehose implements ChatHandler, Firehose
   {
     private final BlockingQueue<InputRow> buffer;
+    private final MapInputRowParser parser;
 
     private final Object readLock = new Object();
 
     private volatile InputRow nextRow = null;
     private volatile boolean closed = false;
 
-    public EventReceiverFirehose()
+    public EventReceiverFirehose(MapInputRowParser parser)
     {
       this.buffer = new ArrayBlockingQueue<InputRow>(bufferSize);
+      this.parser = parser;
     }
 
     @POST

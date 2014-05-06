@@ -29,6 +29,11 @@ import javax.annotation.Nullable;
 
 public class HashedPartitionsSpec extends AbstractPartitionsSpec
 {
+  public static HashedPartitionsSpec makeDefaultHashedPartitionsSpec()
+  {
+    return new HashedPartitionsSpec(null, null, null, null);
+  }
+
   @JsonCreator
   public HashedPartitionsSpec(
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,

@@ -23,18 +23,17 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.emitter.EmittingLogger;
+import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 
@@ -42,82 +41,74 @@ import java.util.concurrent.ExecutorService;
  * This plumber just drops segments at the end of a flush duration instead of handing them off. It is only useful if you want to run
  * a real time node without the rest of the Druid cluster.
  */
-public class FlushingPlumberSchool implements PlumberSchool
+public class FlushingPlumberSchool extends RealtimePlumberSchool
 {
-  private static final EmittingLogger log = new EmittingLogger(FlushingPlumberSchool.class);
+  private static final Duration defaultFlushDuration = new Duration("PT1H");
 
   private final Duration flushDuration;
-  private final Period windowPeriod;
-  private final File basePersistDirectory;
-  private final IndexGranularity segmentGranularity;
-  private final int maxPendingPersists;
 
-  @JacksonInject
-  @NotNull
-  private volatile ServiceEmitter emitter;
-
-  @JacksonInject
-  @NotNull
-  private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile DataSegmentAnnouncer segmentAnnouncer = null;
-
-  @JacksonInject
-  @NotNull
-  @Processing
-  private volatile ExecutorService queryExecutorService = null;
-
-  private volatile VersioningPolicy versioningPolicy = null;
-  private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
+  private final ServiceEmitter emitter;
+  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final DataSegmentAnnouncer segmentAnnouncer;
+  private final ExecutorService queryExecutorService;
 
   @JsonCreator
   public FlushingPlumberSchool(
       @JsonProperty("flushDuration") Duration flushDuration,
+      @JacksonInject ServiceEmitter emitter,
+      @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
+      @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
+      @JacksonInject @Processing ExecutorService queryExecutorService,
+      // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
-    this.flushDuration = flushDuration;
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.segmentGranularity = segmentGranularity;
-    this.versioningPolicy = new IntervalStartVersioningPolicy();
-    this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-    // Workaround for Jackson issue where if maxPendingPersists is null, all JacksonInjects fail
-    this.maxPendingPersists = RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS;
-
-    Preconditions.checkNotNull(flushDuration, "FlushingPlumberSchool requires a flushDuration.");
-    Preconditions.checkNotNull(windowPeriod, "FlushingPlumberSchool requires a windowPeriod.");
-    Preconditions.checkNotNull(basePersistDirectory, "FlushingPlumberSchool requires a basePersistDirectory.");
-    Preconditions.checkNotNull(segmentGranularity, "FlushingPlumberSchool requires a segmentGranularity.");
-  }
-
-  @Override
-
-  public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
-  {
-    verifyState();
-
-    final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
-    log.info("Creating plumber using rejectionPolicy[%s]", rejectionPolicy);
-
-    return new FlushingPlumber(
-        flushDuration,
+    super(
+        emitter,
+        conglomerate,
+        null,
+        segmentAnnouncer,
+        null,
+        null,
+        queryExecutorService,
         windowPeriod,
         basePersistDirectory,
         segmentGranularity,
+        versioningPolicy,
+        rejectionPolicyFactory,
+        maxPendingPersists
+    );
+
+    this.flushDuration = flushDuration == null ? defaultFlushDuration : flushDuration;
+    this.emitter = emitter;
+    this.conglomerate = conglomerate;
+    this.segmentAnnouncer = segmentAnnouncer;
+    this.queryExecutorService = queryExecutorService;
+  }
+
+  @Override
+  public Plumber findPlumber(
+      final DataSchema schema,
+      final RealtimeTuningConfig config,
+      final FireDepartmentMetrics metrics
+  )
+  {
+    verifyState();
+
+    return new FlushingPlumber(
+        flushDuration,
         schema,
+        config,
         metrics,
-        rejectionPolicy,
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
-        versioningPolicy,
-        maxPendingPersists
+        queryExecutorService
     );
   }
 

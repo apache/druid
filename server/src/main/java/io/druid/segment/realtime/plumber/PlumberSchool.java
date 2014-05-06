@@ -21,12 +21,14 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.metamx.common.Granularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RealtimePlumberSchool.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class),
     @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class)
@@ -38,5 +40,8 @@ public interface PlumberSchool
    *
    * @return returns a plumber
    */
-  public Plumber findPlumber(Schema schema, FireDepartmentMetrics metrics);
+  public Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
+
+  @Deprecated
+  public Granularity getSegmentGranularity();
 }

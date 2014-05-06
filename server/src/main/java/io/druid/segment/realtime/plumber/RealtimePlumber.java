@@ -9,6 +9,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.metamx.common.Granularity;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
@@ -29,16 +30,16 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
-import io.druid.segment.IndexGranularity;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -68,21 +69,18 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
-  private final Period windowPeriod;
-  private final File basePersistDirectory;
-  private final IndexGranularity segmentGranularity;
-  private final Schema schema;
-  private final FireDepartmentMetrics metrics;
+
+  private final DataSchema schema;
+  private final RealtimeTuningConfig config;
   private final RejectionPolicy rejectionPolicy;
+  private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
-  private final VersioningPolicy versioningPolicy;
   private final DataSegmentPusher dataSegmentPusher;
   private final SegmentPublisher segmentPublisher;
   private final ServerView serverView;
-  private final int maxPendingPersists;
   private final Object handoffCondition = new Object();
   private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
@@ -95,58 +93,41 @@ public class RealtimePlumber implements Plumber
   private volatile ScheduledExecutorService scheduledExecutor = null;
 
   public RealtimePlumber(
-      Period windowPeriod,
-      File basePersistDirectory,
-      IndexGranularity segmentGranularity,
-      Schema schema,
+      DataSchema schema,
+      RealtimeTuningConfig config,
       FireDepartmentMetrics metrics,
-      RejectionPolicy rejectionPolicy,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ExecutorService queryExecutorService,
-      VersioningPolicy versioningPolicy,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      ServerView serverView,
-      int maxPendingPersists
+      ServerView serverView
   )
   {
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.segmentGranularity = segmentGranularity;
     this.schema = schema;
+    this.config = config;
+    this.rejectionPolicy = config.getRejectionPolicyFactory().create(config.getWindowPeriod());
     this.metrics = metrics;
-    this.rejectionPolicy = rejectionPolicy;
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
-    this.versioningPolicy = versioningPolicy;
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
-    this.maxPendingPersists = maxPendingPersists;
+
+    log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
-  public Schema getSchema()
+  public DataSchema getSchema()
   {
     return schema;
   }
 
-  public Period getWindowPeriod()
+  public RealtimeTuningConfig getConfig()
   {
-    return windowPeriod;
-  }
-
-  public IndexGranularity getSegmentGranularity()
-  {
-    return segmentGranularity;
-  }
-
-  public VersioningPolicy getVersioningPolicy()
-  {
-    return versioningPolicy;
+    return config;
   }
 
   public RejectionPolicy getRejectionPolicy()
@@ -176,7 +157,10 @@ public class RealtimePlumber implements Plumber
       return null;
     }
 
-    final long truncatedTime = segmentGranularity.truncate(timestamp);
+    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
+
+    final long truncatedTime = segmentGranularity.truncate(new DateTime(timestamp)).getMillis();
 
     Sink retVal = sinks.get(truncatedTime);
 
@@ -186,7 +170,7 @@ public class RealtimePlumber implements Plumber
           segmentGranularity.increment(new DateTime(truncatedTime))
       );
 
-      retVal = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval));
+      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval));
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -425,6 +409,8 @@ public class RealtimePlumber implements Plumber
 
   protected void initializeExecutors()
   {
+    final int maxPendingPersists = config.getMaxPendingPersists();
+
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = Execs.newBlockingSingleThreaded(
@@ -461,6 +447,8 @@ public class RealtimePlumber implements Plumber
 
   protected void bootstrapSinksFromDisk()
   {
+    final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
+
     File baseDir = computeBaseDir(schema);
     if (baseDir == null || !baseDir.exists()) {
       return;
@@ -524,7 +512,7 @@ public class RealtimePlumber implements Plumber
                           sinkInterval.getStart(),
                           sinkInterval.getEnd(),
                           versioningPolicy.getVersion(sinkInterval),
-                          schema.getShardSpec()
+                          config.getShardSpec()
                       ),
                       IndexIO.loadIndex(segmentDir)
                   ),
@@ -533,7 +521,7 @@ public class RealtimePlumber implements Plumber
           );
         }
 
-        Sink currSink = new Sink(sinkInterval, schema, versioningPolicy.getVersion(sinkInterval), hydrants);
+        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
             currSink.getInterval(),
@@ -553,26 +541,35 @@ public class RealtimePlumber implements Plumber
 
   protected void startPersistThread()
   {
-    final long truncatedNow = segmentGranularity.truncate(new DateTime()).getMillis();
+    final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
+    final Period windowPeriod = config.getWindowPeriod();
+
+    final DateTime truncatedNow = segmentGranularity.truncate(new DateTime());
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 
     log.info(
         "Expect to run at [%s]",
         new DateTime().plus(
-            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis)
+            new Duration(
+                System.currentTimeMillis(),
+                segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
+            )
         )
     );
 
     ScheduledExecutors
         .scheduleAtFixedRate(
             scheduledExecutor,
-            new Duration(System.currentTimeMillis(), segmentGranularity.increment(truncatedNow) + windowMillis),
+            new Duration(
+                System.currentTimeMillis(),
+                segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
+            ),
             new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
             new ThreadRenamingCallable<ScheduledExecutors.Signal>(
                 String.format(
                     "%s-overseer-%d",
                     schema.getDataSource(),
-                    schema.getShardSpec().getPartitionNum()
+                    config.getShardSpec().getPartitionNum()
                 )
             )
             {
@@ -651,12 +648,12 @@ public class RealtimePlumber implements Plumber
     }
   }
 
-  protected File computeBaseDir(Schema schema)
+  protected File computeBaseDir(DataSchema schema)
   {
-    return new File(basePersistDirectory, schema.getDataSource());
+    return new File(config.getBasePersistDirectory(), schema.getDataSource());
   }
 
-  protected File computePersistDir(Schema schema, Interval interval)
+  protected File computePersistDir(DataSchema schema, Interval interval)
   {
     return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
   }
@@ -670,7 +667,7 @@ public class RealtimePlumber implements Plumber
    *
    * @return the number of rows persisted
    */
-  protected int persistHydrant(FireHydrant indexToPersist, Schema schema, Interval interval)
+  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval)
   {
     synchronized (indexToPersist) {
       if (indexToPersist.hasSwapped()) {
@@ -736,7 +733,7 @@ public class RealtimePlumber implements Plumber
 
             log.debug("Checking segment[%s] on server[%s]", segment, server);
             if (schema.getDataSource().equals(segment.getDataSource())
-                && schema.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
+                && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 ) {
               final Interval interval = segment.getInterval();
               for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {

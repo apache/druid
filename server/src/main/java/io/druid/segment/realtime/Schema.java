@@ -34,6 +34,7 @@ import java.util.List;
 
 /**
  */
+@Deprecated
 public class Schema
 {
   private final String dataSource;

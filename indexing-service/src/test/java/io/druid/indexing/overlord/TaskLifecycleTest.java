@@ -41,8 +41,9 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -162,7 +163,8 @@ public class TaskLifecycleTest
         new DataSegmentMover()
         {
           @Override
-          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
+              throws SegmentLoadingException
           {
             return dataSegment;
           }
@@ -227,9 +229,14 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
         null,
+        "foo",
+        new UniformGranularitySpec(
+            Granularity.DAY,
+            null,
+            ImmutableList.of(new Interval("2010-01-01/P2D")),
+            Granularity.DAY
+        ),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
@@ -282,9 +289,9 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
         null,
+        "foo",
+        new UniformGranularitySpec(Granularity.DAY, null, ImmutableList.of(new Interval("2010-01-01/P1D")), Granularity.DAY),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
@@ -592,7 +599,7 @@ public class TaskLifecycleTest
     return new FirehoseFactory()
     {
       @Override
-      public Firehose connect() throws IOException
+      public Firehose connect(InputRowParser parser) throws IOException
       {
         return new Firehose()
         {
@@ -628,6 +635,12 @@ public class TaskLifecycleTest
           }
         };
       }
+
+      @Override
+      public InputRowParser getParser()
+      {
+        return null;
+      }
     };
   }
 
@@ -636,7 +649,7 @@ public class TaskLifecycleTest
     return new FirehoseFactory()
     {
       @Override
-      public Firehose connect() throws IOException
+      public Firehose connect(InputRowParser parser) throws IOException
       {
         final Iterator<InputRow> inputRowIterator = inputRows.iterator();
 
@@ -673,6 +686,12 @@ public class TaskLifecycleTest
 
           }
         };
+      }
+
+      @Override
+      public InputRowParser getParser()
+      {
+        return null;
       }
     };
   }

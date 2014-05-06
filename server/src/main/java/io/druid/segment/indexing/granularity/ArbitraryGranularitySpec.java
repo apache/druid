@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexer.granularity;
+package io.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,6 +27,7 @@ import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -91,7 +92,19 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public Granularity getGranularity()
+  public Granularity getSegmentGranularity()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public QueryGranularity getQueryGranularity()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
   {
     throw new UnsupportedOperationException();
   }

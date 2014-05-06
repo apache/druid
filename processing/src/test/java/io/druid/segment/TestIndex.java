@@ -26,7 +26,8 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.LineProcessor;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.impl.DelimitedDataSpec;
+import io.druid.data.input.impl.DelimitedParseSpec;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
@@ -175,9 +176,13 @@ public class TestIndex
           new LineProcessor<Integer>()
           {
             StringInputRowParser parser = new StringInputRowParser(
-                new TimestampSpec("ts", "iso"),
-                new DelimitedDataSpec("\t", Arrays.asList(COLUMNS), Arrays.asList(DIMENSIONS), null),
-                Arrays.<String>asList()
+                new DelimitedParseSpec(
+                    new TimestampSpec("ts", "iso"),
+                    new DimensionsSpec(Arrays.asList(DIMENSIONS), null, null),
+                    "\t",
+                    Arrays.asList(COLUMNS)
+                ),
+                null, null, null
             );
             boolean runOnce = false;
             int lineCount = 0;

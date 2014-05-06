@@ -40,7 +40,7 @@ import java.util.LinkedList;
 
 /**
  */
-public class LocalFirehoseFactory implements FirehoseFactory
+public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
   private final File baseDir;
   private final String filter;
@@ -77,7 +77,7 @@ public class LocalFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
     File[] foundFiles = baseDir.listFiles(
         new FilenameFilter()
@@ -125,7 +125,7 @@ public class LocalFirehoseFactory implements FirehoseFactory
             throw new UnsupportedOperationException();
           }
         },
-        parser
+        firehoseParser
     );
   }
 }

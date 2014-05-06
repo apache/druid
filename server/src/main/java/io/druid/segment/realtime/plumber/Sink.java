@@ -28,11 +28,13 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -51,17 +53,20 @@ public class Sink implements Iterable<FireHydrant>
   private volatile FireHydrant currIndex;
 
   private final Interval interval;
-  private final Schema schema;
+  private final DataSchema schema;
+  private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
 
   public Sink(
       Interval interval,
-      Schema schema,
+      DataSchema schema,
+      RealtimeTuningConfig config,
       String version
   )
   {
     this.schema = schema;
+    this.config = config;
     this.interval = interval;
     this.version = version;
 
@@ -70,12 +75,14 @@ public class Sink implements Iterable<FireHydrant>
 
   public Sink(
       Interval interval,
-      Schema schema,
+      DataSchema schema,
+      RealtimeTuningConfig config,
       String version,
       List<FireHydrant> hydrants
   )
   {
     this.schema = schema;
+    this.config = config;
     this.interval = interval;
     this.version = version;
 
@@ -158,19 +165,25 @@ public class Sink implements Iterable<FireHydrant>
           }
         }
         ),
-        schema.getShardSpec(),
+        config.getShardSpec(),
         null,
         0
     );
   }
 
-  private FireHydrant makeNewCurrIndex(long minTimestamp, Schema schema)
+  private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
+    List<SpatialDimensionSchema> spatialDimensionSchemas = schema.getParser() == null
+                                                           ? Lists.<SpatialDimensionSchema>newArrayList()
+                                                           : schema.getParser()
+                                                                   .getParseSpec()
+                                                                   .getDimensionsSpec()
+                                                                   .getSpatialDimensions();
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(schema.getIndexGranularity())
-            .withSpatialDimensions(schema.getSpatialDimensions())
+            .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
+            .withSpatialDimensions(spatialDimensionSchemas)
             .withMetrics(schema.getAggregators())
             .build()
     );

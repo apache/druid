@@ -33,7 +33,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -137,7 +137,14 @@ public class DetermineHashedPartitionsJob implements Jobby
         {
         }
         );
-        config.setGranularitySpec(new UniformGranularitySpec(config.getGranularitySpec().getGranularity(), intervals));
+        config.setGranularitySpec(
+            new UniformGranularitySpec(
+                config.getGranularitySpec().getSegmentGranularity(),
+                config.getGranularitySpec().getQueryGranularity(),
+                intervals,
+                config.getGranularitySpec().getSegmentGranularity()
+            )
+        );
         log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
@@ -199,8 +206,8 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.setup(context);
-      rollupGranularity = getConfig().getRollupSpec().getRollupGranularity();
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      rollupGranularity = getConfig().getGranularitySpec().getQueryGranularity();
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       Optional<Set<Interval>> intervals = config.getSegmentGranularIntervals();
       if (intervals.isPresent()) {
         determineIntervals = false;
@@ -229,7 +236,9 @@ public class DetermineHashedPartitionsJob implements Jobby
       );
       Interval interval;
       if (determineIntervals) {
-        interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+        interval = config.getGranularitySpec()
+                         .getSegmentGranularity()
+                         .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
 
         if (!hyperLogLogs.containsKey(interval)) {
           hyperLogLogs.put(interval, HyperLogLogCollector.makeLatestCollector());
@@ -280,7 +289,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     }
 
     @Override
@@ -294,7 +303,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       for (BytesWritable value : values) {
         aggregate.fold(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()));
       }
-      Interval interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(key.get()));
+      Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
@@ -372,7 +381,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     public void setConf(Configuration config)
     {
       this.config = config;
-      HadoopDruidIndexerConfig hadoopConfig = HadoopDruidIndexerConfigBuilder.fromConfiguration(config);
+      HadoopDruidIndexerConfig hadoopConfig = HadoopDruidIndexerConfig.fromConfiguration(config);
       if (hadoopConfig.getSegmentGranularIntervals().isPresent()) {
         determineIntervals = false;
         int reducerNumber = 0;

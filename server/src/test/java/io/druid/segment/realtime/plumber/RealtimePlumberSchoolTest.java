@@ -20,28 +20,34 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
+import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.ServerView;
-import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.ParseSpec;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;
@@ -75,18 +81,30 @@ public class RealtimePlumberSchoolTest
     final File tmpDir = Files.createTempDir();
     tmpDir.deleteOnExit();
 
-    final Schema schema = new Schema(
+    final DataSchema schema = new DataSchema(
         "test",
-        Lists.<SpatialDimensionSchema>newArrayList(),
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        QueryGranularity.NONE,
-        new NoneShardSpec()
-    );
+        new InputRowParser()
+        {
+          @Override
+          public InputRow parse(Object input) throws FormattedException
+          {
+            return null;
+          }
 
-    RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
-        new Period("PT10m"),
-        tmpDir,
-        IndexGranularity.HOUR
+          @Override
+          public ParseSpec getParseSpec()
+          {
+            return new JSONParseSpec(new TimestampSpec("timestamp", "auto"), new DimensionsSpec(null, null, null));
+          }
+
+          @Override
+          public InputRowParser withParseSpec(ParseSpec parseSpec)
+          {
+            return null;
+          }
+        },
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);
@@ -107,17 +125,34 @@ public class RealtimePlumberSchoolTest
 
     EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
 
-    realtimePlumberSchool.setConglomerate(new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()));
-    realtimePlumberSchool.setSegmentAnnouncer(announcer);
-    realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
-    realtimePlumberSchool.setRejectionPolicyFactory(new NoopRejectionPolicyFactory());
-    realtimePlumberSchool.setVersioningPolicy(new IntervalStartVersioningPolicy());
-    realtimePlumberSchool.setDataSegmentPusher(dataSegmentPusher);
-    realtimePlumberSchool.setServerView(serverView);
-    realtimePlumberSchool.setEmitter(emitter);
-    realtimePlumberSchool.setQueryExecutorService(MoreExecutors.sameThreadExecutor());
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        1,
+        null,
+        null,
+        null,
+        new IntervalStartVersioningPolicy(),
+        new NoopRejectionPolicyFactory(),
+        null,
+        null
+    );
 
-    plumber = realtimePlumberSchool.findPlumber(schema, new FireDepartmentMetrics());
+    RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
+        emitter,
+        new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()),
+        dataSegmentPusher,
+        announcer,
+        segmentPublisher,
+        serverView,
+        MoreExecutors.sameThreadExecutor(),
+        new Period("PT10m"),
+        tmpDir,
+        Granularity.HOUR,
+        new IntervalStartVersioningPolicy(),
+        new NoopRejectionPolicyFactory(),
+        0
+    );
+
+    plumber = realtimePlumberSchool.findPlumber(schema, tuningConfig, new FireDepartmentMetrics());
   }
 
   @After
