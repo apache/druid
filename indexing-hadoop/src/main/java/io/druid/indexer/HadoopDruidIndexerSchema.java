@@ -53,6 +53,7 @@ public class HadoopDruidIndexerSchema
   private final DataRollupSpec rollupSpec;
   private final DbUpdaterJobSpec updaterJobSpec;
   private final boolean ignoreInvalidRows;
+  private final Map<String, String> jobProperties;
 
   @JsonCreator
   public HadoopDruidIndexerSchema(
@@ -72,11 +73,11 @@ public class HadoopDruidIndexerSchema
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
       final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       // These fields are deprecated and will be removed in the future
       final @JsonProperty("timestampColumn") String timestampColumn,
       final @JsonProperty("timestampFormat") String timestampFormat
-
-      )
+  )
   {
     this.dataSource = dataSource;
     this.timestampSpec = (timestampSpec == null) ? new TimestampSpec(timestampColumn, timestampFormat) : timestampSpec;
@@ -94,6 +95,9 @@ public class HadoopDruidIndexerSchema
     this.rollupSpec = rollupSpec;
     this.updaterJobSpec = updaterJobSpec;
     this.ignoreInvalidRows = ignoreInvalidRows;
+    this.jobProperties = (jobProperties == null
+                          ? ImmutableMap.<String, String>of()
+                          : ImmutableMap.copyOf(jobProperties));
   }
 
   @JsonProperty
@@ -190,5 +194,11 @@ public class HadoopDruidIndexerSchema
   public boolean isIgnoreInvalidRows()
   {
     return ignoreInvalidRows;
+  }
+
+  @JsonProperty
+  public Map<String, String> getJobProperties()
+  {
+    return jobProperties;
   }
 }

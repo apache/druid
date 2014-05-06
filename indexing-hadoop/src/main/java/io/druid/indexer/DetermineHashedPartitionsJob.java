@@ -108,6 +108,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       JobHelper.setupClasspath(config, groupByJob);
 
       config.addInputPaths(groupByJob);
+      config.addJobProperties(groupByJob);
       config.intoConfiguration(groupByJob);
       FileOutputFormat.setOutputPath(groupByJob, config.makeGroupedDataDir());
 
