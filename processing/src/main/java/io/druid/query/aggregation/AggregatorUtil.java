@@ -81,5 +81,4 @@ public class AggregatorUtil
     }
     return new Pair(condensedAggs, condensedPostAggs);
   }
-
 }

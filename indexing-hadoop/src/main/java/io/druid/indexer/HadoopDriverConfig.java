@@ -51,7 +51,8 @@ public class HadoopDriverConfig implements DriverConfig
         false,
         true,
         false,
-        false
+        false,
+        null
     );
   }
 
@@ -64,6 +65,7 @@ public class HadoopDriverConfig implements DriverConfig
   private final Boolean cleanupOnFailure;
   private final boolean overwriteFiles;
   private final boolean ignoreInvalidRows;
+  private final Map<String, String> jobProperties;
 
   @JsonCreator
   public HadoopDriverConfig(
@@ -75,7 +77,8 @@ public class HadoopDriverConfig implements DriverConfig
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
-      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows
+      final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      final @JsonProperty("jobProperties") Map<String, String> jobProperties
   )
   {
     this.workingPath = workingPath == null ? null : workingPath;
@@ -87,6 +90,9 @@ public class HadoopDriverConfig implements DriverConfig
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
     this.ignoreInvalidRows = ignoreInvalidRows;
+    this.jobProperties = (jobProperties == null
+                          ? ImmutableMap.<String, String>of()
+                          : ImmutableMap.copyOf(jobProperties));
   }
 
   @JsonProperty
@@ -143,6 +149,12 @@ public class HadoopDriverConfig implements DriverConfig
     return ignoreInvalidRows;
   }
 
+  @JsonProperty
+  public Map<String, String> getJobProperties()
+  {
+    return jobProperties;
+  }
+
   public HadoopDriverConfig withWorkingPath(String path)
   {
     return new HadoopDriverConfig(
@@ -154,7 +166,8 @@ public class HadoopDriverConfig implements DriverConfig
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
-        ignoreInvalidRows
+        ignoreInvalidRows,
+        jobProperties
     );
   }
 
@@ -169,7 +182,8 @@ public class HadoopDriverConfig implements DriverConfig
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
-        ignoreInvalidRows
+        ignoreInvalidRows,
+        jobProperties
     );
   }
 
@@ -184,7 +198,8 @@ public class HadoopDriverConfig implements DriverConfig
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
-        ignoreInvalidRows
+        ignoreInvalidRows,
+        jobProperties
     );
   }
 }

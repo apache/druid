@@ -163,6 +163,7 @@ public class IndexGeneratorJob implements Jobby
       FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
 
       config.addInputPaths(job);
+      config.addJobProperties(job);
       config.intoConfiguration(job);
 
       JobHelper.setupClasspath(config, job);

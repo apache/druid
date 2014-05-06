@@ -25,9 +25,8 @@ import com.google.common.base.Charsets;
 import com.metamx.common.IAE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.NoopAggregator;
-import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -71,7 +70,7 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
 
     if (selector == null) {
-      return new NoopAggregator(name);
+      return Aggregators.noopAggregator();
     }
 
     if (HyperLogLogCollector.class.isAssignableFrom(selector.classOfObject())) {
@@ -89,7 +88,7 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
     ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
 
     if (selector == null) {
-      return new NoopBufferAggregator();
+      return Aggregators.noopBufferAggregator();
     }
 
     if (HyperLogLogCollector.class.isAssignableFrom(selector.classOfObject())) {

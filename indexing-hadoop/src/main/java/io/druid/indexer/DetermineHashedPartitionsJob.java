@@ -108,6 +108,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       JobHelper.setupClasspath(config, groupByJob);
 
       config.addInputPaths(groupByJob);
+      config.addJobProperties(groupByJob);
       config.intoConfiguration(groupByJob);
       FileOutputFormat.setOutputPath(groupByJob, config.makeGroupedDataDir());
 
@@ -128,6 +129,9 @@ public class DetermineHashedPartitionsJob implements Jobby
       if (!config.getSegmentGranularIntervals().isPresent()) {
         final Path intervalInfoPath = config.makeIntervalInfoPath();
         fileSystem = intervalInfoPath.getFileSystem(groupByJob.getConfiguration());
+        if (!Utils.exists(groupByJob, fileSystem, intervalInfoPath)) {
+          throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
+        }
         List<Interval> intervals = config.jsonMapper.readValue(
             Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
         {
@@ -152,7 +156,8 @@ public class DetermineHashedPartitionsJob implements Jobby
         if (fileSystem == null) {
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
-        final Long cardinality = config.jsonMapper.readValue(
+        if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
+          Long cardinality = config.jsonMapper.readValue(
             Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
         {
         }
@@ -169,8 +174,11 @@ public class DetermineHashedPartitionsJob implements Jobby
           }
         }
 
-        shardSpecs.put(bucket, actualSpecs);
+          shardSpecs.put(bucket, actualSpecs);
 
+        } else {
+          log.info("Path[%s] didn't exist!?", partitionInfoPath);
+        }
       }
       config.setShardSpecs(shardSpecs);
       log.info(

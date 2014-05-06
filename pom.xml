@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.102-SNAPSHOT</version>
+    <version>0.6.107-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -39,7 +39,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.25.4</metamx.java-util.version>
+        <metamx.java-util.version>0.25.5</metamx.java-util.version>
         <apache.curator.version>2.4.0</apache.curator.version>
         <druid.api.version>0.2.0-SNAPSHOT</druid.api.version>
     </properties>
@@ -79,7 +79,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.9.2</version>
+                <version>0.9.4</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -407,6 +407,11 @@
                 <version>4.2</version>
             </dependency>
             <dependency>
+                <groupId>com.davekoelle</groupId>
+                <artifactId>alphanum</artifactId>
+                <version>1.0.3</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
                 <version>2.3.0</version>
@@ -443,6 +448,12 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
                 <version>${apache.curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.jboss.netty</groupId>
+                        <artifactId>netty</artifactId>
+                    </exclusion>
+                </exclusions>
                 <scope>test</scope>
             </dependency>
             <dependency>

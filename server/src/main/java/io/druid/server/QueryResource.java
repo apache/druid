@@ -34,6 +34,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.log.RequestLogger;
@@ -131,7 +132,7 @@ public class QueryResource
 
       emitter.emit(
           new ServiceMetricEvent.Builder()
-              .setUser2(query.getDataSource().toString())
+              .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
               .setUser4(query.getType())
               .setUser5(COMMA_JOIN.join(query.getIntervals()))
               .setUser6(String.valueOf(query.hasFilters()))

@@ -537,7 +537,7 @@ public class Druids
     public SearchQueryBuilder copy(SearchQuery query)
     {
       return new SearchQueryBuilder()
-          .dataSource(((TableDataSource)query.getDataSource()).getName())
+          .dataSource(query.getDataSource())
           .intervals(query.getQuerySegmentSpec())
           .filters(query.getDimensionsFilter())
           .granularity(query.getGranularity())

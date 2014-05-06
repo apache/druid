@@ -37,6 +37,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
@@ -54,7 +55,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -80,6 +80,14 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   )
   {
     this.config = config;
+  }
+
+  private static List<PostAggregator> prunePostAggregators(TopNQuery query)
+  {
+    return AggregatorUtil.pruneDependentPostAgg(
+        query.getPostAggregatorSpecs(),
+        query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
+    );
   }
 
   @Override
@@ -131,7 +139,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4(String.format("topN/%s/%s", query.getThreshold(), query.getDimensionSpec().getDimension()))
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -370,7 +378,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public QueryRunner<Result<TopNResultValue>> preMergeQueryDecoration(QueryRunner<Result<TopNResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<TopNResultValue>>(runner, config.getChunkPeriod());
+    return new IntervalChunkingQueryRunner<Result<TopNResultValue>>(
+        runner,
+        config.getChunkPeriod()
+    );
   }
 
   @Override
@@ -467,13 +478,5 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           }
       );
     }
-  }
-
-  private static List<PostAggregator> prunePostAggregators(TopNQuery query)
-  {
-    return AggregatorUtil.pruneDependentPostAgg(
-        query.getPostAggregatorSpecs(),
-        query.getTopNMetricSpec().getMetricName(query.getDimensionSpec())
-    );
   }
 }

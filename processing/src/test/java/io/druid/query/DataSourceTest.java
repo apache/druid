@@ -85,4 +85,25 @@ public class DataSourceTest
     Assert.assertEquals(new QueryDataSource(query), dataSource);
   }
 
+  @Test
+  public void testUnionDataSource() throws Exception
+  {
+    DataSource dataSource = jsonMapper.readValue(
+        "{\"type\":\"union\", \"dataSources\":[\"ds1\", \"ds2\"]}",
+        DataSource.class
+    );
+    Assert.assertTrue(dataSource instanceof UnionDataSource);
+    Assert.assertEquals(
+        Lists.newArrayList(new TableDataSource("ds1"), new TableDataSource("ds2")),
+        Lists.newArrayList(((UnionDataSource) dataSource).getDataSources())
+    );
+    Assert.assertEquals(
+        Lists.newArrayList("ds1", "ds2"),
+        Lists.newArrayList(dataSource.getNames())
+    );
+
+    final DataSource serde = jsonMapper.readValue(jsonMapper.writeValueAsString(dataSource), DataSource.class);
+    Assert.assertEquals(dataSource, serde);
+  }
+
 }

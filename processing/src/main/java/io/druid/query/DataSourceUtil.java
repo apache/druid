@@ -17,15 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query;
 
-/**
- */
-public class IdentityMetricManipulationFn implements MetricManipulationFn
+import java.util.List;
+
+public class DataSourceUtil
 {
-  @Override
-  public Object manipulate(AggregatorFactory factory, Object object)
+  public static String getMetricName(DataSource dataSource)
   {
-    return object;
+    final List<String> names = dataSource.getNames();
+    return names.size() == 1 ? names.get(0) : names.toString();
   }
 }

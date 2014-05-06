@@ -17,39 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.guice;
 
-import java.nio.ByteBuffer;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import io.druid.data.input.ProtoBufInputRowParser;
+import io.druid.initialization.DruidModule;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
-public class NoopBufferAggregator implements BufferAggregator
+public class ParsersModule implements DruidModule
 {
   @Override
-  public void init(ByteBuffer buf, int position)
+  public void configure(Binder binder)
   {
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public List<? extends Module> getJacksonModules()
   {
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    return null;
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return 0;
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
+    return Arrays.<Module>asList(
+        new SimpleModule("ParsersModule")
+            .registerSubtypes(
+                new NamedType(ProtoBufInputRowParser.class, "protobuf")
+            )
+    );
   }
 }

@@ -23,6 +23,10 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.Lists;
+
+import java.util.Arrays;
+import java.util.List;
 
 @JsonTypeName("table")
 public class TableDataSource implements DataSource
@@ -37,10 +41,14 @@ public class TableDataSource implements DataSource
   }
 
   @JsonProperty
-  @Override
-  public String getName()
-  {
+  public String getName(){
     return name;
+  }
+
+  @Override
+  public List<String> getNames()
+  {
+    return Arrays.asList(name);
   }
 
   public String toString() { return name; }

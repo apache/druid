@@ -17,17 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.client.selector;
 
-import com.google.common.base.Optional;
+import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
+
+import java.util.Comparator;
 
 /**
  */
-public interface ChatHandlerProvider
+public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
-  public void register(final String key, ChatHandler handler);
+  private static final Comparator<Integer> comparator = new Comparator<Integer>()
+  {
+    @Override
+    public int compare(Integer o1, Integer o2)
+    {
+      return Ints.compare(o1, o2);
+    }
+  };
 
-  public void unregister(final String key);
+  @Inject
+  public LowestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  {
+    super(serverSelectorStrategy);
+  }
 
-  public Optional<ChatHandler> get(final String key);
+  @Override
+  public Comparator<Integer> getComparator()
+  {
+    return comparator;
+  }
 }

@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -32,7 +32,10 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.segment.realtime.firehose.ChatHandler;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -48,10 +51,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
- * firehoses with an {@link ServiceAnnouncingChatHandlerProvider}.
+ * Builds firehoses that accept events through the {@link io.druid.segment.realtime.firehose.EventReceiver} interface. Can also register these
+ * firehoses with an {@link io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider}.
  */
-@JsonTypeName("receiver")
 public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRowParser>
 {
   private static final EmittingLogger log = new EmittingLogger(EventReceiverFirehoseFactory.class);
@@ -140,7 +142,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       final List<InputRow> rows = Lists.newArrayList();
       for (final Map<String, Object> event : events) {
         // Might throw an exception. We'd like that to happen now, instead of while adding to the row buffer.
-        rows.add(parser.parse(event));
+        InputRow row = parser.parse(event);
+        rows.add(Rows.toCaseInsensitiveInputRow(row,row.getDimensions()));
       }
 
       try {

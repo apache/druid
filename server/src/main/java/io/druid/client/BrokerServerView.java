@@ -20,6 +20,7 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -27,7 +28,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
-import io.druid.client.selector.ServerSelectorStrategy;
+import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
 import io.druid.query.DataSource;
@@ -61,7 +62,7 @@ public class BrokerServerView implements TimelineServerView
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final ServerView baseView;
-  private final ServerSelectorStrategy serverSelectorStrategy;
+  private final TierSelectorStrategy tierSelectorStrategy;
 
   @Inject
   public BrokerServerView(
@@ -69,14 +70,14 @@ public class BrokerServerView implements TimelineServerView
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
       ServerView baseView,
-      ServerSelectorStrategy serverSelectorStrategy
+      TierSelectorStrategy tierSelectorStrategy
   )
   {
     this.warehouse = warehouse;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.baseView = baseView;
-    this.serverSelectorStrategy = serverSelectorStrategy;
+    this.tierSelectorStrategy = tierSelectorStrategy;
 
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
@@ -171,7 +172,7 @@ public class BrokerServerView implements TimelineServerView
 
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
-        selector = new ServerSelector(segment, serverSelectorStrategy);
+        selector = new ServerSelector(segment, tierSelectorStrategy);
 
         VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         if (timeline == null) {
@@ -237,17 +238,7 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
-    String table;
-    while (dataSource instanceof QueryDataSource) {
-      dataSource = ((QueryDataSource) dataSource).getQuery().getDataSource();
-    }
-
-    if (dataSource instanceof TableDataSource) {
-      table = ((TableDataSource) dataSource).getName();
-    } else {
-      throw new UnsupportedOperationException("Unsupported data source type: " + dataSource.getClass().getSimpleName());
-    }
-
+    String table = Iterables.getOnlyElement(dataSource.getNames());
     synchronized (lock) {
       return timelines.get(table);
     }

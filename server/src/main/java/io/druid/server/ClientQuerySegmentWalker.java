@@ -32,12 +32,13 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
 /**
-*/
+ */
 public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
   private final ServiceEmitter emitter;
@@ -70,22 +71,24 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   private <T> FinalizeResultsQueryRunner<T> makeRunner(final Query<T> query)
   {
-    final QueryToolChest<T,Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     return new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                new MetricsEmittingQueryRunner<T>(
-                    emitter,
-                    new Function<Query<T>, ServiceMetricEvent.Builder>()
-                    {
-                      @Override
-                      public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
-                      {
-                        return toolChest.makeMetricBuilder(query);
-                      }
-                    },
-                    toolChest.preMergeQueryDecoration(baseClient)
-                ).withWaitMeasuredFromNow()
+                new UnionQueryRunner<T>(
+                    new MetricsEmittingQueryRunner<T>(
+                        emitter,
+                        new Function<Query<T>, ServiceMetricEvent.Builder>()
+                        {
+                          @Override
+                          public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
+                          {
+                            return toolChest.makeMetricBuilder(query);
+                          }
+                        },
+                        toolChest.preMergeQueryDecoration(baseClient)
+                    ).withWaitMeasuredFromNow()
+                )
             )
         ),
         toolChest

@@ -443,6 +443,15 @@ public class HadoopDruidIndexerConfig
     );
   }
 
+  public void addJobProperties(Job job)
+  {
+    Configuration conf = job.getConfiguration();
+
+    for (final Map.Entry<String, String> entry : schema.getDriverConfig().getJobProperties().entrySet()) {
+      conf.set(entry.getKey(), entry.getValue());
+    }
+  }
+
   public void intoConfiguration(Job job)
   {
     Configuration conf = job.getConfiguration();

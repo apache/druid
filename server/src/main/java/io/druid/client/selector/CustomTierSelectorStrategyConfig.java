@@ -17,13 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.common.index;
+package io.druid.client.selector;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
+
+import java.util.List;
 
 /**
- * Objects that can be registered with a {@link ServiceAnnouncingChatHandlerProvider} and provide http endpoints for indexing-related
- * objects. This interface is empty because it only exists to signal intent. The actual http endpoints are provided
- * through JAX-RS annotations on the {@link ChatHandler} objects.
  */
-public interface ChatHandler
+public class CustomTierSelectorStrategyConfig
 {
+  @JsonProperty
+  private List<Integer> priorities = Lists.newArrayList();
+
+  public List<Integer> getPriorities()
+  {
+    return priorities;
+  }
 }

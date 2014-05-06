@@ -2,7 +2,7 @@
   "dataSource": "wikipedia",
   "timestampSpec" : {
     "column": "timestamp",
-    "format": "iso",
+    "format": "iso"
   },
   "dataSpec": {
     "format": "json",

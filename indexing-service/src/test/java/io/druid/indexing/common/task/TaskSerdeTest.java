@@ -420,6 +420,7 @@ public class TaskSerdeTest
             new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.NONE),
             null,
             false,
+            ImmutableMap.of("foo", "bar"),
             null,
             null,
             null,
@@ -440,5 +441,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(task.getSchema().getDriverConfig().getJobProperties(), task2.getSchema().getDriverConfig().getJobProperties());
   }
 }

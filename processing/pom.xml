@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.102-SNAPSHOT</version>
+        <version>0.6.107-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -77,6 +77,10 @@
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>
             <version>1.7R4</version>
+        </dependency>
+        <dependency>
+            <groupId>com.davekoelle</groupId>
+            <artifactId>alphanum</artifactId>
         </dependency>
 
 

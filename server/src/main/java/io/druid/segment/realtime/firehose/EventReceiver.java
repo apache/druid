@@ -17,52 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.segment.realtime.firehose;
 
-/**
- */
-public class NoopAggregator implements Aggregator
+import java.util.Collection;
+import java.util.Map;
+
+public interface EventReceiver
 {
-  private final String name;
-
-  public NoopAggregator(
-      String name
-  )
-  {
-    this.name = name;
-  }
-
-  @Override
-  public void aggregate()
-  {
-  }
-
-  @Override
-  public void reset()
-  {
-  }
-
-  @Override
-  public Object get()
-  {
-    return null;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return 0;
-  }
-
-  @Override
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
-  }
+  public void addAll(Collection<Map<String, Object>> events);
 }

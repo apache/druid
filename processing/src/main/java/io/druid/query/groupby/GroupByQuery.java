@@ -257,6 +257,24 @@ public class GroupByQuery extends BaseQuery<Row>
     );
   }
 
+  @Override
+  public Query<Row> withDataSource(DataSource dataSource)
+  {
+    return new GroupByQuery(
+        dataSource,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        dimensions,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        havingSpec,
+        limitSpec,
+        orderByLimitFn,
+        getContext()
+    );
+  }
+
   public static class Builder
   {
     private DataSource dataSource;

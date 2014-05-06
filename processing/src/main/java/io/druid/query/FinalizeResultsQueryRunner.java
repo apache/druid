@@ -24,9 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.query.aggregation.FinalizeMetricManipulationFn;
-import io.druid.query.aggregation.IdentityMetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.aggregation.MetricManipulatorFns;
 
 import javax.annotation.Nullable;
 
@@ -58,11 +57,11 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
 
     if (shouldFinalize) {
       queryToRun = query.withOverriddenContext(ImmutableMap.<String, Object>of("finalize", false));
-      metricManipulationFn = new FinalizeMetricManipulationFn();
+      metricManipulationFn = MetricManipulatorFns.finalizing();
 
     } else {
       queryToRun = query;
-      metricManipulationFn = new IdentityMetricManipulationFn();
+      metricManipulationFn = MetricManipulatorFns.identity();
     }
     if (isBySegment) {
       finalizerFn = new Function<T, T>()

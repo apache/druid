@@ -17,15 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.client.selector;
+
+import com.google.common.primitives.Ints;
+import com.google.inject.Inject;
+
+import java.util.Comparator;
 
 /**
  */
-public class FinalizeMetricManipulationFn implements MetricManipulationFn
+public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
-  @Override
-  public Object manipulate(AggregatorFactory factory, Object object)
+  private static final Comparator<Integer> comparator = new Comparator<Integer>()
   {
-    return factory.finalizeComputation(object);
+    @Override
+    public int compare(Integer o1, Integer o2)
+    {
+      return -Ints.compare(o1, o2);
+    }
+  };
+
+  @Inject
+  public HighestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  {
+    super(serverSelectorStrategy);
+  }
+
+  @Override
+  public Comparator<Integer> getComparator()
+  {
+    return comparator;
   }
 }

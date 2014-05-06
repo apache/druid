@@ -43,3 +43,20 @@ The grammar for dimension values sorted lexicographically is as follows:
 |--------|-----------|---------|
 |type|this indicates a lexicographic sort|yes|
 |previousStop|the starting point of the lexicographic sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
+
+## AlphaNumeric TopNMetricSpec
+
+Sort dimension values in alpha-numeric order, i.e treating numbers differently from other characters in sorting the values.
+See [http://www.davekoelle.com/alphanum.html](http://www.davekoelle.com/alphanum.html) for details on how the algorithm works.
+
+```json
+"metric": {
+    "type": "alphaNumeric",
+    "previousStop": "<previousStop_value>"
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|this indicates an alpha-numeric sort|yes|
+|previousStop|the starting point of the alpha-numeric sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|

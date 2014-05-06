@@ -72,6 +72,7 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
       final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       // These fields are deprecated and will be removed in the future
       final @JsonProperty("timestampColumn") String timestampColumn,
       final @JsonProperty("timestampFormat") String timestampFormat,
@@ -161,7 +162,8 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
           leaveIntermediate,
           cleanupOnFailure,
           overwriteFiles,
-          ignoreInvalidRows
+          ignoreInvalidRows,
+          jobProperties
       );
     }
   }
@@ -214,6 +216,7 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -245,6 +248,7 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -271,6 +275,7 @@ public class HadoopIngestionSchema extends IngestionSchema<HadoopIOConfig, Hadoo
         null,
         null,
         false,
+        null,
         null,
         null,
         null,
