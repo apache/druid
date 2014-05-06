@@ -129,6 +129,7 @@ public class HadoopDruidIndexerConfig
   private volatile DataRollupSpec rollupSpec;
   private volatile DbUpdaterJobSpec updaterJobSpec;
   private volatile boolean ignoreInvalidRows;
+  private volatile Map<String, String> jobProperties;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
@@ -148,6 +149,7 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
       final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
+      final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       // These fields are deprecated and will be removed in the future
       final @JsonProperty("timestampColumn") String timestampColumn,
       final @JsonProperty("timestampFormat") String timestampFormat,
@@ -171,6 +173,9 @@ public class HadoopDruidIndexerConfig
     this.rollupSpec = rollupSpec;
     this.updaterJobSpec = updaterJobSpec;
     this.ignoreInvalidRows = ignoreInvalidRows;
+    this.jobProperties = (jobProperties == null
+                          ? ImmutableMap.<String, String>of()
+                          : ImmutableMap.copyOf(jobProperties));
 
     if (partitionsSpec != null) {
       Preconditions.checkArgument(
@@ -378,6 +383,17 @@ public class HadoopDruidIndexerConfig
   public void setIgnoreInvalidRows(boolean ignoreInvalidRows)
   {
     this.ignoreInvalidRows = ignoreInvalidRows;
+  }
+
+  @JsonProperty
+  public Map<String, String> getJobProperties()
+  {
+    return jobProperties;
+  }
+
+  public void setJobProperties(Map<String, String> jobProperties)
+  {
+    this.jobProperties = jobProperties;
   }
 
   public Optional<List<Interval>> getIntervals()
@@ -611,6 +627,15 @@ public class HadoopDruidIndexerConfig
             bucket.partitionNum
         )
     );
+  }
+
+  public void addJobProperties(Job job)
+  {
+    Configuration conf = job.getConfiguration();
+
+    for (final Map.Entry<String, String> entry : jobProperties.entrySet()) {
+      conf.set(entry.getKey(), entry.getValue());
+    }
   }
 
   public void intoConfiguration(Job job)

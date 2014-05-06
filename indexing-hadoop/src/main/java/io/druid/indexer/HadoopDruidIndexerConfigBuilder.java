@@ -46,7 +46,8 @@ public class HadoopDruidIndexerConfigBuilder
     return HadoopDruidIndexerConfig.jsonMapper.convertValue(schema, HadoopDruidIndexerConfig.class);
   }
 
-  public static HadoopDruidIndexerSchema toSchema(HadoopDruidIndexerConfig config){
+  public static HadoopDruidIndexerSchema toSchema(HadoopDruidIndexerConfig config)
+  {
     return HadoopDruidIndexerConfig.jsonMapper.convertValue(config, HadoopDruidIndexerSchema.class);
   }
 
@@ -62,8 +63,8 @@ public class HadoopDruidIndexerConfigBuilder
       return fromMap(
           (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
               file, new TypeReference<Map<String, Object>>()
-          {
-          }
+              {
+              }
           )
       );
     }
@@ -79,8 +80,8 @@ public class HadoopDruidIndexerConfigBuilder
       return fromMap(
           (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
               str, new TypeReference<Map<String, Object>>()
-          {
-          }
+              {
+              }
           )
       );
     }
@@ -112,6 +113,7 @@ public class HadoopDruidIndexerConfigBuilder
   private volatile DataRollupSpec rollupSpec;
   private volatile DbUpdaterJobSpec updaterJobSpec;
   private volatile boolean ignoreInvalidRows;
+  private volatile Map<String, String> jobProperties;
 
   public HadoopDruidIndexerConfigBuilder()
   {
@@ -131,6 +133,7 @@ public class HadoopDruidIndexerConfigBuilder
     this.rollupSpec = null;
     this.updaterJobSpec = null;
     this.ignoreInvalidRows = false;
+    this.jobProperties = ImmutableMap.of();
   }
 
   public HadoopDruidIndexerConfigBuilder withDataSource(String dataSource)
@@ -230,6 +233,12 @@ public class HadoopDruidIndexerConfigBuilder
     return this;
   }
 
+  public HadoopDruidIndexerConfigBuilder withJobProperties(Map<String, String> jobProperties)
+  {
+    this.jobProperties = ImmutableMap.copyOf(jobProperties);
+    return this;
+  }
+
   public HadoopDruidIndexerConfigBuilder withSchema(HadoopDruidIndexerSchema schema)
   {
     this.dataSource = schema.getDataSource();
@@ -248,6 +257,7 @@ public class HadoopDruidIndexerConfigBuilder
     this.rollupSpec = schema.getRollupSpec();
     this.updaterJobSpec = schema.getUpdaterJobSpec();
     this.ignoreInvalidRows = schema.isIgnoreInvalidRows();
+    this.jobProperties = schema.getJobProperties();
 
     return this;
   }
@@ -271,6 +281,7 @@ public class HadoopDruidIndexerConfigBuilder
         rollupSpec,
         updaterJobSpec,
         ignoreInvalidRows,
+        jobProperties,
         null,
         null,
         null,
