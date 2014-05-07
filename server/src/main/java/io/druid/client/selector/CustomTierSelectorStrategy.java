@@ -1,8 +1,9 @@
 package io.druid.client.selector;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.api.client.util.Maps;
 import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -13,10 +14,10 @@ public class CustomTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
   private final Comparator<Integer> comparator;
 
-  @Inject
+  @JsonCreator
   public CustomTierSelectorStrategy(
-      ServerSelectorStrategy serverSelectorStrategy,
-      CustomTierSelectorStrategyConfig config
+      @JacksonInject ServerSelectorStrategy serverSelectorStrategy,
+      @JacksonInject CustomTierSelectorStrategyConfig config
   )
   {
     super(serverSelectorStrategy);

@@ -19,8 +19,9 @@
 
 package io.druid.client.selector;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
 
 import java.util.Comparator;
 
@@ -37,8 +38,8 @@ public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStr
     }
   };
 
-  @Inject
-  public HighestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  @JsonCreator
+  public HighestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
   {
     super(serverSelectorStrategy);
   }

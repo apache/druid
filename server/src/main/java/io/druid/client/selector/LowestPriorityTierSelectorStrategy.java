@@ -19,8 +19,9 @@
 
 package io.druid.client.selector;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
 
 import java.util.Comparator;
 
@@ -37,8 +38,8 @@ public class LowestPriorityTierSelectorStrategy extends AbstractTierSelectorStra
     }
   };
 
-  @Inject
-  public LowestPriorityTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
+  @JsonCreator
+  public LowestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
   {
     super(serverSelectorStrategy);
   }
