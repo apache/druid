@@ -281,6 +281,7 @@ public class IncrementalIndex implements Iterable<Row>
                     );
                   }
                 }
+
             );
       }
 
@@ -329,7 +330,7 @@ public class IncrementalIndex implements Iterable<Row>
     int count = 0;
     for (String dimValue : dimValues) {
       String canonicalDimValue = dimLookup.get(dimValue);
-      if (canonicalDimValue == null && !dimLookup.contains(dimValue)) {
+      if (canonicalDimValue == null) {
         canonicalDimValue = dimValue;
         dimLookup.add(dimValue);
       }
@@ -559,17 +560,7 @@ public class IncrementalIndex implements Iterable<Row>
 
         int valsIndex = 0;
         while (retVal == 0 && valsIndex < lhsVals.length) {
-          final String lhsVal = lhsVals[valsIndex];
-          final String rhsVal = rhsVals[valsIndex];
-          if (lhsVal == null && rhsVal == null) {
-            return 0;
-          } else if (lhsVal == null) {
-            return -1;
-          } else if (rhsVal == null) {
-            return 1;
-          } else {
-            retVal = lhsVal.compareTo(rhsVal);
-          }
+          retVal = lhsVals[valsIndex].compareTo(rhsVals[valsIndex]);
           ++valsIndex;
         }
         ++index;
@@ -585,16 +576,16 @@ public class IncrementalIndex implements Iterable<Row>
              "timestamp=" + new DateTime(timestamp) +
              ", dims=" + Lists.transform(
           Arrays.asList(dims), new Function<String[], Object>()
-          {
-            @Override
-            public Object apply(@Nullable String[] input)
-            {
-              if (input == null || input.length == 0) {
-                return Arrays.asList("null");
-              }
-              return Arrays.asList(input);
-            }
+      {
+        @Override
+        public Object apply(@Nullable String[] input)
+        {
+          if (input == null || input.length == 0) {
+            return Arrays.asList("null");
           }
+          return Arrays.asList(input);
+        }
+      }
       ) +
              '}';
     }
@@ -602,7 +593,6 @@ public class IncrementalIndex implements Iterable<Row>
 
   static class DimDim
   {
-    public static final String NULL_STRING = "\u0000";
     private final Map<String, String> poorMansInterning = Maps.newConcurrentMap();
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
@@ -615,32 +605,19 @@ public class IncrementalIndex implements Iterable<Row>
       falseIdsReverse = biMap.inverse();
     }
 
-    public boolean contains(@Nullable String value)
+    public String get(String value)
     {
-      return poorMansInterning.containsKey(value == null ? NULL_STRING : value);
+      return value == null ? null : poorMansInterning.get(value);
     }
 
-    public String get(@Nullable String value)
+    public int getId(String value)
     {
-      final String retVal;
-      if (value == null) {
-        retVal = poorMansInterning.get(NULL_STRING);
-      } else {
-        retVal = poorMansInterning.get(value);
-      }
-      return retVal == null ? null : (retVal.equals(NULL_STRING) ? null : retVal);
+      return falseIds.get(value);
     }
 
-    public int getId(@Nullable String value)
-    {
-      return value == null ? falseIds.get(NULL_STRING) : falseIds.get(value);
-    }
-
-    @Nullable
     public String getValue(int id)
     {
-      final String value = falseIdsReverse.get(id);
-      return value.equals(NULL_STRING) ? null : value;
+      return falseIdsReverse.get(id);
     }
 
     public int size()
@@ -648,30 +625,27 @@ public class IncrementalIndex implements Iterable<Row>
       return poorMansInterning.size();
     }
 
-    public synchronized void add(@Nullable String value)
+    public Set<String> keySet()
     {
-      if (value == null) {
-        value = NULL_STRING;
-      }
+      return poorMansInterning.keySet();
+    }
+
+    public synchronized void add(String value)
+    {
       poorMansInterning.put(value, value);
       falseIds.put(value, falseIds.size());
     }
 
-    public int getSortedId(@Nullable String value)
+    public int getSortedId(String value)
     {
       assertSorted();
-      if (value == null) {
-        value = NULL_STRING;
-      }
       return Arrays.binarySearch(sortedVals, value);
     }
 
-    @Nullable
     public String getSortedValue(int index)
     {
       assertSorted();
-      final String sortedVal = sortedVals[index];
-      return sortedVal.equals(NULL_STRING) ? null : sortedVal;
+      return sortedVals[index];
     }
 
     public void sort()

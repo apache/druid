@@ -189,7 +189,7 @@ public class SpatialDimensionRowFormatter
       return false;
     }
     for (String dimVal : dimVals) {
-      if (dimVal == null || Floats.tryParse(dimVal) == null) {
+      if (Floats.tryParse(dimVal) == null) {
         return false;
       }
     }

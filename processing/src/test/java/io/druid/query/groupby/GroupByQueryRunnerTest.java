@@ -47,7 +47,6 @@ import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
-import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
@@ -211,11 +210,9 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
-
   @Test
   public void testGroupByWithDimExtractionFn()
   {
-    final DimExtractionFn fn1 = new RegexDimExtractionFn("(\\w{1})");
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -225,20 +222,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new DimExtractionFn()
-                    {
-                      @Override
-                      public byte[] getCacheKey()
-                      {
-                        return new byte[]{(byte)0xFF};
-                      }
-
-                      @Override
-                      public String apply(String dimValue)
-                      {
-                        return dimValue.equals("mezzanine") ? null : fn1.apply(dimValue);
-                      }
-                    }
+                    new RegexDimExtractionFn("(\\w{1})")
                 )
             )
         )
@@ -252,20 +236,20 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        createExpectedRow("2011-04-01", "alias", null, "rows", 3L, "idx", 2870L),
         createExpectedRow("2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
         createExpectedRow("2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
         createExpectedRow("2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
         createExpectedRow("2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
+        createExpectedRow("2011-04-01", "alias", "m", "rows", 3L, "idx", 2870L),
         createExpectedRow("2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
         createExpectedRow("2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
         createExpectedRow("2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
 
-        createExpectedRow("2011-04-02", "alias", null, "rows", 3L, "idx", 2447L),
         createExpectedRow("2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
         createExpectedRow("2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
         createExpectedRow("2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
         createExpectedRow("2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
+        createExpectedRow("2011-04-02", "alias", "m", "rows", 3L, "idx", 2447L),
         createExpectedRow("2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
         createExpectedRow("2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
         createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
