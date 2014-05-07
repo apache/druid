@@ -96,10 +96,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
         Aggregator[] theAggregators = rowSelector[dimIndex];
         if (theAggregators == null) {
           String key = query.getDimensionSpec().getDimExtractionFn().apply(dimSelector.lookupName(dimIndex));
-          if (key == null) {
-            rowSelector[dimIndex] = EMPTY_ARRAY;
-            continue;
-          }
+          // null keys are allowed
           theAggregators = aggregatesStore.get(key);
           if (theAggregators == null) {
             theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());
