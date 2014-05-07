@@ -33,12 +33,15 @@ import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.List;
 
 /**
  */
 public class HyperUniquesSerde extends ComplexMetricSerde
 {
+  private final static byte[] NULL_BYTES = "\u0000".getBytes(Charsets.UTF_8);
+
   private static Ordering<HyperLogLogCollector> comparator = new Ordering<HyperLogLogCollector>()
   {
     @Override
@@ -92,7 +95,13 @@ public class HyperUniquesSerde extends ComplexMetricSerde
           }
 
           for (String dimensionValue : dimValues) {
-            collector.add(hashFn.hashBytes(dimensionValue.getBytes(Charsets.UTF_8)).asBytes());
+            collector.add(
+                hashFn.hashBytes(
+                    dimensionValue == null
+                    ? NULL_BYTES
+                    : dimensionValue.getBytes(Charsets.UTF_8)
+                ).asBytes()
+            );
           }
           return collector;
         }
