@@ -80,6 +80,20 @@ public class PeriodLoadRuleTest
             now
         )
     );
+    Assert.assertTrue(
+        rule.appliesTo(
+            builder.interval(new Interval(now.minusMonths(1).minusDays(1), now.minusMonths(1).plusDays(1))).build(),
+            now
+        )
+    );
+    Assert.assertFalse(
+        rule.appliesTo(
+            builder.interval(new Interval(now.minusMonths(1).minusDays(1), now.minusMonths(1)))
+                   .build(),
+            now
+        )
+    );
+
 
     PeriodLoadRule futureRule = new PeriodLoadRule(
         new Period("P1M"),
