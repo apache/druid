@@ -107,6 +107,7 @@ public class DatabaseSegmentManagerTest
   public void testPoll()
   {
     EasyMock.expect(dbi.withHandle(EasyMock.<HandleCallback>anyObject())).andReturn(testRows);
+    EasyMock.expect(dbi.withHandle(EasyMock.<HandleCallback>anyObject())).andReturn(testRows);
     EasyMock.replay(dbi);
 
     manager.start();
