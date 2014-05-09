@@ -39,13 +39,15 @@ public class CompressedLongsSupplierSerializerTest
   public void testSanity() throws Exception
   {
     final ByteOrder order = ByteOrder.nativeOrder();
+    final int sizePer = 999;
     CompressedLongsSupplierSerializer serializer = new CompressedLongsSupplierSerializer(
-        999,
+        sizePer,
         new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
             new IOPeonForTesting(),
             "test",
-            CompressedLongBufferObjectStrategy.getBufferForOrder(order)
-        )
+            CompressedLongBufferObjectStrategy.getBufferForOrder(order, CompressedObjectStrategy.CompressionStrategy.LZ4, sizePer)
+        ),
+        CompressedObjectStrategy.CompressionStrategy.LZ4
     );
     serializer.open();
 

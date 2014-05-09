@@ -40,22 +40,26 @@ import java.util.Iterator;
  */
 public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 {
-  public static final byte version = 0x1;
+  public static final byte LZF_VERSION = 0x1;
+  public static final byte version = 0x2;
   public static final int MAX_FLOATS_IN_BUFFER = (0xFFFF >> 2);
 
   private final int totalSize;
   private final int sizePer;
   private final GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   CompressedFloatsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers
+      GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseFloatBuffers = baseFloatBuffers;
+    this.compression = compression;
   }
 
   public int size()
@@ -151,7 +155,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   public long getSerializedSize()
   {
-    return baseFloatBuffers.getSerializedSize() + 1 + 4 + 4;
+    return baseFloatBuffers.getSerializedSize() + 1 + 4 + 4 + 1;
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -159,6 +163,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     channel.write(ByteBuffer.wrap(new byte[]{version}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
+    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
     baseFloatBuffers.writeToChannel(channel);
   }
 
@@ -167,7 +172,8 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     return new CompressedFloatsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseFloatBuffers, CompressedFloatBufferObjectStrategy.getBufferForOrder(order))
+        GenericIndexed.fromIterable(baseFloatBuffers, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        compression
     );
   }
 
@@ -191,23 +197,53 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == version) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressedObjectStrategy.CompressionStrategy compression =
+          CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
+
       return new CompressedFloatsIndexedSupplier(
-        buffer.getInt(),
-        buffer.getInt(),
-        GenericIndexed.read(buffer, CompressedFloatBufferObjectStrategy.getBufferForOrder(order))
+          totalSize,
+          sizePer,
+          GenericIndexed.read(
+              buffer,
+              CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                  order,
+                  compression,
+                  sizePer
+              )
+          ),
+          compression
+      );
+    } else if (versionFromBuffer == LZF_VERSION) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      return new CompressedFloatsIndexedSupplier(
+          totalSize,
+          sizePer,
+          GenericIndexed.read(
+              buffer,
+              CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                  order,
+                  compression,
+                  sizePer
+              )
+          ),
+          compression
       );
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedFloatsIndexedSupplier fromFloatBuffer(FloatBuffer buffer, final ByteOrder order)
+  public static CompressedFloatsIndexedSupplier fromFloatBuffer(FloatBuffer buffer, final ByteOrder order, CompressedObjectStrategy.CompressionStrategy compression)
   {
-    return fromFloatBuffer(buffer, MAX_FLOATS_IN_BUFFER, order);
+    return fromFloatBuffer(buffer, MAX_FLOATS_IN_BUFFER, order, compression);
   }
 
   public static CompressedFloatsIndexedSupplier fromFloatBuffer(
-      final FloatBuffer buffer, final int chunkFactor, final ByteOrder order
+      final FloatBuffer buffer, final int chunkFactor, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -254,8 +290,9 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
                 };
               }
             },
-            CompressedFloatBufferObjectStrategy.getBufferForOrder(order)
-        )
+            CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, chunkFactor)
+        ),
+        compression
     );
   }
 

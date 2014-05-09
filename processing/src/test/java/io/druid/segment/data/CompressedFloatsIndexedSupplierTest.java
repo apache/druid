@@ -68,7 +68,8 @@ public class CompressedFloatsIndexedSupplierTest
     supplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
         FloatBuffer.wrap(vals),
         5,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        CompressedObjectStrategy.CompressionStrategy.LZ4
     );
 
     indexed = supplier.get();
@@ -82,7 +83,7 @@ public class CompressedFloatsIndexedSupplierTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedFloatsIndexedSupplier theSupplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
-        FloatBuffer.wrap(vals), 5, ByteOrder.nativeOrder()
+        FloatBuffer.wrap(vals), 5, ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
