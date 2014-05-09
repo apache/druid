@@ -37,20 +37,23 @@ import java.nio.LongBuffer;
 public class CompressedLongsSupplierSerializer
 {
   public static CompressedLongsSupplierSerializer create(
-      IOPeon ioPeon, final String filenameBase, final ByteOrder order
+      IOPeon ioPeon, final String filenameBase, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
+    final int sizePer = 0xFFFF / Longs.BYTES;
     final CompressedLongsSupplierSerializer retVal = new CompressedLongsSupplierSerializer(
-        0xFFFF / Longs.BYTES,
+        sizePer,
         new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
-            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order)
-        )
+            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+        ),
+        compression
     );
     return retVal;
   }
 
   private final int sizePer;
   private final GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   private int numInserted = 0;
 
@@ -58,11 +61,13 @@ public class CompressedLongsSupplierSerializer
 
   public CompressedLongsSupplierSerializer(
       int sizePer,
-      GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener
+      GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.sizePer = sizePer;
     this.flattener = flattener;
+    this.compression = compression;
 
     endBuffer = LongBuffer.allocate(sizePer);
     endBuffer.mark();
@@ -104,6 +109,7 @@ public class CompressedLongsSupplierSerializer
       out.write(CompressedLongsIndexedSupplier.version);
       out.write(Ints.toByteArray(numInserted));
       out.write(Ints.toByteArray(sizePer));
+      out.write(new byte[]{compression.getId()});
       ByteStreams.copy(flattener.combineStreams(), out);
     }
   }
