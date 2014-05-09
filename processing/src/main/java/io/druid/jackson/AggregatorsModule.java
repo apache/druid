@@ -26,6 +26,7 @@ import com.google.common.hash.Hashing;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.HistogramAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -68,7 +69,8 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptAggregatorFactory.class),
       @JsonSubTypes.Type(name = "histogram", value = HistogramAggregatorFactory.class),
       @JsonSubTypes.Type(name = "hyperUnique", value = HyperUniquesAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "cardinality", value = CardinalityAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "cardinality", value = CardinalityAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "filtered", value = FilteredAggregatorFactory.class)
   })
   public static interface AggregatorFactoryMixin
   {
