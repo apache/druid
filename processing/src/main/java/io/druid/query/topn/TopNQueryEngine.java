@@ -21,8 +21,11 @@ package io.druid.query.topn;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
 import io.druid.granularity.QueryGranularity;
@@ -35,6 +38,7 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
+import javax.sql.rowset.Predicate;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -51,7 +55,7 @@ public class TopNQueryEngine
     this.bufferPool = bufferPool;
   }
 
-  public Iterable<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter)
+  public Sequence<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter)
   {
     if (adapter == null) {
       throw new ISE(
@@ -68,20 +72,24 @@ public class TopNQueryEngine
         queryIntervals.size() == 1, "Can only handle a single interval, got[%s]", queryIntervals
     );
 
-    return FunctionalIterable
-        .create(adapter.makeCursors(filter, queryIntervals.get(0), granularity))
-        .transform(
-            new Function<Cursor, Cursor>()
-            {
-              @Override
-              public Cursor apply(Cursor input)
-              {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
-                return input;
-              }
-            }
-        )
-        .keep(mapFn);
+    return Sequences.filter(
+        Sequences.map(
+            Sequences.map(
+                adapter.makeCursors(filter, queryIntervals.get(0), granularity),
+                new Function<Cursor, Cursor>()
+                {
+                  @Override
+                  public Cursor apply(Cursor input)
+                  {
+                    log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
+                    return input;
+                  }
+                }
+            ),
+            mapFn
+        ),
+        Predicates.<Result<TopNResultValue>>notNull()
+    );
   }
 
   private Function<Cursor, Result<TopNResultValue>> getMapFn(TopNQuery query, final StorageAdapter adapter)

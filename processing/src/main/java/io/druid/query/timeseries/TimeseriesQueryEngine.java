@@ -21,7 +21,6 @@ package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
@@ -32,7 +31,6 @@ import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
 
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -47,13 +45,7 @@ public class TimeseriesQueryEngine
       );
     }
 
-    return new BaseSequence<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>(
-        new BaseSequence.IteratorMaker<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>()
-        {
-          @Override
-          public Iterator<Result<TimeseriesResultValue>> make()
-          {
-            return QueryRunnerHelper.makeCursorBasedQuery(
+    return QueryRunnerHelper.makeCursorBasedQuery(
                 adapter,
                 query.getQuerySegmentSpec().getIntervals(),
                 Filters.convertDimensionFilters(query.getDimensionsFilter()),
@@ -91,18 +83,6 @@ public class TimeseriesQueryEngine
                     return retVal;
                   }
                 }
-            ).iterator();
-          }
-
-          @Override
-          public void cleanup(Iterator<Result<TimeseriesResultValue>> toClean)
-          {
-            // https://github.com/metamx/druid/issues/128
-            while (toClean.hasNext()) {
-              toClean.next();
-            }
-          }
-        }
     );
   }
 }

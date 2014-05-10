@@ -17,7 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment;import io.druid.granularity.QueryGranularity;
+package io.druid.segment;
+
+import com.metamx.common.guava.Sequence;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
@@ -25,5 +28,5 @@ import org.joda.time.Interval;
  */
 public interface CursorFactory
 {
-  public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran);
+  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran);
 }

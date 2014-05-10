@@ -20,14 +20,12 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
-import com.metamx.common.collect.MoreIterators;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.FunctionalIterator;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.filter.Filter;
 import io.druid.segment.column.Column;
@@ -44,7 +42,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -134,14 +132,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
+  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
   {
     Interval actualInterval = interval;
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
 
     if (!actualInterval.overlaps(dataInterval)) {
-      return ImmutableList.of();
+      return Sequences.empty();
     }
 
     if (actualInterval.getStart().isBefore(dataInterval.getStart())) {
@@ -151,26 +149,26 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       actualInterval = actualInterval.withEnd(dataInterval.getEnd());
     }
 
-    final Iterable<Cursor> iterable;
+    final Sequence<Cursor> sequence;
     if (filter == null) {
-      iterable = new NoFilterCursorIterable(index, actualInterval, gran);
+      sequence = new NoFilterCursorSequenceBuilder(index, actualInterval, gran).build();
     } else {
       Offset offset = new ConciseOffset(filter.goConcise(new ColumnSelectorBitmapIndexSelector(index)));
 
-      iterable = new CursorIterable(index, actualInterval, gran, offset);
+      sequence = new CursorSequenceBuilder(index, actualInterval, gran, offset).build();
     }
 
-    return FunctionalIterable.create(iterable).keep(Functions.<Cursor>identity());
+    return Sequences.filter(sequence, Predicates.<Cursor>notNull());
   }
 
-  private static class CursorIterable implements Iterable<Cursor>
+  private static class CursorSequenceBuilder
   {
     private final ColumnSelector index;
     private final Interval interval;
     private final QueryGranularity gran;
     private final Offset offset;
 
-    public CursorIterable(
+    public CursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
         QueryGranularity gran,
@@ -183,8 +181,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       this.offset = offset;
     }
 
-    @Override
-    public Iterator<Cursor> iterator()
+    public Sequence<Cursor> build()
     {
       final Offset baseOffset = offset.clone();
 
@@ -194,12 +191,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
       final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
 
-      final FunctionalIterator<Cursor> retVal = FunctionalIterator
-          .create(gran.iterable(interval.getStartMillis(), interval.getEndMillis()).iterator())
-          .transform(
+      return Sequences.withBaggage(
+          Sequences.map(
+              Sequences.simple(gran.iterable(interval.getStartMillis(), interval.getEndMillis())),
               new Function<Long, Cursor>()
               {
-
                 @Override
                 public Cursor apply(final Long input)
                 {
@@ -529,16 +525,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   };
                 }
               }
-          );
-
-      // This after call is not perfect, if there is an exception during processing, it will never get called,
-      // but it's better than nothing and doing this properly all the time requires a lot more fixerating
-      return MoreIterators.after(
-          retVal,
-          new Runnable()
+          ),
+          new Closeable()
           {
             @Override
-            public void run()
+            public void close() throws IOException
             {
               Closeables.closeQuietly(timestamps);
               for (GenericColumn column : genericColumnCache.values()) {
@@ -600,13 +591,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static class NoFilterCursorIterable implements Iterable<Cursor>
+  private static class NoFilterCursorSequenceBuilder
   {
     private final ColumnSelector index;
     private final Interval interval;
     private final QueryGranularity gran;
 
-    public NoFilterCursorIterable(
+    public NoFilterCursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
         QueryGranularity gran
@@ -623,8 +614,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      *
      * @return
      */
-    @Override
-    public Iterator<Cursor> iterator()
+    public Sequence<Cursor> build()
     {
       final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
@@ -632,9 +622,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
       final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
 
-      final FunctionalIterator<Cursor> retVal = FunctionalIterator
-          .create(gran.iterable(interval.getStartMillis(), interval.getEndMillis()).iterator())
-          .transform(
+      return Sequences.withBaggage(
+          Sequences.map(
+              Sequences.simple(gran.iterable(interval.getStartMillis(), interval.getEndMillis())),
               new Function<Long, Cursor>()
               {
                 private int currRow = 0;
@@ -959,14 +949,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   };
                 }
               }
-          );
-
-      return MoreIterators.after(
-          retVal,
-          new Runnable()
+          ),
+          new Closeable()
           {
             @Override
-            public void run()
+            public void close() throws IOException
             {
               Closeables.closeQuietly(timestamps);
               for (GenericColumn column : genericColumnCache.values()) {

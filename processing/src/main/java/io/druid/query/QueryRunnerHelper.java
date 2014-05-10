@@ -21,7 +21,10 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
@@ -51,7 +54,7 @@ public class QueryRunnerHelper
     return aggregators;
   }
 
-  public static <T> Iterable<Result<T>> makeCursorBasedQuery(
+  public static <T> Sequence<Result<T>> makeCursorBasedQuery(
       final StorageAdapter adapter,
       List<Interval> queryIntervals,
       Filter filter,
@@ -63,19 +66,24 @@ public class QueryRunnerHelper
         queryIntervals.size() == 1, "Can only handle a single interval, got[%s]", queryIntervals
     );
 
-    return FunctionalIterable
-        .create(adapter.makeCursors(filter, queryIntervals.get(0), granularity))
-        .transform(
-            new Function<Cursor, Cursor>()
-            {
-              @Override
-              public Cursor apply(@Nullable Cursor input)
-              {
-                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
-                return input;
-              }
-            }
-        )
-        .keep(mapFn);
+    return Sequences.filter(
+        Sequences.map(
+            Sequences.map(
+                adapter.makeCursors(filter, queryIntervals.get(0), granularity),
+
+                new Function<Cursor, Cursor>()
+                {
+                  @Override
+                  public Cursor apply(@Nullable Cursor input)
+                  {
+                    log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
+                    return input;
+                  }
+                }
+            ),
+            mapFn
+        ),
+        Predicates.<Result<T>>notNull()
+    );
   }
 }
