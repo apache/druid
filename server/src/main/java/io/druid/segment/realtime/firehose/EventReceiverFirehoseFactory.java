@@ -22,7 +22,7 @@ package io.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -33,9 +33,8 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
-import io.druid.segment.realtime.firehose.ChatHandler;
-import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -68,13 +67,19 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
-      @JsonProperty("parser") MapInputRowParser parser,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider
+      @JsonProperty("parser") Map<String, Object> parser,
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      // for backwards compat
+      @JacksonInject ObjectMapper jsonMapper
   )
   {
-    this.serviceName = Preconditions.checkNotNull(serviceName, "serviceName");
+    Preconditions.checkNotNull(parser, "parser");
+    Preconditions.checkNotNull(serviceName, "serviceName");
+
+    this.serviceName = serviceName;
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
-    this.parser = Preconditions.checkNotNull(parser, "parser");
+    parser.put("type", "map");
+    this.parser = jsonMapper.convertValue(parser, MapInputRowParser.class);
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
   }
 
