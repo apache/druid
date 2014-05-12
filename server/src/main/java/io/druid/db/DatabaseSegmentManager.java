@@ -106,7 +106,7 @@ public class DatabaseSegmentManager
       final Duration delay = config.get().getPollDuration().toStandardDuration();
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
-          delay,
+          new Duration(0),
           delay,
           new Runnable()
           {
