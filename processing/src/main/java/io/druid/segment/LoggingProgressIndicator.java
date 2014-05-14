@@ -54,8 +54,10 @@ public class LoggingProgressIndicator extends AbstractProgressIndicator
   @Override
   public void stop()
   {
-    log.info("Stopping [%s]", progressName);
+    long time = global.elapsed(TimeUnit.MILLISECONDS);
     global.stop();
+
+    log.info("[%s] complete. Elapsed time: [%,d] millis", progressName, time);
   }
 
   @Override

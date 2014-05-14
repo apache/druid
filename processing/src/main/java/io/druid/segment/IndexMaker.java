@@ -788,7 +788,7 @@ public class IndexMaker
   ) throws IOException
   {
 
-    final String section = String.format("make column[%s]", dimension);
+    final String section = String.format("make %s", dimension);
     progress.startSection(section);
 
     final ColumnDescriptor.Builder dimBuilder = ColumnDescriptor.builder();
@@ -1047,6 +1047,8 @@ public class IndexMaker
         dimBuilder,
         dimension
     );
+
+    progress.stopSection(section);
   }
 
   private static void makeMetricColumns(
