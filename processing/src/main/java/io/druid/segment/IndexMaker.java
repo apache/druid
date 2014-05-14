@@ -78,7 +78,6 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -130,7 +129,7 @@ public class IndexMaker
       File outDir
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, new NoopProgressIndicator());
+    return persist(index, dataInterval, outDir, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File persist(
@@ -175,7 +174,7 @@ public class IndexMaker
       List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return mergeQueryableIndex(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return mergeQueryableIndex(indexes, metricAggs, outDir, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File mergeQueryableIndex(
@@ -207,7 +206,7 @@ public class IndexMaker
       List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return merge(adapters, metricAggs, outDir, new NoopProgressIndicator());
+    return merge(adapters, metricAggs, outDir, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File merge(
@@ -327,7 +326,7 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(mapper, adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn);
+    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn);
   }
 
   public static File append(
@@ -335,7 +334,7 @@ public class IndexMaker
       File outDir
   ) throws IOException
   {
-    return append(adapters, outDir, new NoopProgressIndicator());
+    return append(adapters, outDir, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File append(
@@ -410,11 +409,10 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(mapper, adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn);
+    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn);
   }
 
   private static File makeIndexFiles(
-      final ObjectMapper mapper,
       final List<IndexableAdapter> adapters,
       final File outDir,
       final ProgressIndicator progress,
@@ -423,6 +421,9 @@ public class IndexMaker
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
   ) throws IOException
   {
+    progress.start();
+    progress.progress();
+
     final Map<String, ValueType> valueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
     final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
     final Map<String, ColumnCapabilitiesImpl> columnCapabilities = Maps.newHashMap();
@@ -458,16 +459,76 @@ public class IndexMaker
         Files.newOutputStreamSupplier(new File(outDir, "version.bin"))
     );
 
-    long startTime = System.currentTimeMillis();
-
-    /************* Setup Dim Conversions **************/
-    progress.progress();
-    startTime = System.currentTimeMillis();
-
     final Map<String, Integer> dimIndexes = Maps.newHashMap();
     final Map<String, Iterable<String>> dimensionValuesLookup = Maps.newHashMap();
     final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
     final Set<String> skippedDimensions = Sets.newHashSet();
+    final List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
+
+    progress.progress();
+    setupDimConversion(
+        adapters,
+        progress,
+        mergedDimensions,
+        dimConversions,
+        dimIndexes,
+        skippedDimensions,
+        dimensionValuesLookup
+    );
+
+    progress.progress();
+    final Iterable<Rowboat> theRows = makeRowIterable(
+        adapters,
+        mergedDimensions,
+        mergedMetrics,
+        dimConversions,
+        rowMergerFn
+    );
+
+    progress.progress();
+    final int rowCount = convertDims(adapters, progress, theRows, rowNumConversions);
+
+    progress.progress();
+    makeTimeColumn(v9Smoosher, progress, theRows, rowCount);
+
+    progress.progress();
+    makeDimColumns(
+        v9Smoosher,
+        adapters,
+        progress,
+        mergedDimensions,
+        skippedDimensions,
+        theRows,
+        columnCapabilities,
+        dimensionValuesLookup,
+        rowNumConversions
+    );
+
+    progress.progress();
+    makeMetricColumns(v9Smoosher, progress, theRows, mergedMetrics, valueTypes, metricTypeNames, rowCount);
+
+    progress.progress();
+    makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, skippedDimensions, progress);
+
+    v9Smoosher.close();
+
+    progress.stop();
+
+    return outDir;
+  }
+
+  private static void setupDimConversion(
+      final List<IndexableAdapter> adapters,
+      final ProgressIndicator progress,
+      final List<String> mergedDimensions,
+      final List<Map<String, IntBuffer>> dimConversions,
+      final Map<String, Integer> dimIndexes,
+      final Set<String> skippedDimensions,
+      final Map<String, Iterable<String>> dimensionValuesLookup
+  )
+  {
+    final String section = "setup dimension conversions";
+    progress.startSection(section);
 
     for (IndexableAdapter adapter : adapters) {
       dimConversions.add(Maps.<String, IntBuffer>newHashMap());
@@ -494,40 +555,17 @@ public class IndexMaker
       // sort all dimension values and treat all null values as empty strings
       final Iterable<String> dimensionValues = CombiningIterable.createSplatted(
           dimValueLookups,
-          //Iterables.transform(
-          //    dimValueLookups,
-          //    new Function<Indexed<String>, Iterable<String>>()
-          //    {
-          //      @Override
-          //      public Iterable<String> apply(Indexed<String> indexed)
-          //      {
-          //        return Iterables.transform(
-          //            indexed,
-          //            new Function<String, String>()
-          //            {
-          //              @Override
-          //              public String apply(String input)
-          //              {
-          //                return (input == null) ? "" : input;
-          //              }
-          //            }
-          //        );
-          //      }
-          //    }
-          //),
           Ordering.<String>natural().nullsFirst()
       );
 
       int cardinality = 0;
       for (String value : dimensionValues) {
-        //if (value != null) {
         for (int i = 0; i < adapters.size(); i++) {
           DimValueConverter converter = converters[i];
           if (converter != null) {
             converter.convert(value, cardinality);
           }
         }
-        //}
 
         ++cardinality;
       }
@@ -548,494 +586,7 @@ public class IndexMaker
       }
     }
 
-    final Iterable<Rowboat> theRows = makeRowIterable(
-        adapters,
-        mergedDimensions,
-        mergedMetrics,
-        dimConversions,
-        rowMergerFn
-    );
-
-    /************* Do Dim Conversions **************/
-    List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
-    for (IndexableAdapter index : adapters) {
-      int[] arr = new int[index.getNumRows()];
-      Arrays.fill(arr, INVALID_ROW);
-      rowNumConversions.add(IntBuffer.wrap(arr));
-    }
-
-    int rowCount = 0;
-    for (Rowboat theRow : theRows) {
-      for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
-        final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getKey());
-
-        for (Integer rowNum : comprisedRow.getValue()) {
-          while (conversionBuffer.position() < rowNum) {
-            conversionBuffer.put(INVALID_ROW);
-          }
-          conversionBuffer.put(rowCount);
-        }
-      }
-
-      if ((++rowCount % 500000) == 0) {
-        log.info(
-            "outDir[%s] walked 500,000/%,d rows in %,d millis.",
-            outDir,
-            rowCount,
-            System.currentTimeMillis() - startTime
-        );
-      }
-    }
-
-    for (IntBuffer rowNumConversion : rowNumConversions) {
-      rowNumConversion.rewind();
-    }
-
-    /************* Write time column **************/
-    long[] longs = new long[rowCount];
-
-    int rowNum = 0;
-    for (Rowboat theRow : theRows) {
-      longs[rowNum++] = theRow.getTimestamp();
-    }
-
-    CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromLongBuffer(
-        LongBuffer.wrap(longs),
-        IndexIO.BYTE_ORDER
-    );
-
-    final ColumnDescriptor.Builder timeBuilder = ColumnDescriptor.builder();
-    timeBuilder.setValueType(ValueType.LONG);
-
-    writeColumn(
-        mapper,
-        v9Smoosher,
-        new LongGenericColumnPartSerde(timestamps, IndexIO.BYTE_ORDER),
-        timeBuilder,
-        "__time"
-    );
-
-    /************* Write dimensions **************/
-    dimIndex = 0;
-    for (String dimension : mergedDimensions) {
-      if (skippedDimensions.contains(dimension)) {
-        dimIndex++;
-        continue;
-      }
-
-      final ColumnDescriptor.Builder dimBuilder = ColumnDescriptor.builder();
-      dimBuilder.setValueType(ValueType.STRING);
-
-      final List<ByteBuffer> outParts = Lists.newArrayList();
-
-      ByteArrayOutputStream nameBAOS = new ByteArrayOutputStream();
-      serializerUtils.writeString(nameBAOS, dimension);
-      outParts.add(ByteBuffer.wrap(nameBAOS.toByteArray()));
-
-      boolean hasMultipleValues = columnCapabilities.get(dimension).hasMultipleValues();
-      dimBuilder.setHasMultipleValues(hasMultipleValues);
-
-      // make dimension columns
-      VSizeIndexedInts singleValCol = null;
-      VSizeIndexed multiValCol = null;
-
-      ColumnAdder adder = hasMultipleValues ? new MultiValColumnAdder() : new SingleValColumnAdder();
-
-      ConciseSet nullSet = null;
-      rowCount = 0;
-      for (Rowboat theRow : theRows) {
-        if (dimIndex > theRow.getDims().length) {
-          if (nullSet == null) {
-            nullSet = new ConciseSet();
-          }
-          nullSet.add(rowCount);
-          adder.add(null);
-        } else {
-          int[] dimVals = theRow.getDims()[dimIndex];
-          if (dimVals == null || dimVals.length == 0) {
-            if (nullSet == null) {
-              nullSet = new ConciseSet();
-            }
-            nullSet.add(rowCount);
-          }
-          adder.add(dimVals);
-        }
-        rowCount++;
-      }
-
-      GenericIndexed<String> dictionary = null;
-      final Iterable<String> dimensionValues = dimensionValuesLookup.get(dimension);
-      boolean bumpDictionary = false;
-
-      if (hasMultipleValues) {
-        List<List<Integer>> vals = ((MultiValColumnAdder) adder).get();
-        multiValCol = VSizeIndexed.fromIterable(
-            Iterables.transform(
-                vals,
-                new Function<List<Integer>, VSizeIndexedInts>()
-                {
-                  @Override
-                  public VSizeIndexedInts apply(List<Integer> input)
-                  {
-                    return VSizeIndexedInts.fromList(
-                        input,
-                        Collections.max(input)
-                    );
-                  }
-                }
-            )
-        );
-        dictionary = GenericIndexed.fromIterable(
-            dimensionValues,
-            GenericIndexed.stringStrategy
-        );
-      } else {
-        final List<Integer> vals = ((SingleValColumnAdder) adder).get();
-
-        if (nullSet != null) {
-          log.info("Dimension[%s] has null rows.", dimension);
-
-          if (Iterables.getFirst(dimensionValues, "") != null) {
-            bumpDictionary = true;
-            log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
-
-            final List<String> nullList = Lists.newArrayList();
-            nullList.add(null);
-
-            dictionary = GenericIndexed.fromIterable(
-                Iterables.concat(nullList, dimensionValues),
-                GenericIndexed.stringStrategy
-            );
-            singleValCol = VSizeIndexedInts.fromList(
-                new AbstractList<Integer>()
-                {
-                  @Override
-                  public Integer get(int index)
-                  {
-                    Integer val = vals.get(index);
-                    if (val == null) {
-                      return 0;
-                    }
-                    return val + 1;
-                  }
-
-                  @Override
-                  public int size()
-                  {
-                    return vals.size();
-                  }
-                }, dictionary.size()
-            );
-          }
-        } else {
-          dictionary = GenericIndexed.fromIterable(
-              dimensionValues,
-              GenericIndexed.stringStrategy
-          );
-          singleValCol = VSizeIndexedInts.fromList(vals, dictionary.size());
-        }
-      }
-
-      // Make bitmap indexes
-      List<ConciseSet> conciseSets = Lists.newArrayList();
-      for (String dimVal : dimensionValues) {
-        List<Iterable<Integer>> convertedInverteds = Lists.newArrayListWithCapacity(adapters.size());
-        for (int j = 0; j < adapters.size(); ++j) {
-          convertedInverteds.add(
-              new ConvertingIndexedInts(
-                  adapters.get(j).getInverteds(dimension, dimVal), rowNumConversions.get(j)
-              )
-          );
-        }
-
-        ConciseSet bitset = new ConciseSet();
-        for (Integer row : CombiningIterable.createSplatted(
-            convertedInverteds,
-            Ordering.<Integer>natural().nullsFirst()
-        )) {
-          if (row != INVALID_ROW) {
-            bitset.add(row);
-          }
-        }
-
-        conciseSets.add(bitset);
-      }
-
-      GenericIndexed<ImmutableConciseSet> bitmaps;
-      if (!hasMultipleValues) {
-        if (nullSet != null) {
-          final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullSet);
-          if (bumpDictionary) {
-            bitmaps = GenericIndexed.fromIterable(
-                Iterables.concat(
-                    Arrays.asList(theNullSet),
-                    Iterables.transform(
-                        conciseSets,
-                        new Function<ConciseSet, ImmutableConciseSet>()
-                        {
-                          @Override
-                          public ImmutableConciseSet apply(ConciseSet input)
-                          {
-                            return ImmutableConciseSet.newImmutableFromMutable(input);
-                          }
-                        }
-                    )
-                ),
-                ConciseCompressedIndexedInts.objectStrategy
-            );
-          } else {
-            Iterable<ImmutableConciseSet> immutableConciseSets = Iterables.transform(
-                conciseSets,
-                new Function<ConciseSet, ImmutableConciseSet>()
-                {
-                  @Override
-                  public ImmutableConciseSet apply(ConciseSet input)
-                  {
-                    return ImmutableConciseSet.newImmutableFromMutable(input);
-                  }
-                }
-            );
-
-            bitmaps = GenericIndexed.fromIterable(
-                Iterables.concat(
-                    Arrays.asList(
-                        ImmutableConciseSet.union(
-                            theNullSet,
-                            Iterables.getFirst(immutableConciseSets, null)
-                        )
-                    ),
-                    Iterables.skip(immutableConciseSets, 1)
-                ),
-                ConciseCompressedIndexedInts.objectStrategy
-            );
-          }
-        } else {
-          bitmaps = GenericIndexed.fromIterable(
-              Iterables.transform(
-                  conciseSets,
-                  new Function<ConciseSet, ImmutableConciseSet>()
-                  {
-                    @Override
-                    public ImmutableConciseSet apply(ConciseSet input)
-                    {
-                      return ImmutableConciseSet.newImmutableFromMutable(input);
-                    }
-                  }
-              ),
-              ConciseCompressedIndexedInts.objectStrategy
-          );
-        }
-      } else {
-        bitmaps = GenericIndexed.fromIterable(
-            Iterables.transform(
-                conciseSets,
-                new Function<ConciseSet, ImmutableConciseSet>()
-                {
-                  @Override
-                  public ImmutableConciseSet apply(ConciseSet input)
-                  {
-                    return ImmutableConciseSet.newImmutableFromMutable(input);
-                  }
-                }
-            ),
-            ConciseCompressedIndexedInts.objectStrategy
-        );
-      }
-
-      // Make spatial indexes
-      ImmutableRTree spatialIndex = null;
-      boolean hasSpatialIndexes = columnCapabilities.get(dimension).hasSpatialIndexes();
-      RTree tree = null;
-      if (hasSpatialIndexes) {
-        tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
-      }
-
-      int dimValIndex = 0;
-      for (String dimVal : dimensionValuesLookup.get(dimension)) {
-        if (hasSpatialIndexes) {
-          List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-          float[] coords = new float[stringCoords.size()];
-          for (int j = 0; j < coords.length; j++) {
-            coords[j] = Float.valueOf(stringCoords.get(j));
-          }
-          tree.insert(coords, conciseSets.get(dimValIndex++));
-        }
-      }
-      if (hasSpatialIndexes) {
-        spatialIndex = ImmutableRTree.newImmutableFromMutable(tree);
-      }
-
-      writeColumn(
-          mapper,
-          v9Smoosher,
-          new DictionaryEncodedColumnPartSerde(
-              dictionary,
-              singleValCol,
-              multiValCol,
-              bitmaps,
-              spatialIndex
-          ),
-          dimBuilder,
-          dimension
-      );
-
-      dimIndex++;
-    }
-
-    int metIndex = 0;
-    for (String metric : mergedMetrics) {
-      final ColumnDescriptor.Builder metBuilder = ColumnDescriptor.builder();
-
-      ValueType type = valueTypes.get(metric);
-
-      final int metricIndex = metIndex;
-      switch (type) {
-        case FLOAT:
-          metBuilder.setValueType(ValueType.FLOAT);
-
-          float[] arr = new float[rowCount];
-          rowNum = 0;
-          for (Rowboat theRow : theRows) {
-            Object obj = theRow.getMetrics()[metricIndex]; // TODO
-            arr[rowNum++] = (obj == null) ? 0 : ((Number) obj).floatValue();
-          }
-
-          CompressedFloatsIndexedSupplier compressedFloats = CompressedFloatsIndexedSupplier.fromFloatBuffer(
-              FloatBuffer.wrap(arr),
-              IndexIO.BYTE_ORDER
-          );
-
-          writeColumn(
-              mapper,
-              v9Smoosher,
-              new FloatGenericColumnPartSerde(compressedFloats, IndexIO.BYTE_ORDER),
-              metBuilder,
-              metric
-          );
-          break;
-        case COMPLEX:
-          String complexType = metricTypeNames.get(metric);
-
-          ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexType);
-
-          if (serde == null) {
-            throw new ISE("Unknown type[%s]", complexType);
-          }
-
-          final GenericIndexed metricColumn = GenericIndexed.fromIterable(
-              Iterables.transform(
-                  theRows,
-                  new Function<Rowboat, Object>()
-                  {
-                    @Override
-                    public Object apply(Rowboat input)
-                    {
-                      return input.getMetrics()[metricIndex]; // TODO
-                    }
-                  }
-              ),
-              serde.getObjectStrategy()
-          );
-
-          metBuilder.setValueType(ValueType.COMPLEX);
-          writeColumn(
-              mapper,
-              v9Smoosher,
-              new ComplexColumnPartSerde(metricColumn, complexType),
-              metBuilder,
-              metric
-          );
-          break;
-        default:
-          throw new ISE("Unknown type[%s]", type);
-      }
-      metIndex++;
-    }
-
-    /*************  Main index.drd file **************/
-    progress.progress();
-    final Set<String> finalColumns = Sets.newTreeSet();
-    finalColumns.addAll(mergedDimensions);
-    finalColumns.addAll(mergedMetrics);
-    finalColumns.removeAll(skippedDimensions);
-
-    final Iterable<String> finalDimensions = Iterables.filter(
-        mergedDimensions,
-        new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            return !skippedDimensions.contains(input);
-          }
-        }
-    );
-
-    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.stringStrategy);
-    GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.stringStrategy);
-
-    final long numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
-    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
-
-    cols.writeToChannel(writer);
-    dims.writeToChannel(writer);
-
-    DateTime minTime = new DateTime(Long.MAX_VALUE);
-    DateTime maxTime = new DateTime(0l);
-
-    for (IndexableAdapter index : adapters) {
-      minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
-      maxTime = JodaUtils.maxDateTime(maxTime, index.getDataInterval().getEnd());
-    }
-    final Interval dataInterval = new Interval(minTime, maxTime);
-
-    serializerUtils.writeLong(writer, dataInterval.getStartMillis());
-    serializerUtils.writeLong(writer, dataInterval.getEndMillis());
-    writer.close();
-
-    IndexIO.checkFileSize(new File(outDir, "index.drd"));
-    log.info("outDir[%s] completed index.drd in %,d millis.", outDir, System.currentTimeMillis() - startTime);
-
-    v9Smoosher.close();
-
-    return outDir;
-  }
-
-  private static void writeColumn(
-      ObjectMapper mapper,
-      FileSmoosher v9Smoosher,
-      ColumnPartSerde serde,
-      ColumnDescriptor.Builder builder,
-      String name
-  ) throws IOException
-  {
-    builder.addSerde(serde);
-
-    final ColumnDescriptor descriptor = builder.build();
-
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    serializerUtils.writeString(baos, mapper.writeValueAsString(descriptor));
-    byte[] specBytes = baos.toByteArray();
-
-    final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
-        name, descriptor.numBytes() + specBytes.length
-    );
-    channel.write(ByteBuffer.wrap(specBytes));
-    descriptor.write(channel);
-    channel.close();
-  }
-
-  private static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
-  {
-    Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
-
-    for (Iterable<T> indexedList : indexedLists) {
-      for (T val : indexedList) {
-        retVal.add(val);
-      }
-    }
-
-    return Lists.newArrayList(retVal);
+    progress.stopSection(section);
   }
 
   private static Iterable<Rowboat> makeRowIterable(
@@ -1107,6 +658,589 @@ public class IndexMaker
     return rowMergerFn.apply(boats);
   }
 
+  private static int convertDims(
+      final List<IndexableAdapter> adapters,
+      final ProgressIndicator progress,
+      final Iterable<Rowboat> theRows,
+      final List<IntBuffer> rowNumConversions
+  ) throws IOException
+  {
+    final String section = "convert dims";
+    progress.startSection(section);
+
+    for (IndexableAdapter index : adapters) {
+      int[] arr = new int[index.getNumRows()];
+      Arrays.fill(arr, INVALID_ROW);
+      rowNumConversions.add(IntBuffer.wrap(arr));
+    }
+
+    int rowCount = 0;
+    for (Rowboat theRow : theRows) {
+      for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
+        final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getKey());
+
+        for (Integer rowNum : comprisedRow.getValue()) {
+          while (conversionBuffer.position() < rowNum) {
+            conversionBuffer.put(INVALID_ROW);
+          }
+          conversionBuffer.put(rowCount);
+        }
+      }
+
+      if ((++rowCount % 500000) == 0) {
+        progress.progressSection(section, String.format("Walked 500,000/%,d rows", rowCount));
+      }
+    }
+
+    for (IntBuffer rowNumConversion : rowNumConversions) {
+      rowNumConversion.rewind();
+    }
+
+    progress.stopSection(section);
+
+    return rowCount;
+  }
+
+  private static void makeTimeColumn(
+      final FileSmoosher v9Smoosher,
+      final ProgressIndicator progress,
+      final Iterable<Rowboat> theRows,
+      final int rowCount
+  ) throws IOException
+  {
+    final String section = "make time column";
+    progress.startSection(section);
+
+    long[] longs = new long[rowCount];
+
+    int rowNum = 0;
+    for (Rowboat theRow : theRows) {
+      longs[rowNum++] = theRow.getTimestamp();
+    }
+
+    CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromLongBuffer(
+        LongBuffer.wrap(longs),
+        IndexIO.BYTE_ORDER
+    );
+
+    final ColumnDescriptor.Builder timeBuilder = ColumnDescriptor.builder();
+    timeBuilder.setValueType(ValueType.LONG);
+
+    writeColumn(
+        v9Smoosher,
+        new LongGenericColumnPartSerde(timestamps, IndexIO.BYTE_ORDER),
+        timeBuilder,
+        "__time"
+    );
+
+    progress.stopSection(section);
+  }
+
+  private static void makeDimColumns(
+      final FileSmoosher v9Smoosher,
+      final List<IndexableAdapter> adapters,
+      final ProgressIndicator progress,
+      final List<String> mergedDimensions,
+      final Set<String> skippedDimensions,
+      final Iterable<Rowboat> theRows,
+      final Map<String, ColumnCapabilitiesImpl> columnCapabilities,
+      final Map<String, Iterable<String>> dimensionValuesLookup,
+      final List<IntBuffer> rowNumConversions
+  ) throws IOException
+  {
+    final String dimSection = "make dimension columns";
+    progress.startSection(dimSection);
+
+    int dimIndex = 0;
+    for (String dimension : mergedDimensions) {
+      if (skippedDimensions.contains(dimension)) {
+        dimIndex++;
+        continue;
+      }
+
+      makeDimColumn(
+          v9Smoosher,
+          adapters,
+          progress,
+          theRows,
+          dimIndex,
+          dimension,
+          columnCapabilities,
+          dimensionValuesLookup,
+          rowNumConversions
+      );
+      dimIndex++;
+    }
+    progress.stopSection(dimSection);
+  }
+
+
+  private static void makeDimColumn(
+      final FileSmoosher v9Smoosher,
+      final List<IndexableAdapter> adapters,
+      final ProgressIndicator progress,
+      final Iterable<Rowboat> theRows,
+      final int dimIndex,
+      final String dimension,
+      final Map<String, ColumnCapabilitiesImpl> columnCapabilities,
+      final Map<String, Iterable<String>> dimensionValuesLookup,
+      final List<IntBuffer> rowNumConversions
+  ) throws IOException
+  {
+
+    final String section = String.format("make column[%s]", dimension);
+    progress.startSection(section);
+
+    final ColumnDescriptor.Builder dimBuilder = ColumnDescriptor.builder();
+    dimBuilder.setValueType(ValueType.STRING);
+
+    final List<ByteBuffer> outParts = Lists.newArrayList();
+
+    ByteArrayOutputStream nameBAOS = new ByteArrayOutputStream();
+    serializerUtils.writeString(nameBAOS, dimension);
+    outParts.add(ByteBuffer.wrap(nameBAOS.toByteArray()));
+
+    boolean hasMultipleValues = columnCapabilities.get(dimension).hasMultipleValues();
+    dimBuilder.setHasMultipleValues(hasMultipleValues);
+
+    // make dimension columns
+    VSizeIndexedInts singleValCol = null;
+    VSizeIndexed multiValCol = null;
+
+    ColumnDictionaryEntryStore adder = hasMultipleValues
+                                       ? new MultiValColumnDictionaryEntryStore()
+                                       : new SingleValColumnDictionaryEntryStore();
+
+    ConciseSet nullSet = null;
+    int rowCount = 0;
+    for (Rowboat theRow : theRows) {
+      if (dimIndex > theRow.getDims().length) {
+        if (nullSet == null) {
+          nullSet = new ConciseSet();
+        }
+        nullSet.add(rowCount);
+        adder.add(null);
+      } else {
+        int[] dimVals = theRow.getDims()[dimIndex];
+        if (dimVals == null || dimVals.length == 0) {
+          if (nullSet == null) {
+            nullSet = new ConciseSet();
+          }
+          nullSet.add(rowCount);
+        }
+        adder.add(dimVals);
+      }
+      rowCount++;
+    }
+
+    GenericIndexed<String> dictionary = null;
+    final Iterable<String> dimensionValues = dimensionValuesLookup.get(dimension);
+    boolean bumpDictionary = false;
+
+    if (hasMultipleValues) {
+      List<List<Integer>> vals = ((MultiValColumnDictionaryEntryStore) adder).get();
+      multiValCol = VSizeIndexed.fromIterable(
+          Iterables.transform(
+              vals,
+              new Function<List<Integer>, VSizeIndexedInts>()
+              {
+                @Override
+                public VSizeIndexedInts apply(List<Integer> input)
+                {
+                  return VSizeIndexedInts.fromList(
+                      input,
+                      Collections.max(input)
+                  );
+                }
+              }
+          )
+      );
+      dictionary = GenericIndexed.fromIterable(
+          dimensionValues,
+          GenericIndexed.stringStrategy
+      );
+    } else {
+      final List<Integer> vals = ((SingleValColumnDictionaryEntryStore) adder).get();
+
+      if (nullSet != null) {
+        log.info("Dimension[%s] has null rows.", dimension);
+
+        if (Iterables.getFirst(dimensionValues, "") != null) {
+          bumpDictionary = true;
+          log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
+
+          final List<String> nullList = Lists.newArrayList();
+          nullList.add(null);
+
+          dictionary = GenericIndexed.fromIterable(
+              Iterables.concat(nullList, dimensionValues),
+              GenericIndexed.stringStrategy
+          );
+          singleValCol = VSizeIndexedInts.fromList(
+              new AbstractList<Integer>()
+              {
+                @Override
+                public Integer get(int index)
+                {
+                  Integer val = vals.get(index);
+                  if (val == null) {
+                    return 0;
+                  }
+                  return val + 1;
+                }
+
+                @Override
+                public int size()
+                {
+                  return vals.size();
+                }
+              }, dictionary.size()
+          );
+        }
+      } else {
+        dictionary = GenericIndexed.fromIterable(
+            dimensionValues,
+            GenericIndexed.stringStrategy
+        );
+        singleValCol = VSizeIndexedInts.fromList(vals, dictionary.size());
+      }
+    }
+
+    // Make bitmap indexes
+    List<ConciseSet> conciseSets = Lists.newArrayList();
+    for (String dimVal : dimensionValues) {
+      List<Iterable<Integer>> convertedInverteds = Lists.newArrayListWithCapacity(adapters.size());
+      for (int j = 0; j < adapters.size(); ++j) {
+        convertedInverteds.add(
+            new ConvertingIndexedInts(
+                adapters.get(j).getInverteds(dimension, dimVal), rowNumConversions.get(j)
+            )
+        );
+      }
+
+      ConciseSet bitset = new ConciseSet();
+      for (Integer row : CombiningIterable.createSplatted(
+          convertedInverteds,
+          Ordering.<Integer>natural().nullsFirst()
+      )) {
+        if (row != INVALID_ROW) {
+          bitset.add(row);
+        }
+      }
+
+      conciseSets.add(bitset);
+    }
+
+    GenericIndexed<ImmutableConciseSet> bitmaps;
+    if (!hasMultipleValues) {
+      if (nullSet != null) {
+        final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullSet);
+        if (bumpDictionary) {
+          bitmaps = GenericIndexed.fromIterable(
+              Iterables.concat(
+                  Arrays.asList(theNullSet),
+                  Iterables.transform(
+                      conciseSets,
+                      new Function<ConciseSet, ImmutableConciseSet>()
+                      {
+                        @Override
+                        public ImmutableConciseSet apply(ConciseSet input)
+                        {
+                          return ImmutableConciseSet.newImmutableFromMutable(input);
+                        }
+                      }
+                  )
+              ),
+              ConciseCompressedIndexedInts.objectStrategy
+          );
+        } else {
+          Iterable<ImmutableConciseSet> immutableConciseSets = Iterables.transform(
+              conciseSets,
+              new Function<ConciseSet, ImmutableConciseSet>()
+              {
+                @Override
+                public ImmutableConciseSet apply(ConciseSet input)
+                {
+                  return ImmutableConciseSet.newImmutableFromMutable(input);
+                }
+              }
+          );
+
+          bitmaps = GenericIndexed.fromIterable(
+              Iterables.concat(
+                  Arrays.asList(
+                      ImmutableConciseSet.union(
+                          theNullSet,
+                          Iterables.getFirst(immutableConciseSets, null)
+                      )
+                  ),
+                  Iterables.skip(immutableConciseSets, 1)
+              ),
+              ConciseCompressedIndexedInts.objectStrategy
+          );
+        }
+      } else {
+        bitmaps = GenericIndexed.fromIterable(
+            Iterables.transform(
+                conciseSets,
+                new Function<ConciseSet, ImmutableConciseSet>()
+                {
+                  @Override
+                  public ImmutableConciseSet apply(ConciseSet input)
+                  {
+                    return ImmutableConciseSet.newImmutableFromMutable(input);
+                  }
+                }
+            ),
+            ConciseCompressedIndexedInts.objectStrategy
+        );
+      }
+    } else {
+      bitmaps = GenericIndexed.fromIterable(
+          Iterables.transform(
+              conciseSets,
+              new Function<ConciseSet, ImmutableConciseSet>()
+              {
+                @Override
+                public ImmutableConciseSet apply(ConciseSet input)
+                {
+                  return ImmutableConciseSet.newImmutableFromMutable(input);
+                }
+              }
+          ),
+          ConciseCompressedIndexedInts.objectStrategy
+      );
+    }
+
+    // Make spatial indexes
+    ImmutableRTree spatialIndex = null;
+    boolean hasSpatialIndexes = columnCapabilities.get(dimension).hasSpatialIndexes();
+    RTree tree = null;
+    if (hasSpatialIndexes) {
+      tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
+    }
+
+    int dimValIndex = 0;
+    for (String dimVal : dimensionValuesLookup.get(dimension)) {
+      if (hasSpatialIndexes) {
+        List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+        float[] coords = new float[stringCoords.size()];
+        for (int j = 0; j < coords.length; j++) {
+          coords[j] = Float.valueOf(stringCoords.get(j));
+        }
+        tree.insert(coords, conciseSets.get(dimValIndex++));
+      }
+    }
+    if (hasSpatialIndexes) {
+      spatialIndex = ImmutableRTree.newImmutableFromMutable(tree);
+    }
+
+    writeColumn(
+        v9Smoosher,
+        new DictionaryEncodedColumnPartSerde(
+            dictionary,
+            singleValCol,
+            multiValCol,
+            bitmaps,
+            spatialIndex
+        ),
+        dimBuilder,
+        dimension
+    );
+  }
+
+  private static void makeMetricColumns(
+      final FileSmoosher v9Smoosher,
+      final ProgressIndicator progress,
+      final Iterable<Rowboat> theRows,
+      final List<String> mergedMetrics,
+      final Map<String, ValueType> valueTypes,
+      final Map<String, String> metricTypeNames,
+      final int rowCount
+  ) throws IOException
+  {
+    final String metSection = "make metric columns";
+    progress.startSection(metSection);
+
+    int metIndex = 0;
+    for (String metric : mergedMetrics) {
+      makeMetricColumn(v9Smoosher, progress, theRows, metIndex, metric, valueTypes, metricTypeNames, rowCount);
+      metIndex++;
+    }
+    progress.stopSection(metSection);
+  }
+
+  private static void makeMetricColumn(
+      final FileSmoosher v9Smoosher,
+      final ProgressIndicator progress,
+      final Iterable<Rowboat> theRows,
+      final int metricIndex,
+      final String metric,
+      final Map<String, ValueType> valueTypes,
+      final Map<String, String> metricTypeNames,
+      final int rowCount
+  ) throws IOException
+  {
+    final String section = String.format("make column[%s]", metric);
+    progress.startSection(section);
+
+    final ColumnDescriptor.Builder metBuilder = ColumnDescriptor.builder();
+    ValueType type = valueTypes.get(metric);
+
+    switch (type) {
+      case FLOAT:
+        metBuilder.setValueType(ValueType.FLOAT);
+
+        float[] arr = new float[rowCount];
+        int rowNum = 0;
+        for (Rowboat theRow : theRows) {
+          Object obj = theRow.getMetrics()[metricIndex]; // TODO
+          arr[rowNum++] = (obj == null) ? 0 : ((Number) obj).floatValue();
+        }
+
+        CompressedFloatsIndexedSupplier compressedFloats = CompressedFloatsIndexedSupplier.fromFloatBuffer(
+            FloatBuffer.wrap(arr),
+            IndexIO.BYTE_ORDER
+        );
+
+        writeColumn(
+            v9Smoosher,
+            new FloatGenericColumnPartSerde(compressedFloats, IndexIO.BYTE_ORDER),
+            metBuilder,
+            metric
+        );
+        break;
+      case COMPLEX:
+        String complexType = metricTypeNames.get(metric);
+
+        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexType);
+
+        if (serde == null) {
+          throw new ISE("Unknown type[%s]", complexType);
+        }
+
+        final GenericIndexed metricColumn = GenericIndexed.fromIterable(
+            Iterables.transform(
+                theRows,
+                new Function<Rowboat, Object>()
+                {
+                  @Override
+                  public Object apply(Rowboat input)
+                  {
+                    return input.getMetrics()[metricIndex]; // TODO
+                  }
+                }
+            ),
+            serde.getObjectStrategy()
+        );
+
+        metBuilder.setValueType(ValueType.COMPLEX);
+        writeColumn(
+            v9Smoosher,
+            new ComplexColumnPartSerde(metricColumn, complexType),
+            metBuilder,
+            metric
+        );
+        break;
+      default:
+        throw new ISE("Unknown type[%s]", type);
+    }
+
+    progress.stopSection(section);
+  }
+
+  private static void makeIndexBinary(
+      final FileSmoosher v9Smoosher,
+      final List<IndexableAdapter> adapters,
+      final File outDir,
+      final List<String> mergedDimensions,
+      final List<String> mergedMetrics,
+      final Set<String> skippedDimensions,
+      final ProgressIndicator progress
+  ) throws IOException
+  {
+    final String section = "building index.drd";
+    progress.startSection(section);
+
+    final Set<String> finalColumns = Sets.newTreeSet();
+    finalColumns.addAll(mergedDimensions);
+    finalColumns.addAll(mergedMetrics);
+    finalColumns.removeAll(skippedDimensions);
+
+    final Iterable<String> finalDimensions = Iterables.filter(
+        mergedDimensions,
+        new Predicate<String>()
+        {
+          @Override
+          public boolean apply(String input)
+          {
+            return !skippedDimensions.contains(input);
+          }
+        }
+    );
+
+    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.stringStrategy);
+    GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.stringStrategy);
+
+    final long numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
+    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
+
+    cols.writeToChannel(writer);
+    dims.writeToChannel(writer);
+
+    DateTime minTime = new DateTime(Long.MAX_VALUE);
+    DateTime maxTime = new DateTime(0l);
+
+    for (IndexableAdapter index : adapters) {
+      minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
+      maxTime = JodaUtils.maxDateTime(maxTime, index.getDataInterval().getEnd());
+    }
+    final Interval dataInterval = new Interval(minTime, maxTime);
+
+    serializerUtils.writeLong(writer, dataInterval.getStartMillis());
+    serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+    writer.close();
+
+    IndexIO.checkFileSize(new File(outDir, "index.drd"));
+
+    progress.stopSection(section);
+  }
+
+  private static void writeColumn(
+      FileSmoosher v9Smoosher,
+      ColumnPartSerde serde,
+      ColumnDescriptor.Builder builder,
+      String name
+  ) throws IOException
+  {
+    builder.addSerde(serde);
+
+    final ColumnDescriptor descriptor = builder.build();
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    serializerUtils.writeString(baos, mapper.writeValueAsString(descriptor));
+    byte[] specBytes = baos.toByteArray();
+
+    final SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+        name, descriptor.numBytes() + specBytes.length
+    );
+    channel.write(ByteBuffer.wrap(specBytes));
+    descriptor.write(channel);
+    channel.close();
+  }
+
+  private static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
+  {
+    Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
+
+    for (Iterable<T> indexedList : indexedLists) {
+      for (T val : indexedList) {
+        retVal.add(val);
+      }
+    }
+
+    return Lists.newArrayList(retVal);
+  }
 
   private static class DimValueConverter
   {
@@ -1280,13 +1414,10 @@ public class IndexMaker
                 newDims[i] = new int[dims[i].length];
 
                 for (int j = 0; j < dims[i].length; ++j) {
-                  if (converter.hasRemaining()) {
-                    newDims[i][j] = converter.get(dims[i][j]);
-                  }
                   if (!converter.hasRemaining()) {
-                    log.error("Converter mismatch! wtfbbq!");
+                    throw new ISE("Converter mismatch! wtfbbq!");
                   }
-                  //newDims[i][j] = converter.get(dims[i][j]);
+                  newDims[i][j] = converter.get(dims[i][j]);
                 }
               }
 
@@ -1389,23 +1520,12 @@ public class IndexMaker
     }
   }
 
-  public static interface ProgressIndicator
-  {
-    public void progress();
-  }
-
-  private static class NoopProgressIndicator implements ProgressIndicator
-  {
-    @Override
-    public void progress() {}
-  }
-
-  private static interface ColumnAdder
+  private static interface ColumnDictionaryEntryStore
   {
     public void add(int[] vals);
   }
 
-  private static class SingleValColumnAdder implements ColumnAdder
+  private static class SingleValColumnDictionaryEntryStore implements ColumnDictionaryEntryStore
   {
     private final List<Integer> data = Lists.newArrayList();
 
@@ -1425,7 +1545,7 @@ public class IndexMaker
     }
   }
 
-  private static class MultiValColumnAdder implements ColumnAdder
+  private static class MultiValColumnDictionaryEntryStore implements ColumnDictionaryEntryStore
   {
     private final List<List<Integer>> data = Lists.newArrayList();
 

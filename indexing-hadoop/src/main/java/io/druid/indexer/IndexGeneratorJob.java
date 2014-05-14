@@ -36,6 +36,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.AbstractProgressIndicator;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
 import io.druid.segment.QueryableIndex;
@@ -311,7 +312,7 @@ public class IndexGeneratorJob implements Jobby
 
           context.progress();
           IndexMaker.persist(
-              index, interval, file, new IndexMaker.ProgressIndicator()
+              index, interval, file, new AbstractProgressIndicator()
           {
             @Override
             public void progress()
@@ -339,7 +340,7 @@ public class IndexGeneratorJob implements Jobby
 
         mergedBase = new File(baseFlushFile, "merged");
         IndexMaker.persist(
-            index, interval, mergedBase, new IndexMaker.ProgressIndicator()
+            index, interval, mergedBase, new AbstractProgressIndicator()
         {
           @Override
           public void progress()
@@ -352,7 +353,7 @@ public class IndexGeneratorJob implements Jobby
         if (!index.isEmpty()) {
           final File finalFile = new File(baseFlushFile, "final");
           IndexMaker.persist(
-              index, interval, finalFile, new IndexMaker.ProgressIndicator()
+              index, interval, finalFile, new AbstractProgressIndicator()
           {
             @Override
             public void progress()
@@ -368,7 +369,7 @@ public class IndexGeneratorJob implements Jobby
           indexes.add(IndexIO.loadIndex(file));
         }
         mergedBase = IndexMaker.mergeQueryableIndex(
-            indexes, aggs, new File(baseFlushFile, "merged"), new IndexMaker.ProgressIndicator()
+            indexes, aggs, new File(baseFlushFile, "merged"), new AbstractProgressIndicator()
         {
           @Override
           public void progress()
