@@ -33,11 +33,11 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -98,7 +98,6 @@ public class IndexGeneratorJob implements Jobby
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
-
     final Configuration conf = new Configuration();
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
 
@@ -292,7 +291,7 @@ public class IndexGeneratorJob implements Jobby
 
       for (final Text value : values) {
         context.progress();
-        final InputRow inputRow = index.getSpatialDimensionRowFormatter().formatRow(parser.parse(value.toString()));
+        final InputRow inputRow = index.formatRow(parser.parse(value.toString()));
         allDimensionNames.addAll(inputRow.getDimensions());
 
         int numRows = index.add(inputRow);
@@ -311,8 +310,8 @@ public class IndexGeneratorJob implements Jobby
           toMerge.add(file);
 
           context.progress();
-          IndexMerger.persist(
-              index, interval, file, new IndexMerger.ProgressIndicator()
+          IndexMaker.persist(
+              index, interval, file, new IndexMaker.ProgressIndicator()
           {
             @Override
             public void progress()
@@ -339,8 +338,8 @@ public class IndexGeneratorJob implements Jobby
         }
 
         mergedBase = new File(baseFlushFile, "merged");
-        IndexMerger.persist(
-            index, interval, mergedBase, new IndexMerger.ProgressIndicator()
+        IndexMaker.persist(
+            index, interval, mergedBase, new IndexMaker.ProgressIndicator()
         {
           @Override
           public void progress()
@@ -352,8 +351,8 @@ public class IndexGeneratorJob implements Jobby
       } else {
         if (!index.isEmpty()) {
           final File finalFile = new File(baseFlushFile, "final");
-          IndexMerger.persist(
-              index, interval, finalFile, new IndexMerger.ProgressIndicator()
+          IndexMaker.persist(
+              index, interval, finalFile, new IndexMaker.ProgressIndicator()
           {
             @Override
             public void progress()
@@ -368,8 +367,8 @@ public class IndexGeneratorJob implements Jobby
         for (File file : toMerge) {
           indexes.add(IndexIO.loadIndex(file));
         }
-        mergedBase = IndexMerger.mergeQueryableIndex(
-            indexes, aggs, new File(baseFlushFile, "merged"), new IndexMerger.ProgressIndicator()
+        mergedBase = IndexMaker.mergeQueryableIndex(
+            indexes, aggs, new File(baseFlushFile, "merged"), new IndexMaker.ProgressIndicator()
         {
           @Override
           public void progress()
@@ -611,16 +610,17 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
-      List<SpatialDimensionSchema> spatialDimensionSchemas = config.getSchema().getDataSchema().getParser() == null
-                                                             ? Lists.<SpatialDimensionSchema>newArrayList()
-                                                             : config.getSchema().getDataSchema().getParser()
-                                                                     .getParseSpec()
-                                                                     .getDimensionsSpec()
-                                                                     .getSpatialDimensions();
+      DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getParser() == null
+                                      ? new DimensionsSpec(null, null, null)
+                                      : config.getSchema()
+                                              .getDataSchema()
+                                              .getParser()
+                                              .getParseSpec()
+                                              .getDimensionsSpec();
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withSpatialDimensions(spatialDimensionSchemas)
+              .withDimensionsSpec(dimensionsSpec)
               .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()

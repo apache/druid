@@ -92,7 +92,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
-
     Sequence<Row> result;
 
     // If there's a subquery, merge subquery results and then apply the aggregator

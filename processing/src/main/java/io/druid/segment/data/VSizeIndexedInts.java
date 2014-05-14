@@ -57,7 +57,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
       if (val > maxValue) {
         throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", val, maxValue, i);
       }
-      
+
       byte[] intAsBytes = Ints.toByteArray(val);
       buffer.put(intAsBytes, intAsBytes.length - numBytes, numBytes);
       ++i;
@@ -138,8 +138,8 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     if (retVal == 0) {
       retVal = buffer.compareTo(o.buffer);
     }
-    
-    return retVal;    
+
+    return retVal;
   }
 
   public int getNumBytes()
@@ -149,6 +149,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public int getSerializedSize()
   {
+    // version, numBytes, size, remaining
     return 1 + 1 + 4 + buffer.remaining();
   }
 

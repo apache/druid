@@ -130,11 +130,11 @@ public class TestIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, DATA_INTERVAL, topFile);
-        IndexMerger.persist(bottom, DATA_INTERVAL, bottomFile);
+        IndexMaker.persist(top, DATA_INTERVAL, topFile);
+        IndexMaker.persist(bottom, DATA_INTERVAL, bottomFile);
 
         mergedRealtime = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(
+            IndexMaker.mergeQueryableIndex(
                 Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
                 METRIC_AGGS,
                 mergedFile
@@ -227,7 +227,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      IndexMerger.persist(index, someTmpFile);
+      IndexMaker.persist(index, someTmpFile);
       return IndexIO.loadIndex(someTmpFile);
     }
     catch (IOException e) {
