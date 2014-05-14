@@ -19,13 +19,17 @@
 
 package io.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class QueryInterruptedException extends RuntimeException
 {
   public QueryInterruptedException() {
     super();
   }
 
-  public QueryInterruptedException(String message)
+  @JsonCreator
+  public QueryInterruptedException(@JsonProperty("error") String message)
   {
     super(message);
   }
@@ -33,5 +37,12 @@ public class QueryInterruptedException extends RuntimeException
   public QueryInterruptedException(Throwable cause)
   {
     super(cause);
+  }
+
+  @JsonProperty("error")
+  @Override
+  public String getMessage()
+  {
+    return super.getMessage();
   }
 }

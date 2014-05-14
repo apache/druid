@@ -45,6 +45,7 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -283,7 +284,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       if (jp == null) {
         try {
           jp = objectMapper.getFactory().createParser(future.get());
-          if (jp.nextToken() != JsonToken.START_ARRAY) {
+          final JsonToken nextToken = jp.nextToken();
+          if (nextToken == JsonToken.START_OBJECT) {
+            QueryInterruptedException e = jp.getCodec().readValue(jp, QueryInterruptedException.class);
+            throw e;
+          }
+          else if (nextToken != JsonToken.START_ARRAY) {
             throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
             jp.nextToken();
