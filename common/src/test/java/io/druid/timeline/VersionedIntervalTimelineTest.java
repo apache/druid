@@ -19,8 +19,11 @@
 
 package io.druid.timeline;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.metamx.common.Pair;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.IntegerPartitionChunk;
@@ -38,6 +41,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -1104,13 +1108,13 @@ public class VersionedIntervalTimelineTest
     add("2011-01-01/2011-01-20", "3", 5);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-01-02/2011-01-08", "2", 3),
             createExpected("2011-01-10/2011-01-16", "2", 4),
             createExpected("2011-01-03/2011-01-06", "1", 1),
             createExpected("2011-01-09/2011-01-12", "1", 2)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1128,12 +1132,12 @@ public class VersionedIntervalTimelineTest
     add("2011-01-01/2011-01-10", "3", 4);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-01-01/2011-01-05", "2", 1),
             createExpected("2011-01-05/2011-01-10", "2", 2),
             createExpected("2011-01-01/2011-01-10", "1", 3)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1151,11 +1155,11 @@ public class VersionedIntervalTimelineTest
     add("2011-01-01/2011-01-10", "3", 4);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-01-03/2011-01-12", "1", 3),
             createExpected("2011-01-01/2011-01-05", "2", 1)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1342,12 +1346,12 @@ public class VersionedIntervalTimelineTest
     add("2011-04-01/2011-04-12", "2", 1);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-04-01/2011-04-03", "1", 2),
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-09/2011-04-12", "1", 4)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1444,11 +1448,11 @@ public class VersionedIntervalTimelineTest
     add("2011-04-03/2011-04-06", "1", 3);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-09/2011-04-12", "1", 3)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1462,11 +1466,11 @@ public class VersionedIntervalTimelineTest
     add("2011-04-01/2011-04-09", "2", 3);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-04-01/2011-04-09", "2", 3),
             createExpected("2011-04-01/2011-04-09", "1", 1)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1481,11 +1485,11 @@ public class VersionedIntervalTimelineTest
     add("2011-04-01/2011-04-09", "9", 4);
 
     assertValues(
-        Arrays.asList(
+        Sets.newHashSet(
             createExpected("2011-04-01/2011-04-09", "2", 3),
             createExpected("2011-04-01/2011-04-09", "1", 1)
         ),
-        timeline.findOvershadowed()
+        Sets.newHashSet(timeline.findOvershadowed())
     );
   }
 
@@ -1557,6 +1561,33 @@ public class VersionedIntervalTimelineTest
       Assert.assertEquals(pair.rhs.lhs, holder.getVersion());
       Assert.assertEquals(pair.rhs.rhs, holder.getObject());
     }
+  }
+
+  private void assertValues(
+      Set<Pair<Interval, Pair<String, PartitionHolder<Integer>>>> expected,
+      Set<TimelineObjectHolder<String, Integer>> actual
+  )
+  {
+    Assert.assertEquals("Sizes did not match.", expected.size(), actual.size());
+
+    Set<Pair<Interval, Pair<String, PartitionHolder<Integer>>>> actualSet =
+        Sets.newHashSet(
+            Iterables.transform(
+                actual,
+                new Function<TimelineObjectHolder<String, Integer>, Pair<Interval, Pair<String, PartitionHolder<Integer>>>>()
+                {
+                  @Override
+                  public Pair<Interval, Pair<String, PartitionHolder<Integer>>> apply(
+                      TimelineObjectHolder<String, Integer> input
+                  )
+                  {
+                    return new Pair<>(input.getInterval(), new Pair<>(input.getVersion(), input.getObject()));
+                  }
+                }
+            )
+        );
+
+    Assert.assertEquals(expected, actualSet);
   }
 
   private VersionedIntervalTimeline<String, Integer> makeStringIntegerTimeline()
