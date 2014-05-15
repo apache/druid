@@ -22,17 +22,24 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+
+import java.util.ArrayList;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
+  private final QueryToolChest<T, Query<T>> toolChest;
 
-  public UnionQueryRunner(QueryRunner<T> baseRunner)
+  public UnionQueryRunner(
+      QueryRunner<T> baseRunner,
+      QueryToolChest<T, Query<T>> toolChest
+  )
   {
     this.baseRunner = baseRunner;
+    this.toolChest = toolChest;
   }
 
   @Override
@@ -40,19 +47,21 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
-      return Sequences.concat(
-          Iterables.transform(
-              ((UnionDataSource) dataSource).getDataSources(),
-              new Function<DataSource, Sequence<T>>()
-              {
-                @Override
-                public Sequence<T> apply(DataSource singleSource)
-                {
-                  return baseRunner.run(
-                      query.withDataSource(singleSource)
-                  );
-                }
-              }
+      return toolChest.mergeSequences(
+          Sequences.simple(
+              Lists.transform(
+                  ((UnionDataSource) dataSource).getDataSources(),
+                  new Function<DataSource, Sequence<T>>()
+                  {
+                    @Override
+                    public Sequence<T> apply(DataSource singleSource)
+                    {
+                      return baseRunner.run(
+                          query.withDataSource(singleSource)
+                      );
+                    }
+                  }
+              )
           )
       );
     } else {
