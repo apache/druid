@@ -172,6 +172,7 @@ public class JettyTest
   // Tests that threads are not stuck when partial chunk is not finalized
   // https://bugs.eclipse.org/bugs/show_bug.cgi?id=424107
   @Test
+  @Ignore
   public void testChunkNotFinalized() throws Exception
   {
     ListenableFuture<InputStream> go = client.get(
