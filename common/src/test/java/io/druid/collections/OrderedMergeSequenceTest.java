@@ -323,19 +323,6 @@ public class OrderedMergeSequenceTest
         )
     );
 
-    Yielder<Integer> yielder = seq1.toYielder(
-        null,
-        new YieldingAccumulator<Integer, Integer>()
-        {
-          @Override
-          public Integer accumulate(Integer accumulated, Integer in)
-          {
-            yield();
-            return in;
-          }
-        }
-    );
-
-    Assert.assertFalse(yielder.isDone());
+    SequenceTestHelper.testAll(seq1, Arrays.asList(1));
   }
 }
