@@ -28,6 +28,8 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.SequenceTestHelper;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.TestSequence;
+import com.metamx.common.guava.Yielder;
+import com.metamx.common.guava.YieldingAccumulator;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -291,5 +293,49 @@ public class OrderedMergeSequenceTest
     );
 
     SequenceTestHelper.testAll(finalMerged, Arrays.asList(1, 1));
+  }
+
+  @Test
+  public void testMergeMerge() throws Exception
+  {
+    final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
+        Ordering.<Integer>natural(), Lists.newArrayList(
+            TestSequence.create(1)
+        )
+    );
+
+    final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
+        Ordering.<Integer>natural(),
+        Sequences.simple(
+            Lists.<Sequence<Integer>>newArrayList(seq1)
+        )
+    );
+
+    SequenceTestHelper.testAll(finalMerged, Arrays.asList(1));
+  }
+
+  @Test
+  public void testOne() throws Exception
+  {
+    final MergeSequence<Integer> seq1 = makeUnorderedMergedSequence(
+        Ordering.<Integer>natural(), Lists.newArrayList(
+            TestSequence.create(1)
+        )
+    );
+
+    Yielder<Integer> yielder = seq1.toYielder(
+        null,
+        new YieldingAccumulator<Integer, Integer>()
+        {
+          @Override
+          public Integer accumulate(Integer accumulated, Integer in)
+          {
+            yield();
+            return in;
+          }
+        }
+    );
+
+    Assert.assertFalse(yielder.isDone());
   }
 }
