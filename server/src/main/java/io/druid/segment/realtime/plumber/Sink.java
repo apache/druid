@@ -50,7 +50,7 @@ public class Sink implements Iterable<FireHydrant>
 {
   private static final Logger log = new Logger(Sink.class);
 
-  private volatile FireHydrant currIndex;
+  private volatile FireHydrant currHydrant;
 
   private final Interval interval;
   private final DataSchema schema;
@@ -107,31 +107,35 @@ public class Sink implements Iterable<FireHydrant>
     return interval;
   }
 
-  public FireHydrant getCurrIndex()
+  public FireHydrant getCurrHydrant()
   {
-    return currIndex;
+    return currHydrant;
   }
 
   public int add(InputRow row)
   {
-    if (currIndex == null) {
-      throw new IAE("No currIndex but given row[%s]", row);
+    if (currHydrant == null) {
+      throw new IAE("No currHydrant but given row[%s]", row);
     }
 
-    synchronized (currIndex) {
-      return currIndex.getIndex().add(row);
+    synchronized (currHydrant) {
+      IncrementalIndex index = currHydrant.getIndex();
+      if (index == null) {
+        return -1; // the hydrant was swapped without being replaced
+      }
+      return index.add(row);
     }
   }
 
   public boolean isEmpty()
   {
-    synchronized (currIndex) {
-      return hydrants.size() == 1 && currIndex.getIndex().isEmpty();
+    synchronized (currHydrant) {
+      return hydrants.size() == 1 && currHydrant.getIndex().isEmpty();
     }
   }
 
   /**
-   * If currIndex is A, creates a new index B, sets currIndex to B and returns A.
+   * If currHydrant is A, creates a new index B, sets currHydrant to B and returns A.
    *
    * @return the current index after swapping in a new one
    */
@@ -142,8 +146,8 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean swappable()
   {
-    synchronized (currIndex) {
-      return currIndex.getIndex() != null && currIndex.getIndex().size() != 0;
+    synchronized (currHydrant) {
+      return currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
     }
   }
 
@@ -189,15 +193,15 @@ public class Sink implements Iterable<FireHydrant>
     );
 
     FireHydrant old;
-    if (currIndex == null) {  // Only happens on initialization, cannot synchronize on null
-      old = currIndex;
-      currIndex = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
-      hydrants.add(currIndex);
+    if (currHydrant == null) {  // Only happens on initialization, cannot synchronize on null
+      old = currHydrant;
+      currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
+      hydrants.add(currHydrant);
     } else {
-      synchronized (currIndex) {
-        old = currIndex;
-        currIndex = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
-        hydrants.add(currIndex);
+      synchronized (currHydrant) {
+        old = currHydrant;
+        currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
+        hydrants.add(currHydrant);
       }
     }
 

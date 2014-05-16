@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
@@ -30,7 +31,12 @@ public interface Plumber
    */
   public void startJob();
 
-  public Sink getSink(long timestamp);
+  /**
+   * @param row - the row to insert
+   * @return - positive numbers indicate how many summarized rows exist in the index for that timestamp,
+   * -1 means a row was thrown away because it was too late
+   */
+  public int add(InputRow row);
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
