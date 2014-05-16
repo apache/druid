@@ -403,27 +403,31 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                         if (dimensionIndexInt != null) {
                           final int dimensionIndex = dimensionIndexInt;
-                          return new ObjectColumnSelector<String>()
+                          return new ObjectColumnSelector<Object>()
                           {
                             @Override
                             public Class classOfObject()
                             {
-                              return String.class;
+                              if (currEntry.getKey().getDims()[dimensionIndex].length > 1) {
+                                return String[].class;
+                              } else {
+                                return String.class;
+                              }
                             }
 
                             @Override
-                            public String get()
+                            public Object get()
                             {
                               final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
                               if (dimVals.length == 1) {
                                 return dimVals[0];
                               }
-                              if (dimVals.length == 0) {
+                              else if (dimVals.length == 0) {
                                 return null;
                               }
-                              throw new UnsupportedOperationException(
-                                  "makeObjectColumnSelector does not support multivalued columns"
-                              );
+                              else {
+                                return dimVals;
+                              }
                             }
                           };
                         }

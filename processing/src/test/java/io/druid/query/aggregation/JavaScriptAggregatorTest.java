@@ -68,6 +68,12 @@ public class JavaScriptAggregatorTest
     selector.increment();
   }
 
+  private static void aggregate(TestObjectColumnSelector selector, Aggregator agg)
+  {
+    agg.aggregate();
+    selector.increment();
+  }
+
   @Test
   public void testAggregate()
   {
@@ -170,6 +176,42 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get());
 
     agg.aggregate();
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+  }
+
+  @Test
+  public void testAggregateStrings()
+  {
+    final TestObjectColumnSelector ocs = new TestObjectColumnSelector("what", new String[]{"hey", "there"});
+    final JavaScriptAggregator agg = new JavaScriptAggregator(
+        "billy",
+        Collections.<ObjectColumnSelector>singletonList(ocs),
+        JavaScriptAggregatorFactory.compileScript(
+            "function aggregate(current, a) { if (typeof a === 'string') { return current + 1; } else { return current + a.length; } }",
+            scriptDoubleSum.get("fnReset"),
+            scriptDoubleSum.get("fnCombine")
+        )
+    );
+
+    agg.reset();
+
+    Assert.assertEquals("billy", agg.getName());
+
+    double val = 0.;
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    aggregate(ocs, agg);
+
+    val += 1;
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    aggregate(ocs, agg);
+
+    val += 2;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());

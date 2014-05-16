@@ -19,6 +19,7 @@
 
 package io.druid.query.timeseries;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
@@ -1260,6 +1261,43 @@ public class TimeseriesQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiValueFilteringJavascriptAggregator()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      ImmutableList.of(
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          QueryRunnerTestHelper.indexSumJsPlacementishN
+                                      )
+                                  )
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime(
+                QueryRunnerTestHelper.firstToThird.getIntervals()
+                                                  .get(0)
+                                                  .getStart()
+            ),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "index", 12459.361190795898d,
+                    "nindex", 283.31103515625d
+                )
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
   @Test

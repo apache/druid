@@ -25,6 +25,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -80,6 +81,13 @@ public class QueryRunnerTestHelper
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  public static final JavaScriptAggregatorFactory indexSumJsPlacementishN = new JavaScriptAggregatorFactory(
+      "nindex",
+      Arrays.asList("placementish", "index"),
+      "function aggregate(current, a, b) { if ((typeof a !== 'string' && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
+      "function reset() { return 0; }",
+      "function combine(a, b) { return a + b; }"
+  );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
       "quality_uniques"
