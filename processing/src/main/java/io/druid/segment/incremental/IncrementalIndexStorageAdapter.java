@@ -408,11 +408,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Class classOfObject()
                             {
-                              if (currEntry.getKey().getDims()[dimensionIndex].length > 1) {
-                                return String[].class;
-                              } else {
-                                return String.class;
-                              }
+                              return Object.class;
                             }
 
                             @Override

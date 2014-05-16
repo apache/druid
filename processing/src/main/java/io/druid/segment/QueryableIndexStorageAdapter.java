@@ -467,23 +467,29 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
                         if (columnVals.hasMultipleValues()) {
-                          return new ObjectColumnSelector<String[]>()
+                          return new ObjectColumnSelector<Object>()
                           {
                             @Override
                             public Class classOfObject()
                             {
-                              return String[].class;
+                              return Object.class;
                             }
 
                             @Override
-                            public String[] get()
+                            public Object get()
                             {
                               final IndexedInts multiValueRow = columnVals.getMultiValueRow(cursorOffset.getOffset());
-                              final String[] strings = new String[multiValueRow.size()];
-                              for (int i = 0 ; i < multiValueRow.size() ; i++) {
-                                strings[i] = columnVals.lookupName(multiValueRow.get(i));
+                              if (multiValueRow.size() == 0) {
+                                return null;
+                              } else if (multiValueRow.size() == 1) {
+                                return columnVals.lookupName(multiValueRow.get(1));
+                              } else {
+                                final String[] strings = new String[multiValueRow.size()];
+                                for (int i = 0 ; i < multiValueRow.size() ; i++) {
+                                  strings[i] = columnVals.lookupName(multiValueRow.get(i));
+                                }
+                                return strings;
                               }
-                              return strings;
                             }
                           };
                         } else {
@@ -891,23 +897,29 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
                         if (columnVals.hasMultipleValues()) {
-                          return new ObjectColumnSelector<String[]>()
+                          return new ObjectColumnSelector<Object>()
                           {
                             @Override
                             public Class classOfObject()
                             {
-                              return String[].class;
+                              return Object.class;
                             }
 
                             @Override
-                            public String[] get()
+                            public Object get()
                             {
                               final IndexedInts multiValueRow = columnVals.getMultiValueRow(currRow);
-                              final String[] strings = new String[multiValueRow.size()];
-                              for (int i = 0 ; i < multiValueRow.size() ; i++) {
-                                strings[i] = columnVals.lookupName(multiValueRow.get(i));
+                              if (multiValueRow.size() == 0) {
+                                return null;
+                              } else if (multiValueRow.size() == 1) {
+                                return columnVals.lookupName(multiValueRow.get(1));
+                              } else {
+                                final String[] strings = new String[multiValueRow.size()];
+                                for (int i = 0 ; i < multiValueRow.size() ; i++) {
+                                  strings[i] = columnVals.lookupName(multiValueRow.get(i));
+                                }
+                                return strings;
                               }
-                              return strings;
                             }
                           };
                         } else {

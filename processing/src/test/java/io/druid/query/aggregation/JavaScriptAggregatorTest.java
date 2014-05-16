@@ -184,12 +184,12 @@ public class JavaScriptAggregatorTest
   @Test
   public void testAggregateStrings()
   {
-    final TestObjectColumnSelector ocs = new TestObjectColumnSelector("what", new String[]{"hey", "there"});
+    final TestObjectColumnSelector ocs = new TestObjectColumnSelector("what", null, new String[]{"hey", "there"});
     final JavaScriptAggregator agg = new JavaScriptAggregator(
         "billy",
         Collections.<ObjectColumnSelector>singletonList(ocs),
         JavaScriptAggregatorFactory.compileScript(
-            "function aggregate(current, a) { if (typeof a === 'string') { return current + 1; } else { return current + a.length; } }",
+            "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
             scriptDoubleSum.get("fnReset"),
             scriptDoubleSum.get("fnCombine")
         )
@@ -206,6 +206,11 @@ public class JavaScriptAggregatorTest
     aggregate(ocs, agg);
 
     val += 1;
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    aggregate(ocs, agg);
+
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
