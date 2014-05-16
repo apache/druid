@@ -103,7 +103,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                       public Future<List<T>> apply(final QueryRunner<T> input)
                       {
                         return exec.submit(
-                            new PrioritizedCallable<List<T>>(priority)
+                            new AbstractPrioritizedCallable<List<T>>(priority)
                             {
                               @Override
                               public List<T> call() throws Exception
