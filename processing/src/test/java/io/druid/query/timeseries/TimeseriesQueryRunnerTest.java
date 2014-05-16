@@ -19,6 +19,7 @@
 
 package io.druid.query.timeseries;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
@@ -1260,6 +1261,85 @@ public class TimeseriesQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiValueFilteringJavascriptAggregator()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      ImmutableList.of(
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          QueryRunnerTestHelper.jsIndexSumIfPlacementishA,
+                                          QueryRunnerTestHelper.jsPlacementishCount
+                                      )
+                                  )
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime(
+                QueryRunnerTestHelper.firstToThird.getIntervals()
+                                                  .get(0)
+                                                  .getStart()
+            ),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "index", 12459.361190795898d,
+                    "nindex", 283.31103515625d,
+                    "pishcount", 52d
+                )
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiValueFilteringJavascriptAggregatorAndAlsoRegularFilters()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .filters(QueryRunnerTestHelper.placementishDimension, "a")
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      ImmutableList.of(
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          QueryRunnerTestHelper.jsIndexSumIfPlacementishA,
+                                          QueryRunnerTestHelper.jsPlacementishCount
+                                      )
+                                  )
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime(
+                QueryRunnerTestHelper.firstToThird.getIntervals()
+                                                  .get(0)
+                                                  .getStart()
+            ),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "index", 283.31103515625d,
+                    "nindex", 283.31103515625d,
+                    "pishcount", 4d
+                )
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
   @Test

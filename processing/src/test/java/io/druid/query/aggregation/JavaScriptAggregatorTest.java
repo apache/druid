@@ -68,6 +68,12 @@ public class JavaScriptAggregatorTest
     selector.increment();
   }
 
+  private static void aggregate(TestObjectColumnSelector selector, Aggregator agg)
+  {
+    agg.aggregate();
+    selector.increment();
+  }
+
   @Test
   public void testAggregate()
   {
@@ -175,8 +181,49 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get());
   }
 
+  @Test
+  public void testAggregateStrings()
+  {
+    final TestObjectColumnSelector ocs = new TestObjectColumnSelector("what", null, new String[]{"hey", "there"});
+    final JavaScriptAggregator agg = new JavaScriptAggregator(
+        "billy",
+        Collections.<ObjectColumnSelector>singletonList(ocs),
+        JavaScriptAggregatorFactory.compileScript(
+            "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
+            scriptDoubleSum.get("fnReset"),
+            scriptDoubleSum.get("fnCombine")
+        )
+    );
+
+    agg.reset();
+
+    Assert.assertEquals("billy", agg.getName());
+
+    double val = 0.;
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    aggregate(ocs, agg);
+
+    val += 1;
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    aggregate(ocs, agg);
+
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    aggregate(ocs, agg);
+
+    val += 2;
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+  }
+
   public static void main(String... args) throws Exception {
-    final LoopingFloatColumnSelector selector = new LoopingFloatColumnSelector(new float[]{42.12f, 9f});
+    final JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector(new float[]{42.12f, 9f});
 
     /* memory usage test
     List<JavaScriptAggregator> aggs = Lists.newLinkedList();
@@ -238,31 +285,5 @@ public class JavaScriptAggregatorTest
     System.out.println(String.format("DoubleSum  aggregator == %,f: %d ms", doubleAgg.get(), t2));
 
     System.out.println(String.format("JavaScript is %2.1fx slower", (double)t1 / t2));
-  }
-
-  static class LoopingFloatColumnSelector extends TestFloatColumnSelector
-  {
-    private final float[] floats;
-    private long index = 0;
-
-    public LoopingFloatColumnSelector(float[] floats)
-    {
-      super(floats);
-      this.floats = floats;
-    }
-
-    @Override
-    public float get()
-    {
-      return floats[(int)(index % floats.length)];
-    }
-
-    public void increment()
-    {
-      ++index;
-      if (index < 0) {
-        index = 0;
-      }
-    }
   }
 }
