@@ -67,24 +67,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
           throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TopNQuery.class);
         }
 
-        final TopNQuery legacyQuery = (TopNQuery) input;
-
-        return new BaseSequence<Result<TopNResultValue>, Iterator<Result<TopNResultValue>>>(
-            new BaseSequence.IteratorMaker<Result<TopNResultValue>, Iterator<Result<TopNResultValue>>>()
-            {
-              @Override
-              public Iterator<Result<TopNResultValue>> make()
-              {
-                return queryEngine.query(legacyQuery, segment.asStorageAdapter()).iterator();
-              }
-
-              @Override
-              public void cleanup(Iterator<Result<TopNResultValue>> toClean)
-              {
-
-              }
-            }
-        );
+        return queryEngine.query((TopNQuery) input, segment.asStorageAdapter());
       }
     };
 
