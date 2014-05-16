@@ -37,6 +37,7 @@ import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -276,7 +277,18 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         for (int i = 0 ; i < size ; i++) {
           final ObjectColumnSelector selector = selectorList[i];
           if (selector != null) {
-            args[i + 1] = Context.javaToJS(selector.get(), scope);
+            final Object arg = selector.get();
+            if (arg.getClass().isArray()) {
+              // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
+              // may have other issues too. Let's just copy the array and wrap that.
+              final Object[] arrayAsObjectArray = new Object[Array.getLength(arg)];
+              for (int j = 0; j < Array.getLength(arg); j++) {
+                arrayAsObjectArray[j] = Array.get(arg, j);
+              }
+              args[i + 1] = cx.newArray(scope, arrayAsObjectArray);
+            } else {
+              args[i + 1] = Context.javaToJS(arg, scope);
+            }
           }
         }
 

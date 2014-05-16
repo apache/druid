@@ -84,7 +84,7 @@ public class QueryRunnerTestHelper
   public static final JavaScriptAggregatorFactory indexSumJsPlacementishN = new JavaScriptAggregatorFactory(
       "nindex",
       Arrays.asList("placementish", "index"),
-      "function aggregate(current, a, b) { if ((typeof a !== 'string' && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
+      "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
       "function reset() { return 0; }",
       "function combine(a, b) { return a + b; }"
   );
