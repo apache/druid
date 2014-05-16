@@ -267,6 +267,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         Context cx = Context.getCurrentContext();
         if (cx == null) {
           cx = contextFactory.enterContext();
+
+          // Disable primitive wrapping- we want Java strings and primitives to behave like JS entities.
           cx.getWrapFactory().setJavaPrimitiveWrap(false);
         }
 
