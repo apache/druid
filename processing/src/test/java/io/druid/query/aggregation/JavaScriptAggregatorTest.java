@@ -223,7 +223,7 @@ public class JavaScriptAggregatorTest
   }
 
   public static void main(String... args) throws Exception {
-    final LoopingFloatColumnSelector selector = new LoopingFloatColumnSelector(new float[]{42.12f, 9f});
+    final JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector(new float[]{42.12f, 9f});
 
     /* memory usage test
     List<JavaScriptAggregator> aggs = Lists.newLinkedList();
@@ -285,31 +285,5 @@ public class JavaScriptAggregatorTest
     System.out.println(String.format("DoubleSum  aggregator == %,f: %d ms", doubleAgg.get(), t2));
 
     System.out.println(String.format("JavaScript is %2.1fx slower", (double)t1 / t2));
-  }
-
-  static class LoopingFloatColumnSelector extends TestFloatColumnSelector
-  {
-    private final float[] floats;
-    private long index = 0;
-
-    public LoopingFloatColumnSelector(float[] floats)
-    {
-      super(floats);
-      this.floats = floats;
-    }
-
-    @Override
-    public float get()
-    {
-      return floats[(int)(index % floats.length)];
-    }
-
-    public void increment()
-    {
-      ++index;
-      if (index < 0) {
-        index = 0;
-      }
-    }
   }
 }
