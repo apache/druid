@@ -19,6 +19,7 @@
 
 package io.druid.server.initialization;
 
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
@@ -173,6 +174,7 @@ public class JettyTest
   // https://bugs.eclipse.org/bugs/show_bug.cgi?id=424107
   @Test
   @Ignore
+  // above bug is not fixed in jetty for gzip encoding, and the chunk is still finalized instead of throwing exception.
   public void testChunkNotFinalized() throws Exception
   {
     ListenableFuture<InputStream> go = client.get(
@@ -191,6 +193,41 @@ public class JettyTest
       // Expected.
     }
 
+  }
+
+  @Test
+  public void testThreadNotStuckOnException() throws Exception
+  {
+    final CountDownLatch latch = new CountDownLatch(1);
+    Executors.newSingleThreadExecutor().execute(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              ListenableFuture<InputStream> go = client.get(
+                  new URL(
+                      "http://localhost:9999/exception/exception"
+                  )
+
+              )
+                                                       .go(new InputStreamResponseHandler());
+              StringWriter writer = new StringWriter();
+              IOUtils.copy(go.get(), writer, "utf-8");
+            }
+            catch (IOException e) {
+              // Expected.
+            }
+            catch (Throwable t) {
+              Throwables.propagate(t);
+            }
+            latch.countDown();
+          }
+        }
+    );
+
+    latch.await(5, TimeUnit.SECONDS);
   }
 
   @After
