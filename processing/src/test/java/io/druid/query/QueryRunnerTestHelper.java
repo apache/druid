@@ -81,10 +81,17 @@ public class QueryRunnerTestHelper
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
-  public static final JavaScriptAggregatorFactory indexSumJsPlacementishN = new JavaScriptAggregatorFactory(
+  public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
       "nindex",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
+      "function reset() { return 0; }",
+      "function combine(a, b) { return a + b; }"
+  );
+  public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
+      "pishcount",
+      Arrays.asList("placementish", "index"),
+      "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
       "function reset() { return 0; }",
       "function combine(a, b) { return a + b; }"
   );
