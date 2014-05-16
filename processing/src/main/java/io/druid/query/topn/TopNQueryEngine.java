@@ -74,19 +74,16 @@ public class TopNQueryEngine
 
     return Sequences.filter(
         Sequences.map(
-            Sequences.map(
-                adapter.makeCursors(filter, queryIntervals.get(0), granularity),
-                new Function<Cursor, Cursor>()
-                {
-                  @Override
-                  public Cursor apply(Cursor input)
-                  {
-                    log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
-                    return input;
-                  }
-                }
-            ),
-            mapFn
+            adapter.makeCursors(filter, queryIntervals.get(0), granularity),
+            new Function<Cursor, Result<TopNResultValue>>()
+            {
+              @Override
+              public Result<TopNResultValue> apply(Cursor input)
+              {
+                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
+                return mapFn.apply(input);
+              }
+            }
         ),
         Predicates.<Result<TopNResultValue>>notNull()
     );

@@ -59,7 +59,7 @@ public class QueryRunnerHelper
       List<Interval> queryIntervals,
       Filter filter,
       QueryGranularity granularity,
-      Function<Cursor, Result<T>> mapFn
+      final Function<Cursor, Result<T>> mapFn
   )
   {
     Preconditions.checkArgument(
@@ -68,20 +68,16 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            Sequences.map(
-                adapter.makeCursors(filter, queryIntervals.get(0), granularity),
-
-                new Function<Cursor, Cursor>()
-                {
-                  @Override
-                  public Cursor apply(@Nullable Cursor input)
-                  {
-                    log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
-                    return input;
-                  }
-                }
-            ),
-            mapFn
+            adapter.makeCursors(filter, queryIntervals.get(0), granularity),
+            new Function<Cursor, Result<T>>()
+            {
+              @Override
+              public Result<T> apply(@Nullable Cursor input)
+              {
+                log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
+                return mapFn.apply(input);
+              }
+            }
         ),
         Predicates.<Result<T>>notNull()
     );
