@@ -33,7 +33,8 @@ public interface Plumber
 
   /**
    * @param row - the row to insert
-   * @return - indicating how many rows were added, -1 means that an error occurred
+   * @return - positive numbers indicate how many summarized rows exist in the index for that timestamp,
+   * -1 means a row was thrown away because it was too late
    */
   public int add(InputRow row);
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
