@@ -134,7 +134,8 @@ public class RealtimeManager implements QuerySegmentWalker
     String dataSourceName;
     try {
       dataSourceName = ((TableDataSource) query.getDataSource()).getName();
-    } catch (ClassCastException e) {
+    }
+    catch (ClassCastException e) {
       throw new UnsupportedOperationException("Subqueries are only supported in the broker");
     }
     return dataSourceName;
@@ -172,7 +173,8 @@ public class RealtimeManager implements QuerySegmentWalker
           log.info("Someone get us a plumber!");
           plumber = fireDepartment.findPlumber();
           log.info("We have our plumber!");
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
           throw Throwables.propagate(e);
         }
       }
@@ -199,14 +201,15 @@ public class RealtimeManager implements QuerySegmentWalker
           try {
             try {
               inputRow = firehose.nextRow();
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
               log.debug(e, "thrown away line due to exception, considering unparseable");
               metrics.incrementUnparseable();
               continue;
             }
 
-            final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-            if (sink == null) {
+            int currCount = plumber.add(inputRow);
+            if (currCount == -1) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
 
@@ -217,30 +220,32 @@ public class RealtimeManager implements QuerySegmentWalker
 
               continue;
             }
-
-            int currCount = sink.add(inputRow);
             if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }
             metrics.incrementProcessed();
-          } catch (FormattedException e) {
+          }
+          catch (FormattedException e) {
             log.info(e, "unparseable line: %s", e.getDetails());
             metrics.incrementUnparseable();
             continue;
           }
         }
-      } catch (RuntimeException e) {
+      }
+      catch (RuntimeException e) {
         log.makeAlert(e, "RuntimeException aborted realtime processing[%s]", fireDepartment.getSchema().getDataSource())
-            .emit();
+           .emit();
         normalExit = false;
         throw e;
-      } catch (Error e) {
+      }
+      catch (Error e) {
         log.makeAlert(e, "Exception aborted realtime processing[%s]", fireDepartment.getSchema().getDataSource())
-            .emit();
+           .emit();
         normalExit = false;
         throw e;
-      } finally {
+      }
+      finally {
         Closeables.closeQuietly(firehose);
         if (normalExit) {
           plumber.finishJob();

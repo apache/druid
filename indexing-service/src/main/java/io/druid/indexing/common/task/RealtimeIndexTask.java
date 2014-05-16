@@ -319,8 +319,8 @@ public class RealtimeIndexTask extends AbstractTask
             continue;
           }
 
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink == null) {
+          int currCount = plumber.add(inputRow);
+          if (currCount == -1) {
             fireDepartment.getMetrics().incrementThrownAway();
             log.debug("Throwing away event[%s]", inputRow);
 
@@ -332,11 +332,6 @@ public class RealtimeIndexTask extends AbstractTask
             continue;
           }
 
-          if (sink.isEmpty()) {
-            log.info("Task %s: New sink: %s", getId(), sink);
-          }
-
-          int currCount = sink.add(inputRow);
           fireDepartment.getMetrics().incrementProcessed();
           if (currCount >= fireDepartmentConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());

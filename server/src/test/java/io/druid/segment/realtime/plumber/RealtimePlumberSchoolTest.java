@@ -127,16 +127,6 @@ public class RealtimePlumberSchoolTest
   }
 
   @Test
-  public void testGetSink() throws Exception
-  {
-    final DateTime theTime = new DateTime("2013-01-01");
-    Sink sink = plumber.getSink(theTime.getMillis());
-
-    Assert.assertEquals(new Interval(String.format("%s/PT1H", theTime.toString())), sink.getInterval());
-    Assert.assertEquals(theTime.toString(), sink.getVersion());
-  }
-
-  @Test
   public void testPersist() throws Exception
   {
     final MutableBoolean committed = new MutableBoolean(false);

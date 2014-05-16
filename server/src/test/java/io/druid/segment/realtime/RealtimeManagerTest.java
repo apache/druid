@@ -229,6 +229,21 @@ public class RealtimeManagerTest
     }
 
     @Override
+    public int add(InputRow row)
+    {
+      if (row == null) {
+        return -1;
+      }
+
+      Sink sink = getSink(row.getTimestampFromEpoch());
+
+      if (sink == null) {
+        return -1;
+      }
+
+      return sink.add(row);
+    }
+
     public Sink getSink(long timestamp)
     {
       if (sink.getInterval().contains(timestamp)) {

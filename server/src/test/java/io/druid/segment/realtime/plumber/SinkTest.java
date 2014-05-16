@@ -88,7 +88,7 @@ public class SinkTest
       }
     });
 
-    FireHydrant currHydrant = sink.getCurrIndex();
+    FireHydrant currHydrant = sink.getCurrHydrant();
     Assert.assertEquals(new Interval("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
 
 
@@ -128,8 +128,8 @@ public class SinkTest
     });
 
     Assert.assertEquals(currHydrant, swapHydrant);
-    Assert.assertNotSame(currHydrant, sink.getCurrIndex());
-    Assert.assertEquals(new Interval("2013-01-01/PT1M"), sink.getCurrIndex().getIndex().getInterval());
+    Assert.assertNotSame(currHydrant, sink.getCurrHydrant());
+    Assert.assertEquals(new Interval("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
 
     Assert.assertEquals(2, Iterators.size(sink.iterator()));
   }

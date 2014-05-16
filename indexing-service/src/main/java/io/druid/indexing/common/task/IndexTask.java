@@ -364,17 +364,15 @@ public class IndexTask extends AbstractFixedIntervalTask
         final InputRow inputRow = firehose.nextRow();
 
         if (shouldIndex(schema, interval, inputRow)) {
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink == null) {
-            throw new NullPointerException(
+          int numRows = plumber.add(inputRow);
+          if (numRows == -1) {
+            throw new ISE(
                 String.format(
                     "Was expecting non-null sink for timestamp[%s]",
                     new DateTime(inputRow.getTimestampFromEpoch())
                 )
             );
           }
-
-          int numRows = sink.add(inputRow);
           metrics.incrementProcessed();
 
           if (numRows >= myRowFlushBoundary) {

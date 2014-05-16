@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
@@ -30,6 +31,7 @@ public interface Plumber
    */
   public void startJob();
 
+  public int add(InputRow row);
   public Sink getSink(long timestamp);
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 

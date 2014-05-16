@@ -30,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
@@ -100,6 +101,16 @@ public class YeOldePlumberSchool implements PlumberSchool
       }
 
       @Override
+      public int add(InputRow row)
+      {
+        Sink sink = getSink(row.getTimestampFromEpoch());
+        if (sink == null) {
+          return -1;
+        }
+
+        return sink.add(row);
+      }
+
       public Sink getSink(long timestamp)
       {
         if (theSink.getInterval().contains(timestamp)) {
