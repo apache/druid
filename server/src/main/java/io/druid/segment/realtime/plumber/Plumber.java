@@ -31,8 +31,11 @@ public interface Plumber
    */
   public void startJob();
 
+  /**
+   * @param row - the row to insert
+   * @return - indicating how many rows were added, -1 means that an error occurred
+   */
   public int add(InputRow row);
-  public Sink getSink(long timestamp);
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
