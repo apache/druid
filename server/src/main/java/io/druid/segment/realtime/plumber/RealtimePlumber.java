@@ -21,6 +21,7 @@ import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
+import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -72,6 +73,7 @@ public class RealtimePlumber implements Plumber
 
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
+
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
@@ -151,6 +153,16 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
+  public int add(InputRow row)
+  {
+    final Sink sink = getSink(row.getTimestampFromEpoch());
+    if (sink == null) {
+      return -1;
+    }
+
+    return sink.add(row);
+  }
+
   public Sink getSink(long timestamp)
   {
     if (!rejectionPolicy.accept(timestamp)) {
