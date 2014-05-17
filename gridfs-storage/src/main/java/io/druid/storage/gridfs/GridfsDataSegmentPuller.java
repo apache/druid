@@ -32,15 +32,15 @@ import java.io.File;
 import java.net.UnknownHostException;
 
 /**
- * Cassandra Segment Puller
+ * GridFS Segment Puller
  *
- * @author boneill42
+ * @author taity
  */
-public class GridfsDataSegmentPuller extends GridfsStorage implements DataSegmentPuller {
-    private static final Logger log = new Logger(GridfsDataSegmentPuller.class);
+public class GridFSDataSegmentPuller extends GridFSStorage implements DataSegmentPuller {
+    private static final Logger log = new Logger(GridFSDataSegmentPuller.class);
 
     @Inject
-    public GridfsDataSegmentPuller(GridfsDataSegmentConfig config) throws UnknownHostException {
+    public GridFSDataSegmentPuller(GridFSDataSegmentConfig config) throws UnknownHostException {
         super(config);
     }
 
@@ -70,8 +70,7 @@ public class GridfsDataSegmentPuller extends GridfsStorage implements DataSegmen
         } catch (Exception e) {
             throw new SegmentLoadingException(e, e.getMessage());
         }
-        log.info("Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime);
-        //log.info("Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime, meta.getObjectSize());
+        log.info("Pull of file[%s] completed in %,d millis", key, System.currentTimeMillis() - startTime);
     }
 
     @Override

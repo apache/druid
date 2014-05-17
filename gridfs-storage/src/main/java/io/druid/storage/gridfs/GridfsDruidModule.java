@@ -32,9 +32,7 @@ import io.druid.segment.loading.DataSegmentPusher;
 
 import java.util.List;
 
-/**
- */
-public class GridfsDruidModule implements DruidModule {
+public class GridFSDruidModule implements DruidModule {
     @Override
     public List<? extends Module> getJacksonModules() {
         return ImmutableList.of();
@@ -42,10 +40,10 @@ public class GridfsDruidModule implements DruidModule {
 
     @Override
     public void configure(Binder binder) {
-        Binders.dataSegmentPullerBinder(binder).addBinding("mongo")
-                .to(GridfsDataSegmentPuller.class).in(LazySingleton.class);
-        PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class)).addBinding("mongo")
-                .to(GridfsDataSegmentPusher.class).in(LazySingleton.class);
-        JsonConfigProvider.bind(binder, "druid.storage.mongo", GridfsDataSegmentConfig.class);
+        Binders.dataSegmentPullerBinder(binder).addBinding("gridfs")
+                .to(GridFSDataSegmentPuller.class).in(LazySingleton.class);
+        PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class)).addBinding("gridfs")
+                .to(GridFSDataSegmentPusher.class).in(LazySingleton.class);
+        JsonConfigProvider.bind(binder, "druid.storage.gridfs", GridFSDataSegmentConfig.class);
     }
 }

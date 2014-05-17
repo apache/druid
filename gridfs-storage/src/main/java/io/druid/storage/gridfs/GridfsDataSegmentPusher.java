@@ -38,24 +38,24 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 
 /**
- * Cassandra Segment Pusher
+ * GridFS Segment Pusher
  *
- * @author boneill42
+ * @author taity
  */
-public class GridfsDataSegmentPusher extends GridfsStorage implements DataSegmentPusher {
-    private static final Logger log = new Logger(GridfsDataSegmentPusher.class);
+public class GridFSDataSegmentPusher extends GridFSStorage implements DataSegmentPusher {
+    private static final Logger log = new Logger(GridFSDataSegmentPusher.class);
     private static final Joiner JOINER = Joiner.on("/").skipNulls();
     private final ObjectMapper jsonMapper;
 
     @Inject
-    public GridfsDataSegmentPusher(GridfsDataSegmentConfig config, ObjectMapper jsonMapper) throws UnknownHostException {
+    public GridFSDataSegmentPusher(GridFSDataSegmentConfig config, ObjectMapper jsonMapper) throws UnknownHostException {
         super(config);
         this.jsonMapper = jsonMapper;
     }
 
     @Override
     public String getPathForHadoop(String dataSource) {
-        throw new UnsupportedOperationException("Cassandra storage does not support indexing via Hadoop");
+        throw new UnsupportedOperationException("GridFS storage does not support indexing via Hadoop");
     }
 
     @Override

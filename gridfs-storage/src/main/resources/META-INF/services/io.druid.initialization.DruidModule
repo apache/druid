@@ -1,1 +1,1 @@
-io.druid.storage.gridfs.GridfsDruidModule
+io.druid.storage.gridfs.GridFSDruidModule

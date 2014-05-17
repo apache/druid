@@ -27,19 +27,13 @@ import com.mongodb.gridfs.GridFS;
 import java.net.UnknownHostException;
 
 /**
- * Superclass for accessing Cassandra Storage.
- * <p/>
- * This is the schema used to support the index and descriptor storage:
- * <p/>
- * CREATE TABLE index_storage ( key text, chunk text, value blob, PRIMARY KEY (key, chunk)) WITH COMPACT STORAGE;
- * CREATE TABLE descriptor_storage ( key varchar, lastModified timestamp, descriptor varchar, PRIMARY KEY (key) ) WITH COMPACT STORAGE;
+ * Superclass for accessing GridFS Storage.
  */
-public class GridfsStorage {
-    private static final String COLLECTION_NAME = "druid_bucket";
+public class GridFSStorage {
     protected final GridFS gridFs;
-    protected final GridfsDataSegmentConfig config;
+    protected final GridFSDataSegmentConfig config;
 
-    public GridfsStorage(GridfsDataSegmentConfig config) throws UnknownHostException {
+    public GridFSStorage(GridFSDataSegmentConfig config) throws UnknownHostException {
         this.config = config;
         MongoClient mongo = new MongoClient(new MongoClientURI(config.uri));
         DB db = mongo.getDB(config.db);

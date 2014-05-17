@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.NotNull;
 
 /**
- * Cassandra Config
+ * GridFS Config
  *
- * @author boneill42
+ * @author taity
  */
-public class GridfsDataSegmentConfig {
+public class GridFSDataSegmentConfig {
     @JsonProperty
     @NotNull
     public String uri = null;
