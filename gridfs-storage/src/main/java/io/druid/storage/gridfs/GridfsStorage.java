@@ -36,7 +36,6 @@ public class GridFSStorage {
     public GridFSStorage(GridFSDataSegmentConfig config) throws UnknownHostException {
         this.config = config;
         MongoClient mongo = new MongoClient(new MongoClientURI(config.uri));
-        DB db = mongo.getDB(config.db);
-        this.gridFs = new GridFS(db, config.bucket);
+        this.gridFs = new GridFS(mongo.getDB(config.db), config.bucket);
     }
 }

@@ -80,7 +80,7 @@ public class GridFSDataSegmentPusher extends GridFSStorage implements DataSegmen
             DBObject metaData = new BasicDBObject();
             metaData.put("key", key);
             metaData.put("lastmodified", System.currentTimeMillis());
-            metaData.put("descriptor", "json");
+            metaData.put("descriptor", json);
 
             gsFile.setFilename(key);
             gsFile.setMetaData(metaData);
