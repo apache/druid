@@ -29,6 +29,7 @@ import io.druid.client.DruidServer;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.TestDruidCoordinator;
 import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ReplicationThrottler;
@@ -168,7 +169,7 @@ public class LoadRuleTest
     );
 
     CoordinatorStats stats = rule.run(
-        null,
+        new TestDruidCoordinator(),
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
@@ -271,7 +272,7 @@ public class LoadRuleTest
 
 
     CoordinatorStats stats = rule.run(
-        null,
+        new TestDruidCoordinator(),
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
