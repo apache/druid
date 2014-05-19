@@ -69,7 +69,7 @@ public class DruidCoordinatorTest
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
 
-    coordinator = new DruidCoordinator(
+    coordinator = new TestDruidCoordinator(
         new DruidCoordinatorConfig()
         {
           @Override

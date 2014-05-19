@@ -31,12 +31,10 @@ import com.google.common.io.Closeables;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ExecutorServices;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
@@ -113,6 +111,7 @@ public class DruidCoordinator
   private final DruidNode self;
 
   private volatile boolean started = false;
+  private volatile int startingLeaderCounter = 0;
   private volatile int leaderCounter = 0;
   private volatile boolean leader = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
@@ -193,6 +192,15 @@ public class DruidCoordinator
   public boolean isLeader()
   {
     return leader;
+  }
+
+  /**
+   * Coordinator losing and regaining leadership can cause master to perform activities with incorrect state.
+   * If we lose leadership, we need to not try to modify segments at all.
+   */
+  public boolean canPerformLeaderAction()
+  {
+    return isLeader() && (startingLeaderCounter == leaderCounter);
   }
 
   public Map<String, LoadQueuePeon> getLoadManagementPeons()
@@ -307,8 +315,12 @@ public class DruidCoordinator
 
   public void removeSegment(DataSegment segment)
   {
-    log.info("Removing Segment[%s]", segment);
-    databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    if (!canPerformLeaderAction()) {
+      log.error("Can't perform leader action to remove [%s]!", segment.getIdentifier());
+    } else {
+      log.info("Removing Segment[%s]", segment);
+      databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    }
   }
 
   public void removeDatasource(String ds)
@@ -390,6 +402,10 @@ public class DruidCoordinator
           ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), to), segmentName
       );
 
+      if (!canPerformLeaderAction()) {
+        throw new IAE("Can't perform leader action to move [%s]!", segmentName);
+      }
+
       loadPeon.loadSegment(
           segment,
           new LoadPeonCallback()
@@ -435,6 +451,10 @@ public class DruidCoordinator
       final LoadQueuePeon dropPeon = loadManagementPeons.get(from);
       if (dropPeon == null) {
         throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", from);
+      }
+
+      if (!canPerformLeaderAction()) {
+        throw new IAE("Can't perform leader action to drop [%s]!", segmentName);
       }
 
       if (!dropPeon.getSegmentsToDrop().contains(segment)) {
@@ -580,7 +600,7 @@ public class DruidCoordinator
           );
         }
 
-        final int startingLeaderCounter = leaderCounter;
+        startingLeaderCounter = leaderCounter;
         for (final Pair<? extends CoordinatorRunnable, Duration> coordinatorRunnable : coordinatorRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
@@ -593,10 +613,10 @@ public class DruidCoordinator
                 @Override
                 public ScheduledExecutors.Signal call()
                 {
-                  if (leader && startingLeaderCounter == leaderCounter) {
+                  if (canPerformLeaderAction()) {
                     theRunnable.run();
                   }
-                  if (leader && startingLeaderCounter == leaderCounter) { // (We might no longer be leader)
+                  if (canPerformLeaderAction()) { // (We might no longer be leader)
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;

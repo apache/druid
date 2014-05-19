@@ -46,7 +46,11 @@ public abstract class LoadRule implements Rule
   private static final String droppedCount = "droppedCount";
 
   @Override
-  public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
+  public CoordinatorStats run(
+      final DruidCoordinator coordinator,
+      final DruidCoordinatorRuntimeParams params,
+      final DataSegment segment
+  )
   {
     CoordinatorStats stats = new CoordinatorStats();
 
@@ -59,7 +63,7 @@ public abstract class LoadRule implements Rule
       final int totalReplicantsInTier = params.getSegmentReplicantLookup()
                                               .getTotalReplicants(segment.getIdentifier(), tier);
       final int loadedReplicantsInTier = params.getSegmentReplicantLookup()
-                                         .getLoadedReplicants(segment.getIdentifier(), tier);
+                                               .getLoadedReplicants(segment.getIdentifier(), tier);
 
       final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(tier);
       if (serverQueue == null) {
@@ -72,6 +76,7 @@ public abstract class LoadRule implements Rule
       final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
       if (params.getAvailableSegments().contains(segment)) {
         CoordinatorStats assignStats = assign(
+            coordinator,
             params.getReplicationManager(),
             tier,
             totalReplicantsInCluster,
@@ -88,13 +93,14 @@ public abstract class LoadRule implements Rule
       loadStatus.put(tier, expectedReplicantsInTier - loadedReplicantsInTier);
     }
     // Remove over-replication
-    stats.accumulate(drop(loadStatus, segment, params));
+    stats.accumulate(drop(coordinator, loadStatus, segment, params));
 
 
     return stats;
   }
 
   private CoordinatorStats assign(
+      final DruidCoordinator coordinator,
       final ReplicationThrottler replicationManager,
       final String tier,
       final int totalReplicantsInCluster,
@@ -135,6 +141,11 @@ public abstract class LoadRule implements Rule
         );
       }
 
+      if (!coordinator.canPerformLeaderAction()) {
+        log.error("Can't perform leader action to load [%s]!", segment.getIdentifier());
+        break;
+      }
+
       holder.getPeon().loadSegment(
           segment,
           new LoadPeonCallback()
@@ -160,6 +171,7 @@ public abstract class LoadRule implements Rule
   }
 
   private CoordinatorStats drop(
+      final DruidCoordinator coordinator,
       final Map<String, Integer> loadStatus,
       final DataSegment segment,
       final DruidCoordinatorRuntimeParams params
@@ -201,6 +213,11 @@ public abstract class LoadRule implements Rule
         final ServerHolder holder = serverQueue.pollLast();
         if (holder == null) {
           log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
+          break;
+        }
+
+        if (!coordinator.canPerformLeaderAction()) {
+          log.error("Can't perform leader action to drop [%s]!", segment.getIdentifier());
           break;
         }
 

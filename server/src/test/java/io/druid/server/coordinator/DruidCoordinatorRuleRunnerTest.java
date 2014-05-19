@@ -107,6 +107,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testRunThreeTiersOneReplicant() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -193,6 +196,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
@@ -206,6 +210,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testRunTwoTiersTwoReplicants() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -285,6 +292,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
@@ -298,6 +306,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testRunTwoTiersWithExistingSegments() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -373,12 +384,16 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testRunTwoTiersTierDoesNotExist() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -430,6 +445,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     ruleRunner.run(params);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(emitter);
     EasyMock.verify(mockPeon);
   }
@@ -437,6 +453,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testRunRuleDoesNotExist() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
     EasyMock.expectLastCall().times(availableSegments.size());
     EasyMock.replay(emitter);
@@ -480,6 +499,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     ruleRunner.run(params);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(emitter);
   }
 
@@ -552,6 +572,11 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testDropTooManyInSameTier() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().times(12);
+    EasyMock.replay(coordinator);
+
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -623,12 +648,18 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropTooManyInDifferentTiers() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().times(12);
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -706,12 +737,18 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDontDropInDifferentTiers() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().times(12);
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -785,12 +822,16 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount") == null);
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropServerActuallyServesSegment() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
             new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T01:00:00.000Z"), null, 0, "normal")
@@ -876,6 +917,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 1);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
     EasyMock.verify(anotherMockPeon);
   }
@@ -889,6 +931,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testReplicantThrottle() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -976,6 +1021,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
@@ -989,6 +1035,9 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testReplicantThrottleAcrossTiers() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -1064,12 +1113,16 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 
   @Test
   public void testDropReplicantThrottle() throws Exception
   {
+    EasyMock.expect(coordinator.canPerformLeaderAction()).andReturn(true).anyTimes();
+    EasyMock.replay(coordinator);
+
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
@@ -1153,6 +1206,8 @@ public class DruidCoordinatorRuleRunnerTest
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
+
+    EasyMock.verify(coordinator);
     EasyMock.verify(mockPeon);
   }
 }
