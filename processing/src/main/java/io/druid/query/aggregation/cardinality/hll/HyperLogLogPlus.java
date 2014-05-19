@@ -205,10 +205,16 @@ public class HyperLogLogPlus
       }
       return retVal;
     }
+
     if (o instanceof HyperLogLogPlus) {
       addAll((HyperLogLogPlus) o);
       return true;
     }
+
+    if (o == null) {
+      o = "";
+    }
+
     return offerHashed(MurmurHash.hash64(o));
   }
 

@@ -148,6 +148,13 @@ public class HyperLogLogPlusTest
   }
 
   @Test
+  public void testNull() throws IOException {
+    HyperLogLogPlus one = new HyperLogLogPlus(8);
+    one.offer(null);
+    assertEquals(1, one.cardinality());
+  }
+
+  @Test
   public void testMerge_Normal() {
     int numToMerge = 4;
     int bits = 18;

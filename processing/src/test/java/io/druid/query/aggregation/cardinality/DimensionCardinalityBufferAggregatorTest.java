@@ -42,7 +42,7 @@ public class DimensionCardinalityBufferAggregatorTest
     }
     val[0] = null;
     agg.aggregate(buf, offset);
-    Assert.assertEquals(1023, ((HyperLogLogPlus) agg.get(buf, offset)).cardinality());
+    Assert.assertEquals(1024, ((HyperLogLogPlus) agg.get(buf, offset)).cardinality());
   }
 
   @Test
@@ -76,6 +76,6 @@ public class DimensionCardinalityBufferAggregatorTest
     }
     val[0] = null;
     agg.aggregate(buf, offset);
-    Assert.assertEquals(1023, ((HyperLogLogPlus) agg.get(buf, offset)).cardinality());
+    Assert.assertEquals(1024, ((HyperLogLogPlus) agg.get(buf, offset)).cardinality());
   }
 }
