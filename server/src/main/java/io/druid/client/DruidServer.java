@@ -29,7 +29,6 @@ import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -282,7 +281,7 @@ public class DruidServer implements Comparable
     return new ImmutableDruidServer(
         metadata,
         currSize,
-        Collections.unmodifiableMap(
+        ImmutableMap.copyOf(
             Maps.transformValues(
                 dataSources,
                 new Function<DruidDataSource, ImmutableDruidDataSource>()
@@ -295,7 +294,7 @@ public class DruidServer implements Comparable
                 }
             )
         ),
-        Collections.unmodifiableMap(segments)
+        ImmutableMap.copyOf(segments)
     );
   }
 }

@@ -19,9 +19,10 @@
 
 package io.druid.client;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.druid.timeline.DataSegment;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,15 +31,15 @@ import java.util.Set;
 public class ImmutableDruidDataSource
 {
   private final String name;
-  private final Map<String, String> properties;
-  private final Map<String, DataSegment> partitionNames;
-  private final Set<DataSegment> segmentsHolder;
+  private final ImmutableMap<String, String> properties;
+  private final ImmutableMap<String, DataSegment> partitionNames;
+  private final ImmutableSet<DataSegment> segmentsHolder;
 
   public ImmutableDruidDataSource(
       String name,
-      Map<String, String> properties,
-      Map<String, DataSegment> partitionNames,
-      Set<DataSegment> segmentsHolder
+      ImmutableMap<String, String> properties,
+      ImmutableMap<String, DataSegment> partitionNames,
+      ImmutableSet<DataSegment> segmentsHolder
   )
   {
     this.name = name;
@@ -54,12 +55,12 @@ public class ImmutableDruidDataSource
 
   public Map<String, String> getProperties()
   {
-    return Collections.unmodifiableMap(properties);
+    return properties;
   }
 
   public Map<String, DataSegment> getPartitionNames()
   {
-    return Collections.unmodifiableMap(partitionNames);
+    return partitionNames;
   }
 
   public boolean isEmpty()
@@ -69,6 +70,6 @@ public class ImmutableDruidDataSource
 
   public Set<DataSegment> getSegments()
   {
-    return Collections.unmodifiableSet(segmentsHolder);
+    return segmentsHolder;
   }
 }

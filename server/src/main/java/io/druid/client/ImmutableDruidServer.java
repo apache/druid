@@ -19,12 +19,10 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableMap;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -33,14 +31,14 @@ public class ImmutableDruidServer
 {
   private final DruidServerMetadata metadata;
   private final long currSize;
-  private final Map<String, ImmutableDruidDataSource> dataSources;
-  private final Map<String, DataSegment> segments;
+  private final ImmutableMap<String, ImmutableDruidDataSource> dataSources;
+  private final ImmutableMap<String, DataSegment> segments;
 
   public ImmutableDruidServer(
       DruidServerMetadata metadata,
       long currSize,
-      Map<String, ImmutableDruidDataSource> dataSources,
-      Map<String, DataSegment> segments
+      ImmutableMap<String, ImmutableDruidDataSource> dataSources,
+      ImmutableMap<String, DataSegment> segments
   )
   {
     this.metadata = metadata;
@@ -69,7 +67,6 @@ public class ImmutableDruidServer
     return currSize;
   }
 
-  @JsonProperty
   public long getMaxSize()
   {
     return metadata.getMaxSize();
@@ -97,11 +94,11 @@ public class ImmutableDruidServer
 
   public Iterable<ImmutableDruidDataSource> getDataSources()
   {
-    return Iterables.unmodifiableIterable(dataSources.values());
+    return dataSources.values();
   }
 
   public Map<String, DataSegment> getSegments()
   {
-    return Collections.unmodifiableMap(segments);
+    return segments;
   }
 }
