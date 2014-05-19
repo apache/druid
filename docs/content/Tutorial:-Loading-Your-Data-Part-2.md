@@ -52,7 +52,7 @@ The following quick-start instructions for booting a Zookeeper and then Kafka cl
 1. Download Apache Kafka 0.7.2 from [http://kafka.apache.org/downloads.html](http://kafka.apache.org/downloads.html)
 
   ```bash
-  wget http://apache.spinellicreations.com/incubator/kafka/kafka-0.7.2-incubating/kafka-0.7.2-incubating-src.tgz
+  wget http://archive.apache.org/dist/kafka/old_releases/kafka-0.7.2-incubating/kafka-0.7.2-incubating-src.tgz
   tar -xvzf kafka-0.7.2-incubating-src.tgz
   cd kafka-0.7.2-incubating-src
   ```
