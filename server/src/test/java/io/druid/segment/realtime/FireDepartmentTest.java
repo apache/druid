@@ -63,7 +63,7 @@ public class FireDepartmentTest
                         null
                     )
                 ),
-                null, null, null
+                null, null, null, null
             ),
             new AggregatorFactory[]{
                 new CountAggregatorFactory("count")
