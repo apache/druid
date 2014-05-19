@@ -19,14 +19,17 @@
 
 package io.druid.server.coordinator;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.client.SingleServerInventoryView;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -96,7 +99,8 @@ public class DruidCoordinatorTest
             return null;
           }
         },
-        new ZkPathsConfig(){
+        new ZkPathsConfig()
+        {
 
           @Override
           public String getZkBasePath()
@@ -130,10 +134,14 @@ public class DruidCoordinatorTest
   @Test
   public void testMoveSegment() throws Exception
   {
-    EasyMock.expect(druidServer.getSegment("dummySegment")).andReturn(segment);
-    EasyMock.expect(druidServer.getMaxSize()).andReturn(new Long(5));
-    EasyMock.expect(druidServer.getCurrSize()).andReturn(new Long(1)).atLeastOnce();
-    EasyMock.expect(druidServer.getName()).andReturn("blah");
+    EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
+        new ImmutableDruidServer(
+            new DruidServerMetadata("blah", null, 5L, null, null, 0),
+            1L,
+            null,
+            ImmutableMap.of("dummySegment", segment)
+        )
+    ).atLeastOnce();
     EasyMock.replay(druidServer);
 
     loadManagementPeons.put("to", loadQueuePeon);
@@ -144,20 +152,22 @@ public class DruidCoordinatorTest
 
     EasyMock.expect(serverInventoryView.getInventoryValue("from")).andReturn(druidServer);
     EasyMock.expect(serverInventoryView.getInventoryValue("to")).andReturn(druidServer);
-    EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(new InventoryManagerConfig()
-    {
-      @Override
-      public String getContainerPath()
-      {
-        return "";
-      }
+    EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(
+        new InventoryManagerConfig()
+        {
+          @Override
+          public String getContainerPath()
+          {
+            return "";
+          }
 
-      @Override
-      public String getInventoryPath()
-      {
-        return "";
-      }
-    });
+          @Override
+          public String getInventoryPath()
+          {
+            return "";
+          }
+        }
+    );
     EasyMock.replay(serverInventoryView);
 
     coordinator.moveSegment("from", "to", "dummySegment", null);

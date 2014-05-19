@@ -23,7 +23,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Table;
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -40,7 +40,7 @@ public class SegmentReplicantLookup
 
     for (MinMaxPriorityQueue<ServerHolder> serversByType : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serversByType) {
-        DruidServer server = serverHolder.getServer();
+        ImmutableDruidServer server = serverHolder.getServer();
 
         for (DataSegment segment : server.getSegments().values()) {
           Integer numReplicants = segmentsInCluster.get(segment.getIdentifier(), server.getTier());

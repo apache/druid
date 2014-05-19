@@ -21,7 +21,7 @@ package io.druid.server.coordination;
 
 import com.google.api.client.util.Lists;
 import com.google.common.collect.Maps;
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CostBalancerStrategy;
 import io.druid.server.coordinator.LoadQueuePeonTester;
@@ -52,7 +52,7 @@ public class CostBalancerStrategyTest
     // Each having having 100 segments
     for (int i = 0; i < serverCount; i++) {
       LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-      DruidServer druidServer = EasyMock.createMock(DruidServer.class);
+      ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);
       EasyMock.expect(druidServer.getName()).andReturn("DruidServer_Name_" + i).anyTimes();
       EasyMock.expect(druidServer.getCurrSize()).andReturn(3000L).anyTimes();
       EasyMock.expect(druidServer.getMaxSize()).andReturn(10000000L).anyTimes();
@@ -73,7 +73,7 @@ public class CostBalancerStrategyTest
 
     // The best server to be available for next segment assignment has only 98 Segments
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
-    DruidServer druidServer = EasyMock.createMock(DruidServer.class);
+    ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);
     EasyMock.expect(druidServer.getName()).andReturn("BEST_SERVER").anyTimes();
     EasyMock.expect(druidServer.getCurrSize()).andReturn(3000L).anyTimes();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(10000000L).anyTimes();

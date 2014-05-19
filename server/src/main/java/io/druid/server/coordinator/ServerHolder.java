@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 
 import com.metamx.common.logger.Logger;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 
 /**
@@ -28,11 +29,11 @@ import io.druid.timeline.DataSegment;
 public class ServerHolder implements Comparable<ServerHolder>
 {
   private static final Logger log = new Logger(ServerHolder.class);
-  private final DruidServer server;
+  private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
 
   public ServerHolder(
-      DruidServer server,
+      ImmutableDruidServer server,
       LoadQueuePeon peon
   )
   {
@@ -40,7 +41,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.peon = peon;
   }
 
-  public DruidServer getServer()
+  public ImmutableDruidServer getServer()
   {
     return server;
   }

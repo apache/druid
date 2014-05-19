@@ -31,12 +31,10 @@ import com.google.common.io.Closeables;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ExecutorServices;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
@@ -44,6 +42,8 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.collections.CountingMap;
@@ -345,12 +345,12 @@ public class DruidCoordinator
   public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
   {
     try {
-      final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
+      final ImmutableDruidServer fromServer = serverInventoryView.getInventoryValue(from).toImmutableDruidServer();
       if (fromServer == null) {
         throw new IAE("Unable to find server [%s]", from);
       }
 
-      final DruidServer toServer = serverInventoryView.getInventoryValue(to);
+      final ImmutableDruidServer toServer = serverInventoryView.getInventoryValue(to).toImmutableDruidServer();
       if (toServer == null) {
         throw new IAE("Unable to find server [%s]", to);
       }
@@ -791,7 +791,7 @@ public class DruidCoordinator
                 public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers = FunctionalIterable
+                  Iterable<ImmutableDruidServer> servers = FunctionalIterable
                       .create(serverInventoryView.getInventory())
                       .filter(
                           new Predicate<DruidServer>()
@@ -804,14 +804,23 @@ public class DruidCoordinator
                               return input.isAssignable();
                             }
                           }
+                      ).transform(
+                          new Function<DruidServer, ImmutableDruidServer>()
+                          {
+                            @Override
+                            public ImmutableDruidServer apply(DruidServer input)
+                            {
+                              return input.toImmutableDruidServer();
+                            }
+                          }
                       );
 
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");
-                    for (DruidServer druidServer : servers) {
+                    for (ImmutableDruidServer druidServer : servers) {
                       log.debug("  %s", druidServer);
                       log.debug("    -- DataSources");
-                      for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
+                      for (ImmutableDruidDataSource druidDataSource : druidServer.getDataSources()) {
                         log.debug("    %s", druidDataSource);
                       }
                     }
@@ -819,7 +828,7 @@ public class DruidCoordinator
 
                   // Find all historical servers, group them by subType and sort by ascending usage
                   final DruidCluster cluster = new DruidCluster();
-                  for (DruidServer server : servers) {
+                  for (ImmutableDruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
                       String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
                       LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
@@ -835,7 +844,7 @@ public class DruidCoordinator
 
                   // Stop peons for servers that aren't there anymore.
                   final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
-                  for (DruidServer server : servers) {
+                  for (ImmutableDruidServer server : servers) {
                     disappeared.remove(server.getName());
                   }
                   for (String name : disappeared) {

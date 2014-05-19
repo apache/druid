@@ -25,6 +25,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.BalancerSegmentHolder;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -149,7 +150,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
   protected void moveSegment(
       final BalancerSegmentHolder segment,
-      final DruidServer toServer,
+      final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
   )
   {

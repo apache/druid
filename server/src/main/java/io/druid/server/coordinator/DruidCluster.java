@@ -22,7 +22,7 @@ package io.druid.server.coordinator;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 
 import java.util.Map;
 
@@ -46,7 +46,7 @@ public class DruidCluster
 
   public void add(ServerHolder serverHolder)
   {
-    DruidServer server = serverHolder.getServer();
+    ImmutableDruidServer server = serverHolder.getServer();
     MinMaxPriorityQueue<ServerHolder> tierServers = cluster.get(server.getTier());
     if (tierServers == null) {
       tierServers = MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create();

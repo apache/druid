@@ -117,4 +117,9 @@ public class DruidDataSource
            ", partitions=" + segmentsHolder.toString() +
            '}';
   }
+
+  public ImmutableDruidDataSource toImmutableDruidDataSource()
+  {
+    return new ImmutableDruidDataSource(name, properties, partitionNames, Collections.unmodifiableSet(segmentsHolder));
+  }
 }

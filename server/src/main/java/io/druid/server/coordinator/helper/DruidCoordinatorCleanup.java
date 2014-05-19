@@ -25,6 +25,8 @@ import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -32,7 +34,6 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
-import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -65,9 +66,9 @@ public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
     // Drop segments that no longer exist in the available segments configuration
     for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
-        DruidServer server = serverHolder.getServer();
+        ImmutableDruidServer server = serverHolder.getServer();
 
-        for (DruidDataSource dataSource : server.getDataSources()) {
+        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
           for (DataSegment segment : dataSource.getSegments()) {
             if (!availableSegments.contains(segment)) {
               LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
@@ -97,9 +98,9 @@ public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
 
       for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
-          DruidServer server = serverHolder.getServer();
+          ImmutableDruidServer server = serverHolder.getServer();
 
-          for (DruidDataSource dataSource : server.getDataSources()) {
+          for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
             VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
             if (timeline == null) {
               timeline = new VersionedIntervalTimeline<String, DataSegment>(Comparators.comparable());

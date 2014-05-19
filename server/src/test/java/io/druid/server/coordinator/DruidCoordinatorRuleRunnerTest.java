@@ -135,7 +135,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -151,7 +151,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "normal",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -167,7 +167,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "cold",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -233,7 +233,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     ),
                     new ServerHolder(
@@ -244,7 +244,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -260,7 +260,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "cold",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -337,7 +337,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -346,7 +346,7 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        normServer,
+                        normServer.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -410,7 +410,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "normal",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -461,7 +461,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "normal",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -522,7 +522,7 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server,
+                        server.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -594,11 +594,11 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server1,
+                        server1.toImmutableDruidServer(),
                         mockPeon
                     ),
                     new ServerHolder(
-                        server2,
+                        server2.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -672,7 +672,7 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server1,
+                        server1.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -681,7 +681,7 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server2,
+                        server2.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -751,7 +751,7 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server1,
+                        server1.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -760,7 +760,7 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server2,
+                        server2.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -844,15 +844,15 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server1,
+                        server1.toImmutableDruidServer(),
                         mockPeon
                     ),
                     new ServerHolder(
-                        server2,
+                        server2.toImmutableDruidServer(),
                         anotherMockPeon
                     ),
                     new ServerHolder(
-                        server3,
+                        server3.toImmutableDruidServer(),
                         anotherMockPeon
                     )
                 )
@@ -915,7 +915,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     ),
                     new ServerHolder(
@@ -926,7 +926,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -1023,7 +1023,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -1039,7 +1039,7 @@ public class DruidCoordinatorRuleRunnerTest
                             "historical",
                             DruidServer.DEFAULT_TIER,
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -1126,11 +1126,11 @@ public class DruidCoordinatorRuleRunnerTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server1,
+                        server1.toImmutableDruidServer(),
                         mockPeon
                     ),
                     new ServerHolder(
-                        server2,
+                        server2.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
