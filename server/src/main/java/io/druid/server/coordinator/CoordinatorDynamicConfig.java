@@ -55,7 +55,7 @@ public class CoordinatorDynamicConfig
     this.emitBalancingStats = emitBalancingStats;
     this.balancerComputeThreads = Math.min(
         Math.max(balancerComputeThreads, 1),
-        Runtime.getRuntime().availableProcessors() - 1
+        Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
     );
   }
 
