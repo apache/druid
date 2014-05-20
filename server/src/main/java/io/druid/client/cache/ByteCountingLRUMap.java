@@ -22,6 +22,7 @@ package io.druid.client.cache;
 import com.metamx.common.logger.Logger;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -110,13 +111,13 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
   }
 
   /**
-   * We want keySet().iterator().remove() to account for object removal
-   * The underlying Map calls this.remove(key) so we do not need to override this
+   * Don't allow key removal using the underlying keySet iterator
+   * All removal operations must use ByteCountingLRUMap.remove()
    */
   @Override
   public Set<ByteBuffer> keySet()
   {
-    return super.keySet();
+    return Collections.unmodifiableSet(super.keySet());
   }
 
   @Override
