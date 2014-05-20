@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
@@ -37,12 +38,12 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
-import io.druid.segment.data.SingleIndexedInts;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -309,7 +310,27 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            return new SingleIndexedInts(column.getSingleValueRow(cursorOffset.getOffset()));
+                            // using an anonymous class is faster than creating a class that stores a copy of the value
+                            return new IndexedInts()
+                            {
+                              @Override
+                              public int size()
+                              {
+                                return 1;
+                              }
+
+                              @Override
+                              public int get(int index)
+                              {
+                                return column.getSingleValueRow(cursorOffset.getOffset());
+                              }
+
+                              @Override
+                              public Iterator<Integer> iterator()
+                              {
+                                return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
+                              }
+                            };
                           }
 
                           @Override
@@ -733,7 +754,27 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            return new SingleIndexedInts(dict.getSingleValueRow(currRow));
+                            // using an anonymous class is faster than creating a class that stores a copy of the value
+                            return new IndexedInts()
+                            {
+                              @Override
+                              public int size()
+                              {
+                                return 1;
+                              }
+
+                              @Override
+                              public int get(int index)
+                              {
+                                return dict.getSingleValueRow(currRow);
+                              }
+
+                              @Override
+                              public Iterator<Integer> iterator()
+                              {
+                                return Iterators.singletonIterator(dict.getSingleValueRow(currRow));
+                              }
+                            };
                           }
 
                           @Override
@@ -970,33 +1011,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             }
           }
       );
-    }
-  }
-
-  private static class NullDimensionSelector implements DimensionSelector
-  {
-    @Override
-    public IndexedInts getRow()
-    {
-      return new SingleIndexedInts(0);
-    }
-
-    @Override
-    public int getValueCardinality()
-    {
-      return 1;
-    }
-
-    @Override
-    public String lookupName(int id)
-    {
-      return "";
-    }
-
-    @Override
-    public int lookupId(String name)
-    {
-      return 0;
     }
   }
 }
