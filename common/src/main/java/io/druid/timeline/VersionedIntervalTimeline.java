@@ -21,6 +21,7 @@ package io.druid.timeline;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
@@ -35,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -191,11 +193,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType>
     }
   }
 
-  public List<TimelineObjectHolder<VersionType, ObjectType>> findOvershadowed()
+  public Set<TimelineObjectHolder<VersionType, ObjectType>> findOvershadowed()
   {
     try {
       lock.readLock().lock();
-      List<TimelineObjectHolder<VersionType, ObjectType>> retVal = new ArrayList<TimelineObjectHolder<VersionType, ObjectType>>();
+      Set<TimelineObjectHolder<VersionType, ObjectType>> retVal = Sets.newHashSet();
 
       Map<Interval, Map<VersionType, TimelineEntry>> overShadowed = Maps.newHashMap();
       for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {

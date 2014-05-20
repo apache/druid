@@ -21,6 +21,7 @@ package io.druid.timeline;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -351,7 +352,7 @@ public class VersionedIntervalTimelineTest
 
     add("2011-10-05/2011-10-07", "6", IntegerPartitionChunk.make(20, null, 2, 62));
     assertValues(
-        ImmutableList.of(
+        ImmutableSet.of(
             createExpected("2011-10-05/2011-10-06", "5", 5)
         ),
         timeline.findOvershadowed()
@@ -1114,7 +1115,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-03/2011-01-06", "1", 1),
             createExpected("2011-01-09/2011-01-12", "1", 2)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
@@ -1137,7 +1138,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-10", "2", 2),
             createExpected("2011-01-01/2011-01-10", "1", 3)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
@@ -1159,7 +1160,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-03/2011-01-12", "1", 3),
             createExpected("2011-01-01/2011-01-05", "2", 1)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
@@ -1308,7 +1309,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-01/2011-04-09", "2", 1);
 
     assertValues(
-        Arrays.asList(
+        ImmutableSet.of(
             createExpected("2011-04-01/2011-04-03", "1", 2),
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-06/2011-04-09", "1", 4)
@@ -1328,7 +1329,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-06/2011-04-09", "2", 4);
 
     assertValues(
-        Arrays.asList(
+        ImmutableSet.of(
             createExpected("2011-04-01/2011-04-09", "1", 1)
         ),
         timeline.findOvershadowed()
@@ -1351,7 +1352,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-09/2011-04-12", "1", 4)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
@@ -1365,7 +1366,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-01/2011-04-09", "2", 1);
 
     assertValues(
-        Arrays.asList(
+        ImmutableSet.of(
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-06/2011-04-09", "1", 4)
         ),
@@ -1383,7 +1384,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-06/2011-04-09", "2", 4);
 
     assertValues(
-        Arrays.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>asList(),
+        ImmutableSet.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>of(),
         timeline.findOvershadowed()
     );
   }
@@ -1398,7 +1399,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-06/2011-04-09", "2", 4);
 
     assertValues(
-        Arrays.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>asList(),
+        ImmutableSet.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>of(),
         timeline.findOvershadowed()
     );
   }
@@ -1413,7 +1414,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-03/2011-04-06", "2", 3);
 
     assertValues(
-        Arrays.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>asList(),
+        ImmutableSet.<Pair<Interval, Pair<String, PartitionHolder<Integer>>>>of(),
         timeline.findOvershadowed()
     );
   }
@@ -1429,7 +1430,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-03/2011-04-06", "1", 3);
 
     assertValues(
-        Arrays.asList(
+        ImmutableSet.of(
             createExpected("2011-04-03/2011-04-06", "1", 3)
         ),
         timeline.findOvershadowed()
@@ -1452,7 +1453,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-03/2011-04-06", "1", 3),
             createExpected("2011-04-09/2011-04-12", "1", 3)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
@@ -1470,7 +1471,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-01/2011-04-09", "2", 3),
             createExpected("2011-04-01/2011-04-09", "1", 1)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
@@ -1489,7 +1490,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-01/2011-04-09", "2", 3),
             createExpected("2011-04-01/2011-04-09", "1", 1)
         ),
-        Sets.newHashSet(timeline.findOvershadowed())
+        timeline.findOvershadowed()
     );
   }
 
