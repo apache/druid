@@ -154,6 +154,7 @@ public class GenericIndexed<T> implements Indexed<T>
   private final int size;
 
   private final boolean cacheable;
+  private final ThreadLocal<ByteBuffer> cachedBuffer;
   private final ThreadLocal<SizedLRUMap<Integer, T>> cachedValues = new ThreadLocal<SizedLRUMap<Integer, T>>() {
     @Override
     protected SizedLRUMap<Integer, T> initialValue()
@@ -177,6 +178,15 @@ public class GenericIndexed<T> implements Indexed<T>
     size = theBuffer.getInt();
     indexOffset = theBuffer.position();
     valuesOffset = theBuffer.position() + (size << 2);
+
+    this.cachedBuffer = new ThreadLocal<ByteBuffer>()
+    {
+      @Override
+      protected ByteBuffer initialValue()
+      {
+        return theBuffer.asReadOnlyBuffer();
+      }
+    };
 
     this.cacheable = strategy instanceof CacheableObjectStrategy;
   }
@@ -210,23 +220,24 @@ public class GenericIndexed<T> implements Indexed<T>
       }
     }
 
+    final ByteBuffer copyBuffer = this.cachedBuffer.get();
+
     final int startOffset;
     final int endOffset;
 
     if (index == 0) {
       startOffset = 4;
-      endOffset = theBuffer.getInt(indexOffset);
+      endOffset = copyBuffer.getInt(indexOffset);
     } else {
-      final int position = indexOffset + ((index - 1) * 4);
-      startOffset = theBuffer.getInt(position) + 4;
-      endOffset = theBuffer.getInt(position + Ints.BYTES);
+      copyBuffer.position(indexOffset + ((index - 1) * 4));
+      startOffset = copyBuffer.getInt() + 4;
+      endOffset = copyBuffer.getInt();
     }
 
     if (startOffset == endOffset) {
       return null;
     }
 
-    final ByteBuffer copyBuffer = this.theBuffer.asReadOnlyBuffer();
     copyBuffer.position(valuesOffset + startOffset);
     final int size = endOffset - startOffset;
     final T value = strategy.fromByteBuffer(copyBuffer, size);
@@ -310,9 +321,9 @@ public class GenericIndexed<T> implements Indexed<T>
     }
 
     @Override
-    public String fromByteBuffer(ByteBuffer buffer, int numBytes)
+    public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      byte[] bytes = new byte[numBytes];
+      final byte[] bytes = new byte[numBytes];
       buffer.get(bytes);
       return new String(bytes, Charsets.UTF_8);
     }
