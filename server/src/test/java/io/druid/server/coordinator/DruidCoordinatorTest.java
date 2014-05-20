@@ -53,6 +53,7 @@ public class DruidCoordinatorTest
   private SingleServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
+  private DruidServer druidServer2;
   private DataSegment segment;
   private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon loadQueuePeon;
@@ -61,6 +62,7 @@ public class DruidCoordinatorTest
   public void setUp() throws Exception
   {
     druidServer = EasyMock.createMock(DruidServer.class);
+    druidServer2 = EasyMock.createMock(DruidServer.class);
     segment = EasyMock.createNiceMock(DataSegment.class);
     loadQueuePeon = EasyMock.createNiceMock(LoadQueuePeon.class);
     loadManagementPeons = new MapMaker().makeMap();
@@ -127,6 +129,7 @@ public class DruidCoordinatorTest
   public void tearDown() throws Exception
   {
     EasyMock.verify(druidServer);
+    EasyMock.verify(druidServer2);
     EasyMock.verify(loadQueuePeon);
     EasyMock.verify(serverInventoryView);
   }
@@ -136,7 +139,7 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("blah", null, 5L, null, null, 0),
+            new DruidServerMetadata("from", null, 5L, null, null, 0),
             1L,
             null,
             ImmutableMap.of("dummySegment", segment)
@@ -144,7 +147,18 @@ public class DruidCoordinatorTest
     ).atLeastOnce();
     EasyMock.replay(druidServer);
 
-    loadManagementPeons.put("blah", loadQueuePeon);
+    EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
+        new ImmutableDruidServer(
+            new DruidServerMetadata("to", null, 5L, null, null, 0),
+            1L,
+            null,
+            ImmutableMap.of("dummySegment2", segment)
+        )
+    ).atLeastOnce();
+    EasyMock.replay(druidServer2);
+
+    loadManagementPeons.put("from", loadQueuePeon);
+    loadManagementPeons.put("to", loadQueuePeon);
 
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
     EasyMock.replay(loadQueuePeon);
@@ -169,7 +183,7 @@ public class DruidCoordinatorTest
 
     coordinator.moveSegment(
         druidServer.toImmutableDruidServer(),
-        druidServer.toImmutableDruidServer(),
+        druidServer2.toImmutableDruidServer(),
         "dummySegment", null
     );
   }
