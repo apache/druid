@@ -144,14 +144,11 @@ public class DruidCoordinatorTest
     ).atLeastOnce();
     EasyMock.replay(druidServer);
 
-    loadManagementPeons.put("to", loadQueuePeon);
-    loadManagementPeons.put("from", loadQueuePeon);
+    loadManagementPeons.put("blah", loadQueuePeon);
 
     EasyMock.expect(loadQueuePeon.getLoadQueueSize()).andReturn(new Long(1));
     EasyMock.replay(loadQueuePeon);
 
-    EasyMock.expect(serverInventoryView.getInventoryValue("from")).andReturn(druidServer);
-    EasyMock.expect(serverInventoryView.getInventoryValue("to")).andReturn(druidServer);
     EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(
         new InventoryManagerConfig()
         {
@@ -170,6 +167,10 @@ public class DruidCoordinatorTest
     );
     EasyMock.replay(serverInventoryView);
 
-    coordinator.moveSegment("from", "to", "dummySegment", null);
+    coordinator.moveSegment(
+        druidServer.toImmutableDruidServer(),
+        druidServer.toImmutableDruidServer(),
+        "dummySegment", null
+    );
   }
 }

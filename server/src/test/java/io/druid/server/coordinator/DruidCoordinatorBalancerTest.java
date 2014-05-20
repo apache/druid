@@ -156,8 +156,8 @@ public class DruidCoordinatorBalancerTest
 
     // Mock stuff that the coordinator needs
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
@@ -233,8 +233,8 @@ public class DruidCoordinatorBalancerTest
 
     // Mock stuff that the coordinator needs
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
@@ -317,8 +317,8 @@ public class DruidCoordinatorBalancerTest
 
     // Mock stuff that the coordinator needs
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );

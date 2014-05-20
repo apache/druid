@@ -101,4 +101,29 @@ public class ImmutableDruidServer
   {
     return segments;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ImmutableDruidServer that = (ImmutableDruidServer) o;
+
+    if (metadata != null ? !metadata.equals(that.metadata) : that.metadata != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return metadata != null ? metadata.hashCode() : 0;
+  }
 }

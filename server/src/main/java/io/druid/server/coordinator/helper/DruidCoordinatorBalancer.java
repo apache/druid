@@ -154,17 +154,16 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       final DruidCoordinatorRuntimeParams params
   )
   {
-    final String toServerName = toServer.getName();
-    final LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServerName);
+    final LoadQueuePeon toPeon = params.getLoadManagementPeons().get(toServer.getName());
 
-    final String fromServerName = segment.getFromServer().getName();
+    final ImmutableDruidServer fromServer = segment.getFromServer();
     final DataSegment segmentToMove = segment.getSegment();
     final String segmentName = segmentToMove.getIdentifier();
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
         (toServer.getSegment(segmentName) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServerName, toServerName);
+      log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServer.getName(), toServer.getName());
 
       LoadPeonCallback callback = null;
       try {
@@ -181,8 +180,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
           }
         };
         coordinator.moveSegment(
-            fromServerName,
-            toServerName,
+            fromServer,
+            toServer,
             segmentToMove.getIdentifier(),
             callback
         );

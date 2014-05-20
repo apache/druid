@@ -342,52 +342,49 @@ public class DruidCoordinator
     }
   }
 
-  public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
+  public void moveSegment(
+      ImmutableDruidServer fromServer,
+      ImmutableDruidServer toServer,
+      String segmentName,
+      final LoadPeonCallback callback
+  )
   {
     try {
-      final ImmutableDruidServer fromServer = serverInventoryView.getInventoryValue(from).toImmutableDruidServer();
-      if (fromServer == null) {
-        throw new IAE("Unable to find server [%s]", from);
-      }
-
-      final ImmutableDruidServer toServer = serverInventoryView.getInventoryValue(to).toImmutableDruidServer();
-      if (toServer == null) {
-        throw new IAE("Unable to find server [%s]", to);
-      }
-
-      if (to.equalsIgnoreCase(from)) {
-        throw new IAE("Redundant command to move segment [%s] from [%s] to [%s]", segmentName, from, to);
-      }
-
       final DataSegment segment = fromServer.getSegment(segmentName);
       if (segment == null) {
-        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, from);
+        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, fromServer.getName());
       }
 
-      final LoadQueuePeon loadPeon = loadManagementPeons.get(to);
+      final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", to);
+        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
       }
 
-      final LoadQueuePeon dropPeon = loadManagementPeons.get(from);
+      final LoadQueuePeon dropPeon = loadManagementPeons.get(fromServer.getName());
       if (dropPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", from);
+        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", fromServer.getName());
       }
 
       final ServerHolder toHolder = new ServerHolder(toServer, loadPeon);
       if (toHolder.getAvailableSize() < segment.getSize()) {
         throw new IAE(
             "Not enough capacity on server [%s] for segment [%s]. Required: %,d, available: %,d.",
-            to,
+            toServer.getName(),
             segment,
             segment.getSize(),
             toHolder.getAvailableSize()
         );
       }
 
-      final String toLoadQueueSegPath = ZKPaths.makePath(ZKPaths.makePath(zkPaths.getLoadQueuePath(), to), segmentName);
+      final String toLoadQueueSegPath = ZKPaths.makePath(
+          ZKPaths.makePath(
+              zkPaths.getLoadQueuePath(),
+              toServer.getName()
+          ), segmentName
+      );
       final String toServedSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), to), segmentName
+          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), toServer.getName()),
+          segmentName
       );
 
       loadPeon.loadSegment(
@@ -415,35 +412,9 @@ public class DruidCoordinator
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentName).emit();
-      callback.execute();
-    }
-  }
-
-  public void dropSegment(String from, String segmentName, final LoadPeonCallback callback)
-  {
-    try {
-      final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
-      if (fromServer == null) {
-        throw new IAE("Unable to find server [%s]", from);
+      if (callback != null) {
+        callback.execute();
       }
-
-      final DataSegment segment = fromServer.getSegment(segmentName);
-      if (segment == null) {
-        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, from);
-      }
-
-      final LoadQueuePeon dropPeon = loadManagementPeons.get(from);
-      if (dropPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", from);
-      }
-
-      if (!dropPeon.getSegmentsToDrop().contains(segment)) {
-        dropPeon.dropSegment(segment, callback);
-      }
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception dropping segment %s", segmentName).emit();
-      callback.execute();
     }
   }
 
@@ -561,9 +532,15 @@ public class DruidCoordinator
         databaseRuleManager.start();
         serverInventoryView.start();
         serviceAnnouncer.announce(self);
+        final int startingLeaderCounter = leaderCounter;
 
         final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
-        coordinatorRunnables.add(Pair.of(new CoordinatorHistoricalManagerRunnable(), config.getCoordinatorPeriod()));
+        coordinatorRunnables.add(
+            Pair.of(
+                new CoordinatorHistoricalManagerRunnable(startingLeaderCounter),
+                config.getCoordinatorPeriod()
+            )
+        );
         if (indexingServiceClient != null) {
           coordinatorRunnables.add(
               Pair.of(
@@ -573,14 +550,14 @@ public class DruidCoordinator
                               DatasourceWhitelist.CONFIG_KEY,
                               DatasourceWhitelist.class
                           )
-                      )
+                      ),
+                      startingLeaderCounter
                   ),
                   config.getCoordinatorIndexingPeriod()
               )
           );
         }
 
-        final int startingLeaderCounter = leaderCounter;
         for (final Pair<? extends CoordinatorRunnable, Duration> coordinatorRunnable : coordinatorRunnables) {
           ScheduledExecutors.scheduleWithFixedDelay(
               exec,
@@ -724,10 +701,12 @@ public class DruidCoordinator
   {
     private final long startTime = System.currentTimeMillis();
     private final List<DruidCoordinatorHelper> helpers;
+    private final int startingLeaderCounter;
 
-    protected CoordinatorRunnable(List<DruidCoordinatorHelper> helpers)
+    protected CoordinatorRunnable(List<DruidCoordinatorHelper> helpers, final int startingLeaderCounter)
     {
       this.helpers = helpers;
+      this.startingLeaderCounter = startingLeaderCounter;
     }
 
     @Override
@@ -769,7 +748,10 @@ public class DruidCoordinator
                                          .build();
 
         for (DruidCoordinatorHelper helper : helpers) {
-          params = helper.run(params);
+          // Don't read state and run state in the same helper otherwise racy conditions may exist
+          if (leader && startingLeaderCounter == leaderCounter) {
+            params = helper.run(params);
+          }
         }
       }
       catch (Exception e) {
@@ -780,7 +762,7 @@ public class DruidCoordinator
 
   private class CoordinatorHistoricalManagerRunnable extends CoordinatorRunnable
   {
-    private CoordinatorHistoricalManagerRunnable()
+    public CoordinatorHistoricalManagerRunnable(final int startingLeaderCounter)
     {
       super(
           ImmutableList.of(
@@ -866,16 +848,17 @@ public class DruidCoordinator
               new DruidCoordinatorCleanup(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
               new DruidCoordinatorLogger()
-          )
+          ),
+          startingLeaderCounter
       );
     }
   }
 
   private class CoordinatorIndexingServiceRunnable extends CoordinatorRunnable
   {
-    private CoordinatorIndexingServiceRunnable(List<DruidCoordinatorHelper> helpers)
+    public CoordinatorIndexingServiceRunnable(List<DruidCoordinatorHelper> helpers, final int startingLeaderCounter)
     {
-      super(helpers);
+      super(helpers, startingLeaderCounter);
     }
   }
 }
