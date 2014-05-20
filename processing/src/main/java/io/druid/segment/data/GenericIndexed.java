@@ -159,7 +159,7 @@ public class GenericIndexed<T> implements Indexed<T>
     @Override
     protected SizedLRUMap<Integer, T> initialValue()
     {
-      return new SizedLRUMap<>(16384, 1024 * 1024);
+      return new SizedLRUMap<>(16384, 1024 * 1024); // 1MB cache per column, per thread
     }
   };
 
@@ -220,6 +220,7 @@ public class GenericIndexed<T> implements Indexed<T>
       }
     }
 
+    // using a cached copy of the buffer instead of making a read-only copy every time get() is called is faster
     final ByteBuffer copyBuffer = this.cachedBuffer.get();
 
     final int startOffset;
@@ -240,6 +241,7 @@ public class GenericIndexed<T> implements Indexed<T>
 
     copyBuffer.position(valuesOffset + startOffset);
     final int size = endOffset - startOffset;
+    // fromByteBuffer must not modify the buffer limit
     final T value = strategy.fromByteBuffer(copyBuffer, size);
 
     if(cacheable) {
