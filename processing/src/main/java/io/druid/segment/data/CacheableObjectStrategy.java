@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,23 +19,8 @@
 
 package io.druid.segment.data;
 
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-
-public interface ObjectStrategy<T> extends Comparator<T>
-{
-  public Class<? extends T> getClazz();
-
-  /**
-   * Convert values from their underlying byte representation.
-   *
-   * Implementations of this method must not change the given buffer mark, or limit, but may modify its position.
-   * Use buffer.asReadOnlyBuffer() or buffer.duplicate() if mark or limit need to be set.
-   *
-   * @param buffer buffer to read value from
-   * @param numBytes number of bytes used to store the value, starting at buffer.position()
-   * @return
-   */
-  public T fromByteBuffer(ByteBuffer buffer, int numBytes);
-  public byte[] toBytes(T val);
-}
+/**
+ * Implementing CacheableObjectStrategy instead of ObjectSrategy indicates
+ * that a column scan may cache the results of fromByteBuffer
+ */
+public interface CacheableObjectStrategy<T> extends ObjectStrategy<T> {}
