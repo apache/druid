@@ -53,7 +53,10 @@ public class CoordinatorDynamicConfig
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
-    this.balancerComputeThreads = Math.min(balancerComputeThreads, Runtime.getRuntime().availableProcessors() - 1);
+    this.balancerComputeThreads = Math.min(
+        Math.max(balancerComputeThreads, 1),
+        Runtime.getRuntime().availableProcessors() - 1
+    );
   }
 
   @JsonProperty
