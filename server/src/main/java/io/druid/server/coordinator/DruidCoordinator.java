@@ -350,6 +350,10 @@ public class DruidCoordinator
   )
   {
     try {
+      if (fromServer.getMetadata().equals(toServer.getMetadata())) {
+        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
+      }
+
       final DataSegment segment = fromServer.getSegment(segmentName);
       if (segment == null) {
         throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, fromServer.getName());
