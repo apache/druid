@@ -143,7 +143,7 @@ public class LoadRuleTest
                             "historical",
                             "hot",
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -159,7 +159,7 @@ public class LoadRuleTest
                             "historical",
                             DruidServer.DEFAULT_TIER,
                             0
-                        ),
+                        ).toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -252,7 +252,7 @@ public class LoadRuleTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server1,
+                        server1.toImmutableDruidServer(),
                         mockPeon
                     )
                 )
@@ -261,7 +261,7 @@ public class LoadRuleTest
             MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
                 Arrays.asList(
                     new ServerHolder(
-                        server2,
+                        server2.toImmutableDruidServer(),
                         mockPeon
                     )
                 )

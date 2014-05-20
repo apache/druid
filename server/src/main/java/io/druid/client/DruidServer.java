@@ -21,7 +21,9 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -272,5 +274,27 @@ public class DruidServer implements Comparable
     }
 
     return getName().compareTo(((DruidServer) o).getName());
+  }
+
+  public ImmutableDruidServer toImmutableDruidServer()
+  {
+    return new ImmutableDruidServer(
+        metadata,
+        currSize,
+        ImmutableMap.copyOf(
+            Maps.transformValues(
+                dataSources,
+                new Function<DruidDataSource, ImmutableDruidDataSource>()
+                {
+                  @Override
+                  public ImmutableDruidDataSource apply(DruidDataSource input)
+                  {
+                    return input.toImmutableDruidDataSource();
+                  }
+                }
+            )
+        ),
+        ImmutableMap.copyOf(segments)
+    );
   }
 }

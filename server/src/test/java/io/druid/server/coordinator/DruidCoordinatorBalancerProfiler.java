@@ -28,6 +28,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.PeriodLoadRule;
@@ -49,8 +50,8 @@ public class DruidCoordinatorBalancerProfiler
 {
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
   private DruidCoordinator coordinator;
-  private DruidServer druidServer1;
-  private DruidServer druidServer2;
+  private ImmutableDruidServer druidServer1;
+  private ImmutableDruidServer druidServer2;
   Map<String, DataSegment> segments = Maps.newHashMap();
   ServiceEmitter emitter;
   DatabaseRuleManager manager;
@@ -61,8 +62,8 @@ public class DruidCoordinatorBalancerProfiler
   public void setUp() throws Exception
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
-    druidServer1 = EasyMock.createMock(DruidServer.class);
-    druidServer2 = EasyMock.createMock(DruidServer.class);
+    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     manager = EasyMock.createMock(DatabaseRuleManager.class);
@@ -79,8 +80,8 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.replay(manager);
 
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
@@ -109,7 +110,7 @@ public class DruidCoordinatorBalancerProfiler
     }
 
     for (int i = 0; i < numServers; i++) {
-      DruidServer server = EasyMock.createMock(DruidServer.class);
+      ImmutableDruidServer server = EasyMock.createMock(ImmutableDruidServer.class);
       EasyMock.expect(server.getMetadata()).andReturn(null).anyTimes();
       EasyMock.expect(server.getCurrSize()).andReturn(30L).atLeastOnce();
       EasyMock.expect(server.getMaxSize()).andReturn(100L).atLeastOnce();
@@ -203,8 +204,8 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.replay(druidServer2);
 
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );

@@ -25,7 +25,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.collections.CountingMap;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
@@ -156,7 +156,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     log.info("Load Queues:");
     for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
-        DruidServer server = serverHolder.getServer();
+        ImmutableDruidServer server = serverHolder.getServer();
         LoadQueuePeon queuePeon = serverHolder.getPeon();
         log.info(
             "Server[%s, %s, %s] has %,d left to load, %,d left to drop, %,d bytes queued, %,d bytes served.",

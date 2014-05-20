@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
@@ -37,10 +38,10 @@ import java.util.Map;
 
 public class ReservoirSegmentSamplerTest
 {
-  private DruidServer druidServer1;
-  private DruidServer druidServer2;
-  private DruidServer druidServer3;
-  private DruidServer druidServer4;
+  private ImmutableDruidServer druidServer1;
+  private ImmutableDruidServer druidServer2;
+  private ImmutableDruidServer druidServer3;
+  private ImmutableDruidServer druidServer4;
 
   private ServerHolder holder1;
   private ServerHolder holder2;
@@ -60,11 +61,11 @@ public class ReservoirSegmentSamplerTest
   @Before
   public void setUp() throws Exception
   {
-    druidServer1 = EasyMock.createMock(DruidServer.class);
-    druidServer1 = EasyMock.createMock(DruidServer.class);
-    druidServer2 = EasyMock.createMock(DruidServer.class);
-    druidServer3 = EasyMock.createMock(DruidServer.class);
-    druidServer4 = EasyMock.createMock(DruidServer.class);
+    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer4 = EasyMock.createMock(ImmutableDruidServer.class);
     holder1 = EasyMock.createMock(ServerHolder.class);
     holder2 = EasyMock.createMock(ServerHolder.class);
     holder3 = EasyMock.createMock(ServerHolder.class);
