@@ -55,7 +55,6 @@ import java.util.concurrent.TimeUnit;
 public class BatchServerInventoryViewTest
 {
   private static final String testBasePath = "/test";
-  private static final Joiner joiner = Joiner.on("/");
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -199,8 +198,8 @@ public class BatchServerInventoryViewTest
   private void waitForSync() throws Exception
   {
     Stopwatch stopwatch = new Stopwatch().start();
-    while (!Iterables.isEmpty(batchServerInventoryView.getInventory())
-           && Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments().size() != testSegments.size()) {
+    while (Iterables.isEmpty(batchServerInventoryView.getInventory())
+           || Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments().size() != testSegments.size()) {
       Thread.sleep(500);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 5000) {
         throw new ISE("BatchServerInventoryView is not updating");
