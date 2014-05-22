@@ -37,6 +37,8 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -90,6 +92,7 @@ public class RealtimePlumber implements Plumber
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
       String.CASE_INSENSITIVE_ORDER
   );
+  private final ColumnConfig columnConfig;
   private volatile boolean shuttingDown = false;
   private volatile boolean stopped = false;
   private volatile ExecutorService persistExecutor = null;
@@ -106,7 +109,8 @@ public class RealtimePlumber implements Plumber
       ExecutorService queryExecutorService,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      FilteredServerView serverView
+      FilteredServerView serverView,
+      ColumnConfig columnConfig
   )
   {
     this.schema = schema;
@@ -120,6 +124,7 @@ public class RealtimePlumber implements Plumber
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
+    this.columnConfig = columnConfig;
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -342,7 +347,7 @@ public class RealtimePlumber implements Plumber
                   mergedTarget
               );
 
-              QueryableIndex index = IndexIO.loadIndex(mergedFile);
+              QueryableIndex index = IndexIO.loadIndex(mergedFile, columnConfig);
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
@@ -528,7 +533,7 @@ public class RealtimePlumber implements Plumber
                           versioningPolicy.getVersion(sinkInterval),
                           config.getShardSpec()
                       ),
-                      IndexIO.loadIndex(segmentDir)
+                      IndexIO.loadIndex(segmentDir, columnConfig)
                   ),
                   Integer.parseInt(segmentDir.getName())
               )
@@ -709,7 +714,7 @@ public class RealtimePlumber implements Plumber
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
                 indexToPersist.getSegment().getIdentifier(),
-                IndexIO.loadIndex(persistedFile)
+                IndexIO.loadIndex(persistedFile, columnConfig)
             )
         );
 

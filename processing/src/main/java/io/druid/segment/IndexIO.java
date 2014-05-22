@@ -44,6 +44,7 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
@@ -122,7 +123,7 @@ public class IndexIO
     return handler.mapDir(inDir);
   }
 
-  public static QueryableIndex loadIndex(File inDir) throws IOException
+  public static QueryableIndex loadIndex(File inDir, ColumnConfig columnConfig) throws IOException
   {
     init();
     final int version = SegmentUtils.getVersionFromDir(inDir);
@@ -130,7 +131,7 @@ public class IndexIO
     final IndexLoader loader = indexLoaders.get(version);
 
     if (loader != null) {
-      return loader.load(inDir);
+      return loader.load(inDir, columnConfig);
     } else {
       throw new ISE("Unknown index version[%s]", version);
     }
@@ -185,7 +186,7 @@ public class IndexIO
     }
   }
 
-  public static boolean convertSegment(File toConvert, File converted) throws IOException
+  public static boolean convertSegment(File toConvert, File converted, ColumnConfig columnConfig) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
 
@@ -203,7 +204,7 @@ public class IndexIO
       case 7:
         log.info("Old version, re-persisting.");
         IndexMerger.append(
-            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
+            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert, columnConfig))),
             converted
         );
         return true;
@@ -613,13 +614,13 @@ public class IndexIO
 
   static interface IndexLoader
   {
-    public QueryableIndex load(File inDir) throws IOException;
+    public QueryableIndex load(File inDir, ColumnConfig columnConfig) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
   {
     @Override
-    public QueryableIndex load(File inDir) throws IOException
+    public QueryableIndex load(File inDir, ColumnConfig columnConfig) throws IOException
     {
       MMappedIndex index = IndexIO.mapDir(inDir);
 
@@ -631,7 +632,7 @@ public class IndexIO
             .setHasMultipleValues(true)
             .setDictionaryEncodedColumn(
                 new DictionaryEncodedColumnSupplier(
-                    index.getDimValueLookup(dimension), null, (index.getDimColumn(dimension))
+                    index.getDimValueLookup(dimension), null, index.getDimColumn(dimension), columnConfig.columnCacheSizeBytes()
                 )
             )
             .setBitmapIndex(
@@ -704,7 +705,7 @@ public class IndexIO
   static class V9IndexLoader implements IndexLoader
   {
     @Override
-    public QueryableIndex load(File inDir) throws IOException
+    public QueryableIndex load(File inDir, ColumnConfig columnConfig) throws IOException
     {
       log.debug("Mapping v9 index[%s]", inDir);
       long startTime = System.currentTimeMillis();
@@ -726,11 +727,11 @@ public class IndexIO
       ObjectMapper mapper = new DefaultObjectMapper();
 
       for (String columnName : cols) {
-        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));
+        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName), columnConfig));
       }
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time")), columns, smooshedFiles
+          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), columnConfig), columns, smooshedFiles
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
@@ -738,12 +739,12 @@ public class IndexIO
       return index;
     }
 
-    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException
+    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, ColumnConfig columnConfig) throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
           serializerUtils.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer);
+      return serde.read(byteBuffer, columnConfig);
     }
   }
 

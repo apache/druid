@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import org.joda.time.Interval;
@@ -33,6 +34,15 @@ import java.io.File;
 
 public class EmptyIndexTest
 {
+  final ColumnConfig columnConfig = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 1024 * 1024;
+    }
+  };
+
   @Test
   public void testEmptyIndex() throws Exception
   {
@@ -49,7 +59,7 @@ public class EmptyIndexTest
     IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(new Interval("2012-08-01/P3D"), emptyIndex);
     IndexMerger.merge(Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter), new AggregatorFactory[0], tmpDir);
 
-    QueryableIndex emptyQueryableIndex = IndexIO.loadIndex(tmpDir);
+    QueryableIndex emptyQueryableIndex = IndexIO.loadIndex(tmpDir, columnConfig);
 
     Assert.assertEquals("getAvailableDimensions", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
     Assert.assertEquals("getAvailableMetrics", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));

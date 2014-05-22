@@ -19,9 +19,11 @@
 
 package io.druid.segment.loading;
 
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.ColumnConfig;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -33,11 +35,21 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
 {
   private static final Logger log = new Logger(MMappedQueryableIndexFactory.class);
 
+  private final ColumnConfig columnConfig;
+
+  @Inject
+  public MMappedQueryableIndexFactory(
+      ColumnConfig columnConfig
+  )
+  {
+    this.columnConfig = columnConfig;
+  }
+
   @Override
   public QueryableIndex factorize(File parentDir) throws SegmentLoadingException
   {
     try {
-      return IndexIO.loadIndex(parentDir);
+      return IndexIO.loadIndex(parentDir, columnConfig);
     }
     catch (IOException e) {
       log.warn(e, "Got exception!!!! Going to delete parentDir[%s]", parentDir);

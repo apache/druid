@@ -34,6 +34,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -73,6 +74,7 @@ public class TaskToolbox
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
   private final File taskWorkDir;
+  private final ColumnConfig columnConfig;
 
   public TaskToolbox(
       TaskConfig config,
@@ -90,7 +92,8 @@ public class TaskToolbox
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper,
-      final File taskWorkDir
+      final File taskWorkDir,
+      ColumnConfig columnConfig
   )
   {
     this.config = config;
@@ -109,6 +112,7 @@ public class TaskToolbox
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
     this.taskWorkDir = taskWorkDir;
+    this.columnConfig = columnConfig;
   }
 
   public TaskConfig getConfig()
@@ -174,6 +178,11 @@ public class TaskToolbox
   public ObjectMapper getObjectMapper()
   {
     return objectMapper;
+  }
+
+  public ColumnConfig getColumnConfig()
+  {
+    return columnConfig;
   }
 
   public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)

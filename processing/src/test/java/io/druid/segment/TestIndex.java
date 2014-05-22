@@ -35,6 +35,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -51,6 +52,15 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TestIndex
 {
+  private static final ColumnConfig columnConfig = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 1024 * 1024;
+    }
+  };
+
   private static final Logger log = new Logger(TestIndex.class);
 
   private static IncrementalIndex realtimeIndex = null;
@@ -135,10 +145,11 @@ public class TestIndex
 
         mergedRealtime = IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
-                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
+                Arrays.asList(IndexIO.loadIndex(topFile, columnConfig), IndexIO.loadIndex(bottomFile, columnConfig)),
                 METRIC_AGGS,
                 mergedFile
-            )
+            ),
+            columnConfig
         );
 
         return mergedRealtime;
@@ -228,7 +239,7 @@ public class TestIndex
       someTmpFile.deleteOnExit();
 
       IndexMerger.persist(index, someTmpFile);
-      return IndexIO.loadIndex(someTmpFile);
+      return IndexIO.loadIndex(someTmpFile, columnConfig);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

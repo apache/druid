@@ -49,6 +49,7 @@ public class TaskAnnouncementTest
         new Period("PT10M"),
         1,
         Granularity.HOUR,
+        null,
         null
     );
     final TaskStatus status = TaskStatus.running(task.getId());

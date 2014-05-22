@@ -19,6 +19,7 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -45,6 +46,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
@@ -105,7 +107,7 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromSchema(HadoopIngestionSpec schema)
   {
-    return new HadoopDruidIndexerConfig(schema);
+    return new HadoopDruidIndexerConfig(injector.getInstance(ColumnConfig.class), schema);
   }
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
@@ -115,6 +117,7 @@ public class HadoopDruidIndexerConfig
       return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
     } else {
       return new HadoopDruidIndexerConfig(
+          injector.getInstance(ColumnConfig.class),
           HadoopDruidIndexerConfig.jsonMapper.convertValue(
               argSpec,
               HadoopIngestionSpec.class
@@ -166,12 +169,15 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
+  private volatile ColumnConfig columnConfig;
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
+      @JacksonInject final ColumnConfig columnConfig,
       final @JsonProperty("schema") HadoopIngestionSpec schema
   )
   {
+    this.columnConfig = columnConfig;
     this.schema = schema;
     this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
@@ -180,6 +186,11 @@ public class HadoopDruidIndexerConfig
   public HadoopIngestionSpec getSchema()
   {
     return schema;
+  }
+
+  public ColumnConfig getColumnConfig()
+  {
+    return columnConfig;
   }
 
   public String getDataSource()

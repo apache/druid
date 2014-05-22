@@ -45,6 +45,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.DateTime;
@@ -65,6 +66,16 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
+
+  private static ColumnConfig columnConfig = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 1024 * 1024;
+    }
+  };
+
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
 
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -231,7 +242,7 @@ public class SpatialFilterTest
     tmpFile.deleteOnExit();
 
     IndexMerger.persist(theIndex, tmpFile);
-    return IndexIO.loadIndex(tmpFile);
+    return IndexIO.loadIndex(tmpFile, columnConfig);
   }
 
   private static QueryableIndex makeMergedQueryableIndex()
@@ -411,10 +422,11 @@ public class SpatialFilterTest
 
       QueryableIndex mergedRealtime = IndexIO.loadIndex(
           IndexMerger.mergeQueryableIndex(
-              Arrays.asList(IndexIO.loadIndex(firstFile), IndexIO.loadIndex(secondFile), IndexIO.loadIndex(thirdFile)),
+              Arrays.asList(IndexIO.loadIndex(firstFile, columnConfig), IndexIO.loadIndex(secondFile, columnConfig), IndexIO.loadIndex(thirdFile, columnConfig)),
               METRIC_AGGS,
               mergedFile
-          )
+          ),
+          columnConfig
       );
 
       return mergedRealtime;
