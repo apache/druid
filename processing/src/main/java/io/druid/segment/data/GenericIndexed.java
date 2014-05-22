@@ -49,9 +49,12 @@ import java.util.Map;
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
  */
-public class GenericIndexed<T> implements Indexed<T>
+public class GenericIndexed<T> implements Indexed<T>, Closeable
 {
   private static final byte version = 0x1;
+
+  public static final int INITIAL_CACHE_CAPACITY = 16384;
+
   private int indexOffset;
 
   public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy)
@@ -155,14 +158,7 @@ public class GenericIndexed<T> implements Indexed<T>
 
   private final boolean cacheable;
   private final ThreadLocal<ByteBuffer> cachedBuffer;
-  private final ThreadLocal<SizedLRUMap<Integer, T>> cachedValues = new ThreadLocal<SizedLRUMap<Integer, T>>() {
-    @Override
-    protected SizedLRUMap<Integer, T> initialValue()
-    {
-      return new SizedLRUMap<>(16384, 1024 * 1024); // 1MB cache per column, per thread
-    }
-  };
-
+  private final ThreadLocal<SizedLRUMap<Integer, T>> cachedValues;
   private final int valuesOffset;
 
   GenericIndexed(
@@ -185,6 +181,35 @@ public class GenericIndexed<T> implements Indexed<T>
       protected ByteBuffer initialValue()
       {
         return theBuffer.asReadOnlyBuffer();
+      }
+    };
+
+    this.cacheable = false;
+    this.cachedValues = new ThreadLocal<>();
+  }
+
+  /**
+   * Creates a copy of the given indexed with the given cache
+   * The resulting copy must be closed to release resources used by the cache
+   *
+   * @param other
+   * @param cache
+   */
+  GenericIndexed(GenericIndexed<T> other, final SizedLRUMap<Integer, T> cache)
+  {
+    this.theBuffer = other.theBuffer;
+    this.strategy = other.strategy;
+    this.allowReverseLookup = other.allowReverseLookup;
+    this.size = other.size;
+    this.indexOffset = other.indexOffset;
+    this.valuesOffset = other.valuesOffset;
+    this.cachedBuffer = other.cachedBuffer;
+
+    this.cachedValues = new ThreadLocal<SizedLRUMap<Integer, T>>() {
+      @Override
+      protected SizedLRUMap<Integer, T> initialValue()
+      {
+        return cache;
       }
     };
 
@@ -291,6 +316,25 @@ public class GenericIndexed<T> implements Indexed<T>
     channel.write(ByteBuffer.wrap(Ints.toByteArray(theBuffer.remaining() + 4)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(size)));
     channel.write(theBuffer.asReadOnlyBuffer());
+  }
+
+  /**
+   * The returned CachedIndexed must be closed to release the underlying memory
+   * @param maxBytes
+   * @return
+   */
+  public GenericIndexed<T> withCache(int maxBytes)
+  {
+    return new GenericIndexed<>(this, new SizedLRUMap<Integer, T>(INITIAL_CACHE_CAPACITY, maxBytes));
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    if(cacheable) {
+      cachedValues.get().clear();
+      cachedValues.remove();
+    }
   }
 
   public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
