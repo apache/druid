@@ -384,7 +384,11 @@ public class IndexTask extends AbstractFixedIntervalTask
         version,
         wrappedDataSegmentPusher,
         tmpDir
-    ).findPlumber(schema, new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec), metrics);
+    ).findPlumber(
+        schema,
+        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec),
+        metrics
+    );
 
     // rowFlushBoundary for this job
     final int myRowFlushBoundary = rowFlushBoundary > 0

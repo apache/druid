@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
@@ -40,7 +41,7 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
@@ -101,14 +102,19 @@ public class SpatialFilterBonusTest
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                             .withQueryGranularity(QueryGranularity.DAY)
                                             .withMetrics(METRIC_AGGS)
-                                            .withSpatialDimensions(
-                                                Arrays.asList(
-                                                    new SpatialDimensionSchema(
-                                                        "dim.geo",
-                                                        Lists.<String>newArrayList()
+                                            .withDimensionsSpec(
+                                                new DimensionsSpec(
+                                                    null,
+                                                    null,
+                                                    Arrays.asList(
+                                                        new SpatialDimensionSchema(
+                                                            "dim.geo",
+                                                            Lists.<String>newArrayList()
+                                                        )
                                                     )
                                                 )
-                                            ).build()
+                                            )
+                                            .build()
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -215,7 +221,7 @@ public class SpatialFilterBonusTest
     tmpFile.mkdirs();
     tmpFile.deleteOnExit();
 
-    IndexMerger.persist(theIndex, tmpFile);
+    IndexMaker.persist(theIndex, tmpFile);
     return IndexIO.loadIndex(tmpFile);
   }
 
@@ -226,40 +232,55 @@ public class SpatialFilterBonusTest
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Lists.<String>newArrayList()
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Lists.<String>newArrayList()
+                                                          )
                                                       )
                                                   )
-                                              ).build()
+                                              )
+                                              .build()
       );
       IncrementalIndex second = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Lists.<String>newArrayList()
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Lists.<String>newArrayList()
+                                                          )
                                                       )
                                                   )
-                                              ).build()
+                                              )
+                                              .build()
       );
       IncrementalIndex third = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Lists.<String>newArrayList()
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Lists.<String>newArrayList()
+                                                          )
                                                       )
                                                   )
-                                              ).build()
+                                              )
+                                              .build()
       );
 
 
@@ -375,12 +396,12 @@ public class SpatialFilterBonusTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      IndexMerger.persist(first, DATA_INTERVAL, firstFile);
-      IndexMerger.persist(second, DATA_INTERVAL, secondFile);
-      IndexMerger.persist(third, DATA_INTERVAL, thirdFile);
+      IndexMaker.persist(first, DATA_INTERVAL, firstFile);
+      IndexMaker.persist(second, DATA_INTERVAL, secondFile);
+      IndexMaker.persist(third, DATA_INTERVAL, thirdFile);
 
       QueryableIndex mergedRealtime = IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(
+          IndexMaker.mergeQueryableIndex(
               Arrays.asList(IndexIO.loadIndex(firstFile), IndexIO.loadIndex(secondFile), IndexIO.loadIndex(thirdFile)),
               METRIC_AGGS,
               mergedFile

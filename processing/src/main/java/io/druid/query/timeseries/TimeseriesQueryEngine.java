@@ -53,7 +53,6 @@ public class TimeseriesQueryEngine
                 new Function<Cursor, Result<TimeseriesResultValue>>()
                 {
                   private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-                  private final List<PostAggregator> postAggregatorSpecs = query.getPostAggregatorSpecs();
 
                   @Override
                   public Result<TimeseriesResultValue> apply(Cursor cursor)

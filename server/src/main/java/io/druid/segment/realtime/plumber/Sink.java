@@ -28,6 +28,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -177,17 +178,14 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
-    List<SpatialDimensionSchema> spatialDimensionSchemas = schema.getParser() == null
-                                                           ? Lists.<SpatialDimensionSchema>newArrayList()
-                                                           : schema.getParser()
-                                                                   .getParseSpec()
-                                                                   .getDimensionsSpec()
-                                                                   .getSpatialDimensions();
+    DimensionsSpec dimensionsSpec = schema.getParser() == null
+                                    ? new DimensionsSpec(null, null, null)
+                                    : schema.getParser().getParseSpec().getDimensionsSpec();
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
             .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withSpatialDimensions(spatialDimensionSchemas)
+            .withDimensionsSpec(dimensionsSpec)
             .withMetrics(schema.getAggregators())
             .build()
     );
