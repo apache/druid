@@ -60,6 +60,7 @@
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>hll</module>
+        <module>sample-agg</module>
     </modules>
 
     <dependencyManagement>
