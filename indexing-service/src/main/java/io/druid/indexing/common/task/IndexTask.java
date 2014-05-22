@@ -382,7 +382,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         interval,
         version,
         wrappedDataSegmentPusher,
-        tmpDir
+        tmpDir,
+        toolbox.getColumnConfig()
     ).findPlumber(schema, new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec), metrics);
 
     // rowFlushBoundary for this job

@@ -38,6 +38,7 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -65,6 +66,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   private final String version;
   private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
+  private final ColumnConfig columnConfig;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
 
@@ -73,13 +75,15 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
-      @JacksonInject("tmpSegmentDir") File tmpSegmentDir
+      @JacksonInject("tmpSegmentDir") File tmpSegmentDir,
+      @JacksonInject ColumnConfig columnConfig
   )
   {
     this.interval = interval;
     this.version = version;
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
+    this.columnConfig = columnConfig;
   }
 
   @Override
@@ -162,7 +166,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           } else {
             List<QueryableIndex> indexes = Lists.newArrayList();
             for (final File oneSpill : spilled) {
-              indexes.add(IndexIO.loadIndex(oneSpill));
+              indexes.add(IndexIO.loadIndex(oneSpill, columnConfig));
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
@@ -170,7 +174,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           }
 
           // Map merged segment so we can extract dimensions
-          final QueryableIndex mappedSegment = IndexIO.loadIndex(fileToUpload);
+          final QueryableIndex mappedSegment = IndexIO.loadIndex(fileToUpload, columnConfig);
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))

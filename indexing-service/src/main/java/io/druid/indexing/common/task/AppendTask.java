@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
@@ -32,6 +33,7 @@ import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
 import io.druid.segment.Rowboat;
 import io.druid.segment.RowboatFilteringIndexAdapter;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -46,14 +48,18 @@ import java.util.Map;
  */
 public class AppendTask extends MergeTaskBase
 {
+  private final ColumnConfig columnConfig;
+
   @JsonCreator
   public AppendTask(
+      @JacksonInject ColumnConfig columnConfig,
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments
   )
   {
     super(id, dataSource, segments);
+    this.columnConfig = columnConfig;
   }
 
   @Override
@@ -92,7 +98,7 @@ public class AppendTask extends MergeTaskBase
       adapters.add(
           new RowboatFilteringIndexAdapter(
               new QueryableIndexIndexableAdapter(
-                  IndexIO.loadIndex(holder.getFile())
+                  IndexIO.loadIndex(holder.getFile(), columnConfig)
               ),
               new Predicate<Rowboat>()
               {

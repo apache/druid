@@ -87,7 +87,8 @@ public class SimpleResourceManagementStrategyTest
                 0
             )
         ),
-        Lists.<AggregatorFactory>newArrayList()
+        Lists.<AggregatorFactory>newArrayList(),
+        null
     );
     simpleResourceManagementStrategy = new SimpleResourceManagementStrategy(
         autoScalingStrategy,

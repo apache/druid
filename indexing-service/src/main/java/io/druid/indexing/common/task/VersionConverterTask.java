@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
@@ -253,7 +252,7 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");
-    if (IndexIO.convertSegment(location, outLocation)) {
+    if (IndexIO.convertSegment(location, outLocation, toolbox.getColumnConfig())) {
       final int outVersion = IndexIO.getVersionFromDir(outLocation);
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original
