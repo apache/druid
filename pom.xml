@@ -407,11 +407,6 @@
                 <version>4.2</version>
             </dependency>
             <dependency>
-                <groupId>com.davekoelle</groupId>
-                <artifactId>alphanum</artifactId>
-                <version>1.0.3</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
                 <version>2.3.0</version>
