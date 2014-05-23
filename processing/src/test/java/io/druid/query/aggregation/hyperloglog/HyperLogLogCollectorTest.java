@@ -299,6 +299,24 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
+  public void testBufferSwap() throws Exception
+  {
+    ByteBuffer biggerOffset = makeCollectorBuffer(1, (byte) 0x00, 0x11);
+    ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
+
+    ByteBuffer buffer = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+    HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buffer);
+
+    // make sure the original buffer gets modified
+    collector.fold(biggerOffset);
+    Assert.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer));
+
+    // make sure the original buffer gets modified
+    collector.fold(smallerOffset);
+    Assert.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer));
+  }
+
+  @Test
   public void testFoldWithArbitraryInitialPositions() throws Exception
   {
     ByteBuffer biggerOffset = shiftedBuffer(makeCollectorBuffer(1, (byte) 0x00, 0x11), 10);
