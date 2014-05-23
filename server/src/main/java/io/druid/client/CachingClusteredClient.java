@@ -183,7 +183,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
 
     if (queryCacheKey != null) {
-      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newHashMap();
+      // cache keys must preserve segment ordering, in order for shards to always be combined in the same order
+      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
       for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
         final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
             segment.lhs.getSegment().getIdentifier(),
