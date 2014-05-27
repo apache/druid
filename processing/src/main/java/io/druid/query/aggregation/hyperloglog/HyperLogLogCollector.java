@@ -358,8 +358,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       throw new ISE("offsetDiff[%d] < 0, shouldn't happen because of swap.", offsetDiff);
     }
 
-    add(other.getMaxOverflowRegister(), other.getMaxOverflowValue());
-
     final int myPayloadStart = getPayloadBytePosition();
     otherBuffer.position(other.getPayloadBytePosition());
 
@@ -398,6 +396,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     // no need to call setRegisterOffset(myOffset) here, since it gets updated every time myOffset is incremented
     setNumNonZeroRegisters(numNonZero);
+
+    // this will add the max overflow and also recheck if offset needs to be shifted
+    add(other.getMaxOverflowRegister(), other.getMaxOverflowValue());
 
     return this;
   }
