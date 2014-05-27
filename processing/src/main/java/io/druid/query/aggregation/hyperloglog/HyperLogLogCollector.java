@@ -299,8 +299,12 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     if (positionOf1 <= registerOffset) {
       return;
     } else if (positionOf1 > (registerOffset + range)) {
-      byte currMax = getMaxOverflowValue();
+      final byte currMax = getMaxOverflowValue();
       if (positionOf1 > currMax) {
+        if(currMax <= (registerOffset + range)) {
+          // this could be optimized by having an add without sanity checks
+          add(getMaxOverflowRegister(), currMax);
+        }
         setMaxOverflowValue(positionOf1);
         setMaxOverflowRegister(bucket);
       }

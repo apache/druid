@@ -844,29 +844,16 @@ public class HyperLogLogCollectorTest
     );
 
     Collection<List<HyperLogLogCollector>> permutations = Collections2.permutations(collectors);
-    Collection<List<HyperLogLogCollector>> selectPermutations = Lists.<List<HyperLogLogCollector>>newArrayList(
-        Iterables.get(
-            permutations,
-            3
-        )
-    );
 
-    selectPermutations = permutations;
-
-//    ArrayList<List<HyperLogLogCollector>> selectPermutations = Lists.<List<HyperLogLogCollector>>newArrayList(
-//        Iterables.get(
-//            permutations,
-//            1
-//        )
-//    );
-
-    for(List<HyperLogLogCollector> permutation : selectPermutations) {
+    for(List<HyperLogLogCollector> permutation : permutations) {
       HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
       for (HyperLogLogCollector foldee : permutation) {
         collector.fold(foldee);
       }
-      System.err.println(collector.estimateCardinality());
+      Assert.assertEquals(29, collector.getMaxOverflowValue());
+      Assert.assertEquals(366, collector.getMaxOverflowRegister());
+      Assert.assertEquals(1.0429189446653817E7, collector.estimateCardinality(), 1);
     }
   }
 
