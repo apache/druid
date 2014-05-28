@@ -84,6 +84,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean preservesOrdering()
+  {
+    return dimExtractionFn.preservesOrdering();
+  }
+
+  @Override
   public String toString()
   {
     return "ExtractionDimensionSpec{" +

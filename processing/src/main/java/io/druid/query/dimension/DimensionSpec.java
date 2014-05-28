@@ -33,7 +33,12 @@ import io.druid.query.extraction.DimExtractionFn;
 public interface DimensionSpec
 {
   public String getDimension();
+
   public String getOutputName();
+
   public DimExtractionFn getDimExtractionFn();
+
   public byte[] getCacheKey();
+
+  public boolean preservesOrdering();
 }
