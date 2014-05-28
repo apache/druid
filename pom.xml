@@ -319,17 +319,17 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.1.4.v20140401</version>
+                <version>9.1.5.v20140505</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.1.4.v20140401</version>
+                <version>9.1.5.v20140505</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.1.4.v20140401</version>
+                <version>9.1.5.v20140505</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -405,11 +405,6 @@
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.2</version>
-            </dependency>
-            <dependency>
-                <groupId>com.davekoelle</groupId>
-                <artifactId>alphanum</artifactId>
-                <version>1.0.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
