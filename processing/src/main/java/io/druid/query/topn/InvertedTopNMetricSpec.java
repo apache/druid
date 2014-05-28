@@ -77,10 +77,19 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      boolean optimizeResultStorage
   )
   {
-    return delegate.getResultBuilder(timestamp, dimSpec, threshold, comparator, aggFactories, postAggs);
+    return delegate.getResultBuilder(
+        timestamp,
+        dimSpec,
+        threshold,
+        comparator,
+        aggFactories,
+        postAggs,
+        canBeOptimizedUnordered()
+    );
   }
 
   @Override
@@ -94,6 +103,9 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
   @Override
   public <T> TopNMetricSpecBuilder<T> configureOptimizer(TopNMetricSpecBuilder<T> builder)
   {
+    if (!canBeOptimizedUnordered()) {
+      return builder;
+    }
     return delegate.configureOptimizer(builder);
   }
 
@@ -107,6 +119,12 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
   public String getMetricName(DimensionSpec dimSpec)
   {
     return delegate.getMetricName(dimSpec);
+  }
+
+  @Override
+  public boolean canBeOptimizedUnordered()
+  {
+    return delegate.canBeOptimizedUnordered();
   }
 
   @Override

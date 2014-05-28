@@ -123,7 +123,8 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      boolean optimizeResultStorage
   )
   {
     return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator, aggFactories, postAggs);
@@ -156,6 +157,12 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   public String getMetricName(DimensionSpec dimSpec)
   {
     return metric;
+  }
+
+  @Override
+  public boolean canBeOptimizedUnordered()
+  {
+    return true;
   }
 
   @Override

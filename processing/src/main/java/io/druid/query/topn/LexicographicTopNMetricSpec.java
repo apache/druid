@@ -82,10 +82,19 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      boolean optimizeResultStorage
   )
   {
-    return new TopNLexicographicResultBuilder(timestamp, dimSpec, threshold, previousStop, comparator, aggFactories);
+    return new TopNLexicographicResultBuilder(
+        timestamp,
+        dimSpec,
+        threshold,
+        previousStop,
+        comparator,
+        aggFactories,
+        optimizeResultStorage
+    );
   }
 
   @Override
@@ -120,6 +129,12 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public boolean canBeOptimizedUnordered()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "LexicographicTopNMetricSpec{" +
@@ -130,12 +145,18 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     LexicographicTopNMetricSpec that = (LexicographicTopNMetricSpec) o;
 
-    if (previousStop != null ? !previousStop.equals(that.previousStop) : that.previousStop != null) return false;
+    if (previousStop != null ? !previousStop.equals(that.previousStop) : that.previousStop != null) {
+      return false;
+    }
 
     return true;
   }

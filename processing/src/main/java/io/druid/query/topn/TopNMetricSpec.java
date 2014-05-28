@@ -50,7 +50,8 @@ public interface TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      boolean optimizeResultStorage
   );
 
   public byte[] getCacheKey();
@@ -60,4 +61,6 @@ public interface TopNMetricSpec
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector);
 
   public String getMetricName(DimensionSpec dimSpec);
+
+  public boolean canBeOptimizedUnordered();
 }

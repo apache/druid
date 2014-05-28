@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
@@ -41,6 +40,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   private final DimensionSpec dimSpec;
   private final String previousStop;
   private final List<AggregatorFactory> aggFactories;
+  private final boolean optimizeResultStorage;
   private MinMaxPriorityQueue<DimValHolder> pQueue = null;
 
   public TopNLexicographicResultBuilder(
@@ -49,13 +49,15 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       int threshold,
       String previousStop,
       final Comparator comparator,
-      List<AggregatorFactory> aggFactories
+      List<AggregatorFactory> aggFactories,
+      boolean optimizeResultStorage
   )
   {
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.previousStop = previousStop;
     this.aggFactories = aggFactories;
+    this.optimizeResultStorage = optimizeResultStorage;
 
     instantiatePQueue(threshold, comparator);
   }
@@ -69,7 +71,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   {
     Map<String, Object> metricValues = Maps.newLinkedHashMap();
 
-    if (dimName.compareTo(previousStop) > 0) {
+    if (!optimizeResultStorage || dimName.compareTo(previousStop) > 0) {
       metricValues.put(dimSpec.getOutputName(), dimName);
       Iterator<AggregatorFactory> aggsIter = aggFactories.iterator();
       for (Object metricVal : metricVals) {

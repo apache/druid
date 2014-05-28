@@ -31,7 +31,6 @@ import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 
 /**
  */
@@ -40,7 +39,6 @@ public class PooledTopNAlgorithm
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
-  private final Comparator<?> comparator;
   private final StupidPool<ByteBuffer> bufferPool;
 
   public PooledTopNAlgorithm(
@@ -53,8 +51,6 @@ public class PooledTopNAlgorithm
 
     this.capabilities = capabilities;
     this.query = query;
-    this.comparator = query.getTopNMetricSpec()
-                           .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
     this.bufferPool = bufferPool;
   }
 
@@ -113,7 +109,6 @@ public class PooledTopNAlgorithm
                            .withAggregatorSizes(aggregatorSizes)
                            .build();
   }
-
 
 
   @Override

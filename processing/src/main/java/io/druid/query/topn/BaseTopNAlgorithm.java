@@ -234,15 +234,16 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
   public static TopNResultBuilder makeResultBuilder(TopNParams params, TopNQuery query)
   {
-    Comparator comparator = query.getTopNMetricSpec()
-                                 .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
+    final Comparator comparator = query.getTopNMetricSpec()
+                                       .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
     return query.getTopNMetricSpec().getResultBuilder(
         params.getCursor().getTime(),
         query.getDimensionSpec(),
         query.getThreshold(),
         comparator,
         query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs()
+        query.getPostAggregatorSpecs(),
+        true
     );
   }
 }
