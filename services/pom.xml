@@ -101,10 +101,6 @@
                 <executions>
                     <execution>
                         <id>distro-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>assembly</goal>
-                        </goals>
                         <configuration>
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>
