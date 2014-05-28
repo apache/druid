@@ -299,8 +299,12 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     if (positionOf1 <= registerOffset) {
       return;
     } else if (positionOf1 > (registerOffset + range)) {
-      byte currMax = getMaxOverflowValue();
+      final byte currMax = getMaxOverflowValue();
       if (positionOf1 > currMax) {
+        if(currMax <= (registerOffset + range)) {
+          // this could be optimized by having an add without sanity checks
+          add(getMaxOverflowRegister(), currMax);
+        }
         setMaxOverflowValue(positionOf1);
         setMaxOverflowRegister(bucket);
       }
@@ -354,8 +358,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       throw new ISE("offsetDiff[%d] < 0, shouldn't happen because of swap.", offsetDiff);
     }
 
-    add(other.getMaxOverflowRegister(), other.getMaxOverflowValue());
-
     final int myPayloadStart = getPayloadBytePosition();
     otherBuffer.position(other.getPayloadBytePosition());
 
@@ -394,6 +396,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     // no need to call setRegisterOffset(myOffset) here, since it gets updated every time myOffset is incremented
     setNumNonZeroRegisters(numNonZero);
+
+    // this will add the max overflow and also recheck if offset needs to be shifted
+    add(other.getMaxOverflowRegister(), other.getMaxOverflowValue());
 
     return this;
   }
@@ -570,18 +575,19 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   private short addNibbleRegister(short bucket, byte positionOf1)
   {
     short numNonZeroRegs = getNumNonZeroRegisters();
-    final short position = (short) (bucket >> 1);
+
+    final int position = getPayloadBytePosition() + (short) (bucket >> 1);
     final boolean isUpperNibble = ((bucket & 0x1) == 0);
 
-    byte shiftedPositionOf1 = (isUpperNibble) ? (byte) (positionOf1 << bitsPerBucket) : positionOf1;
+    final byte shiftedPositionOf1 = (isUpperNibble) ? (byte) (positionOf1 << bitsPerBucket) : positionOf1;
 
     if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
       convertToDenseStorage();
     }
 
-    byte origVal = storageBuffer.get(getPayloadBytePosition() + position);
-    byte newValueMask = (isUpperNibble) ? (byte) 0xf0 : (byte) 0x0f;
-    byte originalValueMask = (byte) (newValueMask ^ 0xff);
+    final byte origVal = storageBuffer.get(position);
+    final byte newValueMask = (isUpperNibble) ? (byte) 0xf0 : (byte) 0x0f;
+    final byte originalValueMask = (byte) (newValueMask ^ 0xff);
 
     // if something was at zero, we have to increase the numNonZeroRegisters
     if ((origVal & newValueMask) == 0 && shiftedPositionOf1 != 0) {
@@ -589,7 +595,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     }
 
     storageBuffer.put(
-        getPayloadBytePosition() + position,
+        position,
         (byte) (UnsignedBytes.max((byte) (origVal & newValueMask), shiftedPositionOf1) | (origVal & originalValueMask))
     );
 
