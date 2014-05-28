@@ -66,7 +66,7 @@ public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
   @Override
   public boolean preservesOrdering()
   {
-    return false;
+    return true;
   }
 
   @Override

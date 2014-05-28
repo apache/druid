@@ -1264,6 +1264,58 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testInvertedTopNLexicographicDimExtraction2()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                providerDimension, providerDimension, new RegexDimExtractionFn("..(.)")
+            )
+        )
+        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec(null)))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        providerDimension, "t",
+                        "rows", 4L,
+                        "index", 5351.814697265625D,
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        providerDimension, "o",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        providerDimension, "f",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+  }
+
+  @Test
   public void testTopNLexicographicDimExtractionWithPreviousStop()
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -1345,6 +1397,51 @@ public class TopNQueryRunnerTest
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    )
+                )
+            )
+        )
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+  }
+
+  @Test
+  public void testInvertedTopNLexicographicDimExtractionWithPreviousStop2()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                providerDimension, providerDimension, new RegexDimExtractionFn("..(.)")
+            )
+        )
+        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("p")))
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        providerDimension, "o",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        providerDimension, "f",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
                     )
                 )
             )

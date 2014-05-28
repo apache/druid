@@ -90,7 +90,7 @@ public class TimeDimExtractionFn implements DimExtractionFn
   @Override
   public boolean preservesOrdering()
   {
-    return true;
+    return false;
   }
 
   @Override

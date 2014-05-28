@@ -43,6 +43,13 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
     @Override
     public int compare(String s, String s2)
     {
+      // null first
+      if (s == null) {
+        return -1;
+      }
+      if (s2 == null) {
+        return 1;
+      }
       return UnsignedBytes.lexicographicalComparator().compare(s.getBytes(Charsets.UTF_8), s2.getBytes(Charsets.UTF_8));
     }
   };
@@ -54,7 +61,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       @JsonProperty("previousStop") String previousStop
   )
   {
-    this.previousStop = (previousStop == null) ? "" : previousStop;
+    this.previousStop = previousStop;
   }
 
   @Override
@@ -98,7 +105,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] previousStopBytes = previousStop.getBytes(Charsets.UTF_8);
+    byte[] previousStopBytes = previousStop == null ? new byte[]{} : previousStop.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + previousStopBytes.length)
                      .put(CACHE_TYPE_ID)

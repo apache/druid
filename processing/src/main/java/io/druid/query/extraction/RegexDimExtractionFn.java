@@ -70,7 +70,7 @@ public class RegexDimExtractionFn implements DimExtractionFn
   @Override
   public boolean preservesOrdering()
   {
-    return true;
+    return false;
   }
 
   @Override

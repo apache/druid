@@ -96,6 +96,6 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   @Override
   public boolean preservesOrdering()
   {
-    return true;
+    return false;
   }
 }
