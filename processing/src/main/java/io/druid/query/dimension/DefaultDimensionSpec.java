@@ -79,7 +79,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public boolean preservesOrdering()
   {
-    return false;
+    return true;
   }
 
   @Override
