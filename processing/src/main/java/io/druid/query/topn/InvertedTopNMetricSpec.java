@@ -77,8 +77,7 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs,
-      boolean optimizeResultStorage
+      List<PostAggregator> postAggs
   )
   {
     return delegate.getResultBuilder(
@@ -87,8 +86,7 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
         threshold,
         comparator,
         aggFactories,
-        postAggs,
-        canBeOptimizedUnordered()
+        postAggs
     );
   }
 

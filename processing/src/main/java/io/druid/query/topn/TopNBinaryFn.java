@@ -129,8 +129,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
         threshold,
         comparator,
         aggregations,
-        postAggregations,
-        true
+        postAggregations
     );
     for (DimensionAndMetricValueExtractor extractor : retVals.values()) {
       bob.addEntry(extractor);

@@ -39,8 +39,8 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String previousStop;
+  private final Comparator comparator;
   private final List<AggregatorFactory> aggFactories;
-  private final boolean optimizeResultStorage;
   private MinMaxPriorityQueue<DimValHolder> pQueue = null;
 
   public TopNLexicographicResultBuilder(
@@ -49,15 +49,14 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       int threshold,
       String previousStop,
       final Comparator comparator,
-      List<AggregatorFactory> aggFactories,
-      boolean optimizeResultStorage
+      List<AggregatorFactory> aggFactories
   )
   {
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.previousStop = previousStop;
+    this.comparator = comparator;
     this.aggFactories = aggFactories;
-    this.optimizeResultStorage = optimizeResultStorage;
 
     instantiatePQueue(threshold, comparator);
   }
@@ -71,7 +70,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   {
     Map<String, Object> metricValues = Maps.newLinkedHashMap();
 
-    if (!optimizeResultStorage || dimName.compareTo(previousStop) > 0) {
+    if (comparator.compare(dimName, previousStop) > 0) {
       metricValues.put(dimSpec.getOutputName(), dimName);
       Iterator<AggregatorFactory> aggsIter = aggFactories.iterator();
       for (Object metricVal : metricVals) {

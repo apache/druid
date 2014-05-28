@@ -123,8 +123,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs,
-      boolean optimizeResultStorage
+      List<PostAggregator> postAggs
   )
   {
     return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator, aggFactories, postAggs);

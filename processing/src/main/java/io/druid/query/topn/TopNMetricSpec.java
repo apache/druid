@@ -50,8 +50,7 @@ public interface TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs,
-      boolean optimizeResultStorage
+      List<PostAggregator> postAggs
   );
 
   public byte[] getCacheKey();

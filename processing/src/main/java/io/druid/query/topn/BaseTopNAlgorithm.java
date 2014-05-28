@@ -242,8 +242,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
         query.getThreshold(),
         comparator,
         query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs(),
-        true
+        query.getPostAggregatorSpecs()
     );
   }
 }
