@@ -33,7 +33,6 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -61,7 +60,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -612,16 +610,10 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
-      List<SpatialDimensionSchema> spatialDimensionSchemas = config.getSchema().getDataSchema().getParser() == null
-                                                             ? Lists.<SpatialDimensionSchema>newArrayList()
-                                                             : config.getSchema().getDataSchema().getParser()
-                                                                     .getParseSpec()
-                                                                     .getDimensionsSpec()
-                                                                     .getSpatialDimensions();
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withSpatialDimensions(spatialDimensionSchemas)
+              .withSpatialDimensions(config.getSchema().getDataSchema().getParser())
               .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()

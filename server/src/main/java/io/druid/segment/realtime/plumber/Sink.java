@@ -177,17 +177,11 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
-    List<SpatialDimensionSchema> spatialDimensionSchemas = schema.getParser() == null
-                                                           ? Lists.<SpatialDimensionSchema>newArrayList()
-                                                           : schema.getParser()
-                                                                   .getParseSpec()
-                                                                   .getDimensionsSpec()
-                                                                   .getSpatialDimensions();
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
             .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withSpatialDimensions(spatialDimensionSchemas)
+            .withSpatialDimensions(schema.getParser())
             .withMetrics(schema.getAggregators())
             .build()
     );
