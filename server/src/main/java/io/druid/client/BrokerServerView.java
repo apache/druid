@@ -36,6 +36,7 @@ import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.TableDataSource;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -61,7 +62,7 @@ public class BrokerServerView implements TimelineServerView
   private final QueryToolChestWarehouse warehouse;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final ServerView baseView;
+  private final ServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
 
   @Inject
@@ -69,7 +70,7 @@ public class BrokerServerView implements TimelineServerView
       QueryToolChestWarehouse warehouse,
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
-      ServerView baseView,
+      ServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy
   )
   {
@@ -89,14 +90,14 @@ public class BrokerServerView implements TimelineServerView
         new ServerView.SegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentAdded(DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
             serverAddedSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(final DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentRemoved(final DruidServerMetadata server, DataSegment segment)
           {
             serverRemovedSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
@@ -159,12 +160,12 @@ public class BrokerServerView implements TimelineServerView
   private QueryableDruidServer removeServer(DruidServer server)
   {
     for (DataSegment segment : server.getSegments().values()) {
-      serverRemovedSegment(server, segment);
+      serverRemovedSegment(server.getMetadata(), segment);
     }
     return clients.remove(server.getName());
   }
 
-  private void serverAddedSegment(final DruidServer server, final DataSegment segment)
+  private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     String segmentId = segment.getIdentifier();
     synchronized (lock) {
@@ -176,7 +177,7 @@ public class BrokerServerView implements TimelineServerView
 
         VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         if (timeline == null) {
-          timeline = new VersionedIntervalTimeline<String, ServerSelector>(Ordering.natural());
+          timeline = new VersionedIntervalTimeline<>(Ordering.natural());
           timelines.put(segment.getDataSource(), timeline);
         }
 
@@ -186,13 +187,13 @@ public class BrokerServerView implements TimelineServerView
 
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        queryableDruidServer = addServer(server);
+        queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
       }
       selector.addServer(queryableDruidServer);
     }
   }
 
-  private void serverRemovedSegment(DruidServer server, DataSegment segment)
+  private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
     String segmentId = segment.getIdentifier();
     final ServerSelector selector;

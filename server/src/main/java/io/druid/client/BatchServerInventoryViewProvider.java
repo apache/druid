@@ -43,8 +43,8 @@ public class BatchServerInventoryViewProvider implements ServerInventoryViewProv
   private ObjectMapper jsonMapper = null;
 
   @Override
-  public ServerInventoryView get()
+  public BatchServerInventoryView get()
   {
-    return new BatchServerInventoryView(zkPaths, curator, jsonMapper);
+    return new BatchServerInventoryView(zkPaths, curator, jsonMapper, null);
   }
 }

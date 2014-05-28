@@ -87,6 +87,11 @@ public class DruidServerMetadata
     return priority;
   }
 
+  public boolean isAssignable()
+  {
+    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
+  }
+
   @Override
   public boolean equals(Object o)
   {

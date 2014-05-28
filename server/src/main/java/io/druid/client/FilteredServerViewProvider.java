@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,32 +19,16 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.framework.CuratorFramework;
 
-import javax.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SingleServerInventoryProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "legacy", value = FilteredSingleServerViewProvider.class),
+    @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerViewProvider.class)
+})
+public interface FilteredServerViewProvider extends Provider<FilteredServerView>
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
-
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public ServerInventoryView get()
-  {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, null);
-  }
 }

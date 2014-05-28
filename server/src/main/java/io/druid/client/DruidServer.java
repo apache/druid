@@ -125,6 +125,11 @@ public class DruidServer implements Comparable
     return metadata.getTier();
   }
 
+  public boolean isAssignable()
+  {
+    return metadata.isAssignable();
+  }
+
   @JsonProperty
   public int getPriority()
   {
@@ -136,11 +141,6 @@ public class DruidServer implements Comparable
   {
     // Copying the map slows things down a lot here, don't use Immutable Map here
     return Collections.unmodifiableMap(segments);
-  }
-
-  public boolean isAssignable()
-  {
-    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
   }
 
   public DataSegment getSegment(String segmentName)

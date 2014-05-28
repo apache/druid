@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,14 +21,14 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicates;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
 
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public class FilteredBatchServerViewProvider implements FilteredServerViewProvider
 {
   @JacksonInject
   @NotNull
@@ -43,8 +43,8 @@ public class SingleServerInventoryProvider implements ServerInventoryViewProvide
   private ObjectMapper jsonMapper = null;
 
   @Override
-  public ServerInventoryView get()
+  public BatchServerInventoryView get()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, null);
+    return new BatchServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysFalse());
   }
 }

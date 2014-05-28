@@ -131,7 +131,8 @@ public class BatchServerInventoryViewTest
           }
         },
         cf,
-        jsonMapper
+        jsonMapper,
+        null
     );
 
     batchServerInventoryView.start();
