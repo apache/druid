@@ -116,6 +116,10 @@ public class PooledTopNAlgorithm
   {
     final TopNMetricSpecBuilder<int[]> arrayProvider = params.getArrayProvider();
 
+    if (query.getDimensionSpec().canTransformValues()) {
+      return arrayProvider.build();
+    }
+
     arrayProvider.ignoreFirstN(numProcessed);
     arrayProvider.keepOnlyN(numToProcess);
     return query.getTopNMetricSpec().configureOptimizer(arrayProvider).build();

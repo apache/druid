@@ -92,4 +92,10 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   {
     return fn.apply(dimValue);
   }
+
+  @Override
+  public boolean canTransformValues()
+  {
+    return true;
+  }
 }

@@ -84,6 +84,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean canTransformValues()
+  {
+    return dimExtractionFn.canTransformValues();
+  }
+
+  @Override
   public String toString()
   {
     return "ExtractionDimensionSpec{" +

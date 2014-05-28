@@ -88,6 +88,12 @@ public class TimeDimExtractionFn implements DimExtractionFn
   }
 
   @Override
+  public boolean canTransformValues()
+  {
+    return true;
+  }
+
+  @Override
   public String toString()
   {
     return "TimeDimExtractionFn{" +

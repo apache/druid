@@ -64,6 +64,12 @@ public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
   }
 
   @Override
+  public boolean canTransformValues()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "SearchQuerySpecDimExtractionFn{" +

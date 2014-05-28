@@ -77,6 +77,12 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean canTransformValues()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "DefaultDimensionSpec{" +

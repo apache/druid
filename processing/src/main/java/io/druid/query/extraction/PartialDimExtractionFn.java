@@ -68,6 +68,12 @@ public class PartialDimExtractionFn implements DimExtractionFn
   }
 
   @Override
+  public boolean canTransformValues()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("regex_matches(%s)", expr);

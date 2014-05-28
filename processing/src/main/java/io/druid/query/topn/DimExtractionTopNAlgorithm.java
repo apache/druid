@@ -49,15 +49,26 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       final DimensionSelector dimSelector, final Cursor cursor
   )
   {
-    return new TopNParams(dimSelector, cursor, dimSelector.getValueCardinality(), Integer.MAX_VALUE);
+    return new TopNParams(
+        dimSelector,
+        cursor,
+        dimSelector.getValueCardinality(),
+        Integer.MAX_VALUE
+    );
   }
 
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
-    return query.getTopNMetricSpec().configureOptimizer(
-        new AggregatorArrayProvider(params.getDimSelector(), query, params.getCardinality())
-    ).build();
+    final AggregatorArrayProvider provider = new AggregatorArrayProvider(
+        params.getDimSelector(),
+        query,
+        params.getCardinality()
+    );
+    if (query.getDimensionSpec().canTransformValues()) {
+      return provider.build();
+    }
+    return query.getTopNMetricSpec().configureOptimizer(provider).build();
   }
 
   @Override

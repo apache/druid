@@ -62,7 +62,12 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       DimensionSelector dimSelector, Cursor cursor
   )
   {
-    return new TopNParams(dimSelector, cursor, dimSelector.getValueCardinality(), Integer.MAX_VALUE);
+    return new TopNParams(
+        dimSelector,
+        cursor,
+        dimSelector.getValueCardinality(),
+        Integer.MAX_VALUE
+    );
   }
 
   @Override
