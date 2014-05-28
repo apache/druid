@@ -77,7 +77,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public boolean canTransformValues()
+  public boolean preservesOrdering()
   {
     return false;
   }

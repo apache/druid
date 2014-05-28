@@ -64,7 +64,7 @@ public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
   }
 
   @Override
-  public boolean canTransformValues()
+  public boolean preservesOrdering()
   {
     return false;
   }

@@ -40,5 +40,5 @@ public interface DimensionSpec
 
   public byte[] getCacheKey();
 
-  public boolean canTransformValues();
+  public boolean preservesOrdering();
 }

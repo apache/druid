@@ -65,7 +65,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
         query,
         params.getCardinality()
     );
-    if (query.getDimensionSpec().canTransformValues()) {
+    if (query.getDimensionSpec().preservesOrdering()) {
       return provider.build();
     }
     return query.getTopNMetricSpec().configureOptimizer(provider).build();

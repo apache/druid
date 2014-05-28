@@ -68,7 +68,7 @@ public class PartialDimExtractionFn implements DimExtractionFn
   }
 
   @Override
-  public boolean canTransformValues()
+  public boolean preservesOrdering()
   {
     return false;
   }

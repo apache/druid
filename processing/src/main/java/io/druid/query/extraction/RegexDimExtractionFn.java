@@ -68,7 +68,7 @@ public class RegexDimExtractionFn implements DimExtractionFn
   }
 
   @Override
-  public boolean canTransformValues()
+  public boolean preservesOrdering()
   {
     return true;
   }

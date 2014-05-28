@@ -38,5 +38,5 @@ public interface DimExtractionFn
 
   public String apply(String dimValue);
 
-  public boolean canTransformValues();
+  public boolean preservesOrdering();
 }

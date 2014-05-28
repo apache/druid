@@ -84,9 +84,9 @@ public class ExtractionDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public boolean canTransformValues()
+  public boolean preservesOrdering()
   {
-    return dimExtractionFn.canTransformValues();
+    return dimExtractionFn.preservesOrdering();
   }
 
   @Override
