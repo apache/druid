@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import io.druid.client.ServerView;
+import io.druid.client.FilteredServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -51,7 +51,7 @@ public class TaskToolboxFactory
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final ServerView newSegmentServerView;
+  private final FilteredServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final ExecutorService queryExecutorService;
   private final MonitorScheduler monitorScheduler;
@@ -68,7 +68,7 @@ public class TaskToolboxFactory
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      ServerView newSegmentServerView,
+      FilteredServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,

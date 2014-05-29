@@ -55,7 +55,6 @@ import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
-import io.druid.segment.realtime.plumber.Sink;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
