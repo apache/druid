@@ -189,13 +189,10 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
   }
 
   /**
-   * Creates a copy of the given indexed with the given cache
+   * Creates a copy of the given indexed with the given cache size
    * The resulting copy must be closed to release resources used by the cache
-   *
-   * @param other
-   * @param cache
    */
-  GenericIndexed(GenericIndexed<T> other, final SizedLRUMap<Integer, T> cache)
+  GenericIndexed(GenericIndexed<T> other, final int maxBytes)
   {
     this.theBuffer = other.theBuffer;
     this.strategy = other.strategy;
@@ -209,7 +206,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
       @Override
       protected SizedLRUMap<Integer, T> initialValue()
       {
-        return cache;
+        return new SizedLRUMap<>(INITIAL_CACHE_CAPACITY, maxBytes);
       }
     };
 
@@ -319,13 +316,13 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
   }
 
   /**
-   * The returned CachedIndexed must be closed to release the underlying memory
+   * The returned GenericIndexed must be closed to release the underlying memory
    * @param maxBytes
    * @return
    */
   public GenericIndexed<T> withCache(int maxBytes)
   {
-    return new GenericIndexed<>(this, new SizedLRUMap<Integer, T>(INITIAL_CACHE_CAPACITY, maxBytes));
+    return new GenericIndexed<>(this, maxBytes);
   }
 
   @Override
