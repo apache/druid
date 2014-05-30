@@ -35,6 +35,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 /**
@@ -44,7 +45,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
 
-  final private Map<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
+  final private ConcurrentMap<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
   private final Predicate<DataSegment> defaultFilter;
 
   @Inject

@@ -29,13 +29,11 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
-import io.druid.segment.filter.Filters;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -48,7 +46,7 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
   final private ConcurrentMap<String, Set<DataSegment>> zNodes = new MapMaker().makeMap();
-  final private Map<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
+  final private ConcurrentMap<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
   final private Predicate<DataSegment> defaultFilter;
 
   @Inject
