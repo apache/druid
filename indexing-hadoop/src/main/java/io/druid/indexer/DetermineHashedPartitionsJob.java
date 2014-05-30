@@ -158,22 +158,27 @@ public class DetermineHashedPartitionsJob implements Jobby
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
-          Long cardinality = config.jsonMapper.readValue(
-            Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-        {
-        }
-        );
-        final int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
-
-        List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-        if (numberOfShards == 1) {
-          actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
-        } else {
-          for (int i = 0; i < numberOfShards; ++i) {
-            actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
-            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+          final Long numRows = config.jsonMapper.readValue(
+              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
+          {
           }
-        }
+          );
+
+          log.info("Found approximately [%,d] rows in data.", numRows);
+
+          final int numberOfShards = (int) Math.ceil((double) numRows / config.getTargetPartitionSize());
+
+          log.info("Creating [%,d] shards", numberOfShards);
+
+          List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
+          if (numberOfShards == 1) {
+            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+          } else {
+            for (int i = 0; i < numberOfShards; ++i) {
+              actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
+              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+            }
+          }
 
           shardSpecs.put(bucket, actualSpecs);
 

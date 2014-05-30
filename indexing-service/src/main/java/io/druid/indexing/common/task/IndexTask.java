@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -34,6 +35,7 @@ import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.TimestampParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -550,5 +552,13 @@ public class IndexTask extends AbstractFixedIntervalTask
     {
       return rowFlushBoundary;
     }
+  }
+
+
+  public static void main(String[] args)
+  {
+    Function<String, DateTime> parser = TimestampParser.createTimestampParser("millis");
+    parser.apply("1401266370985");
+
   }
 }
