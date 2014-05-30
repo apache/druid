@@ -125,7 +125,7 @@ public class DruidClusterBridge
         {
           @Override
           public ServerView.CallbackAction segmentAdded(
-              DruidServer server, DataSegment segment
+              DruidServerMetadata server, DataSegment segment
           )
           {
             try {
@@ -147,7 +147,7 @@ public class DruidClusterBridge
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
             try {
               synchronized (lock) {
@@ -172,7 +172,7 @@ public class DruidClusterBridge
           {
             try {
               for (DataSegment dataSegment : server.getSegments().values()) {
-                serverRemovedSegment(dataSegmentAnnouncer, dataSegment, server);
+                serverRemovedSegment(dataSegmentAnnouncer, dataSegment, server.getMetadata());
               }
             }
             catch (Exception e) {
@@ -370,7 +370,7 @@ public class DruidClusterBridge
     }
   }
 
-  private void serverRemovedSegment(DataSegmentAnnouncer dataSegmentAnnouncer, DataSegment segment, DruidServer server)
+  private void serverRemovedSegment(DataSegmentAnnouncer dataSegmentAnnouncer, DataSegment segment, DruidServerMetadata server)
       throws IOException
   {
     Integer count = segments.get(segment);

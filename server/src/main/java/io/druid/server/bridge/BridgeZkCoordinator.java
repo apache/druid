@@ -92,7 +92,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
           {
             @Override
             public ServerView.CallbackAction segmentAdded(
-                DruidServer server, DataSegment theSegment
+                DruidServerMetadata server, DataSegment theSegment
             )
             {
               if (theSegment.equals(segment)) {
@@ -118,7 +118,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
         {
           @Override
           public ServerView.CallbackAction segmentRemoved(
-              DruidServer server, DataSegment theSegment
+              DruidServerMetadata server, DataSegment theSegment
           )
           {
             if (theSegment.equals(segment)) {

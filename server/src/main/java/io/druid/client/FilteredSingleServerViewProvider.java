@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,9 +28,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
 
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public class FilteredSingleServerViewProvider implements FilteredServerViewProvider
 {
   @JacksonInject
   @NotNull
@@ -45,8 +43,8 @@ public class SingleServerInventoryProvider implements ServerInventoryViewProvide
   private ObjectMapper jsonMapper = null;
 
   @Override
-  public ServerInventoryView get()
+  public SingleServerInventoryView get()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysTrue());
+    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysFalse());
   }
 }
