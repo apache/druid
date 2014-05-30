@@ -146,7 +146,7 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        null
+        Predicates.<DataSegment>alwaysTrue()
     );
 
     batchServerInventoryView.start();

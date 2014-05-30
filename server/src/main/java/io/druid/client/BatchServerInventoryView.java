@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.MapMaker;
@@ -66,11 +67,8 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
         new TypeReference<Set<DataSegment>>(){}
     );
 
-    if(defaultFilter != null) {
-      this.defaultFilter = defaultFilter;
-    } else {
-      this.defaultFilter = Predicates.alwaysTrue();
-    }
+    Preconditions.checkNotNull(defaultFilter);
+    this.defaultFilter = defaultFilter;
   }
 
   @Override

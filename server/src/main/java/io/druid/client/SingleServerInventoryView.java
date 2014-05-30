@@ -21,10 +21,10 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
@@ -33,8 +33,6 @@ import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
@@ -65,11 +63,9 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
         new TypeReference<DataSegment>(){}
     );
 
-    if(defaultFilter != null) {
-      this.defaultFilter = defaultFilter;
-    } else {
-      this.defaultFilter = Predicates.alwaysTrue();
-    }  }
+    Preconditions.checkNotNull(defaultFilter);
+    this.defaultFilter = defaultFilter;
+  }
 
   @Override
   protected DruidServer addInnerInventory(
