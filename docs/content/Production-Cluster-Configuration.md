@@ -55,7 +55,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/overlord
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.115"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.116"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -137,7 +137,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/middlemanager
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.115","io.druid.extensions:druid-kafka-seven:0.6.115"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.116","io.druid.extensions:druid-kafka-seven:0.6.116"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -285,7 +285,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/historical
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.115"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.116"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod

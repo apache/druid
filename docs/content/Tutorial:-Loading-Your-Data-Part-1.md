@@ -96,7 +96,7 @@ The configurations for the overlord node are as follows:
 
 -Ddruid.zk.service.host=localhost
 
--Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.115"]
+-Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.116"]
 
 -Ddruid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
 -Ddruid.db.connector.user=druid
