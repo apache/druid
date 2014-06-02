@@ -97,8 +97,9 @@ public class S3TaskLogs implements TaskLogs
       );
     }
     catch (ServiceException e) {
-      if (e.getErrorCode() != null && (e.getErrorCode().equals("NoSuchKey") || e.getErrorCode()
-                                                                                .equals("NoSuchBucket"))) {
+      if (404 == e.getResponseCode()
+          || "NoSuchKey".equals(e.getErrorCode())
+          || "NoSuchBucket".equals(e.getErrorCode())) {
         return Optional.absent();
       } else {
         throw new IOException(String.format("Failed to stream logs from: %s", taskKey), e);
