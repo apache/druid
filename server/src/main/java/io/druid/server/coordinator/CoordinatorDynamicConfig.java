@@ -120,7 +120,7 @@ public class CoordinatorDynamicConfig
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 100000000L, 100, 5, 15, 10, 1, false);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false);
     }
 
     private Builder(
