@@ -53,7 +53,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |--------|-----------|-------|
 |`millisToWaitBeforeDeleting`|How long does the coordinator need to be active before it can start deleting segments.|90000 (15 mins)|
 |`mergeBytesLimit`|The maximum number of bytes to merge (for segments).|100000000L|
-|`mergeSegmentsLimit`|The maximum number of segments that can be in a single merge [task](Tasks.html).|Integer.MAX_VALUE|
+|`mergeSegmentsLimit`|The maximum number of segments that can be in a single merge [task](Tasks.html).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
