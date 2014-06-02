@@ -323,14 +323,15 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
         );
       }
 
-      final boolean atSteadyState = currentlyProvisioning.isEmpty()
-                                    && currentlyTerminating.isEmpty()
-                                    && validWorkers.size() == targetWorkerCount;
-      final boolean shouldScaleUp = atSteadyState
+      final boolean notTakingActions = currentlyProvisioning.isEmpty()
+                                    && currentlyTerminating.isEmpty();
+      final boolean shouldScaleUp = notTakingActions
+                                    && validWorkers.size() >= targetWorkerCount
                                     && targetWorkerCount < maxWorkerCount
                                     && (hasTaskPendingBeyondThreshold(pendingTasks)
                                         || targetWorkerCount < minWorkerCount);
-      final boolean shouldScaleDown = atSteadyState
+      final boolean shouldScaleDown = notTakingActions
+                                      && validWorkers.size() == targetWorkerCount
                                       && targetWorkerCount > minWorkerCount
                                       && Iterables.any(validWorkers, isLazyWorker);
       if (shouldScaleUp) {
