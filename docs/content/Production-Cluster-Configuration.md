@@ -208,7 +208,7 @@ JVM Configuration:
 -Xms10g
 -XX:NewSize=512m
 -XX:MaxNewSize=512m
--XX:+G1GC
+-XX:+UseG1GC
 -XX:+PrintGCDetails
 -XX:+PrintGCTimeStamps
 -Duser.timezone=UTC
