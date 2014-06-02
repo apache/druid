@@ -452,8 +452,19 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
               List<RemoteTaskRunnerWorkItem> copy = Lists.newArrayList(pendingTasks.values());
               for (RemoteTaskRunnerWorkItem taskRunnerWorkItem : copy) {
                 String taskId = taskRunnerWorkItem.getTaskId();
-                if (tryAssignTask(pendingTaskPayloads.get(taskId), taskRunnerWorkItem)) {
-                  pendingTaskPayloads.remove(taskId);
+                try {
+                  if (tryAssignTask(pendingTaskPayloads.get(taskId), taskRunnerWorkItem)) {
+                    pendingTaskPayloads.remove(taskId);
+                  }
+                }
+                catch (Exception e) {
+                  log.makeAlert(e, "Exception while trying to assign task")
+                     .addData("taskId", taskRunnerWorkItem.getTaskId())
+                     .emit();
+                  RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
+                  if (workItem != null) {
+                    workItem.setResult(TaskStatus.failure(taskId));
+                  }
                 }
               }
             }
@@ -507,32 +518,24 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
    * @param taskRunnerWorkItem - the task to assign
    * @return true iff the task is now assigned
    */
-  private boolean tryAssignTask(final Task task, final RemoteTaskRunnerWorkItem taskRunnerWorkItem)
+  private boolean tryAssignTask(final Task task, final RemoteTaskRunnerWorkItem taskRunnerWorkItem) throws Exception
   {
-    try {
-      Preconditions.checkNotNull(task, "task");
-      Preconditions.checkNotNull(taskRunnerWorkItem, "taskRunnerWorkItem");
-      Preconditions.checkArgument(task.getId().equals(taskRunnerWorkItem.getTaskId()), "task id != workItem id");
+    Preconditions.checkNotNull(task, "task");
+    Preconditions.checkNotNull(taskRunnerWorkItem, "taskRunnerWorkItem");
+    Preconditions.checkArgument(task.getId().equals(taskRunnerWorkItem.getTaskId()), "task id != workItem id");
 
-      if (runningTasks.containsKey(task.getId()) || findWorkerRunningTask(task.getId()) != null) {
-        log.info("Task[%s] already running.", task.getId());
+    if (runningTasks.containsKey(task.getId()) || findWorkerRunningTask(task.getId()) != null) {
+      log.info("Task[%s] already running.", task.getId());
+      return true;
+    } else {
+      // Nothing running this task, announce it in ZK for a worker to run it
+      ZkWorker zkWorker = findWorkerForTask(task);
+      if (zkWorker != null) {
+        announceTask(task, zkWorker, taskRunnerWorkItem);
         return true;
       } else {
-        // Nothing running this task, announce it in ZK for a worker to run it
-        ZkWorker zkWorker = findWorkerForTask(task);
-        if (zkWorker != null) {
-          announceTask(task, zkWorker, taskRunnerWorkItem);
-          return true;
-        } else {
-          return false;
-        }
+        return false;
       }
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception while trying to run task")
-         .addData("taskId", taskRunnerWorkItem.getTaskId())
-         .emit();
-      return false;
     }
   }
 
