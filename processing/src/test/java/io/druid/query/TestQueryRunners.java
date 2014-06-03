@@ -41,14 +41,11 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new TopNQueryRunnerFactory(pool, new TopNQueryQueryToolChest(topNConfig), new QueryWatcher()
-    {
-      @Override
-      public void registerQuery(Query query, ListenableFuture future)
-      {
-
-      }
-    });
+    QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+        pool,
+        new TopNQueryQueryToolChest(topNConfig),
+        QueryRunnerTestHelper.DUMMY_QUERYWATCHER
+    );
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()

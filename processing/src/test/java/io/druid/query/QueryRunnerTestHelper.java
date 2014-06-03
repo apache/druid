@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -53,6 +54,16 @@ import java.util.List;
  */
 public class QueryRunnerTestHelper
 {
+
+  public static final QueryWatcher DUMMY_QUERYWATCHER = new QueryWatcher()
+  {
+    @Override
+    public void registerQuery(Query query, ListenableFuture future)
+    {
+
+    }
+  };
+
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
   public static final UnionDataSource unionDataSource = new UnionDataSource(

@@ -23,9 +23,12 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.collections.StupidPool;
+import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -65,7 +68,8 @@ public class TopNUnionQueryTest
         QueryRunnerTestHelper.makeUnionQueryRunners(
             new TopNQueryRunnerFactory(
                 TestQueryRunners.getPool(),
-                new TopNQueryQueryToolChest(new TopNQueryConfig())
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
+                QueryRunnerTestHelper.DUMMY_QUERYWATCHER
             )
         )
     );
@@ -82,7 +86,8 @@ public class TopNUnionQueryTest
                       }
                     }
                 ),
-                new TopNQueryQueryToolChest(new TopNQueryConfig())
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
+                QueryRunnerTestHelper.DUMMY_QUERYWATCHER
             )
         )
     );

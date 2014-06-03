@@ -44,16 +44,14 @@ import io.druid.query.Result;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Rule;
+import org.junit.Assert;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -70,9 +68,6 @@ public class DirectDruidClientTest
 
     }
   };
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void testRun() throws Exception
@@ -220,8 +215,13 @@ public class DirectDruidClientTest
     Assert.assertEquals(0, client1.getNumOpenConnections());
 
 
-    thrown.expect(QueryInterruptedException.class);
-    Assert.assertTrue(Sequences.toList(results, Lists.newArrayList()).isEmpty());
+    QueryInterruptedException exception = null;
+    try {
+      Sequences.toList(results, Lists.newArrayList());
+    } catch(QueryInterruptedException e) {
+      exception = e;
+    }
+    Assert.assertNotNull(exception);
 
     EasyMock.verify(httpClient);
   }

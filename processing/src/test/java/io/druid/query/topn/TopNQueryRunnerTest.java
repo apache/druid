@@ -72,14 +72,7 @@ public class TopNQueryRunnerTest
             new TopNQueryRunnerFactory(
                 TestQueryRunners.getPool(),
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                new QueryWatcher()
-                {
-                  @Override
-                  public void registerQuery(Query query, ListenableFuture future)
-                  {
-
-                  }
-                }
+                QueryRunnerTestHelper.DUMMY_QUERYWATCHER
             )
         )
     );
@@ -97,14 +90,7 @@ public class TopNQueryRunnerTest
                     }
                 ),
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                new QueryWatcher()
-                {
-                  @Override
-                  public void registerQuery(Query query, ListenableFuture future)
-                  {
-
-                  }
-                }
+                QueryRunnerTestHelper.DUMMY_QUERYWATCHER
             )
         )
     );
