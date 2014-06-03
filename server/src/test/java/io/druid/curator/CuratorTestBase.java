@@ -19,7 +19,7 @@
 
 package io.druid.curator;
 
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
@@ -51,7 +51,7 @@ public class CuratorTestBase
 
   protected void tearDownServerAndCurator()
   {
-    Closeables.closeQuietly(curator);
-    Closeables.closeQuietly(server);
+    CloseQuietly.close(curator);
+    CloseQuietly.close(server);
   }
 }

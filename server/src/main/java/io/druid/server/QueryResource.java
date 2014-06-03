@@ -25,8 +25,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
@@ -200,7 +200,7 @@ public class QueryResource
     }
     finally {
       resp.flushBuffer();
-      Closeables.closeQuietly(out);
+      CloseQuietly.close(out);
     }
   }
 }

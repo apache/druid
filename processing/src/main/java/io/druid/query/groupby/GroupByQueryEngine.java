@@ -25,12 +25,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -123,7 +123,7 @@ public class GroupByQueryEngine
                     @Override
                     public void cleanup(RowIterator iterFromMake)
                     {
-                      Closeables.closeQuietly(iterFromMake);
+                      CloseQuietly.close(iterFromMake);
                     }
                   }
               );
@@ -135,7 +135,7 @@ public class GroupByQueryEngine
           @Override
           public void close() throws IOException
           {
-            Closeables.closeQuietly(bufferHolder);
+            CloseQuietly.close(bufferHolder);
           }
         }
       )

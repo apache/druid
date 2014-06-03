@@ -21,6 +21,7 @@ package io.druid.storage.hdfs;
 
 import com.google.common.io.Closeables;
 import com.google.inject.Inject;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -52,22 +53,17 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller
 
     final FileSystem fs = checkPathAndGetFilesystem(path);
 
-    FSDataInputStream in = null;
-    try {
-      if (path.getName().endsWith(".zip")) {
-        in = fs.open(path);
-        CompressionUtils.unzip(in, dir);
-        in.close();
+    if (path.getName().endsWith(".zip")) {
+      try {
+        try (FSDataInputStream in = fs.open(path)) {
+          CompressionUtils.unzip(in, dir);
+        }
       }
-      else {
-        throw new SegmentLoadingException("Unknown file type[%s]", path);
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Some IOException");
       }
-    }
-    catch (IOException e) {
-      throw new SegmentLoadingException(e, "Some IOException");
-    }
-    finally {
-      Closeables.closeQuietly(in);
+    } else {
+      throw new SegmentLoadingException("Unknown file type[%s]", path);
     }
   }
 
@@ -85,7 +81,8 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller
     }
   }
 
-  private Path getPath(DataSegment segment) {
+  private Path getPath(DataSegment segment)
+  {
     return new Path(String.valueOf(segment.getLoadSpec().get("path")));
   }
 

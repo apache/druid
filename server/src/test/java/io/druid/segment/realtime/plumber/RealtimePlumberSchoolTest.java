@@ -26,7 +26,6 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
-import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
@@ -85,7 +84,7 @@ public class RealtimePlumberSchoolTest
         new InputRowParser()
         {
           @Override
-          public InputRow parse(Object input) throws FormattedException
+          public InputRow parse(Object input)
           {
             return null;
           }
@@ -177,7 +176,7 @@ public class RealtimePlumberSchoolTest
         }
     );
 
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     while (!committed.booleanValue()) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {

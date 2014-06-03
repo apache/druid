@@ -21,9 +21,9 @@ package io.druid.firehose.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
@@ -123,7 +123,7 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
       }
 
       @Override
-      public InputRow nextRow() throws FormattedException
+      public InputRow nextRow()
       {
         final Message message = iter.next().message();
 
@@ -134,16 +134,14 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
         return parseMessage(message);
       }
 
-      public InputRow parseMessage(Message message) throws FormattedException
+      public InputRow parseMessage(Message message)
       {
         try {
           return theParser.parse(message.payload());
         }
         catch (Exception e) {
-          throw new FormattedException.Builder()
-              .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_ROW)
-              .withMessage(String.format("Error parsing[%s], got [%s]", message.payload(), e.toString()))
-              .build();
+          log.error("Unparseable row! Error parsing[%s]", message.payload());
+          throw Throwables.propagate(e);
         }
       }
 

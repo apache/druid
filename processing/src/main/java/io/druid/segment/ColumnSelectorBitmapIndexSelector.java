@@ -19,8 +19,8 @@
 
 package io.druid.segment;
 
-import com.google.common.io.Closeables;
 import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
@@ -95,7 +95,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       return column.length();
     }
     finally {
-      Closeables.closeQuietly(column);
+      CloseQuietly.close(column);
     }
   }
 

@@ -38,6 +38,7 @@ import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -438,9 +439,9 @@ public class IndexMerger
       serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
     }
     finally {
-      Closeables.closeQuietly(channel);
+      CloseQuietly.close(channel);
       channel = null;
-      Closeables.closeQuietly(fileOutputStream);
+      CloseQuietly.close(fileOutputStream);
       fileOutputStream = null;
     }
     IndexIO.checkFileSize(indexFile);
@@ -881,7 +882,7 @@ public class IndexMerger
       );
     }
     finally {
-      Closeables.closeQuietly(channel);
+      CloseQuietly.close(channel);
       channel = null;
     }
     IndexIO.checkFileSize(indexFile);

@@ -26,6 +26,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.OutputSupplier;
 import com.google.inject.Inject;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -78,17 +79,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
     fs.mkdirs(outFile.getParent());
     log.info("Compressing files from[%s] to [%s]", inDir, outFile);
-    FSDataOutputStream out = null;
+
     long size;
-    try {
-      out = fs.create(outFile);
-
+    try (FSDataOutputStream out = fs.create(outFile)) {
       size = CompressionUtils.zip(inDir, out);
-
-      out.close();
-    }
-    finally {
-      Closeables.closeQuietly(out);
     }
 
     return createDescriptorFile(

@@ -20,11 +20,11 @@
 package io.druid.segment;
 
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
@@ -84,8 +84,8 @@ public class MetricHolder
       ByteStreams.copy(in, out);
     }
     finally {
-      Closeables.closeQuietly(out);
-      Closeables.closeQuietly(in);
+      CloseQuietly.close(out);
+      CloseQuietly.close(in);
     }
   }
 

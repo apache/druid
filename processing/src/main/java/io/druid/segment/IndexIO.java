@@ -165,14 +165,9 @@ public class IndexIO
     }
 
     final File indexFile = new File(inDir, "index.drd");
-    InputStream in = null;
     int version;
-    try {
-      in = new FileInputStream(indexFile);
+    try (InputStream in = new FileInputStream(indexFile)) {
       version = in.read();
-    }
-    finally {
-      Closeables.closeQuietly(in);
     }
     return version;
   }
@@ -194,8 +189,8 @@ public class IndexIO
       case 2:
       case 3:
         log.makeAlert("Attempt to load segment of version <= 3.")
-            .addData("version", version)
-            .emit();
+           .addData("version", version)
+           .emit();
         return false;
       case 4:
       case 5:

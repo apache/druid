@@ -180,6 +180,7 @@ public class TestIndex
                     new TimestampSpec("ts", "iso"),
                     new DimensionsSpec(Arrays.asList(DIMENSIONS), null, null),
                     "\t",
+                    "\u0001",
                     Arrays.asList(COLUMNS)
                 ),
                 null, null, null, null
