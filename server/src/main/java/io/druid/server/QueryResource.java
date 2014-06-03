@@ -73,7 +73,6 @@ import java.util.UUID;
 public class QueryResource
 {
   private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
-  private static final Charset UTF8 = Charset.forName("UTF-8");
   private static final Joiner COMMA_JOIN = Joiner.on(",");
   public static final String APPLICATION_SMILE = "application/smile";
   public static final String APPLICATION_JSON = "application/json";
