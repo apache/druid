@@ -85,6 +85,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -351,7 +352,7 @@ public class Initialization
     return Guice.createInjector(
         new DruidGuiceExtensions(),
         new JacksonModule(),
-        new PropertiesModule("runtime.properties"),
+        new PropertiesModule(Arrays.asList("global.runtime.properties", "runtime.properties")),
         new ConfigModule(),
         new Module()
         {
