@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -132,6 +133,110 @@ public class ChainedExecutionQueryRunnerTest
       resultFuture.get();
     } catch(ExecutionException e) {
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
+      cause = (QueryInterruptedException)e.getCause();
+    }
+    Assert.assertNotNull(cause);
+    Assert.assertTrue(future.isCancelled());
+    Assert.assertTrue(runner1.hasStarted);
+    Assert.assertTrue(runner2.hasStarted);
+    Assert.assertFalse(runner3.hasStarted);
+    Assert.assertFalse(runner1.hasCompleted);
+    Assert.assertFalse(runner2.hasCompleted);
+    Assert.assertFalse(runner3.hasCompleted);
+
+    EasyMock.verify(watcher);
+  }
+
+  @Test
+  public void testQueryTimeout() throws Exception
+  {
+    ExecutorService exec = PrioritizedExecutorService.create(
+        new Lifecycle(), new ExecutorServiceConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return "test";
+          }
+
+          @Override
+          public int getNumThreads()
+          {
+            return 2;
+          }
+        }
+    );
+
+    final CountDownLatch queriesStarted = new CountDownLatch(2);
+    final CountDownLatch queryIsRegistered = new CountDownLatch(1);
+
+    Capture<ListenableFuture> capturedFuture = new Capture<>();
+    QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
+    watcher.registerQuery(EasyMock.<Query>anyObject(), EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture)));
+    EasyMock.expectLastCall()
+            .andAnswer(
+                new IAnswer<Void>()
+                {
+                  @Override
+                  public Void answer() throws Throwable
+                  {
+                    queryIsRegistered.countDown();
+                    return null;
+                  }
+                }
+            )
+            .once();
+
+    EasyMock.replay(watcher);
+
+    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted);
+    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted);
+    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted);
+    ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
+        exec,
+        Ordering.<Integer>natural(),
+        watcher,
+        Lists.<QueryRunner<Integer>>newArrayList(
+            runner1,
+            runner2,
+            runner3
+        )
+    );
+
+    final Sequence seq = chainedRunner.run(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .intervals("2014/2015")
+              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
+              .context(ImmutableMap.<String, Object>of("timeout", (100), "queryId", "test"))
+              .build()
+    );
+
+    Future resultFuture = Executors.newFixedThreadPool(1).submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            Sequences.toList(seq, Lists.newArrayList());
+          }
+        }
+    );
+
+    // wait for query to register and start
+    Assert.assertTrue(queryIsRegistered.await(1, TimeUnit.SECONDS));
+    Assert.assertTrue(queriesStarted.await(1, TimeUnit.SECONDS));
+
+    // cancel the query
+    Assert.assertTrue(capturedFuture.hasCaptured());
+    ListenableFuture future = capturedFuture.getValue();
+
+    QueryInterruptedException cause = null;
+    try {
+      resultFuture.get();
+    } catch(ExecutionException e) {
+      Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
+      Assert.assertEquals("Query timeout", e.getCause().getMessage());
       cause = (QueryInterruptedException)e.getCause();
     }
     Assert.assertNotNull(cause);
