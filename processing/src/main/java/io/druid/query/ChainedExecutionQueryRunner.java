@@ -136,6 +136,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 
                                       return retVal;
                                     }
+                                    catch (QueryInterruptedException e) {
+                                      throw Throwables.propagate(e);
+                                    }
                                     catch (Exception e) {
                                       log.error(e, "Exception with one of the sequences!");
                                       throw Throwables.propagate(e);
@@ -166,11 +169,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               throw new QueryInterruptedException("Query interrupted");
             }
             catch(CancellationException e) {
-              log.warn(e, "Query cancelled, query id [%s]", query.getId());
               throw new QueryInterruptedException("Query cancelled");
             }
             catch(TimeoutException e) {
-              log.warn(e, "Query timeout, query id [%s]", query.getId());
               throw new QueryInterruptedException("Query timeout");
             }
             catch (ExecutionException e) {

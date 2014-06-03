@@ -333,7 +333,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           throw new RE(e, "Failure getting results from[%s]", url);
         }
         catch (CancellationException e) {
-          throw new QueryInterruptedException();
+          throw new QueryInterruptedException("Query cancelled");
         }
       }
     }

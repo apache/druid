@@ -125,7 +125,7 @@ public class QueryResource
     final long start = System.currentTimeMillis();
     Query query = null;
     byte[] requestQuery = null;
-    String queryId;
+    String queryId = null;
 
     final boolean isSmile = APPLICATION_SMILE.equals(req.getContentType());
 
@@ -212,6 +212,28 @@ public class QueryResource
             .build();
       }
     }
+    catch (QueryInterruptedException e) {
+      try {
+        log.info("%s [%s]", e.getMessage(), queryId);
+        requestLogger.log(
+            new RequestLogLine(
+                new DateTime(),
+                req.getRemoteAddr(),
+                query,
+                new QueryStats(ImmutableMap.<String, Object>of("success", false, "interrupted", true, "reason", e.toString()))
+            )
+        );
+      } catch (Exception e2) {
+        log.error(e2, "Unable to log query [%s]!", query);
+      }
+      return Response.serverError().entity(
+          jsonWriter.writeValueAsString(
+              ImmutableMap.of(
+                  "error", e.getMessage()
+              )
+          )
+      ).build();
+    }
     catch (Exception e) {
       final String queryString =
           query == null
@@ -243,7 +265,7 @@ public class QueryResource
       return Response.serverError().entity(
           jsonWriter.writeValueAsString(
               ImmutableMap.of(
-                  "error", (e.getMessage() == null) ? "null Exception" : e.getMessage()
+                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )
           )
       ).build();
