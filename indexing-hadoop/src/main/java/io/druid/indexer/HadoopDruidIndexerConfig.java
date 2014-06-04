@@ -255,6 +255,11 @@ public class HadoopDruidIndexerConfig
     return (schema.getIOConfig().getMetadataUpdateSpec() != null);
   }
 
+  public boolean isCombineText()
+  {
+    return schema.getTuningConfig().isCombineText();
+  }
+
   public StringInputRowParser getParser()
   {
     return (StringInputRowParser) schema.getDataSchema().getParser();

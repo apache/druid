@@ -73,6 +73,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
       final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
+      final @JsonProperty("combineText") boolean combineText,
       // These fields are deprecated and will be removed in the future
       final @JsonProperty("timestampColumn") String timestampColumn,
       final @JsonProperty("timestampFormat") String timestampFormat,
@@ -163,7 +164,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           cleanupOnFailure,
           overwriteFiles,
           ignoreInvalidRows,
-          jobProperties
+          jobProperties,
+          combineText
       );
     }
   }
@@ -212,6 +214,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         null,
         false,
         null,
+        false,
         null,
         null,
         null,
@@ -244,6 +247,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         null,
         false,
         null,
+        false,
         null,
         null,
         null,
@@ -276,6 +280,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         null,
         false,
         null,
+        false,
         null,
         null,
         null,
