@@ -27,11 +27,11 @@ import io.airlift.command.Command;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
+import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -65,11 +65,13 @@ public class CliInternalHadoopIndexer implements Runnable
   public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
   {
     try {
+      HadoopIngestionSpec spec;
       if (argumentSpec.startsWith("{")) {
-        return HadoopDruidIndexerConfig.fromString(argumentSpec);
+        spec = HadoopDruidIndexerConfig.jsonMapper.readValue(argumentSpec, HadoopIngestionSpec.class);
       } else {
-        return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
+        spec = HadoopDruidIndexerConfig.jsonMapper.readValue(new File(argumentSpec), HadoopIngestionSpec.class);
       }
+      return HadoopDruidIndexerConfig.fromSchema(spec);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
