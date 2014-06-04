@@ -67,11 +67,10 @@ public class CliInternalHadoopIndexer implements Runnable
     try {
       HadoopIngestionSpec spec;
       if (argumentSpec.startsWith("{")) {
-        spec = HadoopDruidIndexerConfig.jsonMapper.readValue(argumentSpec, HadoopIngestionSpec.class);
+        return HadoopDruidIndexerConfig.fromString(argumentSpec);
       } else {
-        spec = HadoopDruidIndexerConfig.jsonMapper.readValue(new File(argumentSpec), HadoopIngestionSpec.class);
+        return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
       }
-      return HadoopDruidIndexerConfig.fromSchema(spec);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

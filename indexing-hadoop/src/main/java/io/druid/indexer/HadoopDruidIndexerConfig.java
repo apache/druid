@@ -37,7 +37,6 @@ import com.google.inject.Module;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.TimestampParser;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -111,7 +110,17 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
+    //backwards compatibility
+    if (argSpec.containsKey("schema")) {
+      return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
+    } else {
+      return new HadoopDruidIndexerConfig(
+          HadoopDruidIndexerConfig.jsonMapper.convertValue(
+              argSpec,
+              HadoopIngestionSpec.class
+          )
+      );
+    }
   }
 
   @SuppressWarnings("unchecked")
