@@ -201,6 +201,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 while (baseIter.hasNext()) {
+                  if (Thread.interrupted()) {
+                    throw new QueryInterruptedException();
+                  }
+
                   currEntry.set(baseIter.next());
 
                   if (filterMatcher.matches()) {
