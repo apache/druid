@@ -38,7 +38,7 @@ import java.util.List;
  */
 @Command(
     name = "hadoop-indexer",
-    description = "Runs the batch Hadoop Druid Indexer, see https://github.com/metamx/druid/wiki/Batch-ingestion for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/latest/Batch-ingestion.html for a description."
 )
 public class CliInternalHadoopIndexer implements Runnable
 {
