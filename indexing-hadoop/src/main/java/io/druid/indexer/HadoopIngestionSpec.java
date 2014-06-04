@@ -138,7 +138,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
       this.dataSchema = new DataSchema(
           dataSource,
           new StringInputRowParser(
-              dataSpec == null ? null : dataSpec.toParseSpec(timestampSpec, dimensionExclusions),
+              dataSpec == null ? null : dataSpec.toParseSpec(theTimestampSpec, dimensionExclusions),
               null, null, null, null
           ),
           rollupSpec == null
