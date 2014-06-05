@@ -426,19 +426,7 @@ public class DruidCoordinator
   {
     Set<DataSegment> availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
 
-    Iterable<DataSegment> dataSegments = Iterables.concat(
-        Iterables.transform(
-            databaseSegmentManager.getInventory(),
-            new Function<DruidDataSource, Iterable<DataSegment>>()
-            {
-              @Override
-              public Iterable<DataSegment> apply(DruidDataSource input)
-              {
-                return input.getSegments();
-              }
-            }
-        )
-    );
+    Iterable<DataSegment> dataSegments = getAvailableDataSegments();
 
     for (DataSegment dataSegment : dataSegments) {
       if (dataSegment.getSize() < 0) {
