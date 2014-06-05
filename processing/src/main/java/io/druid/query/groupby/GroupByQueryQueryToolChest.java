@@ -29,6 +29,7 @@ import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -62,10 +63,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
   };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
-  private static final Map<String, Object> NO_MERGE_CONTEXT = ImmutableMap.<String, Object>of(GROUP_BY_MERGE_KEY, "false");
+  private static final Map<String, Object> NO_MERGE_CONTEXT = ImmutableMap.<String, Object>of(
+      GROUP_BY_MERGE_KEY,
+      "false"
+  );
   private final Supplier<GroupByQueryConfig> configSupplier;
-  private GroupByQueryEngine engine; // For running the outer query around a subquery
   private final StupidPool<ByteBuffer> bufferPool;
+  private GroupByQueryEngine engine; // For running the outer query around a subquery
 
 
   @Inject
@@ -99,16 +103,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
-
     Sequence<Row> result;
-
     // If there's a subquery, merge subquery results and then apply the aggregator
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
-      } catch (ClassCastException e) {
+      }
+      catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
       Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
@@ -118,10 +121,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     } else {
       result = runner.run(query);
     }
-
-    return postAggregate(query, makeIncrementalIndex(query, result));
+    final IncrementalIndex index = makeIncrementalIndex(query, result);
+    return new ResourceClosingSequence<Row>(postAggregate(query, index), index);
   }
-
 
   private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
@@ -135,7 +137,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             final MapBasedRow row = (MapBasedRow) input;
             return new MapBasedRow(
                 query.getGranularity()
-                    .toDateTime(row.getTimestampFromEpoch()),
+                     .toDateTime(row.getTimestampFromEpoch()),
                 row.getEvent()
             );
           }
@@ -155,7 +157,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
-
 
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)

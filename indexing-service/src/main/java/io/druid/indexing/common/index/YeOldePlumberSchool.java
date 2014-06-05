@@ -40,6 +40,7 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -219,14 +220,14 @@ public class YeOldePlumberSchool implements PlumberSchool
           log.info("Spilling index[%d] with rows[%d] to: %s", indexToPersist.getCount(), rowsToPersist, dirToPersist);
 
           try {
-
+            final IncrementalIndex index = indexToPersist.getIndex();
             IndexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist
             );
 
             indexToPersist.swapSegment(null);
-
+            index.close();
             metrics.incrementRowOutputCount(rowsToPersist);
 
             spilled.add(dirToPersist);

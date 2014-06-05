@@ -39,6 +39,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -713,14 +714,15 @@ public class RealtimePlumber implements Plumber
             indexToPersist.getIndex(),
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
         );
-
+        IncrementalIndex index = indexToPersist.getIndex();
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
                 indexToPersist.getSegment().getIdentifier(),
                 IndexIO.loadIndex(persistedFile)
             )
         );
-
+        //TODO: can there be some races here ?
+        index.close();
         return numRows;
       }
       catch (IOException e) {

@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -140,7 +141,12 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
       }
     }
 
-    return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null));
+    return new ResourceClosingSequence<Row>(
+        Sequences.simple(
+            indexAccumulatorPair.lhs
+                                .iterableWithPostAggregations(null)
+        ), indexAccumulatorPair.lhs
+    );
   }
 
 }
