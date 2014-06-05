@@ -422,7 +422,7 @@ public class DruidCoordinator
     }
   }
 
-  public Set<DataSegment> getAvailableDataSegments()
+  public Set<DataSegment> getOrderedAvailableDataSegments()
   {
     Set<DataSegment> availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
 
@@ -450,6 +450,23 @@ public class DruidCoordinator
     }
 
     return availableSegments;
+  }
+
+  public Iterable<DataSegment> getAvailableDataSegments()
+  {
+    return Iterables.concat(
+        Iterables.transform(
+            databaseSegmentManager.getInventory(),
+            new Function<DruidDataSource, Iterable<DataSegment>>()
+            {
+              @Override
+              public Iterable<DataSegment> apply(DruidDataSource input)
+              {
+                return input.getSegments();
+              }
+            }
+        )
+    );
   }
 
   @LifecycleStart
