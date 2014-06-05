@@ -79,33 +79,43 @@ public class DeleteTask extends AbstractFixedIntervalTask
   {
     // Strategy: Create an empty segment covering the interval to be deleted
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
-    final IncrementalIndex empty = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0]);
-    final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(getInterval(), empty);
-
-    // Create DataSegment
-    final DataSegment segment =
-        DataSegment.builder()
-                   .dataSource(this.getDataSource())
-                   .interval(getInterval())
-                   .version(myLock.getVersion())
-                   .shardSpec(new NoneShardSpec())
-                   .build();
-
-    final File outDir = new File(toolbox.getTaskWorkDir(), segment.getIdentifier());
-    final File fileToUpload = IndexMerger.merge(Lists.newArrayList(emptyAdapter), new AggregatorFactory[0], outDir);
-
-    // Upload the segment
-    final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, segment);
-
-    log.info(
-        "Uploaded tombstone segment for[%s] interval[%s] with version[%s]",
-        segment.getDataSource(),
-        segment.getInterval(),
-        segment.getVersion()
+    final IncrementalIndex empty = new IncrementalIndex(
+        0,
+        QueryGranularity.NONE,
+        new AggregatorFactory[0],
+        toolbox.getIndexPool()
     );
+    try {
+      final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(getInterval(), empty);
 
-    toolbox.pushSegments(ImmutableList.of(uploadedSegment));
+      // Create DataSegment
+      final DataSegment segment =
+          DataSegment.builder()
+                     .dataSource(this.getDataSource())
+                     .interval(getInterval())
+                     .version(myLock.getVersion())
+                     .shardSpec(new NoneShardSpec())
+                     .build();
 
-    return TaskStatus.success(getId());
+      final File outDir = new File(toolbox.getTaskWorkDir(), segment.getIdentifier());
+      final File fileToUpload = IndexMerger.merge(Lists.newArrayList(emptyAdapter), new AggregatorFactory[0], outDir);
+
+      // Upload the segment
+      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, segment);
+
+      log.info(
+          "Uploaded tombstone segment for[%s] interval[%s] with version[%s]",
+          segment.getDataSource(),
+          segment.getInterval(),
+          segment.getVersion()
+      );
+
+      toolbox.pushSegments(ImmutableList.of(uploadedSegment));
+
+      return TaskStatus.success(getId());
+    }
+    finally {
+      empty.close();
+    }
   }
 }

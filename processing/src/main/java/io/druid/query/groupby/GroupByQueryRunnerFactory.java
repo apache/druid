@@ -29,7 +29,9 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
+import io.druid.guice.annotations.Global;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
@@ -39,6 +41,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -51,17 +54,20 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private final GroupByQueryEngine engine;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
+  private final StupidPool<ByteBuffer> bufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
       Supplier<GroupByQueryConfig> config,
-      GroupByQueryQueryToolChest toolChest
+      GroupByQueryQueryToolChest toolChest,
+      @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.engine = engine;
     this.config = config;
     this.toolChest = toolChest;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -117,7 +123,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, queryRunners);
+      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, bufferPool, queryRunners);
     }
   }
 

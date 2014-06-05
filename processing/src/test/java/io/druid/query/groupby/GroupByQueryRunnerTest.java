@@ -40,6 +40,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -114,7 +115,8 @@ public class GroupByQueryRunnerTest
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         engine,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, engine)
+        new GroupByQueryQueryToolChest(configSupplier, engine, TestQueryRunners.pool),
+        TestQueryRunners.pool
     );
 
     return Lists.newArrayList(
@@ -758,7 +760,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine, TestQueryRunners.pool).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
@@ -807,7 +809,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine, TestQueryRunners.pool).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
@@ -856,7 +858,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine, TestQueryRunners.pool).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 

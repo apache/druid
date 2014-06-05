@@ -31,6 +31,7 @@ import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -108,7 +109,8 @@ public class SpatialFilterTest
                                                         Arrays.asList("lat", "long")
                                                     )
                                                 )
-                                            ).build()
+                                            ).build(),
+        TestQueryRunners.pool
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -248,7 +250,8 @@ public class SpatialFilterTest
                                                           Arrays.asList("lat", "long")
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool
       );
       IncrementalIndex second = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -261,7 +264,8 @@ public class SpatialFilterTest
                                                           Arrays.asList("lat", "long")
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool
       );
       IncrementalIndex third = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -274,7 +278,8 @@ public class SpatialFilterTest
                                                           Arrays.asList("lat", "long")
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool
       );
 
 

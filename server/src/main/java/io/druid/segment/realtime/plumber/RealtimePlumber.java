@@ -19,10 +19,12 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.collections.StupidPool;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.Global;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -59,6 +61,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -95,6 +98,8 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService persistExecutor = null;
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
+  private final StupidPool<ByteBuffer> bufferPool;
+
 
   public RealtimePlumber(
       DataSchema schema,
@@ -106,7 +111,9 @@ public class RealtimePlumber implements Plumber
       ExecutorService queryExecutorService,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      FilteredServerView serverView
+      FilteredServerView serverView,
+      StupidPool<ByteBuffer> bufferPool
+
   )
   {
     this.schema = schema;
@@ -120,6 +127,7 @@ public class RealtimePlumber implements Plumber
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
+    this.bufferPool = bufferPool;
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -184,7 +192,7 @@ public class RealtimePlumber implements Plumber
           segmentGranularity.increment(new DateTime(truncatedTime))
       );
 
-      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval));
+      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), bufferPool);
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -535,7 +543,7 @@ public class RealtimePlumber implements Plumber
           );
         }
 
-        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
+        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants, bufferPool);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
             currSink.getInterval(),

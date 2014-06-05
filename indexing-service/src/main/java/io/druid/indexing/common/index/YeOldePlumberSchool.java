@@ -31,7 +31,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.Global;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
@@ -49,9 +51,11 @@ import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
+import sun.misc.JavaNioAccess;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 
@@ -65,6 +69,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   private final String version;
   private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
+  private final StupidPool<ByteBuffer> bufferPool;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
 
@@ -73,13 +78,16 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
-      @JacksonInject("tmpSegmentDir") File tmpSegmentDir
+      @JacksonInject("tmpSegmentDir") File tmpSegmentDir,
+      //TODO: review this global annotation
+      @JacksonInject @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.interval = interval;
     this.version = version;
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -96,7 +104,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   )
   {
     // There can be only one.
-    final Sink theSink = new Sink(interval, schema, config, version);
+    final Sink theSink = new Sink(interval, schema, config, version, bufferPool);
 
     // Temporary directory to hold spilled segments.
     final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());

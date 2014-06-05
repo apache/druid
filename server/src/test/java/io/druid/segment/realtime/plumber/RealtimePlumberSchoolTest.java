@@ -40,6 +40,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -144,6 +145,7 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         serverView,
         MoreExecutors.sameThreadExecutor(),
+        TestQueryRunners.pool,
         new Period("PT10m"),
         tmpDir,
         Granularity.HOUR,

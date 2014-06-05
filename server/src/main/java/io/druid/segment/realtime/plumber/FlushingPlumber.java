@@ -25,6 +25,7 @@ import com.metamx.common.Granularity;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.collections.StupidPool;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
@@ -34,6 +35,7 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -62,7 +64,8 @@ public class FlushingPlumber extends RealtimePlumber
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService
+      ExecutorService queryExecutorService,
+      StupidPool<ByteBuffer> bufferPool
   )
   {
     super(
@@ -75,7 +78,8 @@ public class FlushingPlumber extends RealtimePlumber
         queryExecutorService,
         null,
         null,
-        null
+        null,
+        bufferPool
     );
 
     this.flushDuration = flushDuration;

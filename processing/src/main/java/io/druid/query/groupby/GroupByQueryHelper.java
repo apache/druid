@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
@@ -32,13 +33,16 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class GroupByQueryHelper
 {
   public static Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> createIndexAccumulatorPair(
       final GroupByQuery query,
-      final GroupByQueryConfig config
+      final GroupByQueryConfig config,
+      StupidPool<ByteBuffer> bufferPool
+
   )
   {
     final QueryGranularity gran = query.getGranularity();
@@ -75,7 +79,8 @@ public class GroupByQueryHelper
         // since incoming truncated timestamps may precede timeStart
         granTimeStart,
         gran,
-        aggs.toArray(new AggregatorFactory[aggs.size()])
+        aggs.toArray(new AggregatorFactory[aggs.size()]),
+        bufferPool
     );
 
     Accumulator<IncrementalIndex, Row> accumulator = new Accumulator<IncrementalIndex, Row>()

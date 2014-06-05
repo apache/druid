@@ -33,13 +33,15 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -53,6 +55,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -66,7 +71,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class IncrementalIndex implements Iterable<Row>
+public class IncrementalIndex implements Iterable<Row>, Closeable
 {
   private static final Logger log = new Logger(IncrementalIndex.class);
   private static final Joiner JOINER = Joiner.on(",");
@@ -76,17 +81,21 @@ public class IncrementalIndex implements Iterable<Row>
   private final Map<String, Integer> metricIndexes;
   private final Map<String, String> metricTypes;
   private final ImmutableList<String> metricNames;
+  private final BufferAggregator[] aggs;
+  private final int[] aggPositionOffsets;
+  private final int totalAggSize;
   private final LinkedHashMap<String, Integer> dimensionOrder;
   private final CopyOnWriteArrayList<String> dimensions;
   private final List<SpatialDimensionSchema> spatialDimensions;
   private final SpatialDimensionRowFormatter spatialDimensionRowFormatter;
   private final DimensionHolder dimValues;
-  private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
+  private final ConcurrentSkipListMap<TimeAndDims, Integer> facts;
+  private final ResourceHolder<ByteBuffer> bufferHolder;
   private volatile AtomicInteger numEntries = new AtomicInteger();
   // This is modified on add() in a critical section.
-  private InputRow in;
+  private ThreadLocal<InputRow> in = new ThreadLocal<>();
 
-  public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema)
+  public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema, StupidPool<ByteBuffer> bufferPool)
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
@@ -95,7 +104,100 @@ public class IncrementalIndex implements Iterable<Row>
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
     final ImmutableMap.Builder<String, String> metricTypesBuilder = ImmutableMap.builder();
+    this.aggs = new BufferAggregator[metrics.length];
+    this.aggPositionOffsets = new int[metrics.length];
+    int currAggSize = 0;
     for (int i = 0; i < metrics.length; i++) {
+      final AggregatorFactory agg = metrics[i];
+      aggs[i] = agg.factorizeBuffered(
+          new ColumnSelectorFactory()
+          {
+            @Override
+            public TimestampColumnSelector makeTimestampColumnSelector()
+            {
+              return new TimestampColumnSelector()
+              {
+                @Override
+                public long getTimestamp()
+                {
+                  return in.get().getTimestampFromEpoch();
+                }
+              };
+            }
+
+            @Override
+            public FloatColumnSelector makeFloatColumnSelector(String columnName)
+            {
+              final String metricName = columnName.toLowerCase();
+              return new FloatColumnSelector()
+              {
+                @Override
+                public float get()
+                {
+                  return in.get().getFloatMetric(metricName);
+                }
+              };
+            }
+
+            @Override
+            public ObjectColumnSelector makeObjectColumnSelector(String column)
+            {
+              final String typeName = agg.getTypeName();
+              final String columnName = column.toLowerCase();
+
+              if (typeName.equals("float")) {
+                return new ObjectColumnSelector<Float>()
+                {
+                  @Override
+                  public Class classOfObject()
+                  {
+                    return Float.TYPE;
+                  }
+
+                  @Override
+                  public Float get()
+                  {
+                    return in.get().getFloatMetric(columnName);
+                  }
+                };
+              }
+
+              final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+
+              if (serde == null) {
+                throw new ISE("Don't know how to handle type[%s]", typeName);
+              }
+
+              final ComplexMetricExtractor extractor = serde.getExtractor();
+
+              return new ObjectColumnSelector()
+              {
+                @Override
+                public Class classOfObject()
+                {
+                  return extractor.extractedClass();
+                }
+
+                @Override
+                public Object get()
+                {
+                  return extractor.extractValue(in.get(), columnName);
+                }
+              };
+            }
+
+            @Override
+            public DimensionSelector makeDimensionSelector(String dimension)
+            {
+              // we should implement this, but this is going to be rewritten soon anyways
+              throw new UnsupportedOperationException(
+                  "Incremental index aggregation does not support dimension selectors"
+              );
+            }
+          }
+      );
+      aggPositionOffsets[i] = currAggSize;
+      currAggSize += agg.getMaxIntermediateSize();
       final String metricName = metrics[i].getName().toLowerCase();
       metricNamesBuilder.add(metricName);
       metricIndexesBuilder.put(metricName, i);
@@ -104,6 +206,8 @@ public class IncrementalIndex implements Iterable<Row>
     metricNames = metricNamesBuilder.build();
     metricIndexes = metricIndexesBuilder.build();
     metricTypes = metricTypesBuilder.build();
+
+    this.totalAggSize = currAggSize;
 
     this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<String>();
@@ -114,22 +218,24 @@ public class IncrementalIndex implements Iterable<Row>
     }
     this.spatialDimensions = incrementalIndexSchema.getSpatialDimensions();
     this.spatialDimensionRowFormatter = new SpatialDimensionRowFormatter(spatialDimensions);
-
+    this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-    this.facts = new ConcurrentSkipListMap<TimeAndDims, Aggregator[]>();
+    this.facts = new ConcurrentSkipListMap<TimeAndDims, Integer>();
   }
 
   public IncrementalIndex(
       long minTimestamp,
       QueryGranularity gran,
-      final AggregatorFactory[] metrics
+      final AggregatorFactory[] metrics,
+      StupidPool<ByteBuffer> bufferPool
   )
   {
     this(
         new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
-                                            .build()
+                                            .build(),
+        bufferPool
     );
   }
 
@@ -137,7 +243,7 @@ public class IncrementalIndex implements Iterable<Row>
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
    * <p/>
-   * This is *not* thread-safe.  Calls to add() should always happen on the same thread.
+   * This method is thread-safe.
    *
    * @param row the row of data to add
    *
@@ -188,118 +294,23 @@ public class IncrementalIndex implements Iterable<Row>
 
     TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
 
-    Aggregator[] aggs = facts.get(key);
-    if (aggs == null) {
-      aggs = new Aggregator[metrics.length];
-
-      for (int i = 0; i < metrics.length; ++i) {
-        final AggregatorFactory agg = metrics[i];
-        aggs[i] =
-            agg.factorize(
-                new ColumnSelectorFactory()
-                {
-                  @Override
-                  public TimestampColumnSelector makeTimestampColumnSelector()
-                  {
-                    return new TimestampColumnSelector()
-                    {
-                      @Override
-                      public long getTimestamp()
-                      {
-                        return in.getTimestampFromEpoch();
-                      }
-                    };
-                  }
-
-                  @Override
-                  public FloatColumnSelector makeFloatColumnSelector(String columnName)
-                  {
-                    final String metricName = columnName.toLowerCase();
-                    return new FloatColumnSelector()
-                    {
-                      @Override
-                      public float get()
-                      {
-                        return in.getFloatMetric(metricName);
-                      }
-                    };
-                  }
-
-                  @Override
-                  public ObjectColumnSelector makeObjectColumnSelector(String column)
-                  {
-                    final String typeName = agg.getTypeName();
-                    final String columnName = column.toLowerCase();
-
-                    if (typeName.equals("float")) {
-                      return new ObjectColumnSelector<Float>()
-                      {
-                        @Override
-                        public Class classOfObject()
-                        {
-                          return Float.TYPE;
-                        }
-
-                        @Override
-                        public Float get()
-                        {
-                          return in.getFloatMetric(columnName);
-                        }
-                      };
-                    }
-
-                    final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-
-                    if (serde == null) {
-                      throw new ISE("Don't know how to handle type[%s]", typeName);
-                    }
-
-                    final ComplexMetricExtractor extractor = serde.getExtractor();
-
-                    return new ObjectColumnSelector()
-                    {
-                      @Override
-                      public Class classOfObject()
-                      {
-                        return extractor.extractedClass();
-                      }
-
-                      @Override
-                      public Object get()
-                      {
-                        return extractor.extractValue(in, columnName);
-                      }
-                    };
-                  }
-
-                  @Override
-                  public DimensionSelector makeDimensionSelector(String dimension)
-                  {
-                    // we should implement this, but this is going to be rewritten soon anyways
-                    throw new UnsupportedOperationException(
-                        "Incremental index aggregation does not support dimension selectors"
-                    );
-                  }
-                }
-
-            );
-      }
-
-      Aggregator[] prev = facts.putIfAbsent(key, aggs);
-      if (prev != null) {
-        aggs = prev;
-      } else {
-        numEntries.incrementAndGet();
-      }
-    }
-
     synchronized (this) {
-      in = row;
-      for (Aggregator agg : aggs) {
-        agg.aggregate();
+      if (!facts.containsKey(key)) {
+        int rowOffset = totalAggSize * numEntries.getAndIncrement();
+        for (int i = 0; i < aggs.length; i++) {
+          aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
+        }
+        facts.put(key, rowOffset);
       }
-      in = null;
     }
+    in.set(row);
+    int rowOffset = facts.get(key);
+    for (int i = 0; i < aggs.length; i++) {
+      synchronized (aggs[i]) {
+        aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
+      }
+    }
+    in.set(null);
     return numEntries.get();
   }
 
@@ -413,12 +424,27 @@ public class IncrementalIndex implements Iterable<Row>
     return metricIndexes.get(metricName);
   }
 
-  ConcurrentSkipListMap<TimeAndDims, Aggregator[]> getFacts()
+  int getMetricPosition(int rowOffset, int metricIndex)
+  {
+    return rowOffset + aggPositionOffsets[metricIndex];
+  }
+
+  ByteBuffer getMetricBuffer()
+  {
+    return bufferHolder.get();
+  }
+
+  BufferAggregator getAggregator(int metricIndex)
+  {
+    return aggs[metricIndex];
+  }
+
+  ConcurrentSkipListMap<TimeAndDims, Integer> getFacts()
   {
     return facts;
   }
 
-  ConcurrentNavigableMap<TimeAndDims, Aggregator[]> getSubMap(TimeAndDims start, TimeAndDims end)
+  ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end)
   {
     return facts.subMap(start, end);
   }
@@ -438,13 +464,13 @@ public class IncrementalIndex implements Iterable<Row>
       {
         return Iterators.transform(
             facts.entrySet().iterator(),
-            new Function<Map.Entry<TimeAndDims, Aggregator[]>, Row>()
+            new Function<Map.Entry<TimeAndDims, Integer>, Row>()
             {
               @Override
-              public Row apply(final Map.Entry<TimeAndDims, Aggregator[]> input)
+              public Row apply(final Map.Entry<TimeAndDims, Integer> input)
               {
                 final TimeAndDims timeAndDims = input.getKey();
-                final Aggregator[] aggregators = input.getValue();
+                final int rowOffset = input.getValue();
 
                 String[][] theDims = timeAndDims.getDims();
 
@@ -456,8 +482,8 @@ public class IncrementalIndex implements Iterable<Row>
                   }
                 }
 
-                for (int i = 0; i < aggregators.length; ++i) {
-                  theVals.put(metrics[i].getName(), aggregators[i].get());
+                for (int i = 0; i < aggs.length; ++i) {
+                  theVals.put(metrics[i].getName(), aggs[i].get(bufferHolder.get(), getMetricPosition(rowOffset, i)));
                 }
 
                 if (postAggs != null) {
@@ -472,6 +498,12 @@ public class IncrementalIndex implements Iterable<Row>
         );
       }
     };
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    bufferHolder.close();
   }
 
   static class DimensionHolder

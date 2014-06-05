@@ -34,6 +34,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -320,6 +321,7 @@ public class IndexGeneratorJob implements Jobby
             }
           }
           );
+          index.close();
           index = makeIncrementalIndex(bucket, aggs);
 
           startTime = System.currentTimeMillis();
@@ -378,7 +380,7 @@ public class IndexGeneratorJob implements Jobby
         }
         );
       }
-
+      index.close();
       serializeOutIndex(context, bucket, mergedBase, Lists.newArrayList(allDimensionNames));
 
       for (File file : toMerge) {
@@ -610,13 +612,15 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
+      //TODO: review this, add a config for batch ingestion
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
               .withSpatialDimensions(config.getSchema().getDataSchema().getParser())
               .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
-              .build()
+              .build(),
+          new OffheapBufferPool(1024 * 1024 * 1024)
       );
     }
 

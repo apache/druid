@@ -32,8 +32,10 @@ import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.guice.annotations.Global;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
@@ -49,6 +51,7 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -62,15 +65,19 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private static final Map<String, Object> NO_MERGE_CONTEXT = ImmutableMap.<String, Object>of(GROUP_BY_MERGE_KEY, "false");
   private final Supplier<GroupByQueryConfig> configSupplier;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
+  private final StupidPool<ByteBuffer> bufferPool;
+
 
   @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
-      GroupByQueryEngine engine
+      GroupByQueryEngine engine,
+      @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;
     this.engine = engine;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -142,7 +149,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     final GroupByQueryConfig config = configSupplier.get();
     Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        config
+        config,
+        bufferPool
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);

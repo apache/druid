@@ -23,10 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.metamx.common.Granularity;
+import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.collections.StupidPool;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
@@ -38,7 +42,9 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Period;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -51,6 +57,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
+  private final StupidPool<ByteBuffer> bufferPool;
 
   // Backwards compatible
   private final Period windowPeriod;
@@ -69,6 +76,8 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject FilteredServerView serverView,
       @JacksonInject @Processing ExecutorService executorService,
+      //TODO: define separate index pool
+      @JacksonInject @Global StupidPool<ByteBuffer> bufferPool,
       // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -91,6 +100,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.versioningPolicy = versioningPolicy;
     this.rejectionPolicyFactory = rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists;
+    this.bufferPool = bufferPool;
   }
 
   @Deprecated
@@ -149,7 +159,8 @@ public class RealtimePlumberSchool implements PlumberSchool
         queryExecutorService,
         dataSegmentPusher,
         segmentPublisher,
-        serverView
+        serverView,
+        bufferPool
     );
   }
 
@@ -162,4 +173,5 @@ public class RealtimePlumberSchool implements PlumberSchool
     Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
     Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");
   }
+
 }

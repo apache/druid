@@ -27,8 +27,10 @@ import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.guice.annotations.Global;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -39,6 +41,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -57,18 +60,23 @@ public class Sink implements Iterable<FireHydrant>
   private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
+  private final StupidPool<ByteBuffer> bufferPool;
+
 
   public Sink(
       Interval interval,
       DataSchema schema,
       RealtimeTuningConfig config,
-      String version
+      String version,
+      StupidPool<ByteBuffer> bufferPool
+
   )
   {
     this.schema = schema;
     this.config = config;
     this.interval = interval;
     this.version = version;
+    this.bufferPool = bufferPool;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
@@ -78,13 +86,15 @@ public class Sink implements Iterable<FireHydrant>
       DataSchema schema,
       RealtimeTuningConfig config,
       String version,
-      List<FireHydrant> hydrants
+      List<FireHydrant> hydrants,
+      StupidPool<ByteBuffer> bufferPool
   )
   {
     this.schema = schema;
     this.config = config;
     this.interval = interval;
     this.version = version;
+    this.bufferPool = bufferPool;
 
     for (int i = 0; i < hydrants.size(); ++i) {
       final FireHydrant hydrant = hydrants.get(i);
@@ -183,7 +193,8 @@ public class Sink implements Iterable<FireHydrant>
             .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
             .withSpatialDimensions(schema.getParser())
             .withMetrics(schema.getAggregators())
-            .build()
+            .build(),
+        bufferPool
     );
 
     FireHydrant old;

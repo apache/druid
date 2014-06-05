@@ -28,6 +28,7 @@ import com.google.common.collect.Multimaps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.collections.StupidPool;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -46,6 +47,7 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +75,7 @@ public class TaskToolbox
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
   private final File taskWorkDir;
+  private final StupidPool<ByteBuffer> indexPool;
 
   public TaskToolbox(
       TaskConfig config,
@@ -90,7 +93,8 @@ public class TaskToolbox
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper,
-      final File taskWorkDir
+      final File taskWorkDir,
+      StupidPool<ByteBuffer> indexPool
   )
   {
     this.config = config;
@@ -109,6 +113,7 @@ public class TaskToolbox
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
     this.taskWorkDir = taskWorkDir;
+    this.indexPool = indexPool;
   }
 
   public TaskConfig getConfig()
@@ -209,5 +214,9 @@ public class TaskToolbox
   public File getTaskWorkDir()
   {
     return taskWorkDir;
+  }
+
+  public StupidPool<ByteBuffer> getIndexPool(){
+    return indexPool;
   }
 }

@@ -27,6 +27,7 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -73,7 +74,7 @@ public class FireDepartmentTest
         new RealtimeIOConfig(
             null,
             new RealtimePlumberSchool(
-                null, null, null, null, null, null, null, null, null, null, null, null, 0
+                null, null, null, null, null, null, null, TestQueryRunners.pool, null, null, null, null, null, 0
             )
         ),
         new RealtimeTuningConfig(

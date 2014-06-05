@@ -24,6 +24,8 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.collections.StupidPool;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -36,6 +38,7 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -57,6 +60,7 @@ public class TaskToolboxFactory
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
+  private final StupidPool<ByteBuffer> bufferPool;
 
   @Inject
   public TaskToolboxFactory(
@@ -73,7 +77,9 @@ public class TaskToolboxFactory
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      //TODO: have a separate index pool
+      @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.config = config;
@@ -90,6 +96,7 @@ public class TaskToolboxFactory
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
+    this.bufferPool = bufferPool;
   }
 
   public TaskToolbox build(Task task)
@@ -112,7 +119,8 @@ public class TaskToolboxFactory
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         objectMapper,
-        taskWorkDir
+        taskWorkDir,
+        bufferPool
     );
   }
 }

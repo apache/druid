@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.collections.StupidPool;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
@@ -35,6 +37,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -51,6 +54,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
+  private final StupidPool<ByteBuffer> bufferPool;
 
   @JsonCreator
   public FlushingPlumberSchool(
@@ -59,6 +63,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject @Processing ExecutorService queryExecutorService,
+      //TODO: define separate index pool
+      @JacksonInject @Global StupidPool<ByteBuffer> bufferPool,
       // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -76,6 +82,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         null,
         null,
         queryExecutorService,
+        bufferPool,
         windowPeriod,
         basePersistDirectory,
         segmentGranularity,
@@ -89,6 +96,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -108,7 +116,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService
+        queryExecutorService,
+        bufferPool
     );
   }
 

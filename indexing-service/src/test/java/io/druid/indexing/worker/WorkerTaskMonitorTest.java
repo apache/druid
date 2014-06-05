@@ -38,6 +38,7 @@ import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.OmniSegmentLoader;
@@ -138,7 +139,8 @@ public class WorkerTaskMonitorTest
                       }
                     }
                 )
-            ), jsonMapper
+            ), jsonMapper,
+               new OffheapBufferPool(1024 * 1024)
             )
         ),
         new WorkerConfig().setCapacity(1)

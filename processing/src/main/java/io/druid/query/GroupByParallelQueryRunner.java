@@ -31,12 +31,14 @@ import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -51,20 +53,25 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
   private final ExecutorService exec;
   private final Ordering<Row> ordering;
   private final Supplier<GroupByQueryConfig> configSupplier;
+  private final StupidPool<ByteBuffer> bufferPool;
+
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Ordering<Row> ordering,
       Supplier<GroupByQueryConfig> configSupplier,
+      StupidPool<ByteBuffer> bufferPool,
       QueryRunner<Row>... queryables
   )
   {
-    this(exec, ordering, configSupplier, Arrays.asList(queryables));
+    this(exec, ordering, configSupplier, bufferPool, Arrays.asList(queryables));
   }
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
-      Ordering<Row> ordering, Supplier<GroupByQueryConfig> configSupplier,
+      Ordering<Row> ordering,
+      Supplier<GroupByQueryConfig> configSupplier,
+      StupidPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<Row>> queryables
   )
   {
@@ -72,6 +79,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     this.ordering = ordering;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -81,7 +89,8 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     final GroupByQuery query = (GroupByQuery) queryParam;
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        configSupplier.get()
+        configSupplier.get(),
+        bufferPool
     );
     final int priority = query.getContextPriority(0);
 
