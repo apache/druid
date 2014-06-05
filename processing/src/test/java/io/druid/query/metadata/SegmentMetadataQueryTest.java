@@ -21,16 +21,75 @@ package io.druid.query.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.metadata.metadata.ColumnAnalysis;
+import io.druid.query.metadata.metadata.ListColumnIncluderator;
+import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.TestIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class SegmentMetadataQueryTest
 {
+  @SuppressWarnings("unchecked")
+  private final QueryRunner runner = makeQueryRunner(
+      new SegmentMetadataQueryRunnerFactory()
+  );
   private ObjectMapper mapper = new DefaultObjectMapper();
+
+  @SuppressWarnings("unchecked")
+  public static QueryRunner makeQueryRunner(
+      QueryRunnerFactory factory
+  )
+  {
+    return QueryRunnerTestHelper.makeQueryRunner(
+        factory,
+        new QueryableIndexSegment(QueryRunnerTestHelper.segmentId, TestIndex.getMMappedTestIndex())
+    );
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testSegmentMetadataQuery()
+  {
+    SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
+                                       .dataSource("testing")
+                                       .intervals("2013/2014")
+                                       .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                                       .merge(true)
+                                       .build();
+
+    Iterable<SegmentAnalysis> results = Sequences.toList(
+        runner.run(query),
+        Lists.<SegmentAnalysis>newArrayList()
+    );
+    SegmentAnalysis val = results.iterator().next();
+    Assert.assertEquals("testSegment", val.getId());
+    Assert.assertEquals(69843, val.getSize());
+    Assert.assertEquals(
+        Arrays.asList(new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
+        val.getIntervals()
+    );
+    Assert.assertEquals(1, val.getColumns().size());
+    final ColumnAnalysis columnAnalysis = val.getColumns().get("placement");
+    Assert.assertEquals("STRING", columnAnalysis.getType());
+    Assert.assertEquals(10881, columnAnalysis.getSize());
+    Assert.assertEquals(new Integer(1), columnAnalysis.getCardinality());
+    Assert.assertNull(columnAnalysis.getErrorMessage());
+
+  }
 
   @Test
   public void testSerde() throws Exception

@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -116,17 +117,14 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   @Override
                   public Sequence<SegmentAnalysis> run(final Query<SegmentAnalysis> query)
                   {
-
+                    final int priority = query.getContextPriority(0);
                     Future<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
-                        new Callable<Sequence<SegmentAnalysis>>()
+                        new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
-                            return new ExecutorExecutingSequence<SegmentAnalysis>(
-                                input.run(query),
-                                queryExecutor
-                            );
+                            return input.run(query);
                           }
                         }
                     );
