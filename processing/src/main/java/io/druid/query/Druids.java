@@ -29,6 +29,8 @@ import io.druid.query.filter.NoopDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.metadata.metadata.ColumnIncluderator;
+import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
@@ -822,5 +824,113 @@ public class Druids
   public static ResultBuilder<TimeBoundaryResultValue> newTimeBoundaryResultBuilder()
   {
     return new ResultBuilder<TimeBoundaryResultValue>();
+  }
+
+  /**
+   * A Builder for SegmentMetadataQuery.
+   * <p/>
+   * Required: dataSource(), intervals() must be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   SegmentMetadataQuery query = new SegmentMetadataQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .interval("2010/2013")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see io.druid.query.metadata.metadata.SegmentMetadataQuery
+   */
+  public static class SegmentMetadataQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private ColumnIncluderator toInclude;
+    private Boolean merge;
+    private Map<String, Object> context;
+
+    public SegmentMetadataQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      toInclude = null;
+      merge = null;
+      context = null;
+    }
+
+    public SegmentMetadataQuery build()
+    {
+      return new SegmentMetadataQuery(
+          dataSource,
+          querySegmentSpec,
+          toInclude,
+          merge,
+          context
+      );
+    }
+
+    public SegmentMetadataQueryBuilder copy(SegmentMetadataQueryBuilder builder)
+    {
+      return new SegmentMetadataQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .toInclude(toInclude)
+          .merge(merge)
+          .context(builder.context);
+    }
+
+    public SegmentMetadataQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder toInclude(ColumnIncluderator toInclude)
+    {
+      this.toInclude = toInclude;
+      return this;
+    }
+
+
+    public SegmentMetadataQueryBuilder merge(boolean merge)
+    {
+      this.merge = merge;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+  }
+
+  public static SegmentMetadataQueryBuilder newSegmentMetadataQueryBuilder()
+  {
+    return new SegmentMetadataQueryBuilder();
   }
 }
