@@ -5,9 +5,9 @@ layout: doc_page
 ## What should I set my JVM heap?
 The size of the JVM heap really depends on the type of Druid node you are running. Below are a few considerations.
 
-[Broker nodes](Broker.html) can use the JVM heap as a query cache and thus, the size of the heap will affect on the number of results that can be cached. Broker nodes do not require off-heap memory and generally, heap sizes can be set to be close to the maximum memory on the machine (leaving some room for JVM overhead). The heap is used to merge results from different real-time and historical nodes, along with other computational processing.
+[Broker nodes](Broker.html) uses the JVM heap mainly to merge results from historicals and real-times. Brokers also use off-heap memory and processing threads for groupBy queries.
 
-[Historical nodes](Historical.html) use off-heap memory to store intermediate results, and by default, all segments are memory mapped before they can be queried. The more off-heap memory is available, the more segments can be served without the possibility of data being paged onto disk. On historicals, the JVM heap is used for [GroupBy queries](GroupByQuery.html), some data structures used for intermediate computation, and general processing.
+[Historical nodes](Historical.html) use off-heap memory to store intermediate results, and by default, all segments are memory mapped before they can be queried. Typically, the more memory is available on a historical node, the more segments can be served without the possibility of data being paged on to disk. On historicals, the JVM heap is used for [GroupBy queries](GroupByQuery.html), some data structures used for intermediate computation, and general processing. One way to calculate how much space there is for segments is: memory_for_segments = total_memory - heap - direct_memory - jvm_overhead.
 
 [Coordinator nodes](Coordinator nodes) do not require off-heap memory and the heap is used for loading information about all segments to determine what segments need to be loaded, dropped, moved, or replicated.
 

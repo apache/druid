@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.117-SNAPSHOT</version>
+    <version>0.6.121-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
