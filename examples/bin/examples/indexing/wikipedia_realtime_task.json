@@ -66,6 +66,6 @@
     "timeDimension": "timestamp",
     "timeFormat": "iso"
   },
-  "windowPeriod": "PT0m",
-  "segmentGranularity": "minute"
+  "windowPeriod": "PT10m",
+  "segmentGranularity": "hour"
 }
