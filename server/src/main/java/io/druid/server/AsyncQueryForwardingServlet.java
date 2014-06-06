@@ -41,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.DateTime;
 
 import javax.servlet.AsyncContext;
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.WebServlet;
@@ -98,7 +99,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       ctx = req.startAsync(req, resp);
       final AsyncContext asyncContext = ctx;
 
-      if (req.getAttribute(DISPATCHED) != null) {
+      if (req.getDispatcherType() == DispatcherType.ASYNC) {
         return;
       }
 
@@ -178,12 +179,10 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             public void run()
             {
               routingDruidClient.get(makeUrl(host, req), responseHandler);
+              asyncContext.dispatch();
             }
           }
       );
-
-      asyncContext.dispatch();
-      req.setAttribute(DISPATCHED, true);
     }
     catch (Exception e) {
       handleException(resp, ctx,  e);
@@ -210,7 +209,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       ctx = req.startAsync(req, resp);
       final AsyncContext asyncContext = ctx;
 
-      if (req.getAttribute(DISPATCHED) != null) {
+      if (req.getDispatcherType() == DispatcherType.ASYNC) {
         return;
       }
 
@@ -328,12 +327,10 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             public void run()
             {
               routingDruidClient.post(makeUrl(host, req), theQuery, responseHandler);
+              asyncContext.dispatch();
             }
           }
       );
-
-      asyncContext.dispatch();
-      req.setAttribute(DISPATCHED, true);
     }
     catch (Exception e) {
       handleException(resp, ctx, e);
@@ -387,7 +384,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       resp.flushBuffer();
     }
     catch (IOException e1) {
-      Throwables.propagate(e1);
+      throw Throwables.propagate(e1);
     }
   }
 }
