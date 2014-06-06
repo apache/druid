@@ -36,13 +36,13 @@ public class JavaScriptAggregatorTest
   protected static final Map<String, String> scriptDoubleSum = Maps.newHashMap();
 
   static {
-    sumLogATimesBPlusTen.put("fnAggregate", "function aggregate(current, a, b) { return current + (Math.log(a) * b) }");
-    sumLogATimesBPlusTen.put("fnReset", "function reset()                  { return 10 }");
-    sumLogATimesBPlusTen.put("fnCombine", "function combine(a,b)             { return a + b }");
+    sumLogATimesBPlusTen.put("fnAggregate", "function aggregate(current, a, b) { return current + (Math.log(a) * b); }");
+    sumLogATimesBPlusTen.put("fnReset", "function reset()                  { return 10; }");
+    sumLogATimesBPlusTen.put("fnCombine", "function combine(a,b)             { return a + b; }");
 
-    scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
-    scriptDoubleSum.put("fnReset", "function reset()               { return 0 }");
-    scriptDoubleSum.put("fnCombine", "function combine(a,b)          { return a + b }");
+    scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a; }");
+    scriptDoubleSum.put("fnReset", "function reset()               { return 0; }");
+    scriptDoubleSum.put("fnCombine", "function combine(a,b)          { return a + b; }");
   }
 
   private static void aggregate(TestFloatColumnSelector selector1, TestFloatColumnSelector selector2, Aggregator agg)
@@ -85,9 +85,11 @@ public class JavaScriptAggregatorTest
     JavaScriptAggregator agg = new JavaScriptAggregator(
       "billy",
       Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
-      JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
-                                                script.get("fnReset"),
-                                                script.get("fnCombine"))
+      new RhinoScriptAggregatorFactory(
+          script.get("fnAggregate"),
+          script.get("fnReset"),
+          script.get("fnCombine")
+      ).compileScript()
     );
 
     agg.reset();
@@ -121,9 +123,11 @@ public class JavaScriptAggregatorTest
     Map<String, String> script = sumLogATimesBPlusTen;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
       Arrays.<ObjectColumnSelector>asList(MetricSelectorUtils.wrap(selector1), MetricSelectorUtils.wrap(selector2)),
-      JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
-                                                script.get("fnReset"),
-                                                script.get("fnCombine"))
+      new RhinoScriptAggregatorFactory(
+          script.get("fnAggregate"),
+          script.get("fnReset"),
+          script.get("fnCombine")
+      ).compileScript()
     );
 
     ByteBuffer buf = ByteBuffer.allocateDirect(32);
@@ -156,9 +160,11 @@ public class JavaScriptAggregatorTest
     JavaScriptAggregator agg = new JavaScriptAggregator(
         "billy",
         Collections.<ObjectColumnSelector>singletonList(null),
-        JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
-                                                  script.get("fnReset"),
-                                                  script.get("fnCombine"))
+        new RhinoScriptAggregatorFactory(
+            script.get("fnAggregate"),
+            script.get("fnReset"),
+            script.get("fnCombine")
+        ).compileScript()
     );
 
     final double val = 0;
@@ -188,11 +194,11 @@ public class JavaScriptAggregatorTest
     final JavaScriptAggregator agg = new JavaScriptAggregator(
         "billy",
         Collections.<ObjectColumnSelector>singletonList(ocs),
-        JavaScriptAggregatorFactory.compileScript(
+        new Nashorn2ScriptAggregatorFactory(
             "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
             scriptDoubleSum.get("fnReset"),
             scriptDoubleSum.get("fnCombine")
-        )
+        ).compileScript()
     );
 
     agg.reset();
@@ -246,9 +252,11 @@ public class JavaScriptAggregatorTest
     JavaScriptAggregator aggRhino = new JavaScriptAggregator(
       "billy",
       Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
-      JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
-                                                script.get("fnReset"),
-                                                script.get("fnCombine"))
+      new RhinoScriptAggregatorFactory(
+          script.get("fnAggregate"),
+          script.get("fnReset"),
+          script.get("fnCombine")
+      ).compileScript()
     );
 
     DoubleSumAggregator doubleAgg = new DoubleSumAggregator("billy", selector);

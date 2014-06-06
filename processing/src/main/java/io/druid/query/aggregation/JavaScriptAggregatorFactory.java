@@ -28,20 +28,11 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextAction;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -56,7 +47,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   private final String fnCombine;
 
 
-  private final JavaScriptAggregator.ScriptAggregator compiledScript;
+  private final ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(
@@ -80,7 +71,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
     this.fnReset = fnReset;
     this.fnCombine = fnCombine;
 
-    this.compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+    this.compiledScript = new RhinoScriptAggregatorFactory(fnAggregate, fnReset, fnCombine).compileScript();
   }
 
   @Override
@@ -240,104 +231,6 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
            ", fnReset='" + fnReset + '\'' +
            ", fnCombine='" + fnCombine + '\'' +
            '}';
-  }
-
-  public static JavaScriptAggregator.ScriptAggregator compileScript(
-      final String aggregate,
-      final String reset,
-      final String combine
-  )
-  {
-    final ContextFactory contextFactory = ContextFactory.getGlobal();
-    Context context = contextFactory.enterContext();
-    context.setOptimizationLevel(9);
-
-    final ScriptableObject scope = context.initStandardObjects();
-
-    final Function fnAggregate = context.compileFunction(scope, aggregate, "aggregate", 1, null);
-    final Function fnReset = context.compileFunction(scope, reset, "reset", 1, null);
-    final Function fnCombine = context.compileFunction(scope, combine, "combine", 1, null);
-    Context.exit();
-
-    return new JavaScriptAggregator.ScriptAggregator()
-    {
-      @Override
-      public double aggregate(final double current, final ObjectColumnSelector[] selectorList)
-      {
-        Context cx = Context.getCurrentContext();
-        if (cx == null) {
-          cx = contextFactory.enterContext();
-
-          // Disable primitive wrapping- we want Java strings and primitives to behave like JS entities.
-          cx.getWrapFactory().setJavaPrimitiveWrap(false);
-        }
-
-        final int size = selectorList.length;
-        final Object[] args = new Object[size + 1];
-
-        args[0] = current;
-        for (int i = 0 ; i < size ; i++) {
-          final ObjectColumnSelector selector = selectorList[i];
-          if (selector != null) {
-            final Object arg = selector.get();
-            if (arg != null && arg.getClass().isArray()) {
-              // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
-              // may have other issues too. Let's just copy the array and wrap that.
-              final Object[] arrayAsObjectArray = new Object[Array.getLength(arg)];
-              for (int j = 0; j < Array.getLength(arg); j++) {
-                arrayAsObjectArray[j] = Array.get(arg, j);
-              }
-              args[i + 1] = cx.newArray(scope, arrayAsObjectArray);
-            } else {
-              args[i + 1] = Context.javaToJS(arg, scope);
-            }
-          }
-        }
-
-        final Object res = fnAggregate.call(cx, scope, scope, args);
-        return Context.toNumber(res);
-      }
-
-      @Override
-      public double combine(final double a, final double b)
-      {
-        final Object res = contextFactory.call(
-            new ContextAction()
-            {
-              @Override
-              public Object run(final Context cx)
-              {
-                return fnCombine.call(cx, scope, scope, new Object[]{a, b});
-              }
-            }
-        );
-        return Context.toNumber(res);
-      }
-
-      @Override
-      public double reset()
-      {
-        final Object res = contextFactory.call(
-            new ContextAction()
-            {
-              @Override
-              public Object run(final Context cx)
-              {
-                return fnReset.call(cx, scope, scope, new Object[]{});
-              }
-            }
-        );
-        return Context.toNumber(res);
-      }
-
-      @Override
-      public void close()
-      {
-        if (Context.getCurrentContext() != null) {
-          Context.exit();
-        }
-      }
-    };
   }
 
   @Override

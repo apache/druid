@@ -29,13 +29,14 @@ import java.util.Map;
 
 public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
 {
-
   protected static final Map<String, String> scriptDoubleSum = Maps.newHashMap();
   static {
-    scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
-    scriptDoubleSum.put("fnReset", "function reset() { return 0 }");
-    scriptDoubleSum.put("fnCombine", "function combine(a,b) { return a + b }");
+    scriptDoubleSum.put("fnAggregate", "function(current, a) { return current + a; }");
+    scriptDoubleSum.put("fnReset", "function() { return 0; }");
+    scriptDoubleSum.put("fnCombine", "function(a,b) { return a + b; }");
   }
+
+  public static final int COUNT = 20_000;
 
   private static void aggregate(TestFloatColumnSelector selector, Aggregator agg)
   {
@@ -43,7 +44,8 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     selector.increment();
   }
 
-  private JavaScriptAggregator jsAggregator;
+  private JavaScriptAggregator nashornAggregator;
+  private JavaScriptAggregator rhinoAggregator;
   private DoubleSumAggregator doubleAgg;
   final LoopingFloatColumnSelector selector = new LoopingFloatColumnSelector(new float[]{42.12f, 9f});
 
@@ -52,24 +54,47 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   {
     Map<String, String> script = scriptDoubleSum;
 
-    jsAggregator = new JavaScriptAggregator(
+    rhinoAggregator = new JavaScriptAggregator(
         "billy",
         Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
-        JavaScriptAggregatorFactory.compileScript(
+        new RhinoScriptAggregatorFactory(
             script.get("fnAggregate"),
             script.get("fnReset"),
             script.get("fnCombine")
-        )
+        ).compileScript()
+    );
+
+    nashornAggregator = new JavaScriptAggregator(
+        "billy",
+        Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
+        new Nashorn2ScriptAggregatorFactory(
+            script.get("fnAggregate"),
+            script.get("fnReset"),
+            script.get("fnCombine")
+        ).compileScript()
     );
 
     doubleAgg = new DoubleSumAggregator("billy", selector);
   }
 
-  public double timeJavaScriptDoubleSum(int reps)
+  public double timeNashornScriptDoubleSum(int reps)
   {
     double val = 0;
     for(int i = 0; i < reps; ++i) {
-      aggregate(selector, jsAggregator);
+      for(int k = 0; k < COUNT; ++k) {
+        aggregate(selector, nashornAggregator);
+      }
+    }
+    return val;
+  }
+
+  public double timeRhinoScriptDoubleSum(int reps)
+  {
+    double val = 0;
+    for(int i = 0; i < reps; ++i) {
+      for(int k = 0; k < COUNT; ++k) {
+        aggregate(selector, rhinoAggregator);
+      }
     }
     return val;
   }
@@ -78,7 +103,9 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   {
     double val = 0;
     for(int i = 0; i < reps; ++i) {
-      aggregate(selector, doubleAgg);
+      for(int k = 0; k < COUNT; ++k) {
+        aggregate(selector, doubleAgg);
+      }
     }
     return val;
   }

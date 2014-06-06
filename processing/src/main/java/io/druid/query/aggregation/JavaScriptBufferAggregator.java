@@ -28,11 +28,11 @@ import java.util.List;
 public class JavaScriptBufferAggregator implements BufferAggregator
 {
   private final ObjectColumnSelector[] selectorList;
-  private final JavaScriptAggregator.ScriptAggregator script;
+  private final ScriptAggregator script;
 
   public JavaScriptBufferAggregator(
       List<ObjectColumnSelector> selectorList,
-      JavaScriptAggregator.ScriptAggregator script
+      ScriptAggregator script
   )
   {
     this.selectorList = Lists.newArrayList(selectorList).toArray(new ObjectColumnSelector[]{});

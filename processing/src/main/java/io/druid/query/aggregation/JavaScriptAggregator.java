@@ -26,16 +26,6 @@ import java.util.List;
 
 public class JavaScriptAggregator implements Aggregator
 {
-  static interface ScriptAggregator
-  {
-    public double aggregate(double current, ObjectColumnSelector[] selectorList);
-
-    public double combine(double a, double b);
-
-    public double reset();
-
-    public void close();
-  }
 
   private final String name;
   private final ObjectColumnSelector[] selectorList;
