@@ -477,7 +477,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0) : tuningConfig;
     }
 
     @Override
