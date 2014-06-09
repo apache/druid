@@ -21,7 +21,27 @@ package io.druid.query;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+/**
+ * This interface is in a very early stage and should not be considered stable.
+ *
+ * The purpose of the QueryWatcher is to give overall visibility into queries running
+ * or pending at the QueryRunner level. This is currently used to cancel all the
+ * parts of a pending query, but may be expanded in the future to offer more direct
+ * visibility into query execution and resource usage.
+ *
+ * QueryRunners executing any computation asynchronously must register their queries
+ * with the QueryWatcher.
+ *
+ */
 public interface QueryWatcher
 {
+  /**
+   * QueryRunners must use this method to register any pending queries.
+   *
+   * The given future may have cancel(true) called at any time, if cancellation of this query has been requested.
+   *
+   * @param query a query, which may be a subset of a larger query, as long as the underlying queryId is unchanged
+   * @param future the future holding the execution status of the query
+   */
   public void registerQuery(Query query, ListenableFuture future);
 }
