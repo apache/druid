@@ -59,14 +59,10 @@ public class SearchQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()), new QueryWatcher()
-        {
-          @Override
-          public void registerQuery(Query query, ListenableFuture future)
-          {
-
-          }
-        })
+        new SearchQueryRunnerFactory(
+            new SearchQueryQueryToolChest(new SearchQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
     );
   }
 

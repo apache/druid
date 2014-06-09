@@ -41,21 +41,6 @@ import java.util.concurrent.ExecutorService;
 public class SelectQueryRunnerFactory
     implements QueryRunnerFactory<Result<SelectResultValue>, SelectQuery>
 {
-  public static SelectQueryRunnerFactory create(ObjectMapper jsonMapper)
-  {
-    return new SelectQueryRunnerFactory(
-        new SelectQueryQueryToolChest(new QueryConfig(), jsonMapper),
-        new SelectQueryEngine(),
-        new QueryWatcher()
-        {
-          @Override
-          public void registerQuery(Query query, ListenableFuture future)
-          {
-          }
-        }
-    );
-  }
-
   private final SelectQueryQueryToolChest toolChest;
   private final SelectQueryEngine engine;
   private final QueryWatcher queryWatcher;

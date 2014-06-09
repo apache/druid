@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -46,7 +47,11 @@ public class TimeSeriesUnionQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeUnionQueryRunners(
-        TimeseriesQueryRunnerFactory.create()
+        new TimeseriesQueryRunnerFactory(
+            new TimeseriesQueryQueryToolChest(new QueryConfig()),
+            new TimeseriesQueryEngine(),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
     );
   }
 

@@ -38,6 +38,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryWatcher;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
@@ -60,15 +61,6 @@ import java.util.List;
 
 public class DirectDruidClientTest
 {
-  public static final QueryWatcher DUMMY_WATCHER = new QueryWatcher()
-  {
-    @Override
-    public void registerQuery(Query query, ListenableFuture future)
-    {
-
-    }
-  };
-
   @Test
   public void testRun() throws Exception
   {
@@ -101,14 +93,14 @@ public class DirectDruidClientTest
 
     DirectDruidClient client1 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
-        DUMMY_WATCHER,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
         "foo"
     );
     DirectDruidClient client2 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
-        DUMMY_WATCHER,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
         "foo2"
@@ -196,7 +188,7 @@ public class DirectDruidClientTest
 
     DirectDruidClient client1 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
-        DUMMY_WATCHER,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
         "foo"

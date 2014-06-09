@@ -55,7 +55,7 @@ import java.util.List;
 public class QueryRunnerTestHelper
 {
 
-  public static final QueryWatcher DUMMY_QUERYWATCHER = new QueryWatcher()
+  public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
   {
     @Override
     public void registerQuery(Query query, ListenableFuture future)

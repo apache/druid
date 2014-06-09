@@ -46,14 +46,7 @@ public class TimeBoundaryQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        new TimeBoundaryQueryRunnerFactory(new QueryWatcher()
-        {
-          @Override
-          public void registerQuery(Query query, ListenableFuture future)
-          {
-
-          }
-        })
+        new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
     );
   }
 

@@ -41,25 +41,6 @@ import java.util.concurrent.ExecutorService;
 public class TimeseriesQueryRunnerFactory
     implements QueryRunnerFactory<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
-  /**
-   * Use only for testing
-   * @return
-   */
-  public static TimeseriesQueryRunnerFactory create()
-  {
-    return new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(new QueryConfig()),
-        new TimeseriesQueryEngine(),
-        new QueryWatcher()
-        {
-          @Override
-          public void registerQuery(Query query, ListenableFuture future)
-          {
-          }
-        }
-    );
-  }
-
   private final TimeseriesQueryQueryToolChest toolChest;
   private final TimeseriesQueryEngine engine;
   private final QueryWatcher queryWatcher;
