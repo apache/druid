@@ -284,7 +284,7 @@
             <dependency>
                <groupId>org.glassfish.web</groupId>
                <artifactId>javax.el</artifactId>
-               <version>2.2.4</version>
+               <version>3.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.jamesmurty.utils</groupId>
