@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -79,7 +80,8 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   )
   {
     Predicate<DataSegment> predicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-    Set<DataSegment> filteredInventory = Sets.filter(inventory, predicate);
+    // make a copy of the set and not just a filtered view, in order to not keep all the segment data in memory
+    Set<DataSegment> filteredInventory = Sets.newHashSet(Iterables.filter(inventory, predicate));
 
     zNodes.put(inventoryKey, filteredInventory);
     for (DataSegment segment : filteredInventory) {
@@ -94,7 +96,8 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   )
   {
     Predicate<DataSegment> predicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-    Set<DataSegment> filteredInventory = Sets.filter(inventory, predicate);
+    // make a copy of the set and not just a filtered view, in order to not keep all the segment data in memory
+    Set<DataSegment> filteredInventory = Sets.newHashSet(Iterables.filter(inventory, predicate));
 
     Set<DataSegment> existing = zNodes.get(inventoryKey);
     if (existing == null) {

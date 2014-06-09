@@ -61,6 +61,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.joda.time.DateTime;
@@ -145,7 +146,11 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
 
-      job.setInputFormatClass(CombineTextInputFormat.class);
+      if (config.isCombineText()) {
+        job.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        job.setInputFormatClass(TextInputFormat.class);
+      }
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(Text.class);

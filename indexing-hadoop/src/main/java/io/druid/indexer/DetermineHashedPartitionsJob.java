@@ -33,8 +33,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configurable;
@@ -48,8 +48,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.joda.time.DateTime;
@@ -92,7 +92,11 @@ public class DetermineHashedPartitionsJob implements Jobby
       );
 
       JobHelper.injectSystemProperties(groupByJob);
-      groupByJob.setInputFormatClass(CombineTextInputFormat.class);
+      if (config.isCombineText()) {
+        groupByJob.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        groupByJob.setInputFormatClass(TextInputFormat.class);
+      }
       groupByJob.setMapperClass(DetermineCardinalityMapper.class);
       groupByJob.setMapOutputKeyClass(LongWritable.class);
       groupByJob.setMapOutputValueClass(BytesWritable.class);
