@@ -393,7 +393,14 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.0</version>
+                <version>0.9.1</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- exclude artifact not available in maven central -->
+                        <groupId>com.centerkey.utils</groupId>
+                        <artifactId>barebonesbrowserlaunch</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
