@@ -41,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.DateTime;
 
 import javax.servlet.AsyncContext;
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.WebServlet;
@@ -60,8 +61,28 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 {
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   private static final Charset UTF8 = Charset.forName("UTF-8");
-  private static final String DISPATCHED = "dispatched";
   private static final Joiner COMMA_JOIN = Joiner.on(",");
+
+  private static void handleException(HttpServletResponse resp, AsyncContext ctx, Throwable e)
+  {
+    try {
+      final ServletOutputStream out = resp.getOutputStream();
+      if (!resp.isCommitted()) {
+        resp.setStatus(500);
+        resp.resetBuffer();
+        out.write((e.getMessage() == null) ? "Exception null".getBytes(UTF8) : e.getMessage().getBytes(UTF8));
+        out.write("\n".getBytes(UTF8));
+      }
+
+      if (ctx != null) {
+        ctx.complete();
+      }
+      resp.flushBuffer();
+    }
+    catch (IOException e1) {
+      throw Throwables.propagate(e1);
+    }
+  }
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -98,7 +119,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       ctx = req.startAsync(req, resp);
       final AsyncContext asyncContext = ctx;
 
-      if (req.getAttribute(DISPATCHED) != null) {
+      if (req.getDispatcherType() == DispatcherType.ASYNC) {
         return;
       }
 
@@ -178,15 +199,13 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             public void run()
             {
               routingDruidClient.get(makeUrl(host, req), responseHandler);
+              asyncContext.dispatch();
             }
           }
       );
-
-      asyncContext.dispatch();
-      req.setAttribute(DISPATCHED, true);
     }
     catch (Exception e) {
-      handleException(resp, ctx,  e);
+      handleException(resp, ctx, e);
     }
   }
 
@@ -210,7 +229,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       ctx = req.startAsync(req, resp);
       final AsyncContext asyncContext = ctx;
 
-      if (req.getAttribute(DISPATCHED) != null) {
+      if (req.getDispatcherType() == DispatcherType.ASYNC) {
         return;
       }
 
@@ -328,12 +347,10 @@ public class AsyncQueryForwardingServlet extends HttpServlet
             public void run()
             {
               routingDruidClient.post(makeUrl(host, req), theQuery, responseHandler);
+              asyncContext.dispatch();
             }
           }
       );
-
-      asyncContext.dispatch();
-      req.setAttribute(DISPATCHED, true);
     }
     catch (Exception e) {
       handleException(resp, ctx, e);
@@ -368,26 +385,5 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       return String.format("http://%s%s", host, requestURI);
     }
     return String.format("http://%s%s?%s", host, requestURI, queryString);
-  }
-
-  private static void handleException(HttpServletResponse resp, AsyncContext ctx, Throwable e)
-  {
-    try {
-      final ServletOutputStream out = resp.getOutputStream();
-      if (!resp.isCommitted()) {
-        resp.setStatus(500);
-        resp.resetBuffer();
-        out.write((e.getMessage() == null) ? "Exception null".getBytes(UTF8) : e.getMessage().getBytes(UTF8));
-        out.write("\n".getBytes(UTF8));
-      }
-
-      if (ctx != null) {
-        ctx.complete();
-      }
-      resp.flushBuffer();
-    }
-    catch (IOException e1) {
-      Throwables.propagate(e1);
-    }
   }
 }
