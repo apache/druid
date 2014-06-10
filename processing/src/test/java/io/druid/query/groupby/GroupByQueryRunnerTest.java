@@ -1035,8 +1035,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testSubqueryWithPostAggregators()
   {
-
-    GroupByQuery subquery = GroupByQuery
+    final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -1062,7 +1061,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    GroupByQuery query = GroupByQuery
+    final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -1076,7 +1075,7 @@ public class GroupByQueryRunnerTest
         .setPostAggregatorSpecs(
             Arrays.<PostAggregator>asList(
                 new ArithmeticPostAggregator(
-                    "idx", "+", Arrays.<PostAggregator>asList(
+                    "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
                     new ConstantPostAggregator("ten_thousand", 10000, 10000)
                 )

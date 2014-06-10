@@ -141,6 +141,22 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public List<AggregatorFactory> getBaseFactories()
+  {
+    return Lists.transform(
+        fieldNames,
+        new com.google.common.base.Function<String, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(String input)
+          {
+            return new JavaScriptAggregatorFactory(name, Arrays.asList(input), fnAggregate, fnReset, fnCombine);
+          }
+        }
+    );
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     // handle "NaN" / "Infinity" values serialized as strings in JSON

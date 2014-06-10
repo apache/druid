@@ -53,7 +53,7 @@ public class GroupByQueryHelper
         new Function<AggregatorFactory, AggregatorFactory>()
         {
           @Override
-          public AggregatorFactory apply(@Nullable AggregatorFactory input)
+          public AggregatorFactory apply(AggregatorFactory input)
           {
             return input.getCombiningFactory();
           }
@@ -64,7 +64,7 @@ public class GroupByQueryHelper
         new Function<DimensionSpec, String>()
         {
           @Override
-          public String apply(@Nullable DimensionSpec input)
+          public String apply(DimensionSpec input)
           {
             return input.getOutputName();
           }
@@ -90,7 +90,7 @@ public class GroupByQueryHelper
         return accumulated;
       }
     };
-    return new Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>>(index, accumulator);
+    return new Pair<>(index, accumulator);
   }
 
 }

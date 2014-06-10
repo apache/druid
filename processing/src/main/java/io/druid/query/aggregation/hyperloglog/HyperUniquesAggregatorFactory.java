@@ -132,6 +132,12 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public List<AggregatorFactory> getBaseFactories()
+  {
+    return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(fieldName, fieldName));
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     if (object instanceof byte[]) {

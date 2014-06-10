@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
@@ -51,6 +52,8 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -100,7 +103,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     Sequence<Row> result;
 
     // If there's a subquery, merge subquery results and then apply the aggregator
-    DataSource dataSource = query.getDataSource();
+    final DataSource dataSource = query.getDataSource();
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
@@ -109,19 +112,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
-      Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
-      final GroupByQuery.Builder builder = new GroupByQuery.Builder(subquery);
-      for (PostAggregator postAggregator : subquery.getPostAggregatorSpecs()) {
-        builder.addAggregator(new DoubleSumAggregatorFactory(postAggregator.getName(), postAggregator.getName()));
+      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
+      final List<AggregatorFactory> aggs = Lists.newArrayList();
+      for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
+        aggs.addAll(aggregatorFactory.getBaseFactories());
       }
-      IncrementalIndexStorageAdapter adapter
-          = new IncrementalIndexStorageAdapter(makeIncrementalIndex(builder.build(), subqueryResult));
-      result = engine.process(query, adapter);
+      final GroupByQuery innerQuery = new GroupByQuery.Builder(query).setAggregatorSpecs(aggs)
+                                                                     .setInterval(subquery.getIntervals())
+                                                                     .setPostAggregatorSpecs(Lists.<PostAggregator>newArrayList())
+                                                                     .build();
+
+      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(
+          makeIncrementalIndex(innerQuery, subqueryResult)
+      );
+      return engine.process(query, adapter);
     } else {
       result = runner.run(query);
+      return postAggregate(query, makeIncrementalIndex(query, result));
     }
-
-    return postAggregate(query, makeIncrementalIndex(query, result));
   }
 
 
@@ -161,7 +169,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    return new ConcatSequence<Row>(seqOfSequences);
+    return new ConcatSequence<>(seqOfSequences);
   }
 
   @Override

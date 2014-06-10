@@ -38,6 +38,7 @@ import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -143,6 +144,22 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new CardinalityAggregatorFactory(name, fieldNames, byRow);
+  }
+
+  @Override
+  public List<AggregatorFactory> getBaseFactories()
+  {
+    return Lists.transform(
+        fieldNames,
+        new Function<String, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(String input)
+          {
+            return new CardinalityAggregatorFactory(name, Arrays.asList(input), byRow);
+          }
+        }
+    );
   }
 
   @Override
