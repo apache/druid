@@ -45,7 +45,12 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     final Path path = getPath(segment);
     final FileSystem fs = checkPathAndGetFilesystem(path);
     try {
-      fs.delete(path, true);
+      if (path.getName().endsWith(".zip")) {
+        // delete the parent directory containing the zip file and the descriptor
+        fs.delete(path.getParent(), true);
+      } else {
+        throw new SegmentLoadingException("Unknown file type[%s]", path);
+      }
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Unable to kill segment");
