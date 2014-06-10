@@ -59,7 +59,7 @@
             <artifactId>javax.inject</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.glassfish.web</groupId>
+            <groupId>org.glassfish</groupId>
             <artifactId>javax.el</artifactId>
         </dependency>
         <dependency>
