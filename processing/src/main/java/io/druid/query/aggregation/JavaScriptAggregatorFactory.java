@@ -150,7 +150,7 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
           @Override
           public AggregatorFactory apply(String input)
           {
-            return new JavaScriptAggregatorFactory(name, Arrays.asList(input), fnAggregate, fnReset, fnCombine);
+            return new JavaScriptAggregatorFactory(input, Arrays.asList(input), fnAggregate, fnReset, fnCombine);
           }
         }
     );
