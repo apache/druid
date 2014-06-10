@@ -413,10 +413,6 @@ public class GroupByQueryEngine
                     position += increments[i];
                   }
 
-                  //for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-                  //  theEvent.put(postAggregator.getName(), postAggregator.compute(theEvent));
-                  //}
-
                   return new MapBasedRow(timestamp, theEvent);
                 }
               }
