@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.druid</groupId>
     <artifactId>druid-server</artifactId>
@@ -56,6 +57,10 @@
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.web</groupId>
+            <artifactId>javax.el</artifactId>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -130,12 +135,12 @@
             <artifactId>jetty-servlets</artifactId>
         </dependency>
         <dependency>
-          <groupId>com.ircclouds.irc</groupId>
-          <artifactId>irc-api</artifactId>
+            <groupId>com.ircclouds.irc</groupId>
+            <artifactId>irc-api</artifactId>
         </dependency>
         <dependency>
-          <groupId>com.maxmind.geoip2</groupId>
-          <artifactId>geoip2</artifactId>
+            <groupId>com.maxmind.geoip2</groupId>
+            <artifactId>geoip2</artifactId>
         </dependency>
 
         <!-- Tests -->
