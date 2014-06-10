@@ -42,7 +42,6 @@ import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.segment.Cursor;
@@ -104,41 +103,41 @@ public class GroupByQueryEngine
 
     return Sequences.concat(
         Sequences.withBaggage(
-        Sequences.map(
-          cursors,
-          new Function<Cursor, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(@Nullable final Cursor cursor)
-            {
-              return new BaseSequence<Row, RowIterator>(
-                  new BaseSequence.IteratorMaker<Row, RowIterator>()
+            Sequences.map(
+                cursors,
+                new Function<Cursor, Sequence<Row>>()
+                {
+                  @Override
+                  public Sequence<Row> apply(@Nullable final Cursor cursor)
                   {
-                    @Override
-                    public RowIterator make()
-                    {
-                      return new RowIterator(query, cursor, bufferHolder.get(), config.get());
-                    }
+                    return new BaseSequence<Row, RowIterator>(
+                        new BaseSequence.IteratorMaker<Row, RowIterator>()
+                        {
+                          @Override
+                          public RowIterator make()
+                          {
+                            return new RowIterator(query, cursor, bufferHolder.get(), config.get());
+                          }
 
-                    @Override
-                    public void cleanup(RowIterator iterFromMake)
-                    {
-                      Closeables.closeQuietly(iterFromMake);
-                    }
+                          @Override
+                          public void cleanup(RowIterator iterFromMake)
+                          {
+                            Closeables.closeQuietly(iterFromMake);
+                          }
+                        }
+                    );
                   }
-              );
+                }
+            ),
+            new Closeable()
+            {
+              @Override
+              public void close() throws IOException
+              {
+                Closeables.closeQuietly(bufferHolder);
+              }
             }
-          }
-        ),
-        new Closeable()
-        {
-          @Override
-          public void close() throws IOException
-          {
-            Closeables.closeQuietly(bufferHolder);
-          }
-        }
-      )
+        )
     );
   }
 
@@ -414,9 +413,9 @@ public class GroupByQueryEngine
                     position += increments[i];
                   }
 
-                  for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-                    theEvent.put(postAggregator.getName(), postAggregator.compute(theEvent));
-                  }
+                  //for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+                  //  theEvent.put(postAggregator.getName(), postAggregator.compute(theEvent));
+                  //}
 
                   return new MapBasedRow(timestamp, theEvent);
                 }

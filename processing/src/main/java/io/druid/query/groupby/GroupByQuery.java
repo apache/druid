@@ -292,11 +292,25 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
 
-    private Builder()
+    public Builder()
     {
     }
 
-    private Builder(Builder builder)
+    public Builder(GroupByQuery query)
+    {
+      dataSource = query.getDataSource();
+      querySegmentSpec = query.getQuerySegmentSpec();
+      limitSpec = query.getOrderBy();
+      dimFilter = query.getDimFilter();
+      granularity = query.getGranularity();
+      dimensions = query.getDimensions();
+      aggregatorSpecs = query.getAggregatorSpecs();
+      postAggregatorSpecs = query.getPostAggregatorSpecs();
+      havingSpec = query.getHavingSpec();
+      context = query.getContext();
+    }
+
+    public Builder(Builder builder)
     {
       dataSource = builder.dataSource;
       querySegmentSpec = builder.querySegmentSpec;
@@ -515,36 +529,57 @@ public class GroupByQuery extends BaseQuery<Row>
   public String toString()
   {
     return "GroupByQuery{" +
-        "limitSpec=" + limitSpec +
-        ", dimFilter=" + dimFilter +
-        ", granularity=" + granularity +
-        ", dimensions=" + dimensions +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", orderByLimitFn=" + orderByLimitFn +
-        '}';
+           "limitSpec=" + limitSpec +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + granularity +
+           ", dimensions=" + dimensions +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", orderByLimitFn=" + orderByLimitFn +
+           '}';
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     GroupByQuery that = (GroupByQuery) o;
 
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null)
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null) {
       return false;
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (havingSpec != null ? !havingSpec.equals(that.havingSpec) : that.havingSpec != null) return false;
-    if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) return false;
-    if (orderByLimitFn != null ? !orderByLimitFn.equals(that.orderByLimitFn) : that.orderByLimitFn != null)
+    }
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
       return false;
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null)
+    }
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
       return false;
+    }
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
+      return false;
+    }
+    if (havingSpec != null ? !havingSpec.equals(that.havingSpec) : that.havingSpec != null) {
+      return false;
+    }
+    if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) {
+      return false;
+    }
+    if (orderByLimitFn != null ? !orderByLimitFn.equals(that.orderByLimitFn) : that.orderByLimitFn != null) {
+      return false;
+    }
+    if (postAggregatorSpecs != null
+        ? !postAggregatorSpecs.equals(that.postAggregatorSpecs)
+        : that.postAggregatorSpecs != null) {
+      return false;
+    }
 
     return true;
   }

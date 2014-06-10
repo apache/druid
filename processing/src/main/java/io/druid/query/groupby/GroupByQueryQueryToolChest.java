@@ -43,7 +43,9 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
@@ -59,7 +61,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
   };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
-  private static final Map<String, Object> NO_MERGE_CONTEXT = ImmutableMap.<String, Object>of(GROUP_BY_MERGE_KEY, "false");
+  private static final Map<String, Object> NO_MERGE_CONTEXT = ImmutableMap.<String, Object>of(
+      GROUP_BY_MERGE_KEY,
+      "false"
+  );
   private final Supplier<GroupByQueryConfig> configSupplier;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
 
@@ -92,7 +97,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
-
     Sequence<Row> result;
 
     // If there's a subquery, merge subquery results and then apply the aggregator
@@ -101,12 +105,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       GroupByQuery subquery;
       try {
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
-      } catch (ClassCastException e) {
+      }
+      catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
       Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
+      final GroupByQuery.Builder builder = new GroupByQuery.Builder(subquery);
+      for (PostAggregator postAggregator : subquery.getPostAggregatorSpecs()) {
+        builder.addAggregator(new DoubleSumAggregatorFactory(postAggregator.getName(), postAggregator.getName()));
+      }
       IncrementalIndexStorageAdapter adapter
-          = new IncrementalIndexStorageAdapter(makeIncrementalIndex(subquery, subqueryResult));
+          = new IncrementalIndexStorageAdapter(makeIncrementalIndex(builder.build(), subqueryResult));
       result = engine.process(query, adapter);
     } else {
       result = runner.run(query);
@@ -128,7 +137,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             final MapBasedRow row = (MapBasedRow) input;
             return new MapBasedRow(
                 query.getGranularity()
-                    .toDateTime(row.getTimestampFromEpoch()),
+                     .toDateTime(row.getTimestampFromEpoch()),
                 row.getEvent()
             );
           }
