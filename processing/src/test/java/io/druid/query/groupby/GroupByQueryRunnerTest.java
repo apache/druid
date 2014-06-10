@@ -56,6 +56,7 @@ import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
+import io.druid.query.groupby.having.HavingSpec;
 import io.druid.query.groupby.having.OrHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.LimitSpec;
@@ -864,6 +865,7 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
+
   // A subquery identical to the query should yield identical results
   @Test
   public void testIdenticalSubquery()
@@ -1058,6 +1060,15 @@ public class GroupByQueryRunnerTest
 
             )
         )
+        .setHavingSpec(new HavingSpec()
+        {
+          @Override
+          public boolean eval(Row row)
+          {
+            return (row.getFloatMetric("idx_subpostagg") < 3800);
+          }
+        })
+        .addOrderByColumn("alias")
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -1091,9 +1102,9 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 11118.0),
         createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0),
         createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0),
-        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 13870.0),
+//        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 13870.0),
         createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0),
-        createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 13900.0),
+//        createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 13900.0),
         createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0),
         createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0),
 
