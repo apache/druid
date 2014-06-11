@@ -22,11 +22,15 @@ package io.druid.query.select;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.filter.SelectorDimFilter;
@@ -54,7 +58,11 @@ public class SelectQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        SelectQueryRunnerFactory.create(new DefaultObjectMapper())
+        new SelectQueryRunnerFactory(
+            new SelectQueryQueryToolChest(new QueryConfig(), new DefaultObjectMapper()),
+            new SelectQueryEngine(),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
     );
   }
 

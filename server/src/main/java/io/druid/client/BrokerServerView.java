@@ -32,10 +32,9 @@ import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
 import io.druid.query.DataSource;
-import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
-import io.druid.query.TableDataSource;
+import io.druid.query.QueryWatcher;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -60,6 +59,7 @@ public class BrokerServerView implements TimelineServerView
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
 
   private final QueryToolChestWarehouse warehouse;
+  private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final ServerInventoryView baseView;
@@ -68,6 +68,7 @@ public class BrokerServerView implements TimelineServerView
   @Inject
   public BrokerServerView(
       QueryToolChestWarehouse warehouse,
+      QueryWatcher queryWatcher,
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
       ServerInventoryView baseView,
@@ -75,6 +76,7 @@ public class BrokerServerView implements TimelineServerView
   )
   {
     this.warehouse = warehouse;
+    this.queryWatcher = queryWatcher;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.baseView = baseView;
@@ -154,7 +156,7 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, smileMapper, httpClient, server.getHost());
+    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost());
   }
 
   private QueryableDruidServer removeServer(DruidServer server)

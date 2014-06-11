@@ -22,6 +22,7 @@ package io.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -30,7 +31,9 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.HttpResponseHandler;
 import io.druid.guice.annotations.Client;
 import io.druid.query.Query;
+import io.druid.server.QueryResource;
 import io.druid.server.router.Router;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.inject.Inject;
@@ -68,7 +71,7 @@ public class RoutingDruidClient<IntermediateType, FinalType>
     return openConnections.get();
   }
 
-  public ListenableFuture<FinalType> post(
+  public ListenableFuture<FinalType> postQuery(
       String url,
       Query query,
       HttpResponseHandler<IntermediateType, FinalType> responseHandler
@@ -81,7 +84,7 @@ public class RoutingDruidClient<IntermediateType, FinalType>
       future = httpClient
           .post(new URL(url))
           .setContent(objectMapper.writeValueAsBytes(query))
-          .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
+          .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? QueryResource.APPLICATION_SMILE : QueryResource.APPLICATION_JSON)
           .go(responseHandler);
 
       openConnections.getAndIncrement();
@@ -119,6 +122,21 @@ public class RoutingDruidClient<IntermediateType, FinalType>
     try {
       return httpClient
           .get(new URL(url))
+          .go(responseHandler);
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public ListenableFuture<FinalType> delete(
+      String url,
+      HttpResponseHandler<IntermediateType, FinalType> responseHandler
+  )
+  {
+    try {
+      return httpClient
+          .delete(new URL(url))
           .go(responseHandler);
     }
     catch (IOException e) {

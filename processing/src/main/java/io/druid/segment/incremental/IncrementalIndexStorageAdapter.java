@@ -29,6 +29,7 @@ import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -200,6 +201,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 while (baseIter.hasNext()) {
+                  if (Thread.interrupted()) {
+                    throw new QueryInterruptedException();
+                  }
+
                   currEntry.set(baseIter.next());
 
                   if (filterMatcher.matches()) {
@@ -237,6 +242,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   numAdvanced = 0;
                 } else {
                   Iterators.advance(baseIter, numAdvanced);
+                }
+
+                if (Thread.interrupted()) {
+                  throw new QueryInterruptedException();
                 }
 
                 boolean foundMatched = false;

@@ -24,42 +24,55 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.logger.Logger;
 import io.druid.data.input.Row;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
 {
   private final GroupByQueryEngine engine;
+  private final QueryWatcher queryWatcher;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
+
+  private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
 
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
+      QueryWatcher queryWatcher,
       Supplier<GroupByQueryConfig> config,
       GroupByQueryQueryToolChest toolChest
   )
   {
     this.engine = engine;
+    this.queryWatcher = queryWatcher;
     this.config = config;
     this.toolChest = toolChest;
   }
@@ -71,8 +84,10 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   }
 
   @Override
-  public QueryRunner<Row> mergeRunners(final ExecutorService queryExecutor, Iterable<QueryRunner<Row>> queryRunners)
+  public QueryRunner<Row> mergeRunners(final ExecutorService exec, Iterable<QueryRunner<Row>> queryRunners)
   {
+    // mergeRunners should take ListeningExecutorService at some point
+    final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
     if (config.get().isSingleThreaded()) {
       return new ConcatQueryRunner<Row>(
           Sequences.map(
@@ -88,7 +103,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                     public Sequence<Row> run(final Query<Row> query)
                     {
 
-                      Future<Sequence<Row>> future = queryExecutor.submit(
+                      ListenableFuture<Sequence<Row>> future = queryExecutor.submit(
                           new Callable<Sequence<Row>>()
                           {
                             @Override
@@ -102,13 +117,25 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                           }
                       );
                       try {
-                        return future.get();
+                        queryWatcher.registerQuery(query, future);
+                        final Number timeout = query.getContextValue("timeout", (Number)null);
+                        return timeout == null ? future.get() : future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
                       }
                       catch (InterruptedException e) {
-                        throw Throwables.propagate(e);
+                        log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+                        future.cancel(true);
+                        throw new QueryInterruptedException("Query interrupted");
+                      }
+                      catch(CancellationException e) {
+                        throw new QueryInterruptedException("Query cancelled");
+                      }
+                      catch(TimeoutException e) {
+                        log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+                        future.cancel(true);
+                        throw new QueryInterruptedException("Query timeout");
                       }
                       catch (ExecutionException e) {
-                        throw Throwables.propagate(e);
+                        throw Throwables.propagate(e.getCause());
                       }
                     }
                   };
@@ -117,7 +144,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, queryRunners);
+      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, queryWatcher, queryRunners);
     }
   }
 
