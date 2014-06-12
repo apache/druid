@@ -32,7 +32,12 @@ public class DefaultObjectMapper extends ObjectMapper
 {
   public DefaultObjectMapper()
   {
-    this(null);
+    this((JsonFactory)null);
+  }
+
+  public DefaultObjectMapper(DefaultObjectMapper mapper)
+  {
+    super(mapper);
   }
 
   public DefaultObjectMapper(JsonFactory factory)
@@ -51,5 +56,11 @@ public class DefaultObjectMapper extends ObjectMapper
     configure(MapperFeature.AUTO_DETECT_IS_GETTERS, false);
     configure(MapperFeature.AUTO_DETECT_SETTERS, false);
     configure(SerializationFeature.INDENT_OUTPUT, false);
+  }
+
+  @Override
+  public ObjectMapper copy()
+  {
+    return new DefaultObjectMapper(this);
   }
 }

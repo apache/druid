@@ -30,6 +30,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 
@@ -43,15 +44,18 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
 {
   private final StupidPool<ByteBuffer> computationBufferPool;
   private final TopNQueryQueryToolChest toolchest;
+  private final QueryWatcher queryWatcher;
 
   @Inject
   public TopNQueryRunnerFactory(
       @Global StupidPool<ByteBuffer> computationBufferPool,
-      TopNQueryQueryToolChest toolchest
+      TopNQueryQueryToolChest toolchest,
+      QueryWatcher queryWatcher
   )
   {
     this.computationBufferPool = computationBufferPool;
     this.toolchest = toolchest;
+    this.queryWatcher = queryWatcher;
   }
 
   @Override
@@ -79,7 +83,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
   )
   {
     return new ChainedExecutionQueryRunner<Result<TopNResultValue>>(
-        queryExecutor, toolchest.getOrdering(), queryRunners
+        queryExecutor, toolchest.getOrdering(), queryWatcher, queryRunners
     );
   }
 

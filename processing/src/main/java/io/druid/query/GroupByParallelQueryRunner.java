@@ -26,6 +26,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -39,37 +43,44 @@ import io.druid.segment.incremental.IncrementalIndex;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 
 public class GroupByParallelQueryRunner implements QueryRunner<Row>
 {
   private static final Logger log = new Logger(GroupByParallelQueryRunner.class);
   private final Iterable<QueryRunner<Row>> queryables;
-  private final ExecutorService exec;
+  private final ListeningExecutorService exec;
   private final Ordering<Row> ordering;
   private final Supplier<GroupByQueryConfig> configSupplier;
+  private final QueryWatcher queryWatcher;
+
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Ordering<Row> ordering,
       Supplier<GroupByQueryConfig> configSupplier,
+      QueryWatcher queryWatcher,
       QueryRunner<Row>... queryables
   )
   {
-    this(exec, ordering, configSupplier, Arrays.asList(queryables));
+    this(exec, ordering, configSupplier, queryWatcher, Arrays.asList(queryables));
   }
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Ordering<Row> ordering, Supplier<GroupByQueryConfig> configSupplier,
+      QueryWatcher queryWatcher,
       Iterable<QueryRunner<Row>> queryables
   )
   {
-    this.exec = exec;
+    this.exec = MoreExecutors.listeningDecorator(exec);
     this.ordering = ordering;
+    this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
   }
@@ -87,47 +98,66 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     if (Iterables.isEmpty(queryables)) {
       log.warn("No queryables found.");
     }
-    List<Future<Boolean>> futures = Lists.newArrayList(
-        Iterables.transform(
-            queryables,
-            new Function<QueryRunner<Row>, Future<Boolean>>()
-            {
-              @Override
-              public Future<Boolean> apply(final QueryRunner<Row> input)
-              {
-                return exec.submit(
-                    new AbstractPrioritizedCallable<Boolean>(priority)
-                    {
-                      @Override
-                      public Boolean call() throws Exception
-                      {
-                        try {
-                          input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-                          return true;
+    ListenableFuture<List<Boolean>> futures = Futures.allAsList(
+        Lists.newArrayList(
+            Iterables.transform(
+                queryables,
+                new Function<QueryRunner<Row>, ListenableFuture<Boolean>>()
+                {
+                  @Override
+                  public ListenableFuture<Boolean> apply(final QueryRunner<Row> input)
+                  {
+                    return exec.submit(
+                        new AbstractPrioritizedCallable<Boolean>(priority)
+                        {
+                          @Override
+                          public Boolean call() throws Exception
+                          {
+                            try {
+                              input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                              return true;
+                            }
+                            catch (QueryInterruptedException e) {
+                              throw Throwables.propagate(e);
+                            }
+                            catch (Exception e) {
+                              log.error(e, "Exception with one of the sequences!");
+                              throw Throwables.propagate(e);
+                            }
+                          }
                         }
-                        catch (Exception e) {
-                          log.error(e, "Exception with one of the sequences!");
-                          throw Throwables.propagate(e);
-                        }
-                      }
-                    }
-                );
-              }
-            }
+                    );
+                  }
+                }
+            )
         )
     );
 
     // Let the runners complete
-    for (Future<Boolean> future : futures) {
-      try {
-        future.get();
+    try {
+      queryWatcher.registerQuery(query, futures);
+      final Number timeout = query.getContextValue("timeout", (Number) null);
+      if(timeout == null) {
+        futures.get();
+      } else {
+        futures.get(timeout.longValue(), TimeUnit.MILLISECONDS);
       }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      catch (ExecutionException e) {
-        throw new RuntimeException(e);
-      }
+    }
+    catch (InterruptedException e) {
+      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+      futures.cancel(true);
+      throw new QueryInterruptedException("Query interrupted");
+    }
+    catch(CancellationException e) {
+      throw new QueryInterruptedException("Query cancelled");
+    }
+    catch(TimeoutException e) {
+      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+      futures.cancel(true);
+      throw new QueryInterruptedException("Query timeout");
+    }
+    catch (ExecutionException e) {
+      throw Throwables.propagate(e.getCause());
     }
 
     return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null));
