@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -143,7 +144,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CardinalityAggregatorFactory(name, fieldNames, byRow);
+    return new HyperUniquesAggregatorFactory(name, name);
   }
 
   @Override
