@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
@@ -203,17 +204,17 @@
             <dependency>
                 <groupId>com.google.inject</groupId>
                 <artifactId>guice</artifactId>
-                <version>4.0-beta</version>
+                <version>4.0-beta4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-servlet</artifactId>
-                <version>4.0-beta</version>
+                <version>4.0-beta4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-multibindings</artifactId>
-                <version>4.0-beta</version>
+                <version>4.0-beta4</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -279,6 +280,11 @@
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
                 <version>1</version>
+            </dependency>
+            <dependency>
+               <groupId>org.glassfish</groupId>
+               <artifactId>javax.el</artifactId>
+               <version>3.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.jamesmurty.utils</groupId>
@@ -393,7 +399,14 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.0</version>
+                <version>0.9.1</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- exclude artifact not available in maven central -->
+                        <groupId>com.centerkey.utils</groupId>
+                        <artifactId>barebonesbrowserlaunch</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
