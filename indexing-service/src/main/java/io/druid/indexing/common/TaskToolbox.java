@@ -75,7 +75,6 @@ public class TaskToolbox
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
   private final File taskWorkDir;
-  private final StupidPool<ByteBuffer> indexPool;
 
   public TaskToolbox(
       TaskConfig config,
@@ -93,8 +92,7 @@ public class TaskToolbox
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper,
-      final File taskWorkDir,
-      StupidPool<ByteBuffer> indexPool
+      final File taskWorkDir
   )
   {
     this.config = config;
@@ -113,7 +111,6 @@ public class TaskToolbox
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
     this.taskWorkDir = taskWorkDir;
-    this.indexPool = indexPool;
   }
 
   public TaskConfig getConfig()
@@ -216,7 +213,4 @@ public class TaskToolbox
     return taskWorkDir;
   }
 
-  public StupidPool<ByteBuffer> getIndexPool(){
-    return indexPool;
-  }
 }

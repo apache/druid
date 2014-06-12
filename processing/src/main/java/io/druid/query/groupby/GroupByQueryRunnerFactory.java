@@ -54,20 +54,21 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private final GroupByQueryEngine engine;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
-  private final StupidPool<ByteBuffer> bufferPool;
+  @Global
+  StupidPool<ByteBuffer> computationBufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
       Supplier<GroupByQueryConfig> config,
       GroupByQueryQueryToolChest toolChest,
-      @Global StupidPool<ByteBuffer> bufferPool
+      @Global StupidPool<ByteBuffer> computationBufferPool
   )
   {
     this.engine = engine;
     this.config = config;
     this.toolChest = toolChest;
-    this.bufferPool = bufferPool;
+    this.computationBufferPool = computationBufferPool;
   }
 
   @Override
@@ -123,7 +124,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, bufferPool, queryRunners);
+      return new GroupByParallelQueryRunner(
+          queryExecutor,
+          new RowOrdering(),
+          config,
+          computationBufferPool,
+          queryRunners
+      );
     }
   }
 

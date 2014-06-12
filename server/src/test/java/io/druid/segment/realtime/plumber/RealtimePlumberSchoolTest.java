@@ -145,7 +145,6 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         serverView,
         MoreExecutors.sameThreadExecutor(),
-        TestQueryRunners.pool,
         new Period("PT10m"),
         tmpDir,
         Granularity.HOUR,

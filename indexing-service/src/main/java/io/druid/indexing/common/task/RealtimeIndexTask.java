@@ -308,7 +308,6 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getNewSegmentServerView(),
         toolbox.getQueryExecutorService(),
-        toolbox.getIndexPool(),
         null,
         null,
         null,

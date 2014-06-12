@@ -60,7 +60,6 @@ public class TaskToolboxFactory
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
-  private final StupidPool<ByteBuffer> bufferPool;
 
   @Inject
   public TaskToolboxFactory(
@@ -96,7 +95,6 @@ public class TaskToolboxFactory
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
-    this.bufferPool = bufferPool;
   }
 
   public TaskToolbox build(Task task)
@@ -119,8 +117,7 @@ public class TaskToolboxFactory
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         objectMapper,
-        taskWorkDir,
-        bufferPool
+        taskWorkDir
     );
   }
 }

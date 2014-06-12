@@ -29,8 +29,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.guice.annotations.Global;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -52,31 +51,25 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class Sink implements Iterable<FireHydrant>
 {
   private static final Logger log = new Logger(Sink.class);
-
-  private volatile FireHydrant currHydrant;
-
   private final Interval interval;
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
-  private final StupidPool<ByteBuffer> bufferPool;
+  private volatile FireHydrant currHydrant;
 
 
   public Sink(
       Interval interval,
       DataSchema schema,
       RealtimeTuningConfig config,
-      String version,
-      StupidPool<ByteBuffer> bufferPool
-
+      String version
   )
   {
     this.schema = schema;
     this.config = config;
     this.interval = interval;
     this.version = version;
-    this.bufferPool = bufferPool;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
@@ -86,15 +79,13 @@ public class Sink implements Iterable<FireHydrant>
       DataSchema schema,
       RealtimeTuningConfig config,
       String version,
-      List<FireHydrant> hydrants,
-      StupidPool<ByteBuffer> bufferPool
+      List<FireHydrant> hydrants
   )
   {
     this.schema = schema;
     this.config = config;
     this.interval = interval;
     this.version = version;
-    this.bufferPool = bufferPool;
 
     for (int i = 0; i < hydrants.size(); ++i) {
       final FireHydrant hydrant = hydrants.get(i);
@@ -187,6 +178,11 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
+    int aggsSize = 0;
+    for (AggregatorFactory agg : schema.getAggregators()) {
+      aggsSize += agg.getMaxIntermediateSize();
+    }
+    int bufferSize = aggsSize * config.getMaxRowsInMemory();
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
@@ -194,7 +190,7 @@ public class Sink implements Iterable<FireHydrant>
             .withSpatialDimensions(schema.getParser())
             .withMetrics(schema.getAggregators())
             .build(),
-        bufferPool
+        new OffheapBufferPool(bufferSize)
     );
 
     FireHydrant old;

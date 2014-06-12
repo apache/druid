@@ -64,8 +64,7 @@ public class FlushingPlumber extends RealtimePlumber
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService,
-      StupidPool<ByteBuffer> bufferPool
+      ExecutorService queryExecutorService
   )
   {
     super(
@@ -78,8 +77,7 @@ public class FlushingPlumber extends RealtimePlumber
         queryExecutorService,
         null,
         null,
-        null,
-        bufferPool
+        null
     );
 
     this.flushDuration = flushDuration;

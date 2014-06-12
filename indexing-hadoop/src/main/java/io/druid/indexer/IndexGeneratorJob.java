@@ -617,7 +617,11 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
-      //TODO: review this, add a config for batch ingestion
+      int aggsSize = 0;
+      for (AggregatorFactory agg : aggs) {
+        aggsSize += agg.getMaxIntermediateSize();
+      }
+      int bufferSize = aggsSize * config.getSchema().getTuningConfig().getRowFlushBoundary();
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
@@ -625,7 +629,7 @@ public class IndexGeneratorJob implements Jobby
               .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build(),
-          new OffheapBufferPool(1024 * 1024 * 1024)
+          new OffheapBufferPool(bufferSize)
       );
     }
 

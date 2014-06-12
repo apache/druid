@@ -32,6 +32,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexableAdapter;
@@ -83,7 +84,7 @@ public class DeleteTask extends AbstractFixedIntervalTask
         0,
         QueryGranularity.NONE,
         new AggregatorFactory[0],
-        toolbox.getIndexPool()
+        new OffheapBufferPool(0)
     );
     try {
       final IndexableAdapter emptyAdapter = new IncrementalIndexAdapter(getInterval(), empty);

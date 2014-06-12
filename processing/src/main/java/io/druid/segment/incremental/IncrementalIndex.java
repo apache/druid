@@ -297,6 +297,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     synchronized (this) {
       if (!facts.containsKey(key)) {
         int rowOffset = totalAggSize * numEntries.getAndIncrement();
+        if (rowOffset + totalAggSize > bufferHolder.get().limit()) {
+          throw new ISE("Buffer Full cannot add more rows current rowSize : %d", numEntries.get());
+        }
         for (int i = 0; i < aggs.length; i++) {
           aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
         }

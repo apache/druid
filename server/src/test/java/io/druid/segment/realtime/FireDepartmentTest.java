@@ -74,7 +74,7 @@ public class FireDepartmentTest
         new RealtimeIOConfig(
             null,
             new RealtimePlumberSchool(
-                null, null, null, null, null, null, null, TestQueryRunners.pool, null, null, null, null, null, 0
+                null, null, null, null, null, null, null, null, null, null, null, null, 0
             )
         ),
         new RealtimeTuningConfig(

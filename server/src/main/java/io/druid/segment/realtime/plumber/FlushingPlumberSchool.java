@@ -54,7 +54,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
-  private final StupidPool<ByteBuffer> bufferPool;
 
   @JsonCreator
   public FlushingPlumberSchool(
@@ -63,8 +62,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject @Processing ExecutorService queryExecutorService,
-      //TODO: define separate index pool
-      @JacksonInject @Global StupidPool<ByteBuffer> bufferPool,
       // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -82,7 +79,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         null,
         null,
         queryExecutorService,
-        bufferPool,
         windowPeriod,
         basePersistDirectory,
         segmentGranularity,
@@ -96,7 +92,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
-    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -116,8 +111,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
-        bufferPool
+        queryExecutorService
     );
   }
 

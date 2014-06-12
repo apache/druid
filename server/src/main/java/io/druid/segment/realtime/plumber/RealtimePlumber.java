@@ -99,7 +99,6 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService persistExecutor = null;
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
-  private final StupidPool<ByteBuffer> bufferPool;
 
 
   public RealtimePlumber(
@@ -112,9 +111,7 @@ public class RealtimePlumber implements Plumber
       ExecutorService queryExecutorService,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      FilteredServerView serverView,
-      StupidPool<ByteBuffer> bufferPool
-
+      FilteredServerView serverView
   )
   {
     this.schema = schema;
@@ -128,7 +125,6 @@ public class RealtimePlumber implements Plumber
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
-    this.bufferPool = bufferPool;
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -193,7 +189,7 @@ public class RealtimePlumber implements Plumber
           segmentGranularity.increment(new DateTime(truncatedTime))
       );
 
-      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), bufferPool);
+      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval));
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -544,7 +540,7 @@ public class RealtimePlumber implements Plumber
           );
         }
 
-        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants, bufferPool);
+        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
             currSink.getInterval(),

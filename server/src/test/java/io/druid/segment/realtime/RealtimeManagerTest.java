@@ -118,7 +118,7 @@ public class RealtimeManagerTest
         null,
         null
     );
-    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString(), TestQueryRunners.pool));
+    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));
 
     realtimeManager = new RealtimeManager(
         Arrays.<FireDepartment>asList(

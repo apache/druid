@@ -70,7 +70,6 @@ public class YeOldePlumberSchool implements PlumberSchool
   private final String version;
   private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
-  private final StupidPool<ByteBuffer> bufferPool;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
 
@@ -79,16 +78,13 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
-      @JacksonInject("tmpSegmentDir") File tmpSegmentDir,
-      //TODO: review this global annotation
-      @JacksonInject @Global StupidPool<ByteBuffer> bufferPool
-  )
+      @JacksonInject("tmpSegmentDir") File tmpSegmentDir
+      )
   {
     this.interval = interval;
     this.version = version;
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
-    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -105,7 +101,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   )
   {
     // There can be only one.
-    final Sink theSink = new Sink(interval, schema, config, version, bufferPool);
+    final Sink theSink = new Sink(interval, schema, config, version);
 
     // Temporary directory to hold spilled segments.
     final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());
