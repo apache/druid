@@ -83,7 +83,7 @@ public class GroupByQueryHelper
       @Override
       public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
       {
-        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
+        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions), false) > config.getMaxResults()) {
           throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
         }
 
