@@ -132,17 +132,17 @@ public class DruidDefaultSerializersModule extends SimpleModule
           public void serialize(Yielder yielder, final JsonGenerator jgen, SerializerProvider provider)
               throws IOException, JsonProcessingException
           {
-            jgen.writeStartArray();
             try {
+              jgen.writeStartArray();
               while (!yielder.isDone()) {
                 final Object o = yielder.get();
                 jgen.writeObject(o);
                 yielder = yielder.next(null);
               }
+              jgen.writeEndArray();
             } finally {
               yielder.close();
             }
-            jgen.writeEndArray();
           }
         }
     );
