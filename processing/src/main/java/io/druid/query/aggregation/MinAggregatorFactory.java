@@ -83,7 +83,7 @@ public class MinAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getBaseFactories()
+  public List<AggregatorFactory> getRequiredColumns()
   {
     return Arrays.<AggregatorFactory>asList(new MinAggregatorFactory(fieldName, fieldName));
   }

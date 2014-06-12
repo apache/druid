@@ -111,7 +111,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-        aggs.addAll(aggregatorFactory.getBaseFactories());
+        aggs.addAll(aggregatorFactory.getRequiredColumns());
       }
 
       // We need the inner incremental index to have all the columns required by the outer query

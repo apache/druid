@@ -65,11 +65,11 @@ public interface AggregatorFactory
   public AggregatorFactory getCombiningFactory();
 
   /**
-   * Gets a list of aggregator factories using the actual column names of the data
+   * Gets a list of all columns that this AggregatorFactory will scan
    *
-   * @return Base AggregatorFactories for different fields of this AggregatorFactory
+   * @return AggregatorFactories for the columns to scan of the parent AggregatorFactory
    */
-  public List<AggregatorFactory> getBaseFactories();
+  public List<AggregatorFactory> getRequiredColumns();
 
   /**
    * A method that knows how to "deserialize" the object from whatever form it might have been put into

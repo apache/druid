@@ -132,7 +132,7 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getBaseFactories()
+  public List<AggregatorFactory> getRequiredColumns()
   {
     return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(fieldName, fieldName));
   }

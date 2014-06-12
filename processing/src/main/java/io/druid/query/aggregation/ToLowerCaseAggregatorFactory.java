@@ -66,9 +66,9 @@ public class ToLowerCaseAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getBaseFactories()
+  public List<AggregatorFactory> getRequiredColumns()
   {
-    return baseAggregatorFactory.getBaseFactories();
+    return baseAggregatorFactory.getRequiredColumns();
   }
 
   @Override

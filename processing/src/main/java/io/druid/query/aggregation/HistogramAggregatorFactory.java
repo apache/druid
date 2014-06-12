@@ -101,7 +101,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getBaseFactories()
+  public List<AggregatorFactory> getRequiredColumns()
   {
     return Arrays.<AggregatorFactory>asList(new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
   }

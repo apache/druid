@@ -147,7 +147,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getBaseFactories()
+  public List<AggregatorFactory> getRequiredColumns()
   {
     return Lists.transform(
         fieldNames,
