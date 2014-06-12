@@ -248,7 +248,7 @@ public class IncrementalIndex implements Iterable<Row>
                       final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
                       {
                         @Override
-                        public Class<Object> classOfObject()
+                        public Class classOfObject()
                         {
                           return Object.class;
                         }
@@ -294,22 +294,17 @@ public class IncrementalIndex implements Iterable<Row>
                   public DimensionSelector makeDimensionSelector(final String dimension)
                   {
                     final String dimensionName = dimension.toLowerCase();
-                    final List<String> dimensionValues = in.getDimension(dimensionName);
-                    if (dimensionValues == null) {
-                      return null;
-                    }
-
-                    final IncrementalIndex.DimDim dimValLookup = getDimension(dimensionName);
-                    final int maxId = dimValLookup.size();
                     return new DimensionSelector()
                     {
                       @Override
                       public IndexedInts getRow()
                       {
+                        final List<String> dimensionValues = in.getDimension(dimensionName);
                         final ArrayList<Integer> vals = Lists.newArrayList();
-                        for (String dimVal : dimensionValues) {
-                          int id = dimValLookup.getId(dimVal);
-                          vals.add(id);
+                        if (dimensionValues != null) {
+                          for (int i = 0; i < dimensionValues.size(); ++i) {
+                            vals.add(i);
+                          }
                         }
 
                         return new IndexedInts()
@@ -337,19 +332,19 @@ public class IncrementalIndex implements Iterable<Row>
                       @Override
                       public int getValueCardinality()
                       {
-                        return maxId;
+                        throw new UnsupportedOperationException("value cardinality is unknown in incremental index");
                       }
 
                       @Override
                       public String lookupName(int id)
                       {
-                        return dimValLookup.getValue(id);
+                        return in.getDimension(dimensionName).get(id);
                       }
 
                       @Override
                       public int lookupId(String name)
                       {
-                        return dimValLookup.getId(name);
+                        return in.getDimension(dimensionName).indexOf(name);
                       }
                     };
                   }

@@ -218,6 +218,36 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByWithCardinality()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.qualityCardinality
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow(
+            "2011-04-01",
+            "rows",
+            26L,
+            "cardinality",
+            QueryRunnerTestHelper.UNIQUES_9
+        )
+    );
+
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testGroupByWithDimExtractionFn()
   {
     GroupByQuery query = GroupByQuery
@@ -1209,7 +1239,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testSubqueryWithEverything()
+  public void testSubqueryWithMultiColumnAggregators()
   {
     final GroupByQuery subquery = GroupByQuery
         .builder()
@@ -1220,11 +1250,11 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx_subagg", "index"),
+                new DoubleSumAggregatorFactory("idx_subagg", "index"),
                 new JavaScriptAggregatorFactory(
                     "js_agg",
                     Arrays.asList("index", "provider"),
-                    "function(index, dim){return index + dim.length;}",
+                    "function(current, index, dim){return current + index + dim.length;}",
                     "function(){return 0;}",
                     "function(a,b){return a + b;}"
                 )
@@ -1295,23 +1325,11 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 11135.0),
-        createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 11118.0),
-        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0),
-        createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0),
-        createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0),
-        createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0),
-        createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0),
-
-        createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 11147.0),
-        createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 11112.0),
-        createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 11166.0),
-        createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 11113.0),
-        createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 13447.0),
-        createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 11114.0),
-        createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 13505.0),
-        createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 11097.0),
-        createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 11126.0)
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0, "js_outer_agg", 123.92274475097656),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0, "js_outer_agg", 82.62254333496094),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0, "js_outer_agg", 125.58358001708984),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0, "js_outer_agg", 124.13470458984375),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0, "js_outer_agg", 162.74722290039062)
     );
 
     // Subqueries are handled by the ToolChest
