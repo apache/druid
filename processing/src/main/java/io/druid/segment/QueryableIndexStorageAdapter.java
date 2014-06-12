@@ -27,6 +27,7 @@ import com.google.common.io.Closeables;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.filter.Filter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -224,6 +225,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public void advance()
                     {
+                      if (Thread.interrupted()) {
+                        throw new QueryInterruptedException();
+                      }
                       cursorOffset.increment();
                     }
 
@@ -652,6 +656,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public void advance()
                     {
+                      if (Thread.interrupted()) {
+                        throw new QueryInterruptedException();
+                      }
                       ++currRow;
                     }
 

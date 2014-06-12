@@ -19,6 +19,7 @@
 
 package io.druid.query.timeboundary;
 
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
@@ -27,6 +28,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
@@ -40,6 +42,13 @@ public class TimeBoundaryQueryRunnerFactory
     implements QueryRunnerFactory<Result<TimeBoundaryResultValue>, TimeBoundaryQuery>
 {
   private static final TimeBoundaryQueryQueryToolChest toolChest = new TimeBoundaryQueryQueryToolChest();
+  private final QueryWatcher queryWatcher;
+
+  @Inject
+  public TimeBoundaryQueryRunnerFactory(QueryWatcher queryWatcher)
+  {
+    this.queryWatcher = queryWatcher;
+  }
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> createRunner(final Segment segment)
@@ -53,7 +62,7 @@ public class TimeBoundaryQueryRunnerFactory
   )
   {
     return new ChainedExecutionQueryRunner<Result<TimeBoundaryResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryRunners
+        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
     );
   }
 

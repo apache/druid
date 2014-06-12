@@ -73,11 +73,6 @@ public class S3StorageDruidModule implements DruidModule
   @LazySingleton
   public RestS3Service getRestS3Service(AWSCredentials credentials)
   {
-    try {
       return new RestS3Service(credentials);
-    }
-    catch (S3ServiceException e) {
-      throw new ProvisionException("Unable to create a RestS3Service", e);
-    }
   }
 }

@@ -167,18 +167,20 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           @Override
           public void close() throws IOException
           {
-            if (!isDone() && builder.getUser10() == null) {
-              builder.setUser10("short");
+            try {
+              if (!isDone() && builder.getUser10() == null) {
+                builder.setUser10("short");
+              }
+
+              long timeTaken = System.currentTimeMillis() - startTime;
+              emitter.emit(builder.build("query/time", timeTaken));
+
+              if (creationTime > 0) {
+                emitter.emit(builder.build("query/wait", startTime - creationTime));
+              }
+            } finally {
+              yielder.close();
             }
-
-            long timeTaken = System.currentTimeMillis() - startTime;
-            emitter.emit(builder.build("query/time", timeTaken));
-
-            if(creationTime > 0) {
-              emitter.emit(builder.build("query/wait", startTime - creationTime));
-            }
-
-            yielder.close();
           }
         };
       }
