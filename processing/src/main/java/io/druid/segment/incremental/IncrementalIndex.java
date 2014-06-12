@@ -237,7 +237,7 @@ public class IncrementalIndex implements Iterable<Row>
                       return new ObjectColumnSelector<Float>()
                       {
                         @Override
-                        public Class classOfObject()
+                        public Class<Float> classOfObject()
                         {
                           return Float.TYPE;
                         }
@@ -250,12 +250,11 @@ public class IncrementalIndex implements Iterable<Row>
                       };
                     }
 
-                    final List<String> dimensionValues = in.getDimension(columnName);
-                    if (dimensionValues != null) {
+                    if (getDimension(columnName) != null) {
                       return new ObjectColumnSelector<Object>()
                       {
                         @Override
-                        public Class classOfObject()
+                        public Class<Object> classOfObject()
                         {
                           return Object.class;
                         }
@@ -263,14 +262,12 @@ public class IncrementalIndex implements Iterable<Row>
                         @Override
                         public Object get()
                         {
-                          final String[] dimVals = dimensionValues.toArray(new String[]{});
+                          final String[] dimVals = in.getDimension(columnName).toArray(new String[]{});
                           if (dimVals.length == 1) {
                             return dimVals[0];
-                          }
-                          else if (dimVals.length == 0) {
+                          } else if (dimVals.length == 0) {
                             return null;
-                          }
-                          else {
+                          } else {
                             return dimVals;
                           }
                         }

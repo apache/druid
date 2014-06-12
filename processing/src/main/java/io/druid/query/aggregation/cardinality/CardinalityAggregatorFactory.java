@@ -156,7 +156,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
           @Override
           public AggregatorFactory apply(String input)
           {
-            return new CardinalityAggregatorFactory(input, Arrays.asList(input), byRow);
+            return new CardinalityAggregatorFactory(input, fieldNames, byRow);
           }
         }
     );
