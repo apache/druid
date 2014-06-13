@@ -28,6 +28,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -109,6 +110,11 @@ public class QueryRunnerTestHelper
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
       "quality_uniques"
+  );
+  public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
+      "cardinality",
+      Arrays.asList("quality"),
+      false
   );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
