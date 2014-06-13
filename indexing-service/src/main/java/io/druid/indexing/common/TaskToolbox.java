@@ -27,7 +27,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import io.druid.client.ServerView;
+import io.druid.client.FilteredServerView;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -66,7 +66,7 @@ public class TaskToolbox
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final ServerView newSegmentServerView;
+  private final FilteredServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final MonitorScheduler monitorScheduler;
   private final ExecutorService queryExecutorService;
@@ -84,7 +84,7 @@ public class TaskToolbox
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      ServerView newSegmentServerView,
+      FilteredServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
@@ -151,7 +151,7 @@ public class TaskToolbox
     return segmentAnnouncer;
   }
 
-  public ServerView getNewSegmentServerView()
+  public FilteredServerView getNewSegmentServerView()
   {
     return newSegmentServerView;
   }

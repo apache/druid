@@ -53,7 +53,7 @@ public class ForkingTaskRunnerConfig
   @JsonProperty
   @Min(1024)
   @Max(65535)
-  private int startPort = 8080;
+  private int startPort = 8081;
 
   @JsonProperty
   @NotNull

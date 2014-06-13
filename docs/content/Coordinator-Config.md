@@ -5,96 +5,6 @@ Coordinator Node Configuration
 ==============================
 For general Coordinator Node information, see [here](Coordinator.html).
 
-Quick Start
------------
-Run:
-
-```
-io.druid.cli.Main server coordinator
-```
-
-With the following JVM configuration:
-
-```
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
-
-druid.host=localhost
-druid.service=coordinator
-druid.port=8082
-
-druid.zk.service.host=localhost
-
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
-
-druid.coordinator.startDelay=PT60s
-```
-
-Production Configs
-------------------
-These production configs are using S3 as a deep store.
-
-JVM settings:
-
-```
--server
--Xmx#{HEAP_MAX}g
--Xms#{HEAP_MIN}g
--XX:NewSize=#{NEW_SIZE}g
--XX:MaxNewSize=#{MAX_NEW_SIZE}g
--XX:+UseConcMarkSweepGC
--XX:+PrintGCDetails
--XX:+PrintGCTimeStamps
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
--Djava.io.tmpdir=/mnt/tmp
-
--Dcom.sun.management.jmxremote.port=17071
--Dcom.sun.management.jmxremote.authenticate=false
--Dcom.sun.management.jmxremote.ssl=false
-```
-
-Runtime.properties:
-
-```
-druid.host=#{IP_ADDR}:8080
-druid.port=8080
-druid.service=druid/prod/coordinator
-
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.discovery.curator.path=/prod/discovery
-
-druid.db.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.db.connector.user=#{MYSQL_USER}
-druid.db.connector.password=#{MYSQL_PW}
-druid.db.connector.useValidationQuery=true
-druid.db.tables.base=prod
-
-druid.coordinator.period=PT60S
-druid.coordinator.period.indexingPeriod=PT1H
-druid.coordinator.startDelay=PT300S
-druid.coordinator.merge.on=false
-druid.coordinator.conversion.on=false
-
-druid.selectors.indexing.serviceName=druid:prod:indexer
-
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor", "com.metamx.metrics.JvmMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
-```
-
 Runtime Configuration
 ---------------------
 
@@ -142,8 +52,8 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`millisToWaitBeforeDeleting`|How long does the coordinator need to be active before it can start deleting segments.|90000 (15 mins)|
-|`mergeBytesLimit`|The maximum number of bytes to merge (for segments).|100000000L|
-|`mergeSegmentsLimit`|The maximum number of segments that can be in a single merge [task](Tasks.html).|Integer.MAX_VALUE|
+|`mergeBytesLimit`|The maximum number of bytes to merge (for segments).|524288000L|
+|`mergeSegmentsLimit`|The maximum number of segments that can be in a single [merge task](Tasks.html).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|

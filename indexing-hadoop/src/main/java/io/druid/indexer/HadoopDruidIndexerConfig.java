@@ -110,7 +110,17 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
+    //backwards compatibility
+    if (argSpec.containsKey("schema")) {
+      return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
+    } else {
+      return new HadoopDruidIndexerConfig(
+          HadoopDruidIndexerConfig.jsonMapper.convertValue(
+              argSpec,
+              HadoopIngestionSpec.class
+          )
+      );
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -243,6 +253,11 @@ public class HadoopDruidIndexerConfig
   public boolean isUpdaterJobSpecSet()
   {
     return (schema.getIOConfig().getMetadataUpdateSpec() != null);
+  }
+
+  public boolean isCombineText()
+  {
+    return schema.getTuningConfig().isCombineText();
   }
 
   public StringInputRowParser getParser()

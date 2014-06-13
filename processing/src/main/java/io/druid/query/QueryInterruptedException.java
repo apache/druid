@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,29 +17,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query;
 
-import io.druid.segment.ObjectColumnSelector;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class TestHllComplexMetricSelector implements ObjectColumnSelector<String>
+public class QueryInterruptedException extends RuntimeException
 {
-  private int index = 0;
-
-
-  @Override
-  public Class<String> classOfObject()
-  {
-    return String.class;
+  public QueryInterruptedException() {
+    super();
   }
 
-  @Override
-  public String get()
+  @JsonCreator
+  public QueryInterruptedException(@JsonProperty("error") String message)
   {
-    return String.valueOf(index);
+    super(message);
   }
 
-  public void increment()
+  public QueryInterruptedException(Throwable cause)
   {
-    ++index;
+    super(cause);
+  }
+
+  @JsonProperty("error")
+  @Override
+  public String getMessage()
+  {
+    return super.getMessage();
   }
 }

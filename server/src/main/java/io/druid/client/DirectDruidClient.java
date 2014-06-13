@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -43,11 +44,15 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.InputStreamResponseHandler;
+import com.metamx.http.client.response.StatusResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -60,6 +65,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +79,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = Maps.newConcurrentMap();
 
   private final QueryToolChestWarehouse warehouse;
+  private final QueryWatcher queryWatcher;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
   private final String host;
@@ -82,12 +89,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,
+      QueryWatcher queryWatcher,
       ObjectMapper objectMapper,
       HttpClient httpClient,
       String host
   )
   {
     this.warehouse = warehouse;
+    this.queryWatcher = queryWatcher;
     this.objectMapper = objectMapper;
     this.httpClient = httpClient;
     this.host = host;
@@ -102,7 +111,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query)
+  public Sequence<T> run(final Query<T> query)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = query.getContextBySegment(false);
@@ -127,6 +136,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     final ListenableFuture<InputStream> future;
     final String url = String.format("http://%s/druid/v2/", host);
+    final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
       log.debug("Querying url[%s]", url);
@@ -174,6 +184,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 }
               }
           );
+
+      queryWatcher.registerQuery(query, future);
+
       openConnections.getAndIncrement();
       Futures.addCallback(
           future, new FutureCallback<InputStream>()
@@ -188,6 +201,27 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         public void onFailure(Throwable t)
         {
           openConnections.getAndDecrement();
+          if (future.isCancelled()) {
+            // forward the cancellation to underlying queriable node
+            try {
+              StatusResponseHolder res = httpClient
+                  .delete(new URL(cancelUrl))
+                  .setContent(objectMapper.writeValueAsBytes(query))
+                  .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
+                  .go(new StatusResponseHandler(Charsets.UTF_8))
+                  .get();
+              if (res.getStatus().getCode() >= 500) {
+                throw new RE(
+                    "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+                    res.getStatus().getCode(),
+                    res.getStatus().getReasonPhrase()
+                );
+              }
+            }
+            catch (IOException | ExecutionException | InterruptedException e) {
+              Throwables.propagate(e);
+            }
+          }
         }
       }
       );
@@ -196,7 +230,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       throw Throwables.propagate(e);
     }
 
-    Sequence<T> retVal = new BaseSequence<T, JsonParserIterator<T>>(
+    Sequence<T> retVal = new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
         {
           @Override
@@ -283,21 +317,23 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       if (jp == null) {
         try {
           jp = objectMapper.getFactory().createParser(future.get());
-          if (jp.nextToken() != JsonToken.START_ARRAY) {
+          final JsonToken nextToken = jp.nextToken();
+          if (nextToken == JsonToken.START_OBJECT) {
+            QueryInterruptedException e = jp.getCodec().readValue(jp, QueryInterruptedException.class);
+            throw e;
+          }
+          else if (nextToken != JsonToken.START_ARRAY) {
             throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
             jp.nextToken();
             objectCodec = jp.getCodec();
           }
         }
-        catch (IOException e) {
+        catch (IOException | InterruptedException | ExecutionException e) {
           throw new RE(e, "Failure getting results from[%s]", url);
         }
-        catch (InterruptedException e) {
-          throw new RE(e, "Failure getting results from[%s]", url);
-        }
-        catch (ExecutionException e) {
-          throw new RE(e, "Failure getting results from[%s]", url);
+        catch (CancellationException e) {
+          throw new QueryInterruptedException("Query cancelled");
         }
       }
     }

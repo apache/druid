@@ -60,4 +60,6 @@ public interface TopNMetricSpec
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector);
 
   public String getMetricName(DimensionSpec dimSpec);
+
+  public boolean canBeOptimizedUnordered();
 }

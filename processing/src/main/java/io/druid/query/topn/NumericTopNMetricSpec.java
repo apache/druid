@@ -159,6 +159,12 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public boolean canBeOptimizedUnordered()
+  {
+    return true;
+  }
+
+  @Override
   public String toString()
   {
     return "NumericTopNMetricSpec{" +

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -48,7 +49,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final DataSegmentPusher dataSegmentPusher;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final SegmentPublisher segmentPublisher;
-  private final ServerView serverView;
+  private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
 
   // Backwards compatible
@@ -66,7 +67,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject DataSegmentPusher dataSegmentPusher,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject SegmentPublisher segmentPublisher,
-      @JacksonInject ServerView serverView,
+      @JacksonInject FilteredServerView serverView,
       @JacksonInject @Processing ExecutorService executorService,
       // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,

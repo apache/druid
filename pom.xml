@@ -18,12 +18,13 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.109-SNAPSHOT</version>
+    <version>0.6.122-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -39,9 +40,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.25.5</metamx.java-util.version>
+        <metamx.java-util.version>0.25.6</metamx.java-util.version>
         <apache.curator.version>2.4.0</apache.curator.version>
-        <druid.api.version>0.2.2</druid.api.version>
+        <druid.api.version>0.2.3</druid.api.version>
     </properties>
 
     <modules>
@@ -59,7 +60,6 @@
         <module>kafka-seven</module>
         <module>kafka-eight</module>
         <module>rabbitmq</module>
-        <module>hll</module>
     </modules>
 
     <dependencyManagement>
@@ -79,7 +79,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.9.4</version>
+                <version>0.9.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -204,17 +204,17 @@
             <dependency>
                 <groupId>com.google.inject</groupId>
                 <artifactId>guice</artifactId>
-                <version>4.0-beta</version>
+                <version>4.0-beta4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-servlet</artifactId>
-                <version>4.0-beta</version>
+                <version>4.0-beta4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-multibindings</artifactId>
-                <version>4.0-beta</version>
+                <version>4.0-beta4</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>
@@ -282,6 +282,11 @@
                 <version>1</version>
             </dependency>
             <dependency>
+               <groupId>org.glassfish</groupId>
+               <artifactId>javax.el</artifactId>
+               <version>3.0.0</version>
+            </dependency>
+            <dependency>
                 <groupId>com.jamesmurty.utils</groupId>
                 <artifactId>java-xmlbuilder</artifactId>
                 <version>0.4</version>
@@ -319,17 +324,17 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.1.4.v20140401</version>
+                <version>9.1.5.v20140505</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.1.4.v20140401</version>
+                <version>9.1.5.v20140505</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.1.4.v20140401</version>
+                <version>9.1.5.v20140505</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -394,7 +399,14 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.0</version>
+                <version>0.9.1</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- exclude artifact not available in maven central -->
+                        <groupId>com.centerkey.utils</groupId>
+                        <artifactId>barebonesbrowserlaunch</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
@@ -405,11 +417,6 @@
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.2</version>
-            </dependency>
-            <dependency>
-                <groupId>com.davekoelle</groupId>
-                <artifactId>alphanum</artifactId>
-                <version>1.0.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>

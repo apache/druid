@@ -21,7 +21,9 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -123,6 +125,11 @@ public class DruidServer implements Comparable
     return metadata.getTier();
   }
 
+  public boolean isAssignable()
+  {
+    return metadata.isAssignable();
+  }
+
   @JsonProperty
   public int getPriority()
   {
@@ -134,11 +141,6 @@ public class DruidServer implements Comparable
   {
     // Copying the map slows things down a lot here, don't use Immutable Map here
     return Collections.unmodifiableMap(segments);
-  }
-
-  public boolean isAssignable()
-  {
-    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
   }
 
   public DataSegment getSegment(String segmentName)
@@ -272,5 +274,27 @@ public class DruidServer implements Comparable
     }
 
     return getName().compareTo(((DruidServer) o).getName());
+  }
+
+  public ImmutableDruidServer toImmutableDruidServer()
+  {
+    return new ImmutableDruidServer(
+        metadata,
+        currSize,
+        ImmutableMap.copyOf(
+            Maps.transformValues(
+                dataSources,
+                new Function<DruidDataSource, ImmutableDruidDataSource>()
+                {
+                  @Override
+                  public ImmutableDruidDataSource apply(DruidDataSource input)
+                  {
+                    return input.toImmutableDruidDataSource();
+                  }
+                }
+            )
+        ),
+        ImmutableMap.copyOf(segments)
+    );
   }
 }

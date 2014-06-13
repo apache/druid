@@ -73,6 +73,7 @@ class WikipediaIrcDecoder implements IrcDecoder
   );
 
   final Map<String, Map<String, String>> namespaces;
+  final String geoIpDatabase;
 
   public WikipediaIrcDecoder( Map<String, Map<String, String>> namespaces) {
     this(namespaces, null);
@@ -86,7 +87,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       namespaces = Maps.newHashMap();
     }
     this.namespaces = namespaces;
-
+    this.geoIpDatabase = geoIpDatabase;
 
     File geoDb;
     if(geoIpDatabase != null) {
@@ -114,6 +115,18 @@ class WikipediaIrcDecoder implements IrcDecoder
     } catch(IOException e) {
       throw new RuntimeException("Unable to open geo ip lookup database", e);
     }
+  }
+
+  @JsonProperty
+  public Map<String, Map<String, String>> getNamespaces()
+  {
+    return namespaces;
+  }
+
+  @JsonProperty
+  public String getGeoIpDatabase()
+  {
+    return geoIpDatabase;
   }
 
   @Override

@@ -43,7 +43,6 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.Sink;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -197,8 +196,8 @@ public class RealtimeManager implements QuerySegmentWalker
               continue;
             }
 
-            final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-            if (sink == null) {
+            int currCount = plumber.add(inputRow);
+            if (currCount == -1) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
 
@@ -209,8 +208,6 @@ public class RealtimeManager implements QuerySegmentWalker
 
               continue;
             }
-
-            int currCount = sink.add(inputRow);
             if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
@@ -225,13 +222,11 @@ public class RealtimeManager implements QuerySegmentWalker
         }
       }
       catch (RuntimeException e) {
-
         log.makeAlert(
             e,
             "RuntimeException aborted realtime processing[%s]",
             fireDepartment.getDataSchema().getDataSource()
-        )
-           .emit();
+        ).emit();
         normalExit = false;
         throw e;
       }

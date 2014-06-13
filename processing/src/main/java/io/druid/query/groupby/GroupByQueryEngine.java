@@ -54,6 +54,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -92,7 +94,7 @@ public class GroupByQueryEngine
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
 
-    final Iterable<Cursor> cursors = storageAdapter.makeCursors(
+    final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         Filters.convertDimensionFilters(query.getDimFilter()),
         intervals.get(0),
         query.getGranularity()
@@ -101,50 +103,43 @@ public class GroupByQueryEngine
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     return Sequences.concat(
-        new BaseSequence<Sequence<Row>, Iterator<Sequence<Row>>>(
-            new BaseSequence.IteratorMaker<Sequence<Row>, Iterator<Sequence<Row>>>()
+        Sequences.withBaggage(
+        Sequences.map(
+          cursors,
+          new Function<Cursor, Sequence<Row>>()
+          {
+            @Override
+            public Sequence<Row> apply(@Nullable final Cursor cursor)
             {
-              @Override
-              public Iterator<Sequence<Row>> make()
-              {
-                return FunctionalIterator
-                    .create(cursors.iterator())
-                    .transform(
-                        new Function<Cursor, Sequence<Row>>()
-                        {
-                          @Override
-                          public Sequence<Row> apply(@Nullable final Cursor cursor)
-                          {
-                            return new BaseSequence<Row, RowIterator>(
-                                new BaseSequence.IteratorMaker<Row, RowIterator>()
-                                {
-                                  @Override
-                                  public RowIterator make()
-                                  {
-                                    return new RowIterator(query, cursor, bufferHolder.get(), config.get());
-                                  }
+              return new BaseSequence<Row, RowIterator>(
+                  new BaseSequence.IteratorMaker<Row, RowIterator>()
+                  {
+                    @Override
+                    public RowIterator make()
+                    {
+                      return new RowIterator(query, cursor, bufferHolder.get(), config.get());
+                    }
 
-                                  @Override
-                                  public void cleanup(RowIterator iterFromMake)
-                                  {
-                                    Closeables.closeQuietly(iterFromMake);
-                                  }
-                                }
-                            );
-                          }
-                        }
-                    );
-              }
-
-              @Override
-              public void cleanup(Iterator<Sequence<Row>> iterFromMake)
-              {
-                Closeables.closeQuietly(bufferHolder);
-              }
+                    @Override
+                    public void cleanup(RowIterator iterFromMake)
+                    {
+                      Closeables.closeQuietly(iterFromMake);
+                    }
+                  }
+              );
             }
-        )
+          }
+        ),
+        new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            Closeables.closeQuietly(bufferHolder);
+          }
+        }
+      )
     );
-
   }
 
   private static class RowUpdater

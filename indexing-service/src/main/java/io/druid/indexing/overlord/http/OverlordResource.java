@@ -398,7 +398,12 @@ public class OverlordResource
       if (stream.isPresent()) {
         return Response.ok(stream.get().getInput()).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND).build();
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(
+                           "No log was found for this task. "
+                           + "The task may not exist, or it may not have begun running yet."
+                       )
+                       .build();
       }
     }
     catch (Exception e) {

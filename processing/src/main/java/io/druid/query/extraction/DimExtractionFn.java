@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property="type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),
     @JsonSubTypes.Type(name = "regex", value = RegexDimExtractionFn.class),
@@ -35,5 +35,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface DimExtractionFn
 {
   public byte[] getCacheKey();
+
   public String apply(String dimValue);
+
+  public boolean preservesOrdering();
 }

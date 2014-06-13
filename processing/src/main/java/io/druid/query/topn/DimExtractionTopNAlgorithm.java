@@ -26,7 +26,6 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
-import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -34,7 +33,6 @@ import java.util.Map;
 public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][], Map<String, Aggregator[]>, TopNParams>
 {
   private final TopNQuery query;
-  private final Comparator<?> comparator;
 
   public DimExtractionTopNAlgorithm(
       Capabilities capabilities,
@@ -44,8 +42,6 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
     super(capabilities);
 
     this.query = query;
-    this.comparator = query.getTopNMetricSpec()
-                           .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
   }
 
   @Override
@@ -53,15 +49,28 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       final DimensionSelector dimSelector, final Cursor cursor
   )
   {
-    return new TopNParams(dimSelector, cursor, dimSelector.getValueCardinality(), Integer.MAX_VALUE);
+    return new TopNParams(
+        dimSelector,
+        cursor,
+        dimSelector.getValueCardinality(),
+        Integer.MAX_VALUE
+    );
   }
 
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
-    return query.getTopNMetricSpec().configureOptimizer(
-        new AggregatorArrayProvider(params.getDimSelector(), query, params.getCardinality())
-    ).build();
+    final AggregatorArrayProvider provider = new AggregatorArrayProvider(
+        params.getDimSelector(),
+        query,
+        params.getCardinality()
+    );
+
+    if (!query.getDimensionSpec().preservesOrdering()) {
+      return provider.build();
+    }
+
+    return query.getTopNMetricSpec().configureOptimizer(provider).build();
   }
 
   @Override

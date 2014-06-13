@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -63,11 +64,27 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
 
   @Override
   public Comparator getComparator(
-      List<AggregatorFactory> aggregatorSpecs,
-      List<PostAggregator> postAggregatorSpecs
+      final List<AggregatorFactory> aggregatorSpecs,
+      final List<PostAggregator> postAggregatorSpecs
   )
   {
-    return Comparators.inverse(delegate.getComparator(aggregatorSpecs, postAggregatorSpecs));
+    return Comparators.inverse(
+        new Comparator()
+        {
+          @Override
+          public int compare(Object o1, Object o2)
+          {
+            // nulls last
+            if (o1 == null) {
+              return 1;
+            }
+            if (o2 == null) {
+              return -1;
+            }
+            return delegate.getComparator(aggregatorSpecs, postAggregatorSpecs).compare(o1, o2);
+          }
+        }
+    );
   }
 
   @Override
@@ -80,7 +97,14 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       List<PostAggregator> postAggs
   )
   {
-    return delegate.getResultBuilder(timestamp, dimSpec, threshold, comparator, aggFactories, postAggs);
+    return delegate.getResultBuilder(
+        timestamp,
+        dimSpec,
+        threshold,
+        comparator,
+        aggFactories,
+        postAggs
+    );
   }
 
   @Override
@@ -94,6 +118,9 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
   @Override
   public <T> TopNMetricSpecBuilder<T> configureOptimizer(TopNMetricSpecBuilder<T> builder)
   {
+    if (!canBeOptimizedUnordered()) {
+      return builder;
+    }
     return delegate.configureOptimizer(builder);
   }
 
@@ -107,6 +134,12 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
   public String getMetricName(DimensionSpec dimSpec)
   {
     return delegate.getMetricName(dimSpec);
+  }
+
+  @Override
+  public boolean canBeOptimizedUnordered()
+  {
+    return delegate.canBeOptimizedUnordered();
   }
 
   @Override

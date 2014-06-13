@@ -17,8 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid;
+package io.druid.server.initialization;
 
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
@@ -28,13 +29,14 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.Jerseys;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
 import io.druid.initialization.Initialization;
-import io.druid.server.initialization.JettyServerInitializer;
+import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
@@ -43,13 +45,22 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Random;
@@ -61,6 +72,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class JettyTest
 {
+  private Lifecycle lifecycle;
+  private HttpClient client;
+
   public static void setProperties()
   {
     System.setProperty("druid.host", "localhost:9999");
@@ -71,11 +85,9 @@ public class JettyTest
     System.setProperty("druid.global.http.readTimeout", "PT1S");
   }
 
-  @Test @Ignore // this test will deadlock if it hits an issue, so ignored by default
-  public void testTimeouts() throws Exception
+  @Before
+  public void setup() throws Exception
   {
-    // test for request timeouts properly not locking up all threads
-
     setProperties();
     Injector injector = Initialization.makeInjectorWithModules(
         Initialization.makeStartupInjector(), Lists.<Object>newArrayList(
@@ -86,17 +98,24 @@ public class JettyTest
           {
             binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
             Jerseys.addResource(binder, SlowResource.class);
-
+            Jerseys.addResource(binder, ExceptionResource.class);
           }
         }
     )
     );
-    Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+    lifecycle = injector.getInstance(Lifecycle.class);
     // Jetty is Lazy Initialized do a getInstance
     injector.getInstance(Server.class);
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);
-    final HttpClient client = holder.getClient();
+    client = holder.getClient();
+  }
+
+  @Test
+  @Ignore // this test will deadlock if it hits an issue, so ignored by default
+  public void testTimeouts() throws Exception
+  {
+    // test for request timeouts properly not locking up all threads
     final Executor executor = Executors.newFixedThreadPool(100);
     final AtomicLong count = new AtomicLong(0);
     final CountDownLatch latch = new CountDownLatch(1000);
@@ -149,8 +168,72 @@ public class JettyTest
     }
 
     latch.await();
-    lifecycle.stop();
+  }
 
+  // Tests that threads are not stuck when partial chunk is not finalized
+  // https://bugs.eclipse.org/bugs/show_bug.cgi?id=424107
+  @Test
+  @Ignore
+  // above bug is not fixed in jetty for gzip encoding, and the chunk is still finalized instead of throwing exception.
+  public void testChunkNotFinalized() throws Exception
+  {
+    ListenableFuture<InputStream> go = client.get(
+        new URL(
+            "http://localhost:9999/exception/exception"
+        )
+
+    )
+                                             .go(new InputStreamResponseHandler());
+    try {
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(go.get(), writer, "utf-8");
+      Assert.fail("Should have thrown Exception");
+    }
+    catch (IOException e) {
+      // Expected.
+    }
+
+  }
+
+  @Test
+  public void testThreadNotStuckOnException() throws Exception
+  {
+    final CountDownLatch latch = new CountDownLatch(1);
+    Executors.newSingleThreadExecutor().execute(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              ListenableFuture<InputStream> go = client.get(
+                  new URL(
+                      "http://localhost:9999/exception/exception"
+                  )
+
+              )
+                                                       .go(new InputStreamResponseHandler());
+              StringWriter writer = new StringWriter();
+              IOUtils.copy(go.get(), writer, "utf-8");
+            }
+            catch (IOException e) {
+              // Expected.
+            }
+            catch (Throwable t) {
+              Throwables.propagate(t);
+            }
+            latch.countDown();
+          }
+        }
+    );
+
+    latch.await(5, TimeUnit.SECONDS);
+  }
+
+  @After
+  public void teardown()
+  {
+    lifecycle.stop();
   }
 
   public static class ClientHolder
@@ -204,6 +287,29 @@ public class JettyTest
         //
       }
       return Response.ok("hello").build();
+    }
+  }
+
+  @Path("/exception")
+  public static class ExceptionResource
+  {
+    @GET
+    @Path("/exception")
+    @Produces("application/json")
+    public Response exception(
+        @Context HttpServletResponse resp
+    ) throws IOException
+    {
+      final ServletOutputStream outputStream = resp.getOutputStream();
+      outputStream.println("hello");
+      outputStream.flush();
+      try {
+        TimeUnit.MILLISECONDS.sleep(200);
+      }
+      catch (InterruptedException e) {
+        //
+      }
+      throw new IOException();
     }
   }
 }

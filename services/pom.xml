@@ -27,7 +27,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.109-SNAPSHOT</version>
+        <version>0.6.122-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -101,10 +101,6 @@
                 <executions>
                     <execution>
                         <id>distro-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>assembly</goal>
-                        </goals>
                         <configuration>
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>

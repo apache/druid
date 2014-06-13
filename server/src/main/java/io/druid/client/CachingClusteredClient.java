@@ -55,6 +55,7 @@ import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -104,7 +105,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         new ServerView.BaseSegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
             CachingClusteredClient.this.cache.close(segment.getIdentifier());
             return ServerView.CallbackAction.CONTINUE;
@@ -183,7 +184,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
 
     if (queryCacheKey != null) {
-      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newHashMap();
+      // cache keys must preserve segment ordering, in order for shards to always be combined in the same order
+      Map<Pair<ServerSelector, SegmentDescriptor>, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
       for (Pair<ServerSelector, SegmentDescriptor> segment : segments) {
         final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
             segment.lhs.getSegment().getIdentifier(),

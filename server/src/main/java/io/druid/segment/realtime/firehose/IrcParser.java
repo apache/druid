@@ -19,23 +19,36 @@
 
 package io.druid.segment.realtime.firehose;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.ircclouds.irc.api.domain.messages.ChannelPrivMsg;
 import com.metamx.common.Pair;
 import com.metamx.common.exception.FormattedException;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
+import io.druid.data.input.impl.TimestampSpec;
 import org.joda.time.DateTime;
 
 /**
  */
+@JsonTypeName("protoBuf")
 public class IrcParser implements InputRowParser<Pair<DateTime, ChannelPrivMsg>>
 {
   private final IrcDecoder decoder;
 
-  public IrcParser(IrcDecoder decoder)
+  @JsonCreator
+  public IrcParser(@JsonProperty("decoder") IrcDecoder decoder)
   {
     this.decoder = decoder;
+  }
+
+  @JsonProperty
+  public IrcDecoder getDecoder()
+  {
+    return decoder;
   }
 
   @Override
@@ -47,7 +60,7 @@ public class IrcParser implements InputRowParser<Pair<DateTime, ChannelPrivMsg>>
   @Override
   public ParseSpec getParseSpec()
   {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override

@@ -33,8 +33,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configurable;
@@ -48,6 +48,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -91,7 +92,11 @@ public class DetermineHashedPartitionsJob implements Jobby
       );
 
       JobHelper.injectSystemProperties(groupByJob);
-      groupByJob.setInputFormatClass(TextInputFormat.class);
+      if (config.isCombineText()) {
+        groupByJob.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        groupByJob.setInputFormatClass(TextInputFormat.class);
+      }
       groupByJob.setMapperClass(DetermineCardinalityMapper.class);
       groupByJob.setMapOutputKeyClass(LongWritable.class);
       groupByJob.setMapOutputValueClass(BytesWritable.class);
@@ -157,22 +162,27 @@ public class DetermineHashedPartitionsJob implements Jobby
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
-          Long cardinality = config.jsonMapper.readValue(
-            Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-        {
-        }
-        );
-        final int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
-
-        List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-        if (numberOfShards == 1) {
-          actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
-        } else {
-          for (int i = 0; i < numberOfShards; ++i) {
-            actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
-            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+          final Long numRows = config.jsonMapper.readValue(
+              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
+          {
           }
-        }
+          );
+
+          log.info("Found approximately [%,d] rows in data.", numRows);
+
+          final int numberOfShards = (int) Math.ceil((double) numRows / config.getTargetPartitionSize());
+
+          log.info("Creating [%,d] shards", numberOfShards);
+
+          List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
+          if (numberOfShards == 1) {
+            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+          } else {
+            for (int i = 0; i < numberOfShards; ++i) {
+              actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
+              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+            }
+          }
 
           shardSpecs.put(bucket, actualSpecs);
 

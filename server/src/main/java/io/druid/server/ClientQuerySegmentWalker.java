@@ -87,7 +87,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                           }
                         },
                         toolChest.preMergeQueryDecoration(baseClient)
-                    ).withWaitMeasuredFromNow()
+                    ).withWaitMeasuredFromNow(),
+                    toolChest
                 )
             )
         ),

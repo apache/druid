@@ -88,6 +88,12 @@ public class TimeDimExtractionFn implements DimExtractionFn
   }
 
   @Override
+  public boolean preservesOrdering()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "TimeDimExtractionFn{" +

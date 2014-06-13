@@ -33,7 +33,6 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.AbstractProgressIndicator;
@@ -62,6 +61,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -146,7 +146,11 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
 
-      job.setInputFormatClass(TextInputFormat.class);
+      if (config.isCombineText()) {
+        job.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        job.setInputFormatClass(TextInputFormat.class);
+      }
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(Text.class);
@@ -611,17 +615,10 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
-      DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getParser() == null
-                                      ? new DimensionsSpec(null, null, null)
-                                      : config.getSchema()
-                                              .getDataSchema()
-                                              .getParser()
-                                              .getParseSpec()
-                                              .getDimensionsSpec();
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withDimensionsSpec(dimensionsSpec)
+              .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
               .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()

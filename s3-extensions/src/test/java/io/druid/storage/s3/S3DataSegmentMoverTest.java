@@ -30,6 +30,7 @@ import io.druid.timeline.partition.NoneShardSpec;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.StorageObject;
 import org.joda.time.Interval;
@@ -129,6 +130,18 @@ public class S3DataSegmentMoverTest
     {
       Set<String> objects = storage.get(bucketName);
       return (objects != null && objects.contains(objectKey));
+    }
+
+    @Override
+    public StorageObject getObjectDetails(String bucketName, String objectKey) throws ServiceException
+    {
+      if (isObjectInBucket(bucketName, objectKey)) {
+        final S3Object object = new S3Object(objectKey);
+        object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
+        return object;
+      } else {
+        return null;
+      }
     }
 
     @Override

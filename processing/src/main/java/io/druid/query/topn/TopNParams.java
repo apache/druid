@@ -31,7 +31,12 @@ public class TopNParams
   private final int cardinality;
   private final int numValuesPerPass;
 
-  protected TopNParams(DimensionSelector dimSelector, Cursor cursor, int cardinality, int numValuesPerPass)
+  protected TopNParams(
+      DimensionSelector dimSelector,
+      Cursor cursor,
+      int cardinality,
+      int numValuesPerPass
+  )
   {
     this.dimSelector = dimSelector;
     this.cursor = cursor;

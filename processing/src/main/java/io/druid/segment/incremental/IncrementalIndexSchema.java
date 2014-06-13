@@ -20,11 +20,9 @@
 package io.druid.segment.incremental;
 
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
-
-import java.util.List;
 
 /**
  */
@@ -98,6 +96,19 @@ public class IncrementalIndexSchema
     public Builder withDimensionsSpec(DimensionsSpec dimensionsSpec)
     {
       this.dimensionsSpec = dimensionsSpec;
+      return this;
+    }
+
+    public Builder withDimensionsSpec(InputRowParser parser)
+    {
+      if (parser != null
+          && parser.getParseSpec() != null
+          && parser.getParseSpec().getDimensionsSpec() != null) {
+        this.dimensionsSpec = parser.getParseSpec().getDimensionsSpec();
+      } else {
+        this.dimensionsSpec = new DimensionsSpec(null, null, null);
+      }
+
       return this;
     }
 

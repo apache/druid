@@ -2,6 +2,7 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -16,11 +17,12 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.client.DruidServer;
+import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
+import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -42,6 +44,7 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -72,6 +75,7 @@ public class RealtimePlumber implements Plumber
 
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
+
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
@@ -80,7 +84,7 @@ public class RealtimePlumber implements Plumber
   private final ExecutorService queryExecutorService;
   private final DataSegmentPusher dataSegmentPusher;
   private final SegmentPublisher segmentPublisher;
-  private final ServerView serverView;
+  private final FilteredServerView serverView;
   private final Object handoffCondition = new Object();
   private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
@@ -102,7 +106,7 @@ public class RealtimePlumber implements Plumber
       ExecutorService queryExecutorService,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      ServerView serverView
+      FilteredServerView serverView
   )
   {
     this.schema = schema;
@@ -151,6 +155,16 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
+  public int add(InputRow row)
+  {
+    final Sink sink = getSink(row.getTimestampFromEpoch());
+    if (sink == null) {
+      return -1;
+    }
+
+    return sink.add(row);
+  }
+
   public Sink getSink(long timestamp)
   {
     if (!rejectionPolicy.accept(timestamp)) {
@@ -719,7 +733,7 @@ public class RealtimePlumber implements Plumber
         new ServerView.BaseSegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentAdded(DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
             if (stopped) {
               log.info("Unregistering ServerViewCallback");
@@ -753,6 +767,26 @@ public class RealtimePlumber implements Plumber
             }
 
             return ServerView.CallbackAction.CONTINUE;
+          }
+        },
+        new Predicate<DataSegment>()
+        {
+          @Override
+          public boolean apply(final DataSegment segment)
+          {
+            return
+                schema.getDataSource().equals(segment.getDataSource())
+                && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
+                && Iterables.any(
+                    sinks.keySet(), new Predicate<Long>()
+                    {
+                      @Override
+                      public boolean apply(Long sinkKey)
+                      {
+                        return segment.getInterval().contains(sinkKey);
+                      }
+                    }
+                );
           }
         }
     );

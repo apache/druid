@@ -21,19 +21,7 @@ package io.druid.query;
 
 import java.util.concurrent.Callable;
 
-/**
- */
-public abstract class PrioritizedCallable<T> implements Callable<T>
+public interface PrioritizedCallable<V> extends Callable<V>
 {
-  final int priority;
-
-  public PrioritizedCallable(int priority)
-  {
-    this.priority = priority;
-  }
-
-  public int getPriority()
-  {
-    return priority;
-  }
+  public int getPriority();
 }

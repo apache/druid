@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -27,6 +28,7 @@ import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.exception.FormattedException;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.ParseSpec;
@@ -48,11 +50,8 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import junit.framework.Assert;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Before;
@@ -71,7 +70,7 @@ public class RealtimePlumberSchoolTest
   private DataSegmentAnnouncer announcer;
   private SegmentPublisher segmentPublisher;
   private DataSegmentPusher dataSegmentPusher;
-  private ServerView serverView;
+  private FilteredServerView serverView;
   private ServiceEmitter emitter;
 
   @Before
@@ -114,10 +113,11 @@ public class RealtimePlumberSchoolTest
     segmentPublisher = EasyMock.createMock(SegmentPublisher.class);
     dataSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
 
-    serverView = EasyMock.createMock(ServerView.class);
+    serverView = EasyMock.createMock(FilteredServerView.class);
     serverView.registerSegmentCallback(
         EasyMock.<Executor>anyObject(),
-        EasyMock.<ServerView.SegmentCallback>anyObject()
+        EasyMock.<ServerView.SegmentCallback>anyObject(),
+        EasyMock.<Predicate<DataSegment>>anyObject()
     );
     EasyMock.expectLastCall().anyTimes();
 
@@ -159,16 +159,6 @@ public class RealtimePlumberSchoolTest
   public void tearDown() throws Exception
   {
     EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
-  }
-
-  @Test
-  public void testGetSink() throws Exception
-  {
-    final DateTime theTime = new DateTime("2013-01-01");
-    Sink sink = plumber.getSink(theTime.getMillis());
-
-    Assert.assertEquals(new Interval(String.format("%s/PT1H", theTime.toString())), sink.getInterval());
-    Assert.assertEquals(theTime.toString(), sink.getVersion());
   }
 
   @Test

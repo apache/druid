@@ -80,7 +80,7 @@ public class CoordinatorResource
   @Produces("application/json")
   public Response getLoadQueue(
       @QueryParam("simple") String simple,
-      @QueryParam("simple") String full
+      @QueryParam("full") String full
   )
   {
     if (simple != null) {

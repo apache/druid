@@ -452,8 +452,17 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
               List<RemoteTaskRunnerWorkItem> copy = Lists.newArrayList(pendingTasks.values());
               for (RemoteTaskRunnerWorkItem taskRunnerWorkItem : copy) {
                 String taskId = taskRunnerWorkItem.getTaskId();
-                if (tryAssignTask(pendingTaskPayloads.get(taskId), taskRunnerWorkItem)) {
-                  pendingTaskPayloads.remove(taskId);
+                try {
+                  if (tryAssignTask(pendingTaskPayloads.get(taskId), taskRunnerWorkItem)) {
+                    pendingTaskPayloads.remove(taskId);
+                  }
+                }
+                catch (Exception e) {
+                  log.makeAlert(e, "Exception while trying to assign task")
+                     .addData("taskId", taskRunnerWorkItem.getTaskId())
+                     .emit();
+                  RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
+                  taskComplete(workItem, null, TaskStatus.failure(taskId));
                 }
               }
             }
@@ -470,7 +479,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   /**
    * Removes a task from the complete queue and clears out the ZK status path of the task.
    *
-   * @param taskId   - the task to cleanup
+   * @param taskId - the task to cleanup
    */
   private void cleanup(final String taskId)
   {
@@ -505,34 +514,27 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
    * needs to bootstrap after a restart.
    *
    * @param taskRunnerWorkItem - the task to assign
+   *
    * @return true iff the task is now assigned
    */
-  private boolean tryAssignTask(final Task task, final RemoteTaskRunnerWorkItem taskRunnerWorkItem)
+  private boolean tryAssignTask(final Task task, final RemoteTaskRunnerWorkItem taskRunnerWorkItem) throws Exception
   {
-    try {
-      Preconditions.checkNotNull(task, "task");
-      Preconditions.checkNotNull(taskRunnerWorkItem, "taskRunnerWorkItem");
-      Preconditions.checkArgument(task.getId().equals(taskRunnerWorkItem.getTaskId()), "task id != workItem id");
+    Preconditions.checkNotNull(task, "task");
+    Preconditions.checkNotNull(taskRunnerWorkItem, "taskRunnerWorkItem");
+    Preconditions.checkArgument(task.getId().equals(taskRunnerWorkItem.getTaskId()), "task id != workItem id");
 
-      if (runningTasks.containsKey(task.getId()) || findWorkerRunningTask(task.getId()) != null) {
-        log.info("Task[%s] already running.", task.getId());
+    if (runningTasks.containsKey(task.getId()) || findWorkerRunningTask(task.getId()) != null) {
+      log.info("Task[%s] already running.", task.getId());
+      return true;
+    } else {
+      // Nothing running this task, announce it in ZK for a worker to run it
+      ZkWorker zkWorker = findWorkerForTask(task);
+      if (zkWorker != null) {
+        announceTask(task, zkWorker, taskRunnerWorkItem);
         return true;
       } else {
-        // Nothing running this task, announce it in ZK for a worker to run it
-        ZkWorker zkWorker = findWorkerForTask(task);
-        if (zkWorker != null) {
-          announceTask(task, zkWorker, taskRunnerWorkItem);
-          return true;
-        } else {
-          return false;
-        }
+        return false;
       }
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception while trying to run task")
-         .addData("taskId", taskRunnerWorkItem.getTaskId())
-         .emit();
-      return false;
     }
   }
 
@@ -611,6 +613,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
    * The RemoteTaskRunner updates state according to these changes.
    *
    * @param worker contains metadata for a worker that has appeared in ZK
+   *
    * @return future that will contain a fully initialized worker
    */
   private ListenableFuture<ZkWorker> addWorker(final Worker worker)
@@ -803,7 +806,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         }
     );
     sortedWorkers.addAll(zkWorkers.values());
-    final String workerSetupDataMinVer = workerSetupData.get() == null ? null :workerSetupData.get().getMinVersion();
+    final String workerSetupDataMinVer = workerSetupData.get() == null ? null : workerSetupData.get().getMinVersion();
     final String minWorkerVer = workerSetupDataMinVer == null ? config.getMinWorkerVersion() : workerSetupDataMinVer;
 
     for (ZkWorker zkWorker : sortedWorkers) {
@@ -822,19 +825,24 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   )
   {
     Preconditions.checkNotNull(taskRunnerWorkItem, "taskRunnerWorkItem");
-    Preconditions.checkNotNull(zkWorker, "zkWorker");
     Preconditions.checkNotNull(taskStatus, "taskStatus");
-    log.info(
-        "Worker[%s] completed task[%s] with status[%s]",
-        zkWorker.getWorker().getHost(),
-        taskStatus.getId(),
-        taskStatus.getStatusCode()
-    );
-    // Worker is done with this task
-    zkWorker.setLastCompletedTaskTime(new DateTime());
+    if (zkWorker != null) {
+      log.info(
+          "Worker[%s] completed task[%s] with status[%s]",
+          zkWorker.getWorker().getHost(),
+          taskStatus.getId(),
+          taskStatus.getStatusCode()
+      );
+      // Worker is done with this task
+      zkWorker.setLastCompletedTaskTime(new DateTime());
+    } else {
+      log.info("No worker run task[%s] with status[%s]", taskStatus.getId(), taskStatus.getStatusCode());
+    }
+
     // Move from running -> complete
     completeTasks.put(taskStatus.getId(), taskRunnerWorkItem);
     runningTasks.remove(taskStatus.getId());
+
     // Notify interested parties
     final ListenableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
     if (result != null) {

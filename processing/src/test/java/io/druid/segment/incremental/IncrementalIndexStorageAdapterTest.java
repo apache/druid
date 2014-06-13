@@ -52,6 +52,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  */
@@ -149,10 +150,11 @@ public class IncrementalIndexStorageAdapterTest
     );
 
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    Iterable<Cursor> cursorIterable = adapter.makeCursors(new SelectorFilter("sally", "bo"),
+    Sequence<Cursor> cursorSequence = adapter.makeCursors(new SelectorFilter("sally", "bo"),
                                                           interval,
                                                           QueryGranularity.NONE);
-    Cursor cursor = cursorIterable.iterator().next();
+
+    Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
     DimensionSelector dimSelector;
 
     dimSelector = cursor.makeDimensionSelector("sally");
@@ -202,23 +204,26 @@ public class IncrementalIndexStorageAdapterTest
         )
     );
 
-    final Iterable<Result<TopNResultValue>> results = engine.query(
-        new TopNQueryBuilder().dataSource("test")
-                              .granularity(QueryGranularity.ALL)
-                              .intervals(Lists.newArrayList(new Interval(0, new DateTime().getMillis())))
-                              .dimension("sally")
-                              .metric("cnt")
-                              .threshold(10)
-                              .aggregators(
-                                  Lists.<AggregatorFactory>newArrayList(
-                                      new LongSumAggregatorFactory(
-                                          "cnt",
-                                          "cnt"
+    final Iterable<Result<TopNResultValue>> results = Sequences.toList(
+        engine.query(
+            new TopNQueryBuilder().dataSource("test")
+                                  .granularity(QueryGranularity.ALL)
+                                  .intervals(Lists.newArrayList(new Interval(0, new DateTime().getMillis())))
+                                  .dimension("sally")
+                                  .metric("cnt")
+                                  .threshold(10)
+                                  .aggregators(
+                                      Lists.<AggregatorFactory>newArrayList(
+                                          new LongSumAggregatorFactory(
+                                              "cnt",
+                                              "cnt"
+                                          )
                                       )
                                   )
-                              )
-                              .build(),
-        new IncrementalIndexStorageAdapter(index)
+                                  .build(),
+            new IncrementalIndexStorageAdapter(index)
+        ),
+        Lists.<Result<TopNResultValue>>newLinkedList()
     );
 
     Assert.assertEquals(1, Iterables.size(results));

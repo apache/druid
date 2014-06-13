@@ -55,7 +55,6 @@ import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
-import io.druid.segment.realtime.plumber.Sink;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -335,8 +334,8 @@ public class RealtimeIndexTask extends AbstractTask
             continue;
           }
 
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink == null) {
+          int currCount = plumber.add(inputRow);
+          if (currCount == -1) {
             fireDepartment.getMetrics().incrementThrownAway();
             log.debug("Throwing away event[%s]", inputRow);
 
@@ -348,11 +347,6 @@ public class RealtimeIndexTask extends AbstractTask
             continue;
           }
 
-          if (sink.isEmpty()) {
-            log.info("Task %s: New sink: %s", getId(), sink);
-          }
-
-          int currCount = sink.add(inputRow);
           fireDepartment.getMetrics().incrementProcessed();
           if (currCount >= tuningConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());

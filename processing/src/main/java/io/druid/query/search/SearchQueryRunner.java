@@ -19,12 +19,14 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -50,6 +52,7 @@ import io.druid.segment.filter.Filters;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -141,40 +144,53 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       );
     }
 
-    Iterable<String> dimsToSearch;
+    final Iterable<String> dimsToSearch;
     if (dimensions == null || dimensions.isEmpty()) {
       dimsToSearch = adapter.getAvailableDimensions();
     } else {
       dimsToSearch = dimensions;
     }
 
-    final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
 
-    final Iterable<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
-    for (Cursor cursor : cursors) {
-      Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-      for (String dim : dimsToSearch) {
-        dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
-      }
-
-      while (!cursor.isDone()) {
-        for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
-          final DimensionSelector selector = entry.getValue();
-          final IndexedInts vals = selector.getRow();
-          for (int i = 0; i < vals.size(); ++i) {
-            final String dimVal = selector.lookupName(vals.get(i));
-            if (searchQuerySpec.accept(dimVal)) {
-              retVal.add(new SearchHit(entry.getKey(), dimVal));
-              if (retVal.size() >= limit) {
-                return makeReturnResult(limit, retVal);
-              }
+    final TreeSet<SearchHit> retVal = cursors.accumulate(
+        Sets.newTreeSet(query.getSort().getComparator()),
+        new Accumulator<TreeSet<SearchHit>, Cursor>()
+        {
+          @Override
+          public TreeSet<SearchHit> accumulate(TreeSet<SearchHit> set, Cursor cursor)
+          {
+            if (set.size() >= limit) {
+              return set;
             }
+
+            Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+            for (String dim : dimsToSearch) {
+              dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
+            }
+
+            while (!cursor.isDone()) {
+              for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
+                final DimensionSelector selector = entry.getValue();
+                final IndexedInts vals = selector.getRow();
+                for (int i = 0; i < vals.size(); ++i) {
+                  final String dimVal = selector.lookupName(vals.get(i));
+                  if (searchQuerySpec.accept(dimVal)) {
+                    set.add(new SearchHit(entry.getKey(), dimVal));
+                    if (set.size() >= limit) {
+                      return set;
+                    }
+                  }
+                }
+              }
+
+              cursor.advance();
+            }
+
+            return set;
           }
         }
-
-        cursor.advance();
-      }
-    }
+    );
 
     return makeReturnResult(limit, retVal);
   }
