@@ -216,6 +216,7 @@ public class QueryResource
       catch (Exception e) {
         // make sure to close yieder if anything happened before starting to serialize the response.
         yielder.close();
+        throw Throwables.propagate(e);
       }
       finally {
         // do not close yielder here, since we do not want to close the yielder prior to
