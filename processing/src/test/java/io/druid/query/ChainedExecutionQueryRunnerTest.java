@@ -139,7 +139,9 @@ public class ChainedExecutionQueryRunnerTest
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(runner1.hasStarted);
     Assert.assertTrue(runner2.hasStarted);
-    Assert.assertFalse(runner3.hasStarted);
+    Assert.assertTrue(runner1.interrupted);
+    Assert.assertTrue(runner2.interrupted);
+    Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
     Assert.assertFalse(runner1.hasCompleted);
     Assert.assertFalse(runner2.hasCompleted);
     Assert.assertFalse(runner3.hasCompleted);
