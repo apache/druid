@@ -108,7 +108,7 @@ public class ChainedExecutionQueryRunnerTest
               .build()
     );
 
-    Future resultFuture = Executors.newFixedThreadPool(1).submit(
+    Future resultFuture = Executors.newSingleThreadExecutor().submit(
         new Runnable()
         {
           @Override

@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
@@ -213,12 +214,11 @@ public class RealtimeManager implements QuerySegmentWalker
             }
             metrics.incrementProcessed();
           }
-          catch (Exception e) {
+          catch (ParseException e) {
             if (inputRow != null) {
               log.error(e, "unparseable line: %s", inputRow);
             }
             metrics.incrementUnparseable();
-            continue;
           }
         }
       }

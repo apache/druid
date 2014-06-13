@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -352,7 +353,7 @@ public class RealtimeIndexTask extends AbstractTask
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
         }
-        catch (Exception e) {
+        catch (ParseException e) {
           log.warn(e, "unparseable line");
           fireDepartment.getMetrics().incrementUnparseable();
         }

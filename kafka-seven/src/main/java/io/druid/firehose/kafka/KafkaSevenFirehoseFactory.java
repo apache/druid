@@ -21,7 +21,6 @@ package io.druid.firehose.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
@@ -136,13 +135,7 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
 
       public InputRow parseMessage(Message message)
       {
-        try {
-          return theParser.parse(message.payload());
-        }
-        catch (Exception e) {
-          log.error("Unparseable row! Error parsing[%s]", message.payload());
-          throw Throwables.propagate(e);
-        }
+        return theParser.parse(message.payload());
       }
 
       @Override
