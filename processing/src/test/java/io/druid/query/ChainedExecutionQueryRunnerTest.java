@@ -243,7 +243,9 @@ public class ChainedExecutionQueryRunnerTest
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(runner1.hasStarted);
     Assert.assertTrue(runner2.hasStarted);
-    Assert.assertFalse(runner3.hasStarted);
+    Assert.assertTrue(runner1.interrupted);
+    Assert.assertTrue(runner2.interrupted);
+    Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
     Assert.assertFalse(runner1.hasCompleted);
     Assert.assertFalse(runner2.hasCompleted);
     Assert.assertFalse(runner3.hasCompleted);
@@ -256,6 +258,7 @@ public class ChainedExecutionQueryRunnerTest
     private final CountDownLatch latch;
     private boolean hasStarted = false;
     private boolean hasCompleted = false;
+    private boolean interrupted = false;
 
     public DyingQueryRunner(CountDownLatch latch)
     {
@@ -268,6 +271,7 @@ public class ChainedExecutionQueryRunnerTest
       hasStarted = true;
       latch.countDown();
       if (Thread.interrupted()) {
+        interrupted = true;
         throw new QueryInterruptedException("I got killed");
       }
 
@@ -276,6 +280,7 @@ public class ChainedExecutionQueryRunnerTest
         Thread.sleep(500);
       }
       catch (InterruptedException e) {
+        interrupted = true;
         throw new QueryInterruptedException("I got killed");
       }
 
