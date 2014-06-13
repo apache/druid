@@ -63,7 +63,6 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
   private final QueryWatcher queryWatcher;
   private final StupidPool<ByteBuffer> bufferPool;
 
-
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Ordering<Row> ordering,
@@ -155,17 +154,21 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
       futures.cancel(true);
+      indexAccumulatorPair.lhs.close();
       throw new QueryInterruptedException("Query interrupted");
     }
     catch (CancellationException e) {
+      indexAccumulatorPair.lhs.close();
       throw new QueryInterruptedException("Query cancelled");
     }
     catch (TimeoutException e) {
+      indexAccumulatorPair.lhs.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
       futures.cancel(true);
       throw new QueryInterruptedException("Query timeout");
     }
     catch (ExecutionException e) {
+      indexAccumulatorPair.lhs.close();
       throw Throwables.propagate(e.getCause());
     }
 
@@ -173,7 +176,8 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
         Sequences.simple(
             indexAccumulatorPair.lhs
                                 .iterableWithPostAggregations(null)
-        ), indexAccumulatorPair.lhs
+        ),
+        indexAccumulatorPair.lhs
     );
   }
 

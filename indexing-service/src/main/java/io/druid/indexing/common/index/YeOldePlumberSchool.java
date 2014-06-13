@@ -223,7 +223,6 @@ public class YeOldePlumberSchool implements PlumberSchool
             );
 
             indexToPersist.swapSegment(null);
-            index.close();
             metrics.incrementRowOutputCount(rowsToPersist);
 
             spilled.add(dirToPersist);

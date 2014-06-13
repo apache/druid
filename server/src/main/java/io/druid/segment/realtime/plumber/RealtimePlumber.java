@@ -19,12 +19,10 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
-import io.druid.collections.StupidPool;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
-import io.druid.guice.annotations.Global;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -59,10 +57,10 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -76,10 +74,8 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
-
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
-
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
@@ -253,7 +249,19 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
-                                            return factory.createRunner(input.getSegment());
+                                            // Prevent the underlying segment from closing when its being iterated
+                                            final Closeable closeable = input.getSegment().increment();
+                                            try {
+                                              return factory.createRunner(input.getSegment());
+                                            }
+                                            finally {
+                                              try {
+                                                closeable.close();
+                                              }
+                                              catch (IOException e) {
+                                                throw Throwables.propagate(e);
+                                              }
+                                            }
                                           }
                                         }
                                     )
@@ -717,8 +725,6 @@ public class RealtimePlumber implements Plumber
                 IndexIO.loadIndex(persistedFile)
             )
         );
-        //TODO: can there be some races here ?
-        index.close();
         return numRows;
       }
       catch (IOException e) {
@@ -785,13 +791,13 @@ public class RealtimePlumber implements Plumber
                 && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 && Iterables.any(
                     sinks.keySet(), new Predicate<Long>()
-                    {
-                      @Override
-                      public boolean apply(Long sinkKey)
-                      {
-                        return segment.getInterval().contains(sinkKey);
-                      }
-                    }
+                {
+                  @Override
+                  public boolean apply(Long sinkKey)
+                  {
+                    return segment.getInterval().contains(sinkKey);
+                  }
+                }
                 );
           }
         }
