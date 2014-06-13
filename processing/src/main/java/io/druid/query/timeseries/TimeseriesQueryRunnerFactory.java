@@ -19,6 +19,7 @@
 
 package io.druid.query.timeseries;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
@@ -28,6 +29,7 @@ import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
@@ -39,25 +41,20 @@ import java.util.concurrent.ExecutorService;
 public class TimeseriesQueryRunnerFactory
     implements QueryRunnerFactory<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
-  public static TimeseriesQueryRunnerFactory create()
-  {
-    return new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(new QueryConfig()),
-        new TimeseriesQueryEngine()
-    );
-  }
-
   private final TimeseriesQueryQueryToolChest toolChest;
   private final TimeseriesQueryEngine engine;
+  private final QueryWatcher queryWatcher;
 
   @Inject
   public TimeseriesQueryRunnerFactory(
       TimeseriesQueryQueryToolChest toolChest,
-      TimeseriesQueryEngine engine
+      TimeseriesQueryEngine engine,
+      QueryWatcher queryWatcher
   )
   {
     this.toolChest = toolChest;
     this.engine = engine;
+    this.queryWatcher = queryWatcher;
   }
 
   @Override
@@ -72,7 +69,7 @@ public class TimeseriesQueryRunnerFactory
   )
   {
     return new ChainedExecutionQueryRunner<Result<TimeseriesResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryRunners
+        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
     );
   }
 

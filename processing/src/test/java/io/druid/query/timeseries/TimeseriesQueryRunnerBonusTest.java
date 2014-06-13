@@ -28,8 +28,10 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -87,7 +89,12 @@ public class TimeseriesQueryRunnerBonusTest
 
   private static List<Result<TimeseriesResultValue>> runTimeseriesCount(IncrementalIndex index)
   {
-    final QueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
+    final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
+        new TimeseriesQueryQueryToolChest(new QueryConfig()),
+        new TimeseriesQueryEngine(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
+
     final QueryRunner<Result<TimeseriesResultValue>> runner = makeQueryRunner(
         factory,
         new IncrementalIndexSegment(index, null)

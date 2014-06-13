@@ -120,6 +120,10 @@ public class S3DataSegmentMover implements DataSegmentMover
               if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
                 if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
                   log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+                } else if (s3Client.getObjectDetails(s3Bucket, s3Path)
+                                   .getStorageClass()
+                                   .equals(S3Object.STORAGE_CLASS_GLACIER)) {
+                  log.warn("Cannot move file[s3://%s/%s] of storage class glacier.");
                 } else {
                   log.info(
                       "Moving file[s3://%s/%s] to [s3://%s/%s]",

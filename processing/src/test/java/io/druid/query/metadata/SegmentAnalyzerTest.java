@@ -25,6 +25,7 @@ import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryWatcher;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -95,7 +96,7 @@ public class SegmentAnalyzerTest
   private List<SegmentAnalysis> getSegmentAnalysises(Segment index)
   {
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
-        (QueryRunnerFactory) new SegmentMetadataQueryRunnerFactory(), index
+        (QueryRunnerFactory) new SegmentMetadataQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER), index
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(

@@ -26,6 +26,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -62,7 +63,11 @@ public class TimeseriesQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        TimeseriesQueryRunnerFactory.create()
+        new TimeseriesQueryRunnerFactory(
+            new TimeseriesQueryQueryToolChest(new QueryConfig()),
+            new TimeseriesQueryEngine(),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
     );
   }
 

@@ -60,27 +60,29 @@ public class TimeseriesQueryEngine
                   {
                     Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
 
-                    while (!cursor.isDone()) {
-                      for (Aggregator aggregator : aggregators) {
-                        aggregator.aggregate();
+                    try {
+                      while (!cursor.isDone()) {
+                        for (Aggregator aggregator : aggregators) {
+                          aggregator.aggregate();
+                        }
+                        cursor.advance();
                       }
-                      cursor.advance();
+
+                      TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
+
+                      for (Aggregator aggregator : aggregators) {
+                        bob.addMetric(aggregator);
+                      }
+
+                      Result<TimeseriesResultValue> retVal = bob.build();
+                      return retVal;
                     }
-
-                    TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
-
-                    for (Aggregator aggregator : aggregators) {
-                      bob.addMetric(aggregator);
+                    finally {
+                      // cleanup
+                      for (Aggregator agg : aggregators) {
+                        agg.close();
+                      }
                     }
-
-                    Result<TimeseriesResultValue> retVal = bob.build();
-
-                    // cleanup
-                    for (Aggregator agg : aggregators) {
-                      agg.close();
-                    }
-
-                    return retVal;
                   }
                 }
     );

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -35,7 +34,6 @@ import com.google.common.primitives.Ints;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.TimestampParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -46,15 +44,14 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.IngestionSpec;
-import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.IOConfig;
+import io.druid.segment.indexing.IngestionSpec;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -480,7 +477,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0) : tuningConfig;
     }
 
     @Override
@@ -528,6 +525,9 @@ public class IndexTask extends AbstractFixedIntervalTask
   @JsonTypeName("index")
   public static class IndexTuningConfig implements TuningConfig
   {
+    private static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
+    private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 500000;
+
     private final int targetPartitionSize;
     private final int rowFlushBoundary;
 
@@ -537,8 +537,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary
     )
     {
-      this.targetPartitionSize = targetPartitionSize;
-      this.rowFlushBoundary = rowFlushBoundary;
+      this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
+      this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
     }
 
     @JsonProperty
@@ -552,13 +552,5 @@ public class IndexTask extends AbstractFixedIntervalTask
     {
       return rowFlushBoundary;
     }
-  }
-
-
-  public static void main(String[] args)
-  {
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("millis");
-    parser.apply("1401266370985");
-
   }
 }

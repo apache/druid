@@ -41,7 +41,7 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     // Display info about all available segments
-    final Set<DataSegment> availableSegments = coordinator.getAvailableDataSegments();
+    final Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
     if (log.isDebugEnabled()) {
       log.debug("Available DataSegments");
       for (DataSegment dataSegment : availableSegments) {
