@@ -28,6 +28,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -181,7 +182,7 @@ public class Sink implements Iterable<FireHydrant>
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
             .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withSpatialDimensions(schema.getParser())
+            .withDimensionsSpec(schema.getParser())
             .withMetrics(schema.getAggregators())
             .build()
     );

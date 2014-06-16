@@ -202,7 +202,7 @@ public class IndexIO
       case 6:
       case 7:
         log.info("Old version, re-persisting.");
-        IndexMerger.append(
+        IndexMaker.append(
             Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
             converted
         );
@@ -689,7 +689,7 @@ public class IndexIO
 
       return new SimpleQueryableIndex(
           index.getDataInterval(),
-          new ArrayIndexed<String>(cols, String.class),
+          new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
           new ColumnBuilder()
               .setType(ValueType.LONG)
@@ -722,8 +722,6 @@ public class IndexIO
       final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
 
       Map<String, Column> columns = Maps.newHashMap();
-
-      ObjectMapper mapper = new DefaultObjectMapper();
 
       for (String columnName : cols) {
         columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));

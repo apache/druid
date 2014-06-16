@@ -17,19 +17,45 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
 
 /**
  */
-public interface ColumnCapabilities
+public abstract class AbstractProgressIndicator implements ProgressIndicator
 {
-  public ValueType getType();
+  @Override
+  public void progress()
+  {
+    // do nothing
+  }
 
-  public boolean isDictionaryEncoded();
-  public boolean isRunLengthEncoded();
-  public boolean hasBitmapIndexes();
-  public boolean hasSpatialIndexes();
-  public boolean hasMultipleValues();
+  @Override
+  public void start()
+  {
+    // do nothing
+  }
 
-  public ColumnCapabilitiesImpl merge(ColumnCapabilities other);
+  @Override
+  public void stop()
+  {
+    // do nothing
+  }
+
+  @Override
+  public void startSection(String section)
+  {
+    // do nothing
+  }
+
+  @Override
+  public void progressSection(String section, String message)
+  {
+    // do nothing
+  }
+
+  @Override
+  public void stopSection(String section)
+  {
+    // do nothing
+  }
 }

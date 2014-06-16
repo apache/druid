@@ -27,6 +27,8 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -114,13 +116,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getAvailableDimensions()
+  public Indexed<String> getDimensionNames()
   {
     return new ListIndexed<String>(index.getDimensions(), String.class);
   }
 
   @Override
-  public Indexed<String> getAvailableMetrics()
+  public Indexed<String> getMetricNames()
   {
     return new ListIndexed<String>(index.getMetricNames(), String.class);
   }
@@ -210,16 +212,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                   metrics[i] = aggs[i].get();
                 }
 
-                Map<String, String> description = Maps.newHashMap();
-                for (SpatialDimensionSchema spatialDimensionSchema : index.getSpatialDimensions()) {
-                  description.put(spatialDimensionSchema.getDimName(), "spatial");
-                }
                 return new Rowboat(
                     timeAndDims.getTimestamp(),
                     dims,
                     metrics,
-                    count++,
-                    description
+                    count++
                 );
               }
             }
@@ -288,5 +285,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public String getMetricType(String metric)
   {
     return index.getMetricType(metric);
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return index.getCapabilities(column);
   }
 }

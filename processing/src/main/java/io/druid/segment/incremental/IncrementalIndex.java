@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -46,6 +47,9 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.TimestampColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -70,28 +74,37 @@ public class IncrementalIndex implements Iterable<Row>
 {
   private static final Logger log = new Logger(IncrementalIndex.class);
   private static final Joiner JOINER = Joiner.on(",");
+
   private final long minTimestamp;
   private final QueryGranularity gran;
+
+  private final Set<Function<InputRow, InputRow>> rowTransformers;
+
   private final AggregatorFactory[] metrics;
   private final Map<String, Integer> metricIndexes;
   private final Map<String, String> metricTypes;
   private final ImmutableList<String> metricNames;
+
   private final LinkedHashMap<String, Integer> dimensionOrder;
   private final CopyOnWriteArrayList<String> dimensions;
-  private final List<SpatialDimensionSchema> spatialDimensions;
-  private final SpatialDimensionRowFormatter spatialDimensionRowFormatter;
   private final DimensionHolder dimValues;
+
+  private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
+
   private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
+
   private volatile AtomicInteger numEntries = new AtomicInteger();
   // This is modified on add() in a critical section.
-  private InputRow in;
+  private volatile InputRow in;
 
   public IncrementalIndex(IncrementalIndexSchema incrementalIndexSchema)
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
-    this.metrics = incrementalIndexSchema.getMetrics();
 
+    this.rowTransformers = Sets.newHashSet();
+
+    this.metrics = incrementalIndexSchema.getMetrics();
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
     final ImmutableMap.Builder<String, String> metricTypesBuilder = ImmutableMap.builder();
@@ -101,22 +114,49 @@ public class IncrementalIndex implements Iterable<Row>
       metricIndexesBuilder.put(metricName, i);
       metricTypesBuilder.put(metricName, metrics[i].getTypeName());
     }
-    metricNames = metricNamesBuilder.build();
-    metricIndexes = metricIndexesBuilder.build();
-    metricTypes = metricTypesBuilder.build();
+    this.metricNames = metricNamesBuilder.build();
+    this.metricIndexes = metricIndexesBuilder.build();
+    this.metricTypes = metricTypesBuilder.build();
 
     this.dimensionOrder = Maps.newLinkedHashMap();
-    this.dimensions = new CopyOnWriteArrayList<String>();
+    this.dimensions = new CopyOnWriteArrayList<>();
     int index = 0;
-    for (String dim : incrementalIndexSchema.getDimensions()) {
+    for (String dim : incrementalIndexSchema.getDimensionsSpec().getDimensions()) {
       dimensionOrder.put(dim, index++);
       dimensions.add(dim);
     }
-    this.spatialDimensions = incrementalIndexSchema.getSpatialDimensions();
-    this.spatialDimensionRowFormatter = new SpatialDimensionRowFormatter(spatialDimensions);
+    // This should really be more generic
+    List<SpatialDimensionSchema> spatialDimensions = incrementalIndexSchema.getDimensionsSpec().getSpatialDimensions();
+    if (!spatialDimensions.isEmpty()) {
+      this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
+    }
+
+    this.columnCapabilities = Maps.newHashMap();
+    for (Map.Entry<String, String> entry : metricTypes.entrySet()) {
+      ValueType type;
+      if (entry.getValue().equalsIgnoreCase("float")) {
+        type = ValueType.FLOAT;
+      } else {
+        type = ValueType.COMPLEX;
+      }
+      ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+      capabilities.setType(type);
+      columnCapabilities.put(entry.getKey(), capabilities);
+    }
+    for (String dimension : dimensions) {
+      ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+      capabilities.setType(ValueType.STRING);
+      columnCapabilities.put(dimension, capabilities);
+    }
+    for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
+      ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+      capabilities.setType(ValueType.STRING);
+      capabilities.setHasSpatialIndexes(true);
+      columnCapabilities.put(spatialDimension.getDimName(), capabilities);
+    }
 
     this.dimValues = new DimensionHolder();
-    this.facts = new ConcurrentSkipListMap<TimeAndDims, Aggregator[]>();
+    this.facts = new ConcurrentSkipListMap<>();
   }
 
   public IncrementalIndex(
@@ -133,11 +173,23 @@ public class IncrementalIndex implements Iterable<Row>
     );
   }
 
+  public InputRow formatRow(InputRow row)
+  {
+    for (Function<InputRow, InputRow> rowTransformer : rowTransformers) {
+      row = rowTransformer.apply(row);
+    }
+
+    if (row == null) {
+      throw new IAE("Row is null? How can this be?!");
+    }
+    return row;
+  }
+
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
    * <p/>
-   * This is *not* thread-safe.  Calls to add() should always happen on the same thread.
+   * This is thread-safe.
    *
    * @param row the row of data to add
    *
@@ -145,7 +197,7 @@ public class IncrementalIndex implements Iterable<Row>
    */
   public int add(InputRow row)
   {
-    row = spatialDimensionRowFormatter.formatRow(row);
+    row = formatRow(row);
 
     if (row.getTimestampFromEpoch() < minTimestamp) {
       throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, new DateTime(minTimestamp));
@@ -160,6 +212,18 @@ public class IncrementalIndex implements Iterable<Row>
       for (String dimension : rowDimensions) {
         dimension = dimension.toLowerCase();
         List<String> dimensionValues = row.getDimension(dimension);
+
+        // Set column capabilities as data is coming in
+        ColumnCapabilitiesImpl capabilities = columnCapabilities.get(dimension);
+        if (capabilities == null) {
+          capabilities = new ColumnCapabilitiesImpl();
+          capabilities.setType(ValueType.STRING);
+          columnCapabilities.put(dimension, capabilities);
+        }
+        if (dimensionValues.size() > 1) {
+          capabilities.setHasMultipleValues(true);
+        }
+
         Integer index = dimensionOrder.get(dimension);
         if (index == null) {
           dimensionOrder.put(dimension, dimensionOrder.size());
@@ -353,16 +417,6 @@ public class IncrementalIndex implements Iterable<Row>
     return dimensions;
   }
 
-  public List<SpatialDimensionSchema> getSpatialDimensions()
-  {
-    return spatialDimensions;
-  }
-
-  public SpatialDimensionRowFormatter getSpatialDimensionRowFormatter()
-  {
-    return spatialDimensionRowFormatter;
-  }
-
   public String getMetricType(String metric)
   {
     return metricTypes.get(metric);
@@ -421,6 +475,11 @@ public class IncrementalIndex implements Iterable<Row>
   ConcurrentNavigableMap<TimeAndDims, Aggregator[]> getSubMap(TimeAndDims start, TimeAndDims end)
   {
     return facts.subMap(start, end);
+  }
+
+  ColumnCapabilities getCapabilities(String column)
+  {
+    return columnCapabilities.get(column);
   }
 
   @Override
