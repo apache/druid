@@ -21,6 +21,7 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -504,9 +505,14 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
-    bufferHolder.close();
+    try {
+      bufferHolder.close();
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   static class DimensionHolder
