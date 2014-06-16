@@ -21,6 +21,7 @@ package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -48,12 +49,34 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   );
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";
+
   private static final byte CACHE_TYPE_ID = 0x0;
+
+  public static Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
+  {
+    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
+    Map<String, Object> result = Maps.newHashMap();
+
+    if (min != null) {
+      result.put(MIN_TIME, min);
+    }
+    if (max != null) {
+      result.put(MAX_TIME, max);
+    }
+    if (!result.isEmpty()) {
+      results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
+    }
+
+    return results;
+  }
+
+  private final String bound;
 
   @JsonCreator
   public TimeBoundaryQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("bound") String bound,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -63,6 +86,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
                                    : querySegmentSpec,
         context
     );
+
+    this.bound = bound == null ? "" : bound;
   }
 
   @Override
@@ -77,12 +102,19 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return Query.TIME_BOUNDARY;
   }
 
+  @JsonProperty
+  public String getBound()
+  {
+    return bound;
+  }
+
   @Override
   public TimeBoundaryQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TimeBoundaryQuery(
         getDataSource(),
         getQuerySegmentSpec(),
+        bound,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -93,6 +125,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return new TimeBoundaryQuery(
         getDataSource(),
         spec,
+        bound,
         getContext()
     );
   }
@@ -103,14 +136,17 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return new TimeBoundaryQuery(
         dataSource,
         getQuerySegmentSpec(),
+        bound,
         getContext()
     );
   }
 
   public byte[] getCacheKey()
   {
-    return ByteBuffer.allocate(1)
+    final byte[] boundBytes = bound.getBytes(Charsets.UTF_8);
+    return ByteBuffer.allocate(1 + boundBytes.length)
                      .put(CACHE_TYPE_ID)
+                     .put(boundBytes)
                      .array();
   }
 
@@ -121,25 +157,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
            "dataSource='" + getDataSource() + '\'' +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", duration=" + getDuration() +
+           ", bound" + bound +
            '}';
-  }
-
-  public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
-  {
-    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
-    Map<String, Object> result = Maps.newHashMap();
-
-    if (min != null) {
-      result.put(TimeBoundaryQuery.MIN_TIME, min);
-    }
-    if (max != null) {
-      result.put(TimeBoundaryQuery.MAX_TIME, max);
-    }
-    if (!result.isEmpty()) {
-      results.add(new Result<TimeBoundaryResultValue>(timestamp, new TimeBoundaryResultValue(result)));
-    }
-
-    return results;
   }
 
   public Iterable<Result<TimeBoundaryResultValue>> mergeResults(List<Result<TimeBoundaryResultValue>> results)
@@ -154,25 +173,33 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       TimeBoundaryResultValue val = result.getValue();
 
       DateTime currMinTime = val.getMinTime();
-      if (currMinTime.isBefore(min)) {
+      if (currMinTime != null && currMinTime.isBefore(min)) {
         min = currMinTime;
       }
       DateTime currMaxTime = val.getMaxTime();
-      if (currMaxTime.isAfter(max)) {
+      if (currMaxTime != null && currMaxTime.isAfter(max)) {
         max = currMaxTime;
       }
     }
 
-    return Arrays.asList(
-        new Result<TimeBoundaryResultValue>(
-            min,
-            new TimeBoundaryResultValue(
-                ImmutableMap.<String, Object>of(
-                    TimeBoundaryQuery.MIN_TIME, min,
-                    TimeBoundaryQuery.MAX_TIME, max
-                )
-            )
-        )
-    );
+    final DateTime ts;
+    final DateTime minTime;
+    final DateTime maxTime;
+
+    if (bound.equalsIgnoreCase(MIN_TIME)) {
+      ts = min;
+      minTime = min;
+      maxTime = null;
+    } else if (bound.equalsIgnoreCase(MAX_TIME)) {
+      ts = max;
+      minTime = null;
+      maxTime = max;
+    } else {
+      ts = min;
+      minTime = min;
+      maxTime = max;
+    }
+
+    return buildResult(ts, minTime, maxTime);
   }
 }

@@ -99,6 +99,10 @@ public class TimeBoundaryResultValue
 
   private DateTime getDateTimeValue(Object val)
   {
+    if (val == null) {
+      return null;
+    }
+
     if (val instanceof DateTime) {
       return (DateTime) val;
     } else if (val instanceof String) {
