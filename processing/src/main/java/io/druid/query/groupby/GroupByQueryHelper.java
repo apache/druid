@@ -32,7 +32,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -57,7 +56,7 @@ public class GroupByQueryHelper
         new Function<AggregatorFactory, AggregatorFactory>()
         {
           @Override
-          public AggregatorFactory apply(@Nullable AggregatorFactory input)
+          public AggregatorFactory apply(AggregatorFactory input)
           {
             return input.getCombiningFactory();
           }
@@ -68,7 +67,7 @@ public class GroupByQueryHelper
         new Function<DimensionSpec, String>()
         {
           @Override
-          public String apply(@Nullable DimensionSpec input)
+          public String apply(DimensionSpec input)
           {
             return input.getOutputName();
           }
@@ -80,7 +79,8 @@ public class GroupByQueryHelper
         granTimeStart,
         gran,
         aggs.toArray(new AggregatorFactory[aggs.size()]),
-        bufferPool
+        bufferPool,
+        false
     );
 
     Accumulator<IncrementalIndex, Row> accumulator = new Accumulator<IncrementalIndex, Row>()
@@ -95,7 +95,7 @@ public class GroupByQueryHelper
         return accumulated;
       }
     };
-    return new Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>>(index, accumulator);
+    return new Pair<>(index, accumulator);
   }
 
 }

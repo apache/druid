@@ -42,6 +42,12 @@ public class NoopLimitSpec implements LimitSpec
   }
 
   @Override
+  public LimitSpec merge(LimitSpec other)
+  {
+    return other;
+  }
+
+  @Override
   public String toString()
   {
     return "NoopLimitSpec";

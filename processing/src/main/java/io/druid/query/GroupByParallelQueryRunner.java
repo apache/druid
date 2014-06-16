@@ -94,7 +94,6 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
   @Override
   public Sequence<Row> run(final Query<Row> queryParam)
   {
-
     final GroupByQuery query = (GroupByQuery) queryParam;
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,

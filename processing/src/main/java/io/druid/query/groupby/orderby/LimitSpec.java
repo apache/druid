@@ -38,5 +38,11 @@ import java.util.List;
 })
 public interface LimitSpec
 {
-  public Function<Sequence<Row>, Sequence<Row>> build(List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs);
+  public Function<Sequence<Row>, Sequence<Row>> build(
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggs,
+      List<PostAggregator> postAggs
+  );
+
+  public LimitSpec merge(LimitSpec other);
 }
