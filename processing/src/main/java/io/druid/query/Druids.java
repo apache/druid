@@ -692,14 +692,14 @@ public class Druids
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
-    private String exclude;
+    private String bound;
     private Map<String, Object> context;
 
     public TimeBoundaryQueryBuilder()
     {
       dataSource = null;
       querySegmentSpec = null;
-      exclude = null;
+      bound = null;
       context = null;
     }
 
@@ -708,7 +708,7 @@ public class Druids
       return new TimeBoundaryQuery(
           dataSource,
           querySegmentSpec,
-          exclude,
+          bound,
           context
       );
     }
@@ -718,7 +718,7 @@ public class Druids
       return new TimeBoundaryQueryBuilder()
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
-          .exclude(builder.exclude)
+          .bound(builder.bound)
           .context(builder.context);
     }
 
@@ -752,9 +752,9 @@ public class Druids
       return this;
     }
 
-    public TimeBoundaryQueryBuilder exclude(String ex)
+    public TimeBoundaryQueryBuilder bound(String b)
     {
-      exclude = ex;
+      bound = b;
       return this;
     }
 

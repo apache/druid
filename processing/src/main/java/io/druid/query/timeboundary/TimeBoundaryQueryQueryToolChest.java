@@ -72,7 +72,7 @@ public class TimeBoundaryQueryQueryToolChest
 
     final Predicate<T> filterPredicate;
     // optimizations to avoid hitting too many segments
-    if (query.getExclude().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)) {
+    if (query.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)) {
       filterPredicate = new Predicate<T>()
       {
         @Override
@@ -81,7 +81,7 @@ public class TimeBoundaryQueryQueryToolChest
           return input.getInterval().overlaps(min.getInterval());
         }
       };
-    } else if (query.getExclude().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)) {
+    } else if (query.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)) {
       filterPredicate = new Predicate<T>()
       {
         @Override

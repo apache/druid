@@ -20,13 +20,10 @@
 package io.druid.query.timeboundary;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
-import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -81,11 +78,11 @@ public class TimeBoundaryQueryRunnerTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTimeBoundaryExcludesMin()
+  public void testTimeBoundaryMax()
   {
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
-                                                .exclude(TimeBoundaryQuery.MIN_TIME)
+                                                .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
 
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
@@ -102,11 +99,11 @@ public class TimeBoundaryQueryRunnerTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTimeBoundaryExcludesMax()
+  public void testTimeBoundaryMin()
   {
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
-                                                .exclude(TimeBoundaryQuery.MAX_TIME)
+                                                .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
 
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
