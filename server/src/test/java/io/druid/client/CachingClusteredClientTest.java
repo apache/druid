@@ -73,6 +73,7 @@ import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -695,6 +696,51 @@ public class CachingClusteredClientTest
     );
   }
 
+  @Test
+  public void testTimeBoundaryCaching() throws Exception
+  {
+    testQueryCaching(
+        client,
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource(CachingClusteredClientTest.DATA_SOURCE)
+              .intervals(CachingClusteredClientTest.SEG_SPEC)
+              .context(CachingClusteredClientTest.CONTEXT)
+              .build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeTimeBoundaryResult(new DateTime("2011-01-01"), new DateTime("2011-01-01"), new DateTime("2011-01-02")),
+
+        new Interval("2011-01-01/2011-01-03"),
+        makeTimeBoundaryResult(new DateTime("2011-01-02"), new DateTime("2011-01-02"), new DateTime("2011-01-03")),
+
+        new Interval("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("2011-01-05"), new DateTime("2011-01-05"), new DateTime("2011-01-10")),
+
+        new Interval("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("2011-01-05T01"), new DateTime("2011-01-05T01"), new DateTime("2011-01-10"))
+    );
+  }
+
+  private Iterable<Result<TimeBoundaryResultValue>> makeTimeBoundaryResult(
+      DateTime timestamp,
+      DateTime minTime,
+      DateTime maxTime
+  )
+  {
+    return Arrays.asList(
+        new Result<>(
+            timestamp,
+            new TimeBoundaryResultValue(
+                ImmutableMap.of(
+                    TimeBoundaryQuery.MIN_TIME,
+                    minTime.toString(),
+                    TimeBoundaryQuery.MAX_TIME,
+                    maxTime.toString()
+                )
+            )
+        )
+    );
+  }
+
   public void testQueryCaching(QueryRunner runner, final Query query, Object... args)
   {
     testQueryCaching(runner, 3, true, query, args);
@@ -1287,6 +1333,7 @@ public class CachingClusteredClientTest
                         )
                         .put(TopNQuery.class, new TopNQueryQueryToolChest(new TopNQueryConfig()))
                         .put(SearchQuery.class, new SearchQueryQueryToolChest(new SearchQueryConfig()))
+                        .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
                         .build()
         ),
         new TimelineServerView()
