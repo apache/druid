@@ -32,8 +32,10 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.StupidPool;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Row;
+import io.druid.guice.annotations.Global;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
@@ -45,6 +47,7 @@ import io.druid.query.QueryWatcher;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -60,6 +63,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private final QueryWatcher queryWatcher;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
+  private final StupidPool<ByteBuffer> computationBufferPool;
 
   private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
 
@@ -68,13 +72,15 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
       GroupByQueryEngine engine,
       QueryWatcher queryWatcher,
       Supplier<GroupByQueryConfig> config,
-      GroupByQueryQueryToolChest toolChest
+      GroupByQueryQueryToolChest toolChest,
+      @Global StupidPool<ByteBuffer> computationBufferPool
   )
   {
     this.engine = engine;
     this.queryWatcher = queryWatcher;
     this.config = config;
     this.toolChest = toolChest;
+    this.computationBufferPool = computationBufferPool;
   }
 
   @Override
@@ -144,7 +150,15 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, queryWatcher, queryRunners);
+      return new GroupByParallelQueryRunner(
+          queryExecutor,
+          new RowOrdering(),
+          config,
+          queryWatcher,
+          computationBufferPool,
+          queryRunners
+      );
+
     }
   }
 

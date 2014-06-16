@@ -32,15 +32,18 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -58,23 +61,25 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
   private final Ordering<Row> ordering;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
-
+  private final StupidPool<ByteBuffer> bufferPool;
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Ordering<Row> ordering,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
+      StupidPool<ByteBuffer> bufferPool,
       QueryRunner<Row>... queryables
   )
   {
-    this(exec, ordering, configSupplier, queryWatcher, Arrays.asList(queryables));
+    this(exec, ordering, configSupplier, queryWatcher, bufferPool, Arrays.asList(queryables));
   }
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Ordering<Row> ordering, Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
+      StupidPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<Row>> queryables
   )
   {
@@ -83,6 +88,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -91,7 +97,8 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     final GroupByQuery query = (GroupByQuery) queryParam;
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        configSupplier.get()
+        configSupplier.get(),
+        bufferPool
     );
     final int priority = query.getContextPriority(0);
 
@@ -137,7 +144,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     try {
       queryWatcher.registerQuery(query, futures);
       final Number timeout = query.getContextValue("timeout", (Number) null);
-      if(timeout == null) {
+      if (timeout == null) {
         futures.get();
       } else {
         futures.get(timeout.longValue(), TimeUnit.MILLISECONDS);
@@ -146,21 +153,31 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
       futures.cancel(true);
+      indexAccumulatorPair.lhs.close();
       throw new QueryInterruptedException("Query interrupted");
     }
-    catch(CancellationException e) {
+    catch (CancellationException e) {
+      indexAccumulatorPair.lhs.close();
       throw new QueryInterruptedException("Query cancelled");
     }
-    catch(TimeoutException e) {
+    catch (TimeoutException e) {
+      indexAccumulatorPair.lhs.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
       futures.cancel(true);
       throw new QueryInterruptedException("Query timeout");
     }
     catch (ExecutionException e) {
+      indexAccumulatorPair.lhs.close();
       throw Throwables.propagate(e.getCause());
     }
 
-    return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null));
+    return new ResourceClosingSequence<Row>(
+        Sequences.simple(
+            indexAccumulatorPair.lhs
+                                .iterableWithPostAggregations(null)
+        ),
+        indexAccumulatorPair.lhs
+    );
   }
 
 }

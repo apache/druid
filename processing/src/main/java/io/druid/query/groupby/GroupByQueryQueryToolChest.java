@@ -30,11 +30,14 @@ import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ConcatSequence;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.guice.annotations.Global;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
@@ -51,6 +54,7 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -67,16 +71,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       "false"
   );
   private final Supplier<GroupByQueryConfig> configSupplier;
+  private final StupidPool<ByteBuffer> bufferPool;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
+
 
   @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
-      GroupByQueryEngine engine
+      GroupByQueryEngine engine,
+      @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;
     this.engine = engine;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -99,7 +107,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
+
     final DataSource dataSource = query.getDataSource();
+
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
@@ -108,6 +118,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
+
       final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
@@ -124,13 +135,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final GroupByQuery outerQuery = new GroupByQuery.Builder(query)
           .setLimitSpec(query.getLimitSpec().merge(subquery.getLimitSpec()))
           .build();
+      IncrementalIndex index = makeIncrementalIndex(innerQuery, subqueryResult);
 
-      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(
-          makeIncrementalIndex(innerQuery, subqueryResult)
+      return new ResourceClosingSequence<>(
+          outerQuery.applyLimit(
+              engine.process(
+                  outerQuery,
+                  new IncrementalIndexStorageAdapter(
+                      index
+                  )
+              )
+          ),
+          index
       );
-      return outerQuery.applyLimit(engine.process(outerQuery, adapter));
     } else {
-      return query.applyLimit(postAggregate(query, makeIncrementalIndex(query, runner.run(query))));
+      final IncrementalIndex index = makeIncrementalIndex(query, runner.run(query));
+      return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
     }
   }
 
@@ -159,12 +179,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     final GroupByQueryConfig config = configSupplier.get();
     Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        config
+        config,
+        bufferPool
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
-
 
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)

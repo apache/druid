@@ -32,6 +32,7 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -62,7 +63,8 @@ public class IncrementalIndexStorageAdapterTest
   public void testSanity() throws Exception
   {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        TestQueryRunners.pool
     );
 
     index.add(
@@ -127,7 +129,8 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testResetSanity() {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        TestQueryRunners.pool
     );
 
 
@@ -179,7 +182,8 @@ public class IncrementalIndexStorageAdapterTest
   public void testSingleValueTopN()
   {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        TestQueryRunners.pool
     );
 
     DateTime t = DateTime.now();
@@ -234,7 +238,8 @@ public class IncrementalIndexStorageAdapterTest
   public void testFilterByNull() throws Exception
   {
     IncrementalIndex index = new IncrementalIndex(
-         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+         TestQueryRunners.pool
      );
 
      index.add(

@@ -29,8 +29,8 @@ import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -62,7 +62,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
   private static final Splitter SPLITTER = Splitter.on(",");
-
   private final IncrementalIndex index;
 
   public IncrementalIndexStorageAdapter(
@@ -166,8 +165,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
             return new Cursor()
             {
-              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]>> baseIter;
-              private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Aggregator[]> cursorMap;
+              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
+              private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Integer> cursorMap;
               final DateTime time;
               int numAdvanced = -1;
               boolean done;
@@ -364,13 +363,17 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 final int metricIndex = metricIndexInt;
+                final BufferAggregator agg = index.getAggregator(metricIndex);
 
                 return new FloatColumnSelector()
                 {
                   @Override
                   public float get()
                   {
-                    return currEntry.getValue()[metricIndex].getFloat();
+                    return agg.getFloat(
+                        index.getMetricBuffer(),
+                        index.getMetricPosition(currEntry.getValue(), metricIndex)
+                    );
                   }
                 };
               }
@@ -385,7 +388,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   final int metricIndex = metricIndexInt;
 
                   final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
-
+                  final BufferAggregator agg = index.getAggregator(metricIndex);
                   return new ObjectColumnSelector()
                   {
                     @Override
@@ -397,7 +400,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Object get()
                     {
-                      return currEntry.getValue()[metricIndex].get();
+                      return agg.get(
+                          index.getMetricBuffer(),
+                          index.getMetricPosition(currEntry.getValue(), metricIndex)
+                      );
                     }
                   };
                 }
@@ -420,11 +426,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
                       if (dimVals.length == 1) {
                         return dimVals[0];
-                      }
-                      else if (dimVals.length == 0) {
+                      } else if (dimVals.length == 0) {
                         return null;
-                      }
-                      else {
+                      } else {
                         return dimVals;
                       }
                     }
@@ -448,14 +452,14 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
   private static class EntryHolder
   {
-    Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]> currEntry = null;
+    Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry = null;
 
-    public Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]> get()
+    public Map.Entry<IncrementalIndex.TimeAndDims, Integer> get()
     {
       return currEntry;
     }
 
-    public void set(Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]> currEntry)
+    public void set(Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry)
     {
       this.currEntry = currEntry;
       this.currEntry = currEntry;
@@ -466,7 +470,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return currEntry.getKey();
     }
 
-    public Aggregator[] getValue()
+    public Integer getValue()
     {
       return currEntry.getValue();
     }

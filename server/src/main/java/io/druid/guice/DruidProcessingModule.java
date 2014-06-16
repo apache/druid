@@ -33,6 +33,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
 import io.druid.server.DruidProcessingConfig;
@@ -102,31 +103,8 @@ public class DruidProcessingModule implements Module
       log.warn(e, e.getMessage());
     }
 
-    return new IntermediateProcessingBufferPool(config.intermediateComputeSizeBytes());
+    return new OffheapBufferPool(config.intermediateComputeSizeBytes());
   }
 
-  private static class IntermediateProcessingBufferPool extends StupidPool<ByteBuffer>
-  {
-    private static final Logger log = new Logger(IntermediateProcessingBufferPool.class);
 
-    public IntermediateProcessingBufferPool(final int computationBufferSize)
-    {
-      super(
-          new Supplier<ByteBuffer>()
-          {
-            final AtomicLong count = new AtomicLong(0);
-
-            @Override
-            public ByteBuffer get()
-            {
-              log.info(
-                  "Allocating new intermediate processing buffer[%,d] of size[%,d]",
-                  count.getAndIncrement(), computationBufferSize
-              );
-              return ByteBuffer.allocateDirect(computationBufferSize);
-            }
-          }
-      );
-    }
-  }
 }

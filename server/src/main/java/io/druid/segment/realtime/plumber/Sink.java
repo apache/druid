@@ -27,8 +27,9 @@ import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -39,6 +40,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -49,14 +51,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class Sink implements Iterable<FireHydrant>
 {
   private static final Logger log = new Logger(Sink.class);
-
-  private volatile FireHydrant currHydrant;
-
   private final Interval interval;
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
+  private volatile FireHydrant currHydrant;
+
 
   public Sink(
       Interval interval,
@@ -177,13 +178,19 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
+    int aggsSize = 0;
+    for (AggregatorFactory agg : schema.getAggregators()) {
+      aggsSize += agg.getMaxIntermediateSize();
+    }
+    int bufferSize = aggsSize * config.getMaxRowsInMemory();
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
             .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
             .withSpatialDimensions(schema.getParser())
             .withMetrics(schema.getAggregators())
-            .build()
+            .build(),
+        new OffheapBufferPool(bufferSize)
     );
 
     FireHydrant old;
