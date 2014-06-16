@@ -78,4 +78,46 @@ public class TimeBoundaryQueryRunnerTest
     Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), minTime);
     Assert.assertEquals(new DateTime("2011-04-15T00:00:00.000Z"), maxTime);
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testTimeBoundaryExcludesMin()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .exclude(TimeBoundaryQuery.MIN_TIME)
+                                                .build();
+
+    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
+        runner.run(timeBoundaryQuery),
+        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+    );
+    TimeBoundaryResultValue val = results.iterator().next().getValue();
+    DateTime minTime = val.getMinTime();
+    DateTime maxTime = val.getMaxTime();
+
+    Assert.assertNull(minTime);
+    Assert.assertEquals(new DateTime("2011-04-15T00:00:00.000Z"), maxTime);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testTimeBoundaryExcludesMax()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .exclude(TimeBoundaryQuery.MAX_TIME)
+                                                .build();
+
+    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
+        runner.run(timeBoundaryQuery),
+        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+    );
+    TimeBoundaryResultValue val = results.iterator().next().getValue();
+    DateTime minTime = val.getMinTime();
+    DateTime maxTime = val.getMaxTime();
+
+    Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), minTime);
+    Assert.assertNull(maxTime);
+  }
 }

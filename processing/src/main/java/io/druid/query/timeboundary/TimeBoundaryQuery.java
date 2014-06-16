@@ -50,10 +50,13 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   public static final String MIN_TIME = "minTime";
   private static final byte CACHE_TYPE_ID = 0x0;
 
+  private final String exclude;
+
   @JsonCreator
   public TimeBoundaryQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("exclude") String exclude,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -63,6 +66,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
                                    : querySegmentSpec,
         context
     );
+
+    this.exclude = exclude == null ? "" : exclude;
   }
 
   @Override
@@ -77,12 +82,19 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return Query.TIME_BOUNDARY;
   }
 
+  @JsonProperty
+  public String getExclude()
+  {
+    return exclude;
+  }
+
   @Override
   public TimeBoundaryQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new TimeBoundaryQuery(
         getDataSource(),
         getQuerySegmentSpec(),
+        exclude,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -93,6 +105,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return new TimeBoundaryQuery(
         getDataSource(),
         spec,
+        exclude,
         getContext()
     );
   }
@@ -103,14 +116,17 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return new TimeBoundaryQuery(
         dataSource,
         getQuerySegmentSpec(),
+        exclude,
         getContext()
     );
   }
 
   public byte[] getCacheKey()
   {
-    return ByteBuffer.allocate(1)
+    final byte[] excludeBytes = exclude.getBytes();
+    return ByteBuffer.allocate(1 + excludeBytes.length)
                      .put(CACHE_TYPE_ID)
+                     .put(excludeBytes)
                      .array();
   }
 
@@ -121,6 +137,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
            "dataSource='" + getDataSource() + '\'' +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", duration=" + getDuration() +
+           ", exclude" + exclude +
            '}';
   }
 
@@ -129,14 +146,14 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
     Map<String, Object> result = Maps.newHashMap();
 
-    if (min != null) {
-      result.put(TimeBoundaryQuery.MIN_TIME, min);
+    if (min != null && !exclude.equalsIgnoreCase(MIN_TIME)) {
+      result.put(MIN_TIME, min);
     }
-    if (max != null) {
-      result.put(TimeBoundaryQuery.MAX_TIME, max);
+    if (max != null && !exclude.equalsIgnoreCase(MAX_TIME)) {
+      result.put(MAX_TIME, max);
     }
     if (!result.isEmpty()) {
-      results.add(new Result<TimeBoundaryResultValue>(timestamp, new TimeBoundaryResultValue(result)));
+      results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
     }
 
     return results;
@@ -153,24 +170,40 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     for (Result<TimeBoundaryResultValue> result : results) {
       TimeBoundaryResultValue val = result.getValue();
 
-      DateTime currMinTime = val.getMinTime();
-      if (currMinTime.isBefore(min)) {
-        min = currMinTime;
+      if (!exclude.equalsIgnoreCase(MIN_TIME)) {
+        DateTime currMinTime = val.getMinTime();
+        if (currMinTime.isBefore(min)) {
+          min = currMinTime;
+        }
       }
-      DateTime currMaxTime = val.getMaxTime();
-      if (currMaxTime.isAfter(max)) {
-        max = currMaxTime;
+      if (!exclude.equalsIgnoreCase(MAX_TIME)) {
+        DateTime currMaxTime = val.getMaxTime();
+        if (currMaxTime.isAfter(max)) {
+          max = currMaxTime;
+        }
       }
     }
 
+    final ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder<>();
+    final DateTime ts;
+
+    if (exclude.equalsIgnoreCase(MIN_TIME)) {
+      ts = max;
+      builder.put(MAX_TIME, max);
+    } else if (exclude.equalsIgnoreCase(MAX_TIME)) {
+      ts = min;
+      builder.put(MIN_TIME, min);
+    } else {
+      ts = min;
+      builder.put(MAX_TIME, max);
+      builder.put(MIN_TIME, min);
+    }
+
     return Arrays.asList(
-        new Result<TimeBoundaryResultValue>(
-            min,
+        new Result<>(
+            ts,
             new TimeBoundaryResultValue(
-                ImmutableMap.<String, Object>of(
-                    TimeBoundaryQuery.MIN_TIME, min,
-                    TimeBoundaryQuery.MAX_TIME, max
-                )
+                builder.build()
             )
         )
     );

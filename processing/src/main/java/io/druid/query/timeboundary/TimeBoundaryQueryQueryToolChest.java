@@ -67,21 +67,45 @@ public class TimeBoundaryQueryQueryToolChest
       return segments;
     }
 
-    final T first = segments.get(0);
-    final T second = segments.get(segments.size() - 1);
+    final T min = segments.get(0);
+    final T max = segments.get(segments.size() - 1);
+
+    final Predicate<T> filterPredicate;
+    // optimizations to avoid hitting too many segments
+    if (query.getExclude().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)) {
+      filterPredicate = new Predicate<T>()
+      {
+        @Override
+        public boolean apply(T input)
+        {
+          return input.getInterval().overlaps(min.getInterval());
+        }
+      };
+    } else if (query.getExclude().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)) {
+      filterPredicate = new Predicate<T>()
+      {
+        @Override
+        public boolean apply(T input)
+        {
+          return input.getInterval().overlaps(max.getInterval());
+        }
+      };
+    } else {
+      filterPredicate = new Predicate<T>()
+      {
+        @Override
+        public boolean apply(T input)
+        {
+          return input.getInterval().overlaps(min.getInterval()) || input.getInterval()
+                                                                         .overlaps(max.getInterval());
+        }
+      };
+    }
 
     return Lists.newArrayList(
         Iterables.filter(
             segments,
-            new Predicate<T>()
-            {
-              @Override
-              public boolean apply(T input)
-              {
-                return input.getInterval().overlaps(first.getInterval()) || input.getInterval()
-                    .overlaps(second.getInterval());
-              }
-            }
+            filterPredicate
         )
     );
   }
@@ -146,9 +170,9 @@ public class TimeBoundaryQueryQueryToolChest
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
         return ByteBuffer.allocate(2)
-            .put(TIMEBOUNDARY_QUERY)
-            .put(query.getCacheKey())
-            .array();
+                         .put(TIMEBOUNDARY_QUERY)
+                         .put(query.getCacheKey())
+                         .array();
       }
 
       @Override
