@@ -49,7 +49,26 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   );
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";
+
   private static final byte CACHE_TYPE_ID = 0x0;
+
+  public static Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
+  {
+    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
+    Map<String, Object> result = Maps.newHashMap();
+
+    if (min != null) {
+      result.put(MIN_TIME, min);
+    }
+    if (max != null) {
+      result.put(MAX_TIME, max);
+    }
+    if (!result.isEmpty()) {
+      results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
+    }
+
+    return results;
+  }
 
   private final String bound;
 
@@ -142,24 +161,6 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
            '}';
   }
 
-  public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
-  {
-    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
-    Map<String, Object> result = Maps.newHashMap();
-
-    if (min != null) {
-      result.put(MIN_TIME, min);
-    }
-    if (max != null) {
-      result.put(MAX_TIME, max);
-    }
-    if (!result.isEmpty()) {
-      results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
-    }
-
-    return results;
-  }
-
   public Iterable<Result<TimeBoundaryResultValue>> mergeResults(List<Result<TimeBoundaryResultValue>> results)
   {
     if (results == null || results.isEmpty()) {
@@ -181,28 +182,24 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       }
     }
 
-    final ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder<>();
     final DateTime ts;
+    final DateTime minTime;
+    final DateTime maxTime;
 
     if (bound.equalsIgnoreCase(MIN_TIME)) {
       ts = min;
-      builder.put(MIN_TIME, max);
+      minTime = min;
+      maxTime = null;
     } else if (bound.equalsIgnoreCase(MAX_TIME)) {
       ts = max;
-      builder.put(MAX_TIME, min);
+      minTime = null;
+      maxTime = max;
     } else {
       ts = min;
-      builder.put(MIN_TIME, min);
-      builder.put(MAX_TIME, max);
+      minTime = min;
+      maxTime = max;
     }
 
-    return Arrays.asList(
-        new Result<>(
-            ts,
-            new TimeBoundaryResultValue(
-                builder.build()
-            )
-        )
-    );
+    return buildResult(ts, minTime, maxTime);
   }
 }
