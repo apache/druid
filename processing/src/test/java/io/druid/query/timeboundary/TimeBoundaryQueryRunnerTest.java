@@ -19,12 +19,14 @@
 
 package io.druid.query.timeboundary;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.TableDataSource;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +34,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 /**
  */
@@ -116,5 +120,46 @@ public class TimeBoundaryQueryRunnerTest
 
     Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), minTime);
     Assert.assertNull(maxTime);
+  }
+
+  @Test
+  public void testMergeResults() throws Exception
+  {
+    List<Result<TimeBoundaryResultValue>> results = Arrays.asList(
+        new Result<>(
+            new DateTime(),
+            new TimeBoundaryResultValue(
+                ImmutableMap.of(
+                    "maxTime", "2012-01-01",
+                    "minTime", "2011-01-01"
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime(),
+            new TimeBoundaryResultValue(
+                ImmutableMap.of(
+                    "maxTime", "2012-02-01",
+                    "minTime", "2011-01-01"
+                )
+            )
+        )
+    );
+
+    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null);
+    Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
+
+    Assert.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(new DateTime("2012-02-01")));
+  }
+
+  @Test
+  public void testMergeResultsEmptyResults() throws Exception
+  {
+    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
+
+    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null);
+    Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
+
+    Assert.assertFalse(actual.iterator().hasNext());
   }
 }
