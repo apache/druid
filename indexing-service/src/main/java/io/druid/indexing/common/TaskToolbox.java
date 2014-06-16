@@ -28,7 +28,6 @@ import com.google.common.collect.Multimaps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
-import io.druid.collections.StupidPool;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -47,7 +46,6 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -212,5 +210,4 @@ public class TaskToolbox
   {
     return taskWorkDir;
   }
-
 }

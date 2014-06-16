@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;

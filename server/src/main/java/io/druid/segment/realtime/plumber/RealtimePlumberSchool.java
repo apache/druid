@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
+import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
@@ -50,6 +51,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
+
   // Backwards compatible
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -160,5 +162,4 @@ public class RealtimePlumberSchool implements PlumberSchool
     Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
     Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");
   }
-
 }

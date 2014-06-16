@@ -103,9 +103,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
   {
-    Sequence<Row> result;
     // If there's a subquery, merge subquery results and then apply the aggregator
     DataSource dataSource = query.getDataSource();
+    final IncrementalIndex index;
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
@@ -115,13 +115,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
       Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
-      IncrementalIndexStorageAdapter adapter
-          = new IncrementalIndexStorageAdapter(makeIncrementalIndex(subquery, subqueryResult));
-      result = engine.process(query, adapter);
+      final IncrementalIndex subQueryResultIndex = makeIncrementalIndex(subquery, subqueryResult);
+
+      Sequence<Row> result = engine.process(query, new IncrementalIndexStorageAdapter(subQueryResultIndex));
+      index = makeIncrementalIndex(query, result);
+      subQueryResultIndex.close();
     } else {
-      result = runner.run(query);
+      index = makeIncrementalIndex(query, runner.run(query));
+
     }
-    final IncrementalIndex index = makeIncrementalIndex(query, result);
     return new ResourceClosingSequence<Row>(postAggregate(query, index), index);
   }
 

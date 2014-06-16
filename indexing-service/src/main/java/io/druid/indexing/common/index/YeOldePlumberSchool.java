@@ -31,16 +31,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
-import io.druid.guice.annotations.Global;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
-import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -52,11 +49,9 @@ import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
-import sun.misc.JavaNioAccess;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 
@@ -79,7 +74,7 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JsonProperty("version") String version,
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
       @JacksonInject("tmpSegmentDir") File tmpSegmentDir
-      )
+  )
   {
     this.interval = interval;
     this.version = version;
@@ -216,13 +211,14 @@ public class YeOldePlumberSchool implements PlumberSchool
           log.info("Spilling index[%d] with rows[%d] to: %s", indexToPersist.getCount(), rowsToPersist, dirToPersist);
 
           try {
-            final IncrementalIndex index = indexToPersist.getIndex();
+
             IndexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist
             );
 
             indexToPersist.swapSegment(null);
+
             metrics.incrementRowOutputCount(rowsToPersist);
 
             spilled.add(dirToPersist);

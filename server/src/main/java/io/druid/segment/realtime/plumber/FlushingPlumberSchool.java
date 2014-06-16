@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.collections.StupidPool;
-import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
@@ -37,7 +35,6 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 
 /**

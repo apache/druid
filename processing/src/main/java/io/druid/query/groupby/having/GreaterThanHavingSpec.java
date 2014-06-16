@@ -58,6 +58,7 @@ public class GreaterThanHavingSpec implements HavingSpec
   public boolean eval(Row row)
   {
     float metricValue = row.getFloatMetric(aggregationName);
+
     return Float.compare(metricValue, value.floatValue()) > 0;
   }
 

@@ -718,7 +718,6 @@ public class RealtimePlumber implements Plumber
             indexToPersist.getIndex(),
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
         );
-        IncrementalIndex index = indexToPersist.getIndex();
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
                 indexToPersist.getSegment().getIdentifier(),
