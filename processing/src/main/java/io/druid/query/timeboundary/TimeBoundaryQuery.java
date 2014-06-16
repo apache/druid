@@ -52,24 +52,6 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   private static final byte CACHE_TYPE_ID = 0x0;
 
-  public static Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
-  {
-    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
-    Map<String, Object> result = Maps.newHashMap();
-
-    if (min != null) {
-      result.put(MIN_TIME, min);
-    }
-    if (max != null) {
-      result.put(MAX_TIME, max);
-    }
-    if (!result.isEmpty()) {
-      results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
-    }
-
-    return results;
-  }
-
   private final String bound;
 
   @JsonCreator
@@ -148,6 +130,24 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
                      .put(CACHE_TYPE_ID)
                      .put(boundBytes)
                      .array();
+  }
+
+  public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
+  {
+    List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
+    Map<String, Object> result = Maps.newHashMap();
+
+    if (min != null) {
+      result.put(MIN_TIME, min);
+    }
+    if (max != null) {
+      result.put(MAX_TIME, max);
+    }
+    if (!result.isEmpty()) {
+      results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
+    }
+
+    return results;
   }
 
   public Iterable<Result<TimeBoundaryResultValue>> mergeResults(List<Result<TimeBoundaryResultValue>> results)
