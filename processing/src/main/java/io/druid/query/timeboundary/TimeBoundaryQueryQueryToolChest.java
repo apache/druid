@@ -70,42 +70,18 @@ public class TimeBoundaryQueryQueryToolChest
     final T min = segments.get(0);
     final T max = segments.get(segments.size() - 1);
 
-    final Predicate<T> filterPredicate;
-    // optimizations to avoid hitting too many segments
-    if (query.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)) {
-      filterPredicate = new Predicate<T>()
-      {
-        @Override
-        public boolean apply(T input)
-        {
-          return input.getInterval().overlaps(min.getInterval());
-        }
-      };
-    } else if (query.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)) {
-      filterPredicate = new Predicate<T>()
-      {
-        @Override
-        public boolean apply(T input)
-        {
-          return input.getInterval().overlaps(max.getInterval());
-        }
-      };
-    } else {
-      filterPredicate = new Predicate<T>()
-      {
-        @Override
-        public boolean apply(T input)
-        {
-          return input.getInterval().overlaps(min.getInterval()) || input.getInterval()
-                                                                         .overlaps(max.getInterval());
-        }
-      };
-    }
-
     return Lists.newArrayList(
         Iterables.filter(
             segments,
-            filterPredicate
+            new Predicate<T>()
+            {
+              @Override
+              public boolean apply(T input)
+              {
+                return (min != null && input.getInterval().overlaps(min.getInterval())) ||
+                       (max != null && input.getInterval().overlaps(max.getInterval()));
+              }
+            }
         )
     );
   }
@@ -135,7 +111,7 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<TimeBoundaryResultValue>>(getOrdering(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -201,11 +177,11 @@ public class TimeBoundaryQueryQueryToolChest
         {
           @Override
           @SuppressWarnings("unchecked")
-          public Result<TimeBoundaryResultValue> apply(@Nullable Object input)
+          public Result<TimeBoundaryResultValue> apply(Object input)
           {
             List<Object> result = (List<Object>) input;
 
-            return new Result<TimeBoundaryResultValue>(
+            return new Result<>(
                 new DateTime(result.get(0)),
                 new TimeBoundaryResultValue(result.get(1))
             );
@@ -216,7 +192,7 @@ public class TimeBoundaryQueryQueryToolChest
       @Override
       public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
       {
-        return new MergeSequence<Result<TimeBoundaryResultValue>>(getOrdering(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

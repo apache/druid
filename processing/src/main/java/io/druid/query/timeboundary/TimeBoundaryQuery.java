@@ -147,10 +147,10 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
     Map<String, Object> result = Maps.newHashMap();
 
-    if (min != null && !bound.equalsIgnoreCase(MAX_TIME)) {
+    if (min != null) {
       result.put(MIN_TIME, min);
     }
-    if (max != null && !bound.equalsIgnoreCase(MIN_TIME)) {
+    if (max != null) {
       result.put(MAX_TIME, max);
     }
     if (!result.isEmpty()) {
@@ -171,17 +171,13 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     for (Result<TimeBoundaryResultValue> result : results) {
       TimeBoundaryResultValue val = result.getValue();
 
-      if (!bound.equalsIgnoreCase(MAX_TIME)) {
-        DateTime currMinTime = val.getMinTime();
-        if (currMinTime.isBefore(min)) {
-          min = currMinTime;
-        }
+      DateTime currMinTime = val.getMinTime();
+      if (currMinTime != null && currMinTime.isBefore(min)) {
+        min = currMinTime;
       }
-      if (!bound.equalsIgnoreCase(MIN_TIME)) {
-        DateTime currMaxTime = val.getMaxTime();
-        if (currMaxTime.isAfter(max)) {
-          max = currMaxTime;
-        }
+      DateTime currMaxTime = val.getMaxTime();
+      if (currMaxTime != null && currMaxTime.isAfter(max)) {
+        max = currMaxTime;
       }
     }
 
