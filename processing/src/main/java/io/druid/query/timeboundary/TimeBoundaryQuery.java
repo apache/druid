@@ -21,6 +21,7 @@ package io.druid.query.timeboundary;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -123,10 +124,10 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public byte[] getCacheKey()
   {
-    final byte[] excludeBytes = bound.getBytes();
-    return ByteBuffer.allocate(1 + excludeBytes.length)
+    final byte[] boundBytes = bound.getBytes(Charsets.UTF_8);
+    return ByteBuffer.allocate(1 + boundBytes.length)
                      .put(CACHE_TYPE_ID)
-                     .put(excludeBytes)
+                     .put(boundBytes)
                      .array();
   }
 
