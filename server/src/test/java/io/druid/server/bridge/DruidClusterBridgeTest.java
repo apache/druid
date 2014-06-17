@@ -183,6 +183,8 @@ public class DruidClusterBridgeTest
     EasyMock.expectLastCall();
     batchServerInventoryView.start();
     EasyMock.expectLastCall();
+    batchServerInventoryView.stop();
+    EasyMock.expectLastCall();
     EasyMock.replay(batchServerInventoryView);
 
 
@@ -229,10 +231,10 @@ public class DruidClusterBridgeTest
 
     Assert.assertEquals(118, announced.getMaxSize());
 
+    bridge.stop();
     EasyMock.verify(batchServerInventoryView);
 
     announcer.stop();
-    bridge.stop();
 
     remoteCf.close();
     remoteCluster.close();

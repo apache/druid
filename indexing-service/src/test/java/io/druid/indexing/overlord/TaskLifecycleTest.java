@@ -135,7 +135,7 @@ public class TaskLifecycleTest
     mdc = newMockMDC();
     tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tl, mdc, newMockEmitter()));
     tb = new TaskToolboxFactory(
-        new TaskConfig(tmp.toString(), null, null, 50000),
+        new TaskConfig(tmp.toString(), null, null, 50000, null),
         tac,
         newMockEmitter(),
         new DataSegmentPusher()
