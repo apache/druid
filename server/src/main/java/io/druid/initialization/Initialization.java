@@ -120,6 +120,14 @@ public class Initialization
     return retVal;
   }
 
+  /**
+   * Used for testing only
+   */
+  protected static void clearLoadedModules()
+  {
+    extensionsMap.clear();
+  }
+
   public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {
     final TeslaAether aether = getAetherClient(config);
