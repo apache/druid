@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.HadoopIndexTask;
 import io.druid.initialization.Initialization;
 import io.druid.server.initialization.ExtensionsConfig;
@@ -62,7 +63,7 @@ public class PullDependencies implements Runnable
       allCoordinates.addAll(coordinates);
     }
     if (!noDefaultHadoop) {
-      allCoordinates.add(HadoopIndexTask.DEFAULT_HADOOP_COORDINATES);
+      allCoordinates.addAll(TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES);
     }
     try {
       final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
