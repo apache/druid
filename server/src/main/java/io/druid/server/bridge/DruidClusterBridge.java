@@ -253,7 +253,7 @@ public class DruidClusterBridge
         log.warn(e, "Unable to close leaderLatch, ignoring");
       }
 
-      exec.shutdownNow();
+      exec.shutdown();
 
       started = false;
     }
