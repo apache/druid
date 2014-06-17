@@ -230,5 +230,13 @@ public class DruidClusterBridgeTest
     Assert.assertEquals(118, announced.getMaxSize());
 
     EasyMock.verify(batchServerInventoryView);
+
+    announcer.stop();
+    bridge.stop();
+
+    remoteCf.close();
+    remoteCluster.close();
+    localCf.close();
+    localCluster.close();
   }
 }
