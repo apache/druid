@@ -31,6 +31,7 @@ public class IncrementalIndexSegment implements Segment
 {
   private final IncrementalIndex index;
   private final String segmentIdentifier;
+  private boolean nullStorage = false;
 
   public IncrementalIndexSegment(
       IncrementalIndex index,

@@ -62,9 +62,9 @@ public interface Query<T>
 
   public String getType();
 
-  public Sequence<T> run(QuerySegmentWalker walker);
+  public Sequence<T> run(QuerySegmentWalker walker, Map<String, List> metadata);
 
-  public Sequence<T> run(QueryRunner<T> runner);
+  public Sequence<T> run(QueryRunner<T> runner, Map<String, List> metadata);
 
   public List<Interval> getIntervals();
 

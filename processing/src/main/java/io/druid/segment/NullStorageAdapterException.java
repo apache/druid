@@ -17,35 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query;
+package io.druid.segment;
 
-import com.metamx.common.guava.Sequence;
-
-import java.util.List;
-import java.util.Map;
-
-/**
- */
-public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
+public class NullStorageAdapterException extends IllegalStateException
 {
-  private final QueryRunner<T> baseRunner;
-
-  public BySegmentSkippingQueryRunner(
-      QueryRunner<T> baseRunner
-  )
-  {
-    this.baseRunner = baseRunner;
+  public NullStorageAdapterException(String formatText, Object... arguments) {
+    super(String.format(formatText, arguments));
   }
-
-  @Override
-  public Sequence<T> run(Query<T> query, Map<String, List> metadata)
-  {
-    if (query.getContextBySegment(false)) {
-      return baseRunner.run(query, metadata);
-    }
-
-    return doRun(baseRunner, query, metadata);
-  }
-
-  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, List> metadata);
 }

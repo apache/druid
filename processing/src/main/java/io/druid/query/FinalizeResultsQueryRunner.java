@@ -28,6 +28,8 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -46,7 +48,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, Map<String, List> metadata)
   {
     final boolean isBySegment = query.getContextBySegment(false);
     final boolean shouldFinalize = query.getContextFinalize(true);
@@ -94,7 +96,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
 
 
     return Sequences.map(
-        baseRunner.run(queryToRun),
+        baseRunner.run(queryToRun, metadata),
         finalizerFn
     );
 

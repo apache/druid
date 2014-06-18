@@ -40,6 +40,7 @@ import io.druid.query.SegmentDescriptor;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
@@ -72,7 +73,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query)
+  public Sequence<T> run(Query<T> query, Map<String, List> metadata)
   {
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
@@ -140,7 +141,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
       return Sequences.withEffect(
           Sequences.map(
-              base.run(query),
+              base.run(query, metadata),
               new Function<T, T>()
               {
                 @Override
@@ -162,7 +163,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
           MoreExecutors.sameThreadExecutor()
       );
     } else {
-      return base.run(query);
+      return base.run(query, metadata);
     }
   }
 

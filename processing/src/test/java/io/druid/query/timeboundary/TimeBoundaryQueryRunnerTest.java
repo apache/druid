@@ -20,13 +20,10 @@
 package io.druid.query.timeboundary;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
-import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -36,6 +33,8 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  */
@@ -66,9 +65,9 @@ public class TimeBoundaryQueryRunnerTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .build();
-
+    HashMap<String,List> metadata = new HashMap<String, List>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery),
+        runner.run(timeBoundaryQuery, metadata),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();

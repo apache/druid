@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  */
@@ -91,7 +92,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         QueryRunner timeseriesRunner = new QueryRunner()
         {
           @Override
-          public Sequence run(Query query)
+          public Sequence run(Query query, Map metadata)
           {
             TimeseriesQuery tsQuery = (TimeseriesQuery) query;
 
@@ -104,7 +105,8 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                         .setDimFilter(tsQuery.getDimensionsFilter())
                         .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
                         .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                        .build()
+                        .build(),
+                    metadata
                 ),
                 new Function<Row, Result<TimeseriesResultValue>>()
                 {

@@ -49,6 +49,7 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -79,18 +80,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input)
+      public Sequence<Row> run(Query<Row> input, Map<String, List> metadata)
       {
         if (Boolean.valueOf((String) input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner);
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner, metadata);
         } else {
-          return runner.run(input);
+          return runner.run(input, metadata);
         }
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
+  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, List> metadata)
   {
 
     Sequence<Row> result;
@@ -104,12 +105,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       } catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
-      Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
+      Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, metadata);
       IncrementalIndexStorageAdapter adapter
           = new IncrementalIndexStorageAdapter(makeIncrementalIndex(subquery, subqueryResult));
       result = engine.process(query, adapter);
     } else {
-      result = runner.run(query);
+      result = runner.run(query, metadata);
     }
 
     return postAggregate(query, makeIncrementalIndex(query, result));

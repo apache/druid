@@ -45,6 +45,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -74,7 +75,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     return new QueryRunner<SegmentAnalysis>()
     {
       @Override
-      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ)
+      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ, Map<String, List> metadata)
       {
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
 
@@ -133,7 +134,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                 return new QueryRunner<SegmentAnalysis>()
                 {
                   @Override
-                  public Sequence<SegmentAnalysis> run(final Query<SegmentAnalysis> query)
+                  public Sequence<SegmentAnalysis> run(
+                      final Query<SegmentAnalysis> query,
+                      final Map<String, List> metadata
+                  )
                   {
                     final int priority = query.getContextPriority(0);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
@@ -142,7 +146,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
-                            return input.run(query);
+                            return input.run(query, metadata);
                           }
                         }
                     );

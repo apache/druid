@@ -29,6 +29,7 @@ public class QueryableIndexSegment implements Segment
 {
   private final QueryableIndex index;
   private final String identifier;
+  private boolean nullStorage = false;
 
   public QueryableIndexSegment(final String segmentIdentifier, QueryableIndex index)
   {

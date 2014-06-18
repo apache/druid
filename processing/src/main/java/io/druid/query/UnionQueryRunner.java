@@ -26,7 +26,8 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
@@ -43,7 +44,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, List> metadata)
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
@@ -57,7 +58,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                     public Sequence<T> apply(DataSource singleSource)
                     {
                       return baseRunner.run(
-                          query.withDataSource(singleSource)
+                          query.withDataSource(singleSource),
+                          metadata
                       );
                     }
                   }
@@ -65,7 +67,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
           )
       );
     } else {
-      return baseRunner.run(query);
+      return baseRunner.run(query, metadata);
     }
   }
 

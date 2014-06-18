@@ -54,6 +54,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
+import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -64,6 +65,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -111,7 +114,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, List> metadata)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = query.getContextBySegment(false);
@@ -156,6 +159,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   log.debug("Initial response from url[%s]", url);
                   startTime = System.currentTimeMillis();
                   byteCount += response.getContent().readableBytes();
+
+                  if (!response.getHeader("Missing-Segments").equals("")) {
+                    LinkedList missingSegments = new LinkedList();
+                    try {
+                      missingSegments = objectMapper.readValue(response.getHeader("Missing-Segments"), LinkedList.class);
+                      for (int i = missingSegments.size(); i > 0; i--) {
+                        missingSegments.add(objectMapper.convertValue(missingSegments.remove(0), SegmentDescriptor.class));
+                      }
+                    }
+                    catch (IOException e) {
+                    }
+                    metadata.get("missingSegments").addAll(missingSegments);
+                  }
+
                   return super.handleResponse(response);
                 }
 

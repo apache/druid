@@ -22,20 +22,15 @@ package io.druid.server;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Accumulators;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
-import com.metamx.common.guava.YieldingAccumulators;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -51,7 +46,6 @@ import org.joda.time.DateTime;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -59,12 +53,13 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -147,7 +142,9 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      Sequence results = query.run(texasRanger);
+      HashMap<String, List> metadata = new HashMap<String, List>();
+      metadata.put("missingSegments", new LinkedList());
+      Sequence results = query.run(texasRanger, metadata);
 
       if (results == null) {
         results = Sequences.empty();
@@ -167,6 +164,12 @@ public class QueryResource
               }
           )
       ) {
+
+        String missingSegments = "";
+        if (!metadata.get("missingSegments").isEmpty()) {
+          missingSegments = jsonMapper.writeValueAsString(metadata.get("missingSegments"));
+        }
+
         long requestTime = System.currentTimeMillis() - start;
 
         emitter.emit(
@@ -209,6 +212,7 @@ public class QueryResource
                 isSmile ? APPLICATION_JSON : APPLICATION_SMILE
             )
             .header("X-Druid-Query-Id", queryId)
+            .header("Missing-Segments", missingSegments)
             .build();
       }
     }

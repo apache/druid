@@ -19,7 +19,6 @@
 
 package io.druid.query.search;
 
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -52,7 +51,6 @@ import io.druid.segment.filter.Filters;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -71,7 +69,10 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   }
 
   @Override
-  public Sequence<Result<SearchResultValue>> run(final Query<Result<SearchResultValue>> input)
+  public Sequence<Result<SearchResultValue>> run(
+      final Query<Result<SearchResultValue>> input,
+      Map<String, List> metadata
+  )
   {
     if (!(input instanceof SearchQuery)) {
       throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SearchQuery.class);

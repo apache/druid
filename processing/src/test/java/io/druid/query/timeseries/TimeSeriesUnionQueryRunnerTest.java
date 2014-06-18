@@ -38,6 +38,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -97,9 +98,9 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,List> metadata = new HashMap<String, List>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, metadata),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

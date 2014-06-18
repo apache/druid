@@ -21,9 +21,12 @@ package io.druid.query;
 
 import com.metamx.common.guava.Sequence;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  */
 public interface QueryRunner<T>
 {
-  public Sequence<T> run(Query<T> query);
+  public Sequence<T> run(Query<T> query, Map<String, List> metadata);
 }

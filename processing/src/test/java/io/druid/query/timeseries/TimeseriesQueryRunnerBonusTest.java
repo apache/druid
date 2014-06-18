@@ -43,6 +43,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
 
 public class TimeseriesQueryRunnerBonusTest
@@ -110,9 +111,9 @@ public class TimeseriesQueryRunnerBonusTest
                                       )
                                   )
                                   .build();
-
+    HashMap<String,List> metadata = new HashMap<String, List>();
     return Sequences.toList(
-        runner.run(query),
+        runner.run(query, metadata),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
   }

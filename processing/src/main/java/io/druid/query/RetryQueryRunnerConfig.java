@@ -19,33 +19,12 @@
 
 package io.druid.query;
 
-import com.metamx.common.guava.Sequence;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- */
-public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
+public class RetryQueryRunnerConfig
 {
-  private final QueryRunner<T> baseRunner;
+  @JsonProperty
+  private static int numTries = 1;
 
-  public BySegmentSkippingQueryRunner(
-      QueryRunner<T> baseRunner
-  )
-  {
-    this.baseRunner = baseRunner;
-  }
-
-  @Override
-  public Sequence<T> run(Query<T> query, Map<String, List> metadata)
-  {
-    if (query.getContextBySegment(false)) {
-      return baseRunner.run(query, metadata);
-    }
-
-    return doRun(baseRunner, query, metadata);
-  }
-
-  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, List> metadata);
+  public static int numTries() { return numTries; }
 }
