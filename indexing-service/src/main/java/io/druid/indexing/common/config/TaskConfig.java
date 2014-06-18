@@ -32,10 +32,19 @@ public class TaskConfig
       "org.apache.hadoop:hadoop-client:2.3.0"
   );
 
+  @JsonProperty
   private final String baseDir;
+
+  @JsonProperty
   private final File baseTaskDir;
+
+  @JsonProperty
   private final String hadoopWorkingPath;
+
+  @JsonProperty
   private final int defaultRowFlushBoundary;
+
+  @JsonProperty
   private final List<String> defaultHadoopCoordinates;
 
   @JsonCreator
