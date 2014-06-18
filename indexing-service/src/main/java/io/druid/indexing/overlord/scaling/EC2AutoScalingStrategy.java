@@ -35,7 +35,6 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.setup.EC2NodeData;
-import io.druid.indexing.overlord.setup.EC2UserData;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 
 import java.util.List;
@@ -68,12 +67,16 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
     try {
       final WorkerSetupData setupData = workerSetupDataRef.get();
       final EC2NodeData workerConfig = setupData.getNodeData();
-      final EC2UserData userData;
+      final String userDataBase64;
 
-      if (config.getWorkerVersion() == null) {
-        userData = setupData.getUserData();
+      if (setupData.getUserData() == null) {
+        userDataBase64 = null;
       } else {
-        userData = setupData.getUserData().withVersion(config.getWorkerVersion());
+        if (config.getWorkerVersion() == null) {
+          userDataBase64 = setupData.getUserData().getUserDataBase64();
+        } else {
+          userDataBase64 = setupData.getUserData().withVersion(config.getWorkerVersion()).getUserDataBase64();
+        }
       }
 
       final RunInstancesResult result = amazonEC2Client.runInstances(
@@ -86,7 +89,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
               .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
               .withPlacement(new Placement(setupData.getAvailabilityZone()))
               .withKeyName(workerConfig.getKeyName())
-              .withUserData(userData.getUserDataBase64())
+              .withUserData(userDataBase64)
       );
 
       final List<String> instanceIds = Lists.transform(
