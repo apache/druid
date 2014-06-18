@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedFloats;
@@ -118,9 +118,9 @@ public class MMappedIndexAdapter implements IndexableAdapter
           {
             final boolean hasNext = currRow < numRows;
             if (!hasNext && !done) {
-              Closeables.closeQuietly(timestamps);
+              CloseQuietly.close(timestamps);
               for (IndexedFloats floatMetric : floatMetrics) {
-                Closeables.closeQuietly(floatMetric);
+                CloseQuietly.close(floatMetric);
               }
               done = true;
             }

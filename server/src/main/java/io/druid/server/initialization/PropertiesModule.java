@@ -21,9 +21,9 @@ package io.druid.server.initialization;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 
 import java.io.BufferedInputStream;
@@ -80,7 +80,7 @@ public class PropertiesModule implements Module
       log.wtf(e, "This can only happen if the .exists() call lied.  That's f'd up.");
     }
     finally {
-      Closeables.closeQuietly(stream);
+      CloseQuietly.close(stream);
     }
 
     binder.bind(Properties.class).toInstance(props);

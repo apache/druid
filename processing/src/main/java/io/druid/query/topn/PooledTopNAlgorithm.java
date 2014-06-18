@@ -19,8 +19,8 @@
 
 package io.druid.query.topn;
 
-import com.google.common.io.Closeables;
 import com.metamx.common.Pair;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.query.aggregation.BufferAggregator;
@@ -233,7 +233,7 @@ public class PooledTopNAlgorithm
     if (resultsBufHolder != null) {
       resultsBufHolder.get().clear();
     }
-    Closeables.closeQuietly(resultsBufHolder);
+    CloseQuietly.close(resultsBufHolder);
   }
 
   public static class PooledTopNParams extends TopNParams

@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -338,7 +338,7 @@ public class DruidClusterBridge
         log.makeAlert(e, "Exception becoming leader")
            .emit();
         final LeaderLatch oldLatch = createNewLeaderLatch();
-        Closeables.closeQuietly(oldLatch);
+        CloseQuietly.close(oldLatch);
         try {
           leaderLatch.get().start();
         }

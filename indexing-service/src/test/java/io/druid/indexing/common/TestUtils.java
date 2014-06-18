@@ -63,7 +63,7 @@ public class TestUtils
   public static boolean conditionValid(IndexingServiceCondition condition)
   {
     try {
-      Stopwatch stopwatch = new Stopwatch();
+      Stopwatch stopwatch = Stopwatch.createUnstarted();
       stopwatch.start();
       while (!condition.isValid()) {
         Thread.sleep(100);

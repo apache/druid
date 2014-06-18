@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
@@ -109,7 +109,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return new DateTime(column.getLongSingleValueRow(0));
     }
     finally {
-      Closeables.closeQuietly(column);
+      CloseQuietly.close(column);
     }
   }
 
@@ -122,7 +122,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return new DateTime(column.getLongSingleValueRow(column.length() - 1));
     }
     finally {
-      Closeables.closeQuietly(column);
+      CloseQuietly.close(column);
     }
   }
 
@@ -535,16 +535,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             @Override
             public void close() throws IOException
             {
-              Closeables.closeQuietly(timestamps);
+              CloseQuietly.close(timestamps);
               for (GenericColumn column : genericColumnCache.values()) {
-                Closeables.closeQuietly(column);
+                CloseQuietly.close(column);
               }
               for (ComplexColumn complexColumn : complexColumnCache.values()) {
-                Closeables.closeQuietly(complexColumn);
+                CloseQuietly.close(complexColumn);
               }
               for (Object column : objectColumnCache.values()) {
                 if(column instanceof Closeable) {
-                  Closeables.closeQuietly((Closeable) column);
+                  CloseQuietly.close((Closeable) column);
                 }
               }
             }
@@ -962,16 +962,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             @Override
             public void close() throws IOException
             {
-              Closeables.closeQuietly(timestamps);
+              CloseQuietly.close(timestamps);
               for (GenericColumn column : genericColumnCache.values()) {
-                Closeables.closeQuietly(column);
+                CloseQuietly.close(column);
               }
               for (ComplexColumn complexColumn : complexColumnCache.values()) {
-                Closeables.closeQuietly(complexColumn);
+                CloseQuietly.close(complexColumn);
               }
               for (Object column : objectColumnCache.values()) {
                 if (column instanceof Closeable) {
-                  Closeables.closeQuietly((Closeable) column);
+                  CloseQuietly.close((Closeable) column);
                 }
               }
             }

@@ -137,7 +137,7 @@ public class RealtimeManagerTest
   {
     realtimeManager.start();
 
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     while (realtimeManager.getMetrics("test").processed() != 1) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
