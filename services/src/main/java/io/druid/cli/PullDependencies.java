@@ -27,7 +27,7 @@ import io.airlift.command.Option;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.HadoopIndexTask;
 import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
+import io.druid.guice.ExtensionsConfig;
 import io.tesla.aether.internal.DefaultTeslaAether;
 
 import java.util.List;

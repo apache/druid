@@ -65,15 +65,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class RealtimePlumberSchoolTest
 {
-  private final ColumnConfig columnConfig = new ColumnConfig()
-  {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 1024 * 1024;
-    }
-  };
-
   private Plumber plumber;
 
   private DataSegmentAnnouncer announcer;
@@ -153,7 +144,6 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         serverView,
         MoreExecutors.sameThreadExecutor(),
-        columnConfig,
         new Period("PT10m"),
         tmpDir,
         Granularity.HOUR,

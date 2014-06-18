@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server;
+package io.druid.query;
 
 import java.lang.reflect.InvocationTargetException;
 

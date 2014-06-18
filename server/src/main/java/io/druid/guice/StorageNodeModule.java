@@ -33,7 +33,7 @@ import io.druid.segment.loading.MMappedQueryableIndexFactory;
 import io.druid.segment.loading.QueryableIndexFactory;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.DruidNode;
-import io.druid.server.DruidProcessingConfig;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.server.coordination.DruidServerMetadata;
 
 import javax.annotation.Nullable;

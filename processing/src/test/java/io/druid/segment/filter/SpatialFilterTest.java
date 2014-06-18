@@ -70,16 +70,6 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterTest
 {
-
-  private static ColumnConfig columnConfig = new ColumnConfig()
-  {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 1024 * 1024;
-    }
-  };
-
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
 
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -246,7 +236,7 @@ public class SpatialFilterTest
     tmpFile.deleteOnExit();
 
     IndexMerger.persist(theIndex, tmpFile);
-    return IndexIO.loadIndex(tmpFile, columnConfig);
+    return IndexIO.loadIndex(tmpFile);
   }
 
   private static QueryableIndex makeMergedQueryableIndex()
@@ -426,11 +416,10 @@ public class SpatialFilterTest
 
       QueryableIndex mergedRealtime = IndexIO.loadIndex(
           IndexMerger.mergeQueryableIndex(
-              Arrays.asList(IndexIO.loadIndex(firstFile, columnConfig), IndexIO.loadIndex(secondFile, columnConfig), IndexIO.loadIndex(thirdFile, columnConfig)),
+              Arrays.asList(IndexIO.loadIndex(firstFile), IndexIO.loadIndex(secondFile), IndexIO.loadIndex(thirdFile)),
               METRIC_AGGS,
               mergedFile
-          ),
-          columnConfig
+          )
       );
 
       return mergedRealtime;

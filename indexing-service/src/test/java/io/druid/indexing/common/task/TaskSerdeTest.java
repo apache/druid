@@ -21,15 +21,8 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
-import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
-import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.inject.Binder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.JSONDataSpec;
 import io.druid.data.input.impl.TimestampSpec;
@@ -41,7 +34,6 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
@@ -56,40 +48,7 @@ import java.io.File;
 
 public class TaskSerdeTest
 {
-  private static final ColumnConfig columnConfig = new ColumnConfig()
-  {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 1024 * 1024;
-    }
-  };
-
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final Injector injector = Guice.createInjector(
-      new com.google.inject.Module()
-      {
-        @Override
-        public void configure(Binder binder)
-        {
-          binder.bind(ColumnConfig.class).toInstance(columnConfig);
-        }
-      }
-  );
-
-  static {
-    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
-
-    jsonMapper.setInjectableValues(new GuiceInjectableValues(injector));
-    jsonMapper.setAnnotationIntrospectors(
-        new AnnotationIntrospectorPair(
-            guiceIntrospector, jsonMapper.getSerializationConfig().getAnnotationIntrospector()
-        ),
-        new AnnotationIntrospectorPair(
-            guiceIntrospector, jsonMapper.getDeserializationConfig().getAnnotationIntrospector()
-        )
-    );
-  }
 
   @Test
   public void testIndexTaskSerde() throws Exception
@@ -141,8 +100,7 @@ public class TaskSerdeTest
         ),
         ImmutableList.<AggregatorFactory>of(
             new CountAggregatorFactory("cnt")
-        ),
-        null
+        )
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -244,7 +202,6 @@ public class TaskSerdeTest
         new Period("PT10M"),
         1,
         Granularity.HOUR,
-        null,
         null
     );
 
@@ -330,7 +287,6 @@ public class TaskSerdeTest
   public void testAppendTaskSerde() throws Exception
   {
     final AppendTask task = new AppendTask(
-        columnConfig,
         null,
         "foo",
         ImmutableList.of(

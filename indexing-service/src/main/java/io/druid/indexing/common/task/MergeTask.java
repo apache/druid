@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,7 +30,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -45,20 +43,17 @@ public class MergeTask extends MergeTaskBase
 {
   @JsonIgnore
   private final List<AggregatorFactory> aggregators;
-  private final ColumnConfig columnConfig;
 
   @JsonCreator
   public MergeTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
-      @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
-      @JacksonInject ColumnConfig columnConfig
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators
   )
   {
     super(id, dataSource, segments);
     this.aggregators = aggregators;
-    this.columnConfig = columnConfig;
   }
 
   @Override
@@ -74,7 +69,7 @@ public class MergeTask extends MergeTaskBase
               public QueryableIndex apply(@Nullable File input)
               {
                 try {
-                  return IndexIO.loadIndex(input, columnConfig);
+                  return IndexIO.loadIndex(input);
                 }
                 catch (Exception e) {
                   throw Throwables.propagate(e);

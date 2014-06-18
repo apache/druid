@@ -252,7 +252,7 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");
-    if (IndexIO.convertSegment(location, outLocation, toolbox.getColumnConfig())) {
+    if (IndexIO.convertSegment(location, outLocation)) {
       final int outVersion = IndexIO.getVersionFromDir(outLocation);
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original

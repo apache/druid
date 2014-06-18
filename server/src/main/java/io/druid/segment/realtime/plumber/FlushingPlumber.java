@@ -63,8 +63,7 @@ public class FlushingPlumber extends RealtimePlumber
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService,
-      ColumnConfig columnConfig
+      ExecutorService queryExecutorService
   )
   {
     super(
@@ -77,8 +76,7 @@ public class FlushingPlumber extends RealtimePlumber
         queryExecutorService,
         null,
         null,
-        null,
-        columnConfig
+        null
     );
 
     this.flushDuration = flushDuration;

@@ -58,7 +58,6 @@ public class TaskToolboxFactory
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
-  private final ColumnConfig columnConfig;
 
   @Inject
   public TaskToolboxFactory(
@@ -75,8 +74,7 @@ public class TaskToolboxFactory
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
-      ObjectMapper objectMapper,
-      ColumnConfig columnConfig
+      ObjectMapper objectMapper
   )
   {
     this.config = config;
@@ -93,7 +91,6 @@ public class TaskToolboxFactory
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
-    this.columnConfig = columnConfig;
   }
 
   public TaskToolbox build(Task task)
@@ -116,8 +113,7 @@ public class TaskToolboxFactory
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         objectMapper,
-        taskWorkDir,
-        columnConfig
+        taskWorkDir
     );
   }
 }

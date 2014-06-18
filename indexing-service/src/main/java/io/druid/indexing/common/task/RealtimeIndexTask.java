@@ -96,7 +96,6 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private final FireDepartment spec;
-  private final ColumnConfig columnConfig;
 
   @JsonIgnore
   private volatile Plumber plumber = null;
@@ -116,8 +115,7 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("maxPendingPersists") int maxPendingPersists,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
-      @JacksonInject ColumnConfig columnConfig
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
   )
   {
     super(
@@ -151,7 +149,6 @@ public class RealtimeIndexTask extends AbstractTask
           null, null, null, null
       );
     }
-    this.columnConfig = columnConfig;
   }
 
   @Override
@@ -313,7 +310,6 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getNewSegmentServerView(),
         toolbox.getQueryExecutorService(),
-        columnConfig,
         null,
         null,
         null,
