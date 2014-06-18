@@ -33,7 +33,7 @@ public class WorkerSetupData
   private final int maxNumWorkers;
   private final String availabilityZone;
   private final EC2NodeData nodeData;
-  private final GalaxyUserData userData;
+  private final EC2UserData userData;
 
   @JsonCreator
   public WorkerSetupData(
@@ -42,7 +42,7 @@ public class WorkerSetupData
       @JsonProperty("maxNumWorkers") int maxNumWorkers,
       @JsonProperty("availabilityZone") String availabilityZone,
       @JsonProperty("nodeData") EC2NodeData nodeData,
-      @JsonProperty("userData") GalaxyUserData userData
+      @JsonProperty("userData") EC2UserData userData
   )
   {
     this.minVersion = minVersion;
@@ -84,7 +84,7 @@ public class WorkerSetupData
   }
 
   @JsonProperty
-  public GalaxyUserData getUserData()
+  public EC2UserData getUserData()
   {
     return userData;
   }

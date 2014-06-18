@@ -19,15 +19,47 @@
 
 package io.druid.indexing.common;
 
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.metamx.common.ISE;
+import io.druid.guice.ServerModule;
+import io.druid.jackson.DefaultObjectMapper;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class TestUtils
 {
+  public static final ObjectMapper MAPPER = new DefaultObjectMapper();
+
+  static {
+    final List<? extends Module> list = new ServerModule().getJacksonModules();
+    for (Module module : list) {
+      MAPPER.registerModule(module);
+    }
+    MAPPER.setInjectableValues(
+        new InjectableValues()
+        {
+          @Override
+          public Object findInjectableValue(
+              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+          )
+          {
+            if (valueId.equals("com.fasterxml.jackson.databind.ObjectMapper")) {
+              return TestUtils.MAPPER;
+            }
+            throw new ISE("No Injectable value found");
+          }
+        }
+    );
+  }
+
   public static boolean conditionValid(IndexingServiceCondition condition)
   {
     try {

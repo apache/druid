@@ -29,19 +29,15 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.guice.annotations.Json;
 import io.druid.indexing.overlord.setup.EC2NodeData;
-import io.druid.indexing.overlord.setup.GalaxyUserData;
+import io.druid.indexing.overlord.setup.EC2UserData;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
-import org.apache.commons.codec.binary.Base64;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -50,20 +46,17 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScalingStrategy.class);
 
-  private final ObjectMapper jsonMapper;
   private final AmazonEC2 amazonEC2Client;
   private final SimpleResourceManagementConfig config;
   private final Supplier<WorkerSetupData> workerSetupDataRef;
 
   @Inject
   public EC2AutoScalingStrategy(
-      @Json ObjectMapper jsonMapper,
       AmazonEC2 amazonEC2Client,
       SimpleResourceManagementConfig config,
       Supplier<WorkerSetupData> workerSetupDataRef
   )
   {
-    this.jsonMapper = jsonMapper;
     this.amazonEC2Client = amazonEC2Client;
     this.config = config;
     this.workerSetupDataRef = workerSetupDataRef;
@@ -73,15 +66,17 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
   public AutoScalingData provision()
   {
     try {
-      WorkerSetupData setupData = workerSetupDataRef.get();
-      EC2NodeData workerConfig = setupData.getNodeData();
+      final WorkerSetupData setupData = workerSetupDataRef.get();
+      final EC2NodeData workerConfig = setupData.getNodeData();
+      final EC2UserData userData;
 
-      GalaxyUserData userData = setupData.getUserData();
-      if (config.getWorkerVersion() != null) {
-        userData = userData.withVersion(config.getWorkerVersion());
+      if (config.getWorkerVersion() == null) {
+        userData = setupData.getUserData();
+      } else {
+        userData = setupData.getUserData().withVersion(config.getWorkerVersion());
       }
 
-      RunInstancesResult result = amazonEC2Client.runInstances(
+      final RunInstancesResult result = amazonEC2Client.runInstances(
           new RunInstancesRequest(
               workerConfig.getAmiId(),
               workerConfig.getMinInstances(),
@@ -91,16 +86,10 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
               .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
               .withPlacement(new Placement(setupData.getAvailabilityZone()))
               .withKeyName(workerConfig.getKeyName())
-              .withUserData(
-                  Base64.encodeBase64String(
-                      jsonMapper.writeValueAsBytes(
-                          userData
-                      )
-                  )
-              )
+              .withUserData(userData.getUserDataBase64())
       );
 
-      List<String> instanceIds = Lists.transform(
+      final List<String> instanceIds = Lists.transform(
           result.getReservation().getInstances(),
           new Function<Instance, String>()
           {
