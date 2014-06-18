@@ -26,7 +26,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
-import io.druid.server.initialization.ExtensionsConfig;
+import io.druid.guice.ExtensionsConfig;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -76,7 +76,7 @@ public class InitializationTest
   @Test
   public void test02MakeStartupInjector() throws Exception
   {
-    Injector startupInjector = Initialization.makeStartupInjector();
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Assert.assertNotNull(startupInjector);
     Assert.assertNotNull(startupInjector.getInstance(ObjectMapper.class));
   }
@@ -84,7 +84,7 @@ public class InitializationTest
   @Test
   public void test03ClassLoaderExtensionsLoading()
   {
-    Injector startupInjector = Initialization.makeStartupInjector();
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
 
     Function<DruidModule, String> fnClassName = new Function<DruidModule, String>()
         {
@@ -117,7 +117,7 @@ public class InitializationTest
   @Test
   public void test04MakeInjectorWithModules() throws Exception
   {
-    Injector startupInjector = Initialization.makeStartupInjector();
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(startupInjector, ImmutableList.of());
     Assert.assertNotNull(injector);
   }

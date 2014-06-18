@@ -52,7 +52,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
-  private final ColumnConfig columnConfig;
 
   @JsonCreator
   public FlushingPlumberSchool(
@@ -61,7 +60,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject @Processing ExecutorService queryExecutorService,
-      @JacksonInject ColumnConfig columnConfig,
       // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -79,7 +77,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         null,
         null,
         queryExecutorService,
-        columnConfig,
         windowPeriod,
         basePersistDirectory,
         segmentGranularity,
@@ -93,7 +90,6 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
-    this.columnConfig = columnConfig;
   }
 
   @Override
@@ -113,8 +109,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService,
-        columnConfig
+        queryExecutorService
     );
   }
 

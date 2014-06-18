@@ -41,8 +41,9 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.initialization.GuiceInjectors;
 import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
+import io.druid.guice.ExtensionsConfig;
 import io.druid.timeline.DataSegment;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
@@ -62,7 +63,7 @@ public class HadoopIndexTask extends AbstractTask
   private static final ExtensionsConfig extensionsConfig;
 
   static {
-    extensionsConfig = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
+    extensionsConfig = GuiceInjectors.makeStartupInjector().getInstance(ExtensionsConfig.class);
   }
 
   public static String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";

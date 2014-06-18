@@ -206,15 +206,7 @@ public class TaskLifecycleTest
                 }
             )
         ),
-        new DefaultObjectMapper(),
-        new ColumnConfig()
-        {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 1024 * 1024;
-          }
-        }
+        new DefaultObjectMapper()
     );
     tr = new ThreadPoolTaskRunner(tb);
     tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);

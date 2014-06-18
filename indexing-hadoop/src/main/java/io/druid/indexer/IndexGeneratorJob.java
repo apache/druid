@@ -39,7 +39,6 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.timeline.DataSegment;
@@ -281,8 +280,6 @@ public class IndexGeneratorJob implements Jobby
       //final DataRollupSpec rollupSpec = config.getRollupSpec();
       final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
 
-      final ColumnConfig columnConfig = config.getColumnConfig();
-
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs);
 
       File baseFlushFile = File.createTempFile("base", "flush");
@@ -373,7 +370,7 @@ public class IndexGeneratorJob implements Jobby
         }
 
         for (File file : toMerge) {
-          indexes.add(IndexIO.loadIndex(file, columnConfig));
+          indexes.add(IndexIO.loadIndex(file));
         }
         mergedBase = IndexMerger.mergeQueryableIndex(
             indexes, aggs, new File(baseFlushFile, "merged"), new IndexMerger.ProgressIndicator()

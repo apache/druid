@@ -52,15 +52,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TestIndex
 {
-  private static final ColumnConfig columnConfig = new ColumnConfig()
-  {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 1024 * 1024;
-    }
-  };
-
   private static final Logger log = new Logger(TestIndex.class);
 
   private static IncrementalIndex realtimeIndex = null;
@@ -145,11 +136,10 @@ public class TestIndex
 
         mergedRealtime = IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
-                Arrays.asList(IndexIO.loadIndex(topFile, columnConfig), IndexIO.loadIndex(bottomFile, columnConfig)),
+                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
                 METRIC_AGGS,
                 mergedFile
-            ),
-            columnConfig
+            )
         );
 
         return mergedRealtime;
@@ -239,7 +229,7 @@ public class TestIndex
       someTmpFile.deleteOnExit();
 
       IndexMerger.persist(index, someTmpFile);
-      return IndexIO.loadIndex(someTmpFile, columnConfig);
+      return IndexIO.loadIndex(someTmpFile);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

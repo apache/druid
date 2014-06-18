@@ -22,7 +22,6 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.segment.column.ColumnConfig;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -45,16 +44,6 @@ public class HadoopDruidIndexerConfigTest
       throw Throwables.propagate(e);
     }
   }
-
-  private static final ColumnConfig columnConfig = new ColumnConfig()
-  {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 1024 * 1024;
-    }
-  };
-
 
   @Test
   public void shouldMakeHDFSCompliantSegmentOutputPath()
@@ -80,7 +69,6 @@ public class HadoopDruidIndexerConfigTest
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        columnConfig,
         schema.withTuningConfig(
             schema.getTuningConfig()
                   .withVersion(
@@ -121,7 +109,6 @@ public class HadoopDruidIndexerConfigTest
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        columnConfig,
         schema.withTuningConfig(
             schema.getTuningConfig()
                   .withVersion(

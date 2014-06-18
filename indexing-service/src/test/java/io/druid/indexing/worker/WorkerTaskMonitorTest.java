@@ -179,7 +179,7 @@ public class WorkerTaskMonitorTest
                       }
                     }
                 )
-            ), jsonMapper, null
+            ), jsonMapper
             )
         ),
         new WorkerConfig().setCapacity(1)

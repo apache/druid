@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -31,6 +32,9 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
@@ -41,7 +45,10 @@ import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.guice.ConfigProvider;
+import io.druid.initialization.GuiceInjectors;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
@@ -91,6 +98,9 @@ public class IndexIO
 {
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
+  public static final int CURRENT_VERSION_ID = V9_VERSION;
+
+  public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
   private static final Map<Integer, IndexLoader> indexLoaders =
       ImmutableMap.<Integer, IndexLoader>builder()
@@ -108,13 +118,32 @@ public class IndexIO
 
   private static final EmittingLogger log = new EmittingLogger(IndexIO.class);
   private static final SerializerUtils serializerUtils = new SerializerUtils();
-  public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
-  // This should really be provided by DI, should be changed once we switch around to using a DI framework
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper;
+  private static final ColumnConfig columnConfig;
+
+  static {
+    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                ConfigProvider.bind(
+                    binder,
+                    DruidProcessingConfig.class,
+                    ImmutableMap.of("base_path", "druid.processing")
+                );
+              }
+            }
+        )
+    );
+    mapper = injector.getInstance(ObjectMapper.class);
+    columnConfig = injector.getInstance(DruidProcessingConfig.class);
+  }
 
   private static volatile IndexIOHandler handler = null;
-  public static final int CURRENT_VERSION_ID = V9_VERSION;
 
   @Deprecated
   public static MMappedIndex mapDir(final File inDir) throws IOException
@@ -123,7 +152,7 @@ public class IndexIO
     return handler.mapDir(inDir);
   }
 
-  public static QueryableIndex loadIndex(File inDir, ColumnConfig columnConfig) throws IOException
+  public static QueryableIndex loadIndex(File inDir) throws IOException
   {
     init();
     final int version = SegmentUtils.getVersionFromDir(inDir);
@@ -131,7 +160,7 @@ public class IndexIO
     final IndexLoader loader = indexLoaders.get(version);
 
     if (loader != null) {
-      return loader.load(inDir, columnConfig);
+      return loader.load(inDir);
     } else {
       throw new ISE("Unknown index version[%s]", version);
     }
@@ -186,7 +215,7 @@ public class IndexIO
     }
   }
 
-  public static boolean convertSegment(File toConvert, File converted, ColumnConfig columnConfig) throws IOException
+  public static boolean convertSegment(File toConvert, File converted) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
 
@@ -195,8 +224,8 @@ public class IndexIO
       case 2:
       case 3:
         log.makeAlert("Attempt to load segment of version <= 3.")
-            .addData("version", version)
-            .emit();
+           .addData("version", version)
+           .emit();
         return false;
       case 4:
       case 5:
@@ -204,7 +233,7 @@ public class IndexIO
       case 7:
         log.info("Old version, re-persisting.");
         IndexMerger.append(
-            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert, columnConfig))),
+            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
             converted
         );
         return true;
@@ -614,13 +643,13 @@ public class IndexIO
 
   static interface IndexLoader
   {
-    public QueryableIndex load(File inDir, ColumnConfig columnConfig) throws IOException;
+    public QueryableIndex load(File inDir) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
   {
     @Override
-    public QueryableIndex load(File inDir, ColumnConfig columnConfig) throws IOException
+    public QueryableIndex load(File inDir) throws IOException
     {
       MMappedIndex index = IndexIO.mapDir(inDir);
 
@@ -632,7 +661,10 @@ public class IndexIO
             .setHasMultipleValues(true)
             .setDictionaryEncodedColumn(
                 new DictionaryEncodedColumnSupplier(
-                    index.getDimValueLookup(dimension), null, index.getDimColumn(dimension), columnConfig.columnCacheSizeBytes()
+                    index.getDimValueLookup(dimension),
+                    null,
+                    index.getDimColumn(dimension),
+                    columnConfig.columnCacheSizeBytes()
                 )
             )
             .setBitmapIndex(
@@ -705,7 +737,7 @@ public class IndexIO
   static class V9IndexLoader implements IndexLoader
   {
     @Override
-    public QueryableIndex load(File inDir, ColumnConfig columnConfig) throws IOException
+    public QueryableIndex load(File inDir) throws IOException
     {
       log.debug("Mapping v9 index[%s]", inDir);
       long startTime = System.currentTimeMillis();
@@ -727,11 +759,11 @@ public class IndexIO
       ObjectMapper mapper = new DefaultObjectMapper();
 
       for (String columnName : cols) {
-        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName), columnConfig));
+        columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));
       }
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), columnConfig), columns, smooshedFiles
+          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time")), columns, smooshedFiles
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
@@ -739,7 +771,7 @@ public class IndexIO
       return index;
     }
 
-    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, ColumnConfig columnConfig) throws IOException
+    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer) throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
           serializerUtils.readString(byteBuffer), ColumnDescriptor.class
