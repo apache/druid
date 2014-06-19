@@ -38,7 +38,7 @@ public class SegmentLoaderConfig
   private boolean deleteOnRemove = true;
 
   @JsonProperty("dropSegmentDelayMillis")
-  private int dropSegmentDelayMillis = 0;
+  private int dropSegmentDelayMillis = 5 * 60 * 1000; // 5 mins
 
   @JsonProperty
   private File infoDir = null;

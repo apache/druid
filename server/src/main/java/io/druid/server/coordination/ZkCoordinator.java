@@ -233,7 +233,7 @@ public class ZkCoordinator extends BaseZkCoordinator
 
 
   @Override
-  public void removeSegment(final DataSegment segment, DataSegmentChangeCallback callback)
+  public void removeSegment(final DataSegment segment, final DataSegmentChangeCallback callback)
   {
     try {
       File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
@@ -243,6 +243,7 @@ public class ZkCoordinator extends BaseZkCoordinator
 
       announcer.unannounceSegment(segment);
 
+      log.info("Completely removing [%s] in [%,d] millis", segment.getIdentifier(), config.getDropSegmentDelayMillis());
       exec.schedule(
           new Runnable()
           {
@@ -253,6 +254,9 @@ public class ZkCoordinator extends BaseZkCoordinator
                 serverManager.dropSegment(segment);
               }
               catch (Exception e) {
+                log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
+                   .addData("segment", segment)
+                   .emit();
                 throw Throwables.propagate(e);
               }
             }
