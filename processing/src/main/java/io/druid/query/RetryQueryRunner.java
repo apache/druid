@@ -32,11 +32,13 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
   private final QueryToolChest<T, Query<T>> toolChest;
+  private final RetryQueryRunnerConfig config;
 
-  public RetryQueryRunner(QueryRunner<T> baseRunner, QueryToolChest<T, Query<T>> toolChest)
+  public RetryQueryRunner(QueryRunner<T> baseRunner, QueryToolChest<T, Query<T>> toolChest, RetryQueryRunnerConfig config)
   {
     this.baseRunner = baseRunner;
     this.toolChest = toolChest;
+    this.config = config;
   }
 
   @Override
@@ -44,7 +46,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   {
     Sequence<T> returningSeq = baseRunner.run(query, metadata);
 
-    for (int i = RetryQueryRunnerConfig.numTries(); i > 0; i--) {
+    for (int i = config.numTries(); i > 0; i--) {
       for (int j = metadata.get("missingSegments").size(); j > 0; j--) {
         QuerySegmentSpec segmentSpec = new SpecificSegmentSpec((SegmentDescriptor)metadata.get("missingSegments").remove(0));
         returningSeq = toolChest.mergeSequences(

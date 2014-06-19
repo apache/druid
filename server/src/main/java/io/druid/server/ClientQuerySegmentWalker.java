@@ -32,6 +32,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.RetryQueryRunner;
+import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
@@ -45,17 +46,20 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final CachingClusteredClient baseClient;
   private final QueryToolChestWarehouse warehouse;
+  private final RetryQueryRunnerConfig retryConfig;
 
   @Inject
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
       CachingClusteredClient baseClient,
-      QueryToolChestWarehouse warehouse
+      QueryToolChestWarehouse warehouse,
+      RetryQueryRunnerConfig retryConfig
   )
   {
     this.emitter = emitter;
     this.baseClient = baseClient;
     this.warehouse = warehouse;
+    this.retryConfig = retryConfig;
   }
 
   @Override
@@ -87,7 +91,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                             return toolChest.makeMetricBuilder(query);
                           }
                         },
-                        toolChest.preMergeQueryDecoration(new RetryQueryRunner<T>(baseClient, toolChest)
+                        toolChest.preMergeQueryDecoration(new RetryQueryRunner<T>(baseClient, toolChest, retryConfig)
                             )
                     ).withWaitMeasuredFromNow(),
                     toolChest
