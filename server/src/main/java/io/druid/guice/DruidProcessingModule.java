@@ -36,7 +36,7 @@ import io.druid.guice.annotations.Processing;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
-import io.druid.query.VMUtils;
+import io.druid.common.utils.VMUtils;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;

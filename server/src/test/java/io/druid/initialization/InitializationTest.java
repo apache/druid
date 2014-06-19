@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.guice.GuiceInjectors;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;

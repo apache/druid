@@ -46,7 +46,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.guice.ConfigProvider;
-import io.druid.initialization.GuiceInjectors;
+import io.druid.guice.GuiceInjectors;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.segment.column.Column;

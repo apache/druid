@@ -41,7 +41,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.initialization.GuiceInjectors;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.timeline.DataSegment;

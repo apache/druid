@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.initialization;
+package io.druid.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
@@ -27,6 +27,7 @@ import com.google.inject.Module;
 import com.metamx.common.ISE;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.initialization.DruidModule;
 
 import java.util.Collections;
 import java.util.List;

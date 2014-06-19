@@ -44,7 +44,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
-import io.druid.initialization.GuiceInjectors;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
