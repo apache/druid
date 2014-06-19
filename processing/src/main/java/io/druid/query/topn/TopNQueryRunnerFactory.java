@@ -67,7 +67,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
       @Override
       public Sequence<Result<TopNResultValue>> run(
           Query<Result<TopNResultValue>> input,
-          Map<String, List> metadata
+          Map<String, Object> context
       )
       {
         if (!(input instanceof TopNQuery)) {

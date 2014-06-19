@@ -479,8 +479,8 @@ public class SpatialFilterTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String,List> metadata = new HashMap<String, List>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, metadata));
+      HashMap<String,Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -566,8 +566,8 @@ public class SpatialFilterTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String,List> metadata = new HashMap<String, List>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, metadata));
+      HashMap<String,Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

@@ -93,7 +93,7 @@ public class TimeseriesQueryRunnerFactory
     @Override
     public Sequence<Result<TimeseriesResultValue>> run(
         Query<Result<TimeseriesResultValue>> input,
-        Map<String, List> metadata
+        Map<String, Object> context
     )
     {
       if (!(input instanceof TimeseriesQuery)) {

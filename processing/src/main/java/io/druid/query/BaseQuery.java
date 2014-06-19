@@ -70,14 +70,14 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @Override
-  public Sequence<T> run(QuerySegmentWalker walker, Map<String, List> metadata)
+  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
   {
-    return run(querySegmentSpec.lookup(this, walker), metadata);
+    return run(querySegmentSpec.lookup(this, walker), context);
   }
 
-  public Sequence<T> run(QueryRunner<T> runner, Map<String, List> metadata)
+  public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context)
   {
-    return runner.run(this, metadata);
+    return runner.run(this, context);
   }
 
   @Override

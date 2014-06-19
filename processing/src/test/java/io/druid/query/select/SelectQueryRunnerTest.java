@@ -88,9 +88,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(null, 3),
         null
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, metadata),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -157,9 +157,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(null, 3),
         null
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, metadata),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -217,9 +217,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
         null
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, metadata),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -277,9 +277,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
         null
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, metadata),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 

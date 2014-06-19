@@ -263,7 +263,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09T01"), 181, 52
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             new DateTime("2011-01-01"), 50, 5000,
@@ -285,7 +285,7 @@ public class CachingClusteredClientTest
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
                    .build(),
-            metadata
+            context
         )
     );
   }
@@ -316,7 +316,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), 85, 102
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             new DateTime("2011-11-04", TIMEZONE), 50, 5000,
@@ -329,7 +329,7 @@ public class CachingClusteredClientTest
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
                    .build(),
-            metadata
+            context
         )
     );
   }
@@ -445,7 +445,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998,
@@ -467,7 +467,7 @@ public class CachingClusteredClientTest
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
                    .build(),
-            metadata
+            context
         )
     );
   }
@@ -501,7 +501,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
 
@@ -516,7 +516,7 @@ public class CachingClusteredClientTest
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
                    .build(),
-            metadata
+            context
         )
     );
   }
@@ -566,7 +566,7 @@ public class CachingClusteredClientTest
         )
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -586,7 +586,7 @@ public class CachingClusteredClientTest
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
                    .build(),
-            metadata
+            context
         )
     );
   }
@@ -635,7 +635,7 @@ public class CachingClusteredClientTest
         )
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeTopNResults(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -655,7 +655,7 @@ public class CachingClusteredClientTest
                    .aggregators(AGGS)
                    .postAggregators(POST_AGGS)
                    .build(),
-            metadata
+            context
         )
     );
   }
@@ -763,7 +763,7 @@ public class CachingClusteredClientTest
                 .once();
 
         final Capture<? extends Query> capture = new Capture();
-        final Capture<? extends Map> metadata = new Capture();
+        final Capture<? extends Map> context = new Capture();
         queryCaptures.add(capture);
         QueryRunner queryable = expectations.getQueryRunner();
 
@@ -776,7 +776,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(metadata)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
                   .once();
 
@@ -789,7 +789,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(metadata)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SearchQuery) {
@@ -801,7 +801,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(metadata)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof TimeBoundaryQuery) {
@@ -813,7 +813,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(metadata)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
                   .once();
         } else {
@@ -837,7 +837,7 @@ public class CachingClusteredClientTest
             @Override
             public void run()
             {
-              HashMap<String,List> metadata = new HashMap<String, List>();
+              HashMap<String,List> context = new HashMap<String, List>();
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable<>(
@@ -872,7 +872,7 @@ public class CachingClusteredClientTest
                                 )
                             )
                         ),
-                        metadata
+                        context
                     )
                 );
               }

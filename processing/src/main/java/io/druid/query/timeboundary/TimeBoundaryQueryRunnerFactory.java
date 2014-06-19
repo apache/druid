@@ -86,7 +86,7 @@ public class TimeBoundaryQueryRunnerFactory
     @Override
     public Sequence<Result<TimeBoundaryResultValue>> run(
         Query<Result<TimeBoundaryResultValue>> input,
-        Map<String, List> metadata
+        Map<String, Object> context
     )
     {
       if (!(input instanceof TimeBoundaryQuery)) {

@@ -39,7 +39,7 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     return Sequences.concat(
         Sequences.map(
@@ -49,7 +49,7 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
               @Override
               public Sequence<T> apply(final QueryRunner<T> input)
               {
-                return input.run(query, metadata);
+                return input.run(query, context);
               }
             }
         )

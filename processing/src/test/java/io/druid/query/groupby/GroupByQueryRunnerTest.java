@@ -344,7 +344,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence run(Query<Row> query, Map<String, List> metadata)
+          public Sequence run(Query<Row> query, Map<String, Object> context)
           {
             // simulate two daily segments
             final Query query1 = query.withQuerySegmentSpec(
@@ -353,7 +353,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, metadata), runner.run(query2, metadata));
+            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
           }
         }
     );
@@ -370,9 +370,9 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, runner.run(fullQuery, metadata), "direct");
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, metadata), "merged");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, runner.run(fullQuery, context), "direct");
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
         createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
@@ -386,8 +386,8 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    TestHelper.assertExpectedObjects(allGranExpectedResults, runner.run(allGranQuery, metadata), "direct");
-    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, metadata), "merged");
+    TestHelper.assertExpectedObjects(allGranExpectedResults, runner.run(allGranQuery, context), "direct");
+    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, context), "merged");
   }
 
   @Test
@@ -429,9 +429,9 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, metadata), String.format("limit: %d", limit)
+        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
     );
   }
 
@@ -537,7 +537,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence run(Query<Row> query, Map<String, List> metadata)
+          public Sequence run(Query<Row> query, Map<String, Object> context)
           {
             // simulate two daily segments
             final Query query1 = query.withQuerySegmentSpec(
@@ -546,12 +546,12 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, metadata), runner.run(query2, metadata));
+            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
           }
         }
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, metadata), "merged");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
   }
 
   @Test
@@ -587,11 +587,11 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, metadata), "no-limit");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
 
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), metadata), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
   }
 
@@ -628,10 +628,10 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, metadata), "no-limit");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), metadata), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
   }
 
@@ -668,10 +668,10 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, metadata), "no-limit");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), metadata), "limited"
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
   }
 
@@ -711,7 +711,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence run(Query<Row> query, Map<String, List> metadata)
+          public Sequence run(Query<Row> query, Map<String, Object> context)
           {
             // simulate two daily segments
             final Query query1 = query.withQuerySegmentSpec(
@@ -720,13 +720,13 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, metadata), runner.run(query2, metadata));
+            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
           }
         }
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, metadata), "merged");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
   }
 
   @Test
@@ -765,9 +765,9 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, metadata), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
   @Test
@@ -799,8 +799,8 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "quality", "technology", "rows", 2L),
         createExpectedRow("2011-04-01", "quality", "travel", "rows", 2L)
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, runner.run(query, metadata), "normal");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, runner.run(query, context), "normal");
     final GroupByQueryEngine engine = new GroupByQueryEngine(
         configSupplier,
         new StupidPool<ByteBuffer>(
@@ -816,7 +816,7 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, metadata), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
   @Test
@@ -849,8 +849,8 @@ public class GroupByQueryRunnerTest
         createExpectedRow("2011-04-01", "quality", "travel", "rows", 2L)
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    TestHelper.assertExpectedObjects(expectedResults, runner.run(query, metadata), "normal");
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedObjects(expectedResults, runner.run(query, context), "normal");
     final GroupByQueryEngine engine = new GroupByQueryEngine(
         configSupplier,
         new StupidPool<ByteBuffer>(
@@ -866,7 +866,7 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, metadata), "no-limit");
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
   // A subquery identical to the query should yield identical results
@@ -1046,8 +1046,8 @@ public class GroupByQueryRunnerTest
         toolChest
     );
 
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    Sequence<Row> queryResult = theRunner.run(query, metadata);
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    Sequence<Row> queryResult = theRunner.run(query, context);
     return Sequences.toList(queryResult, Lists.<Row>newArrayList());
   }
 

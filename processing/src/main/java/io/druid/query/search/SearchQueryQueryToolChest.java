@@ -286,7 +286,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     @Override
     public Sequence<Result<SearchResultValue>> run(
         Query<Result<SearchResultValue>> input,
-        Map<String, List> metadata
+        Map<String, Object> context
     )
     {
       if (!(input instanceof SearchQuery)) {
@@ -295,13 +295,13 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
       final SearchQuery query = (SearchQuery) input;
       if (query.getLimit() < config.getMaxSearchLimit()) {
-        return runner.run(query, metadata);
+        return runner.run(query, context);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withLimit(config.getMaxSearchLimit()), metadata),
+          runner.run(query.withLimit(config.getMaxSearchLimit()), context),
           new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
           {
             @Override

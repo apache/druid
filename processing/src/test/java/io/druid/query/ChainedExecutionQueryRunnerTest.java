@@ -36,7 +36,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -102,14 +101,14 @@ public class ChainedExecutionQueryRunnerTest
             runner3
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     final Sequence seq = chainedRunner.run(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .intervals("2014/2015")
               .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
               .build(),
-        metadata
+        context
     );
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
@@ -206,7 +205,7 @@ public class ChainedExecutionQueryRunnerTest
             runner3
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     final Sequence seq = chainedRunner.run(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
@@ -214,7 +213,7 @@ public class ChainedExecutionQueryRunnerTest
               .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
               .context(ImmutableMap.<String, Object>of("timeout", (100), "queryId", "test"))
               .build(),
-        metadata
+        context
     );
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
@@ -268,7 +267,7 @@ public class ChainedExecutionQueryRunnerTest
     }
 
     @Override
-    public Sequence<Integer> run(Query<Integer> query, Map<String, List> metadata)
+    public Sequence<Integer> run(Query<Integer> query, Map<String, Object> context)
     {
       hasStarted = true;
       latch.countDown();

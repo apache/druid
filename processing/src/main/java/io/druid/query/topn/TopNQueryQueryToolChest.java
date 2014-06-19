@@ -412,7 +412,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     @Override
     public Sequence<Result<TopNResultValue>> run(
         Query<Result<TopNResultValue>> input,
-        Map<String, List> metadata
+        Map<String, Object> context
     )
     {
       if (!(input instanceof TopNQuery)) {
@@ -421,13 +421,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       final TopNQuery query = (TopNQuery) input;
       if (query.getThreshold() > minTopNThreshold) {
-        return runner.run(query, metadata);
+        return runner.run(query, context);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withThreshold(minTopNThreshold), metadata),
+          runner.run(query.withThreshold(minTopNThreshold), context),
           new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
           {
             @Override

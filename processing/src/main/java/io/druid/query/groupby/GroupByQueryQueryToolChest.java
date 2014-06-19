@@ -80,18 +80,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input, Map<String, List> metadata)
+      public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
       {
         if (Boolean.valueOf((String) input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner, metadata);
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner, context);
         } else {
-          return runner.run(input, metadata);
+          return runner.run(input, context);
         }
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, List> metadata)
+  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, Object> context)
   {
 
     Sequence<Row> result;
@@ -105,12 +105,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       } catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
-      Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, metadata);
+      Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       IncrementalIndexStorageAdapter adapter
           = new IncrementalIndexStorageAdapter(makeIncrementalIndex(subquery, subqueryResult));
       result = engine.process(query, adapter);
     } else {
-      result = runner.run(query, metadata);
+      result = runner.run(query, context);
     }
 
     return postAggregate(query, makeIncrementalIndex(query, result));

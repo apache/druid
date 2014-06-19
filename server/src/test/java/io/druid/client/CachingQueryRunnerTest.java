@@ -124,7 +124,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map metadata)
+          public Sequence run(Query query, Map context)
           {
             return resultSeq;
           }
@@ -141,8 +141,8 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-    HashMap<String,Object> metadata = new HashMap<String, Object>();
-    Sequence res = runner.run(query, metadata);
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    Sequence res = runner.run(query, context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
@@ -214,7 +214,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map metadata)
+          public Sequence run(Query query, Map context)
           {
             return Sequences.empty();
           }
@@ -222,8 +222,8 @@ public class CachingQueryRunnerTest
         new CacheConfig()
 
     );
-    HashMap<String,Object> metadata = new HashMap<String, Object>();
-    List<Object> results = Sequences.toList(runner.run(query, metadata), new ArrayList());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    List<Object> results = Sequences.toList(runner.run(query, context), new ArrayList());
     Assert.assertEquals(expectedResults, results);
   }
 

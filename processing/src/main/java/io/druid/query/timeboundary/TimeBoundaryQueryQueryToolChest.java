@@ -96,13 +96,13 @@ public class TimeBoundaryQueryQueryToolChest
     {
       @Override
       protected Sequence<Result<TimeBoundaryResultValue>> doRun(
-          QueryRunner<Result<TimeBoundaryResultValue>> baseRunner, Query<Result<TimeBoundaryResultValue>> input, Map<String, List> metadata
+          QueryRunner<Result<TimeBoundaryResultValue>> baseRunner, Query<Result<TimeBoundaryResultValue>> input, Map<String, Object> context
       )
       {
         TimeBoundaryQuery query = (TimeBoundaryQuery) input;
         return Sequences.simple(
             query.mergeResults(
-                Sequences.toList(baseRunner.run(query, metadata), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
+                Sequences.toList(baseRunner.run(query, context), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
             )
         );
       }

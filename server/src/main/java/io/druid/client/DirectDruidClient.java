@@ -114,7 +114,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = query.getContextBySegment(false);
@@ -170,7 +170,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     }
                     catch (IOException e) {
                     }
-                    metadata.get("missingSegments").addAll(missingSegments);
+                    ((List) context.get("missingSegments")).addAll(missingSegments);
                   }
 
                   return super.handleResponse(response);

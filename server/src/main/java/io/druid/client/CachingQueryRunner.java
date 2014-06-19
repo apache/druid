@@ -73,7 +73,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query, Map<String, List> metadata)
+  public Sequence<T> run(Query<T> query, Map<String, Object> context)
   {
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
@@ -141,7 +141,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
       return Sequences.withEffect(
           Sequences.map(
-              base.run(query, metadata),
+              base.run(query, context),
               new Function<T, T>()
               {
                 @Override
@@ -163,7 +163,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
           MoreExecutors.sameThreadExecutor()
       );
     } else {
-      return base.run(query, metadata);
+      return base.run(query, context);
     }
   }
 

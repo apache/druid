@@ -52,10 +52,10 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
 
   @Override
   @SuppressWarnings("unchecked")
-  public Sequence<T> run(final Query<T> query, Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> query, Map<String, Object> context)
   {
     if (query.getContextBySegment(false)) {
-      final Sequence<T> baseSequence = base.run(query, metadata);
+      final Sequence<T> baseSequence = base.run(query, context);
       return new Sequence<T>()
       {
         @Override
@@ -97,6 +97,6 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
         }
       };
     }
-    return base.run(query, metadata);
+    return base.run(query, context);
   }
 }

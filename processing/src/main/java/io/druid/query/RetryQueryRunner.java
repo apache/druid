@@ -42,20 +42,20 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> query, Map<String, Object> context)
   {
-    Sequence<T> returningSeq = baseRunner.run(query, metadata);
+    Sequence<T> returningSeq = baseRunner.run(query, context);
 
     for (int i = config.numTries(); i > 0; i--) {
-      for (int j = metadata.get("missingSegments").size(); j > 0; j--) {
-        QuerySegmentSpec segmentSpec = new SpecificSegmentSpec((SegmentDescriptor)metadata.get("missingSegments").remove(0));
+      for (int j = ((List)context.get("missingSegments")).size(); j > 0; j--) {
+        QuerySegmentSpec segmentSpec = new SpecificSegmentSpec((SegmentDescriptor)((List) context.get("missingSegments")).remove(0));
         returningSeq = toolChest.mergeSequences(
             Sequences.simple(
                 Arrays.asList(
                     returningSeq,
                     baseRunner.run(
                         query.withQuerySegmentSpec(segmentSpec),
-                        metadata
+                        context
                     )
                 )
             )

@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.metamx.common.guava.Sequence;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,14 +37,14 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query, Map<String, List> metadata)
+  public Sequence<T> run(Query<T> query, Map<String, Object> context)
   {
     if (query.getContextBySegment(false)) {
-      return baseRunner.run(query, metadata);
+      return baseRunner.run(query, context);
     }
 
-    return doRun(baseRunner, query, metadata);
+    return doRun(baseRunner, query, context);
   }
 
-  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, List> metadata);
+  protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, Object> context);
 }

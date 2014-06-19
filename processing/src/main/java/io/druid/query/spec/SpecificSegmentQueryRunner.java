@@ -51,7 +51,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> input, final Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> input, final Map<String, Object> context)
   {
     final Query<T> query = input.withQuerySegmentSpec(specificSpec);
 
@@ -66,9 +66,9 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
       {
         Sequence<T> returningSeq;
         try {
-          returningSeq = base.run(query, metadata);
+          returningSeq = base.run(query, context);
         } catch (NullStorageAdapterException e) {
-          metadata.get("missingSegments").add(((SpecificSegmentSpec) specificSpec).getDescriptor());
+          ((List)context.get("missingSegments")).add(((SpecificSegmentSpec) specificSpec).getDescriptor());
           returningSeq = Sequences.empty();
         }
         return returningSeq;

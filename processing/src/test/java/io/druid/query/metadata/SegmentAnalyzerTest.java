@@ -102,7 +102,7 @@ public class SegmentAnalyzerTest
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
         new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
-    return Sequences.toList(query.run(runner, metadata), Lists.<SegmentAnalysis>newArrayList());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());
   }
 }

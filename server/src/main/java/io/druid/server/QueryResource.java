@@ -142,9 +142,9 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      HashMap<String, List> metadata = new HashMap<String, List>();
-      metadata.put("missingSegments", new LinkedList());
-      Sequence results = query.run(texasRanger, metadata);
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      context.put("missingSegments", new LinkedList());
+      Sequence results = query.run(texasRanger, context);
 
       if (results == null) {
         results = Sequences.empty();
@@ -166,8 +166,8 @@ public class QueryResource
       ) {
 
         String missingSegments = "";
-        if (!metadata.get("missingSegments").isEmpty()) {
-          missingSegments = jsonMapper.writeValueAsString(metadata.get("missingSegments"));
+        if (!((List)context.get("missingSegments")).isEmpty()) {
+          missingSegments = jsonMapper.writeValueAsString(context.get("missingSegments"));
         }
 
         long requestTime = System.currentTimeMillis() - start;

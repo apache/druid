@@ -49,10 +49,10 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     if (period.getMillis() == 0) {
-      return baseRunner.run(query, metadata);
+      return baseRunner.run(query, context);
     }
 
     return Sequences.concat(
@@ -76,7 +76,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                   {
                     return baseRunner.run(
                         query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(singleInterval))),
-                        metadata
+                        context
                     );
                   }
                 }

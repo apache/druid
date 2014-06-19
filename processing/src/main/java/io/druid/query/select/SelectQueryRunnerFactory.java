@@ -92,7 +92,7 @@ public class SelectQueryRunnerFactory
     @Override
     public Sequence<Result<SelectResultValue>> run(
         Query<Result<SelectResultValue>> input,
-        Map<String, List> metadata
+        Map<String, Object> context
     )
     {
       if (!(input instanceof SelectQuery)) {

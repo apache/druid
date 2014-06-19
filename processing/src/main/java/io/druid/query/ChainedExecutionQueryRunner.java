@@ -94,7 +94,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, List> metadata)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     final int priority = query.getContextPriority(0);
 
@@ -125,7 +125,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                         throw new ISE("Input is null?! How is this possible?!");
                                       }
 
-                                      Sequence<T> result = input.run(query, metadata);
+                                      Sequence<T> result = input.run(query, context);
                                       if (result == null) {
                                         throw new ISE("Got a null result! Segments are missing!");
                                       }

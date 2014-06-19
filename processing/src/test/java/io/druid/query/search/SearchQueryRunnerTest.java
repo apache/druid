@@ -369,9 +369,9 @@ public class SearchQueryRunnerTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,List> context = new HashMap<String, List>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery, metadata),
+        runner.run(searchQuery, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
 

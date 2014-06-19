@@ -102,7 +102,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                   return new QueryRunner<Row>()
                   {
                     @Override
-                    public Sequence<Row> run(final Query<Row> query, final Map<String, List> metadata)
+                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
                     {
 
                       ListenableFuture<Sequence<Row>> future = queryExecutor.submit(
@@ -112,7 +112,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                             public Sequence<Row> call() throws Exception
                             {
                               return new ExecutorExecutingSequence<Row>(
-                                  input.run(query, metadata),
+                                  input.run(query, context),
                                   queryExecutor
                               );
                             }
@@ -168,7 +168,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input, Map<String, List> metadata)
+    public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
     {
       if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);

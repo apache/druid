@@ -34,7 +34,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 
 /**
  */
@@ -65,9 +64,9 @@ public class TimeBoundaryQueryRunnerTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .build();
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, metadata),
+        runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();

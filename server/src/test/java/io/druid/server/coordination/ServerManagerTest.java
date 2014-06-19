@@ -429,8 +429,8 @@ public class ServerManagerTest
           @Override
           public void run()
           {
-            Map<String,List> metadata = new HashMap<String, List>();
-            Sequence<Result<SearchResultValue>> seq = runner.run(query, metadata);
+            Map<String,Object> context = new HashMap<String, Object>();
+            Sequence<Result<SearchResultValue>> seq = runner.run(query, context);
             Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
@@ -679,9 +679,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> run(Query<T> query, Map<String, List> metadata)
+    public Sequence<T> run(Query<T> query, Map<String, Object> context)
     {
-      return new BlockingSequence<T>(runner.run(query, metadata), waitLatch, waitYieldLatch, notifyLatch);
+      return new BlockingSequence<T>(runner.run(query, context), waitLatch, waitYieldLatch, notifyLatch);
     }
   }
 

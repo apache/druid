@@ -98,9 +98,9 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-    HashMap<String,List> metadata = new HashMap<String, List>();
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, metadata),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

@@ -71,7 +71,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   @Override
   public Sequence<Result<SearchResultValue>> run(
       final Query<Result<SearchResultValue>> input,
-      Map<String, List> metadata
+      Map<String, Object> context
   )
   {
     if (!(input instanceof SearchQuery)) {

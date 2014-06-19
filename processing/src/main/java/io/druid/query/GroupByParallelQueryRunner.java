@@ -87,7 +87,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(final Query<Row> queryParam, final Map<String, List> metadata)
+  public Sequence<Row> run(final Query<Row> queryParam, final Map<String, Object> context)
   {
 
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -116,7 +116,7 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
                           public Boolean call() throws Exception
                           {
                             try {
-                              input.run(queryParam, metadata).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                              input.run(queryParam, context).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               return true;
                             }
                             catch (QueryInterruptedException e) {
