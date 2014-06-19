@@ -19,9 +19,11 @@
 
 package io.druid.segment;
 
-public class NullStorageAdapterException extends IllegalStateException
+import com.metamx.common.ISE;
+
+public class SegmentMissingException extends ISE
 {
-  public NullStorageAdapterException(String formatText, Object... arguments) {
+  public SegmentMissingException(String formatText, Object... arguments) {
     super(String.format(formatText, arguments));
   }
 }

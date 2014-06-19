@@ -21,8 +21,8 @@ package io.druid.query;
 
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.query.spec.QuerySegmentSpec;
-import io.druid.query.spec.SpecificSegmentSpec;
+import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.segment.SegmentMissingException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +30,7 @@ import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
+  public static String missingSegments = "missingSegments";
   private final QueryRunner<T> baseRunner;
   private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;
@@ -46,23 +47,32 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   {
     Sequence<T> returningSeq = baseRunner.run(query, context);
 
-    for (int i = config.numTries(); i > 0; i--) {
-      for (int j = ((List)context.get("missingSegments")).size(); j > 0; j--) {
-        QuerySegmentSpec segmentSpec = new SpecificSegmentSpec((SegmentDescriptor)((List) context.get("missingSegments")).remove(0));
+
+    for (int i = config.numTries(); i > 0 && !((List)context.get(missingSegments)).isEmpty(); i--) {
+        List<SegmentDescriptor> segList= (List<SegmentDescriptor>)context.get(missingSegments);
+        ((List)context.get(missingSegments)).clear();
         returningSeq = toolChest.mergeSequences(
             Sequences.simple(
                 Arrays.asList(
                     returningSeq,
                     baseRunner.run(
-                        query.withQuerySegmentSpec(segmentSpec),
+                        query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(segList)),
                         context
                     )
                 )
             )
         );
+    }
+
+    if (!config.returnPartialResults() && !((List)context.get(missingSegments)).isEmpty()) {
+      String failedSegments = "";
+      for (SegmentDescriptor segment : (List<SegmentDescriptor>) context.get("missingSegments")) {
+        failedSegments = failedSegments + segment.toString() + " ";
       }
+      throw new SegmentMissingException("The following segments are missing: " + failedSegments);
     }
 
     return returningSeq;
   }
 }
+

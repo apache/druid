@@ -27,7 +27,7 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import io.druid.segment.NullStorageAdapterException;
+import io.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
 import java.util.List;
@@ -67,7 +67,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
         Sequence<T> returningSeq;
         try {
           returningSeq = base.run(query, context);
-        } catch (NullStorageAdapterException e) {
+        } catch (SegmentMissingException e) {
           ((List)context.get("missingSegments")).add(((SpecificSegmentSpec) specificSpec).getDescriptor());
           returningSeq = Sequences.empty();
         }

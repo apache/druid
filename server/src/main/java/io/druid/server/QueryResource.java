@@ -22,9 +22,11 @@ package io.druid.server;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.api.client.util.Lists;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.MapMaker;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
@@ -57,9 +59,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -142,8 +143,8 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      HashMap<String, Object> context = new HashMap<String, Object>();
-      context.put("missingSegments", new LinkedList());
+      Map<String, Object> context = new MapMaker().makeMap();
+      context.put("missingSegments", Lists.newArrayList());
       Sequence results = query.run(texasRanger, context);
 
       if (results == null) {

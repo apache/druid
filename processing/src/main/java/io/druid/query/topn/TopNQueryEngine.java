@@ -32,7 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
-import io.druid.segment.NullStorageAdapterException;
+import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -56,7 +56,7 @@ public class TopNQueryEngine
   public Sequence<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter)
   {
     if (adapter == null) {
-      throw new NullStorageAdapterException(
+      throw new SegmentMissingException(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
