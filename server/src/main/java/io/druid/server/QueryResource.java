@@ -166,9 +166,9 @@ public class QueryResource
           )
       ) {
 
-        String missingSegments = "";
+        String headerContext = "";
         if (!((List)context.get("missingSegments")).isEmpty()) {
-          missingSegments = jsonMapper.writeValueAsString(context.get("missingSegments"));
+          headerContext = jsonMapper.writeValueAsString(context);
         }
 
         long requestTime = System.currentTimeMillis() - start;
@@ -213,7 +213,7 @@ public class QueryResource
                 isSmile ? APPLICATION_JSON : APPLICATION_SMILE
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("Missing-Segments", missingSegments)
+            .header("Context", headerContext)
             .build();
       }
     }
