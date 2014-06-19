@@ -69,7 +69,8 @@ You should see a bunch of files:
 * run_example_client.sh
 * LICENSE, config, examples, lib directories
 
-#### Setting up Zookeeper
+Setting up Zookeeper
+--------------------
 
 Before we get started, we need to start Apache Zookeeper.
 
