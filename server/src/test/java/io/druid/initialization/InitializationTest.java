@@ -28,6 +28,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;

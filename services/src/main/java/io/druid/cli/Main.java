@@ -26,7 +26,7 @@ import io.airlift.command.ParseException;
 import io.druid.cli.convert.ConvertProperties;
 import io.druid.cli.validate.DruidJsonValidator;
 import io.druid.guice.ExtensionsConfig;
-import io.druid.initialization.GuiceInjectors;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 
 import java.util.Collection;
