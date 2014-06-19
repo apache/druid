@@ -35,6 +35,16 @@ public class FieldAccessPostAggregator implements PostAggregator
   private final String name;
   private final String fieldName;
 
+    private static final Comparator COMPARATOR = new Comparator()
+    {
+        @Override
+        public int compare(Object o, Object o1)
+        {
+            return ((Comparable) o).compareTo((Comparable) o1);
+        }
+    };
+
+
   @JsonCreator
   public FieldAccessPostAggregator(
       @JsonProperty("name") String name,
@@ -54,7 +64,8 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Override
   public Comparator getComparator()
   {
-    throw new UnsupportedOperationException();
+//    throw new UnsupportedOperationException();
+      return COMPARATOR;
   }
 
   @Override

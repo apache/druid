@@ -27,14 +27,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.DimensionType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -97,6 +98,7 @@ public class DefaultLimitSpec implements LimitSpec
       List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
   )
   {
+      /*
     Ordering<Row> ordering = new Ordering<Row>()
     {
       @Override
@@ -105,11 +107,15 @@ public class DefaultLimitSpec implements LimitSpec
         return Longs.compare(left.getTimestampFromEpoch(), right.getTimestampFromEpoch());
       }
     };
+    */
+
+      Ordering<Row> ordering = null;
 
     Map<String, Ordering<Row>> possibleOrderings = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
     for (DimensionSpec spec : dimensions) {
       final String dimension = spec.getOutputName();
-      possibleOrderings.put(dimension, dimensionOrdering(dimension));
+//        possibleOrderings.put(dimension, dimensionOrdering(dimension));
+      possibleOrderings.put(dimension, dimensionOrdering(dimension, spec.getDimType()));
     }
 
     for (final AggregatorFactory agg : aggs) {
@@ -118,12 +124,17 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     for (PostAggregator postAgg : postAggs) {
-      final String column = postAgg.getName();
-      possibleOrderings.put(column, metricOrdering(column, postAgg.getComparator()));
+        String column = postAgg.getName();
+        // FieldAccessPostAggregator support ordering
+        if (postAgg instanceof FieldAccessPostAggregator) {
+            possibleOrderings.put(column, metricOrdering(((FieldAccessPostAggregator) postAgg).getFieldName(), postAgg.getComparator()));
+        } else {
+            possibleOrderings.put(column, metricOrdering(column, postAgg.getComparator()));
+        }
     }
 
     for (OrderByColumnSpec columnSpec : columns) {
-      Ordering<Row> nextOrdering = possibleOrderings.get(columnSpec.getDimension());
+        Ordering<Row> nextOrdering = possibleOrderings.get(columnSpec.getDimension());
 
       if (nextOrdering == null) {
         throw new ISE("Unknown column in order clause[%s]", columnSpec);
@@ -134,7 +145,11 @@ public class DefaultLimitSpec implements LimitSpec
           nextOrdering = nextOrdering.reverse();
       }
 
-      ordering = ordering.compound(nextOrdering);
+        if (null != ordering) {
+            ordering = ordering.compound(nextOrdering);
+        } else {
+            ordering = nextOrdering;
+        }
     }
 
     return ordering;
@@ -152,6 +167,44 @@ public class DefaultLimitSpec implements LimitSpec
       }
     };
   }
+
+    private Ordering<Row> dimensionOrdering(final String dimension, final DimensionType dimensionType)
+    {
+
+        Function<Row, Comparable> func;
+        switch (dimensionType) {
+            case INTEGER:
+            case DECIMAL:
+                func = new Function<Row, Comparable>()
+                {
+                    @Override
+                    public Comparable apply(Row input)
+                    {
+                        // Multi-value dimensions have all been flattened at this point;
+                        final List<String> dimList = input.getDimension(dimension);
+                        return dimensionType.cast(dimList.isEmpty() ? null : dimList.get(0));
+                    }
+                };
+                break;
+            case PLAIN:
+            default:
+                func = new Function<Row, Comparable>()
+                {
+                    @Override
+                    public String apply(Row input)
+                    {
+                        // Multi-value dimensions have all been flattened at this point;
+                        final List<String> dimList = input.getDimension(dimension);
+                        return dimList.isEmpty() ? null : dimList.get(0);
+                    }
+                };
+                break;
+        }
+        return dimensionType.getOrdering()
+                .nullsFirst()
+                .onResultOf(func);
+    }
+
 
   private Ordering<Row> dimensionOrdering(final String dimension)
   {

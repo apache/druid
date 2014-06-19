@@ -27,21 +27,25 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class DefaultDimensionSpec implements DimensionSpec
+public class TypedDimensionSpec implements DimensionSpec
 {
-    private static final byte CACHE_TYPE_ID = 0x0;
+    private static final byte CACHE_TYPE_ID = 0x2;
+
     private final String dimension;
+    private final DimensionType dimType;
     private final String outputName;
 
     @JsonCreator
-    public DefaultDimensionSpec(
+    public TypedDimensionSpec(
             @JsonProperty("dimension") String dimension,
-            @JsonProperty("outputName") String outputName
+            @JsonProperty("outputName") String outputName,
+            @JsonProperty("dimType") DimensionType dimType
     )
     {
         this.dimension = dimension;
+        this.dimType = dimType == null ? DimensionType.PLAIN : dimType;
 
-        // Do null check for legacy backwards compatibility, callers should be setting the value.
+        // Do null check for backwards compatibility
         this.outputName = outputName == null ? dimension : outputName;
     }
 
@@ -60,33 +64,38 @@ public class DefaultDimensionSpec implements DimensionSpec
     }
 
     @Override
+    @JsonProperty
+    public DimensionType getDimType()
+    {
+        return dimType;
+    }
+
+    @Override
     public DimExtractionFn getDimExtractionFn()
     {
         return null;
     }
-
-    @Override
-    public DimensionType getDimType() {
-        return DimensionType.PLAIN;
-    }
-
     @Override
     public byte[] getCacheKey()
     {
         byte[] dimensionBytes = dimension.getBytes();
+        byte[] dimTypeBytes = dimType.name().getBytes();
 
-        return ByteBuffer.allocate(1 + dimensionBytes.length)
+        return ByteBuffer.allocate(1 + dimensionBytes.length + dimTypeBytes.length)
                 .put(CACHE_TYPE_ID)
                 .put(dimensionBytes)
+                .put(dimTypeBytes)
                 .array();
     }
 
     @Override
     public String toString()
     {
-        return "DefaultDimensionSpec{" +
+        return "TypedDimensionSpec{" +
                 "dimension='" + dimension + '\'' +
+                ", dimType=" + dimType +
                 ", outputName='" + outputName + '\'' +
                 '}';
     }
+
 }

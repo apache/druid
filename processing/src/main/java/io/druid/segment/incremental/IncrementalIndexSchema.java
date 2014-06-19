@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.dimension.DimensionSpec;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +38,7 @@ public class IncrementalIndexSchema
   private final QueryGranularity gran;
   private final List<String> dimensions;
   private final List<SpatialDimensionSchema> spatialDimensions;
+    private final List<DimensionSpec> extractionDimensionSpecs;
   private final AggregatorFactory[] metrics;
 
   public IncrementalIndexSchema(
@@ -44,7 +46,8 @@ public class IncrementalIndexSchema
       QueryGranularity gran,
       List<String> dimensions,
       List<SpatialDimensionSchema> spatialDimensions,
-      AggregatorFactory[] metrics
+      AggregatorFactory[] metrics,
+      List<DimensionSpec> extractionDimensionSpecs
   )
   {
     this.minTimestamp = minTimestamp;
@@ -52,6 +55,7 @@ public class IncrementalIndexSchema
     this.dimensions = dimensions;
     this.spatialDimensions = spatialDimensions;
     this.metrics = metrics;
+      this.extractionDimensionSpecs = extractionDimensionSpecs;
   }
 
   public long getMinTimestamp()
@@ -79,13 +83,18 @@ public class IncrementalIndexSchema
     return metrics;
   }
 
-  public static class Builder
+    public List<DimensionSpec> getExtractionDimensionSpecs() {
+        return extractionDimensionSpecs;
+    }
+
+    public static class Builder
   {
     private long minTimestamp;
     private QueryGranularity gran;
     private List<String> dimensions;
     private List<SpatialDimensionSchema> spatialDimensions;
     private AggregatorFactory[] metrics;
+      private List<DimensionSpec> extractionDimensionSpecs;
 
     public Builder()
     {
@@ -94,6 +103,7 @@ public class IncrementalIndexSchema
       this.dimensions = Lists.newArrayList();
       this.spatialDimensions = Lists.newArrayList();
       this.metrics = new AggregatorFactory[]{};
+        this.extractionDimensionSpecs = Lists.newArrayList();
     }
 
     public Builder withMinTimestamp(long minTimestamp)
@@ -138,10 +148,17 @@ public class IncrementalIndexSchema
       return this;
     }
 
+      public Builder withExtractionDimensionSpecs (List<DimensionSpec> extractionDimensionSpecs)
+    {
+      this.extractionDimensionSpecs = extractionDimensionSpecs;
+      return this;
+    }
+
+
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, gran, dimensions, spatialDimensions, metrics
+          minTimestamp, gran, dimensions, spatialDimensions, metrics, extractionDimensionSpecs
       );
     }
   }

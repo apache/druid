@@ -41,7 +41,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     @Override
     public int compare(Object o, Object o1)
     {
-      return ((Double) o).compareTo((Double) o1);
+      return ((Comparable) o).compareTo((Comparable) o1);
     }
   };
 

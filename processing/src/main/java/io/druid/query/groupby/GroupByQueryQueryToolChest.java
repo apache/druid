@@ -22,7 +22,9 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -44,6 +46,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
@@ -122,13 +125,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
     );
 
+      final List<DimensionSpec> extractionDimensionSpecs =
+              Lists.newArrayList(Collections2.filter(query.getDimensions(), new Predicate<DimensionSpec>() {
+                    @Override
+                    public boolean apply( DimensionSpec input) {
+                        return (input instanceof ExtractionDimensionSpec);
+                    }
+                }));
+
     final IncrementalIndex index = runner.run(query).accumulate(
         new IncrementalIndex(
             // use granularity truncated min timestamp
             // since incoming truncated timestamps may precede timeStart
             granTimeStart,
             gran,
-            aggs.toArray(new AggregatorFactory[aggs.size()])
+            aggs.toArray(new AggregatorFactory[aggs.size()]),
+            extractionDimensionSpecs
         ),
         new Accumulator<IncrementalIndex, Row>()
         {
