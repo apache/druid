@@ -120,7 +120,7 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private static final ObjectMapper mapper;
-  private static final ColumnConfig columnConfig;
+  protected static final ColumnConfig columnConfig;
 
   static {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
@@ -135,12 +135,13 @@ public class IndexIO
                     DruidProcessingConfig.class,
                     ImmutableMap.of("base_path", "druid.processing")
                 );
+                binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
               }
             }
         )
     );
     mapper = injector.getInstance(ObjectMapper.class);
-    columnConfig = injector.getInstance(DruidProcessingConfig.class);
+    columnConfig = injector.getInstance(ColumnConfig.class);
   }
 
   private static volatile IndexIOHandler handler = null;
