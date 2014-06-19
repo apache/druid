@@ -201,9 +201,11 @@ public class Announcer
 
                       Set<String> pathsToReinstate = Sets.newHashSet();
                       for (String node : finalSubPaths.keySet()) {
-                        String path = ZKPaths.makePath(parentPath, node);
-                        log.info("Node[%s] is added to reinstate.", path);
-                        pathsToReinstate.add(path);
+                        pathsToReinstate.add(ZKPaths.makePath(parentPath, node));
+                      }
+
+                      for (ChildData data : cache.getCurrentData()) {
+                        pathsToReinstate.remove(data.getPath());
                       }
 
                       if (!pathsToReinstate.isEmpty() && !pathsLost.compareAndSet(null, pathsToReinstate)) {

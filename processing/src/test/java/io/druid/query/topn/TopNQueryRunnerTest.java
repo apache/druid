@@ -30,13 +30,7 @@ import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.*;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -55,11 +49,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  */
@@ -183,6 +173,7 @@ public class TopNQueryRunnerTest
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+//            .postAggregators(Arrays.<PostAggregator>asList(indexPostAgg))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(

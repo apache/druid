@@ -21,13 +21,7 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.*;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -41,6 +35,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -52,12 +47,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -82,6 +72,8 @@ public class IncrementalIndex implements Iterable<Row>
   private final SpatialDimensionRowFormatter spatialDimensionRowFormatter;
   private final DimensionHolder dimValues;
   private final ConcurrentSkipListMap<TimeAndDims, Aggregator[]> facts;
+
+    private final ExtractionDimensionFormatter extractionDimensionFormatter;
 
   private volatile int numEntries = 0;
 
@@ -119,6 +111,13 @@ public class IncrementalIndex implements Iterable<Row>
 
     this.dimValues = new DimensionHolder();
     this.facts = new ConcurrentSkipListMap<TimeAndDims, Aggregator[]>();
+
+      List<DimensionSpec> specs = incrementalIndexSchema.getExtractionDimensionSpecs();
+       if (null == specs || specs.isEmpty()) {
+           extractionDimensionFormatter = null;
+      } else {
+           extractionDimensionFormatter = new ExtractionDimensionFormatter(specs);
+      }
   }
 
   public IncrementalIndex(
@@ -134,6 +133,24 @@ public class IncrementalIndex implements Iterable<Row>
                                             .build()
     );
   }
+
+     public IncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      final AggregatorFactory[] metrics,
+      final List<DimensionSpec> specs // only ExtractionDimensionSpec here
+  )
+  {
+    this(
+            new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                    .withQueryGranularity(gran)
+                    .withMetrics(metrics)
+                    .withExtractionDimensionSpecs(specs)
+                    .build()
+    );
+
+  }
+
 
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
@@ -152,6 +169,11 @@ public class IncrementalIndex implements Iterable<Row>
     if (row.getTimestampFromEpoch() < minTimestamp) {
       throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, new DateTime(minTimestamp));
     }
+
+      // yangxu: exact dim val
+      if (null != extractionDimensionFormatter) {
+      row = extractionDimensionFormatter.formatRow(row);
+      }
 
     final List<String> rowDimensions = row.getDimensions();
     String[][] dims = new String[dimensionOrder.size()][];

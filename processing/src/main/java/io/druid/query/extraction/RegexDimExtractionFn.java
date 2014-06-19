@@ -58,7 +58,9 @@ public class RegexDimExtractionFn implements DimExtractionFn
   public String apply(String dimValue)
   {
     Matcher matcher = pattern.matcher(dimValue);
-    return matcher.find() ? matcher.group(1) : dimValue;
+      boolean found = matcher.find();
+      return (found && matcher.groupCount() >= 1) ? matcher.group(1) : dimValue;
+//    return matcher.find() ? matcher.group(1) : dimValue;
   }
 
   @JsonProperty("expr")

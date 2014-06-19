@@ -28,12 +28,14 @@ import io.druid.query.extraction.DimExtractionFn;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacyDimensionSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
+    @JsonSubTypes.Type(name = "typed", value = TypedDimensionSpec.class),
     @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class)
 })
 public interface DimensionSpec
 {
-  public String getDimension();
-  public String getOutputName();
-  public DimExtractionFn getDimExtractionFn();
-  public byte[] getCacheKey();
+    public String getDimension();
+    public String getOutputName();
+    public DimExtractionFn getDimExtractionFn();
+    public DimensionType getDimType();
+    public byte[] getCacheKey();
 }

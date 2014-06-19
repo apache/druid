@@ -21,6 +21,7 @@ package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
@@ -48,6 +49,8 @@ import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -212,8 +215,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return GROUP_BY;
   }
 
-  public Sequence<Row> applyLimit(Sequence<Row> results)
-  {
+  public Sequence<Row> applyLimit(Sequence<Row> results) {
     return orderByLimitFn.apply(results);
   }
 

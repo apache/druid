@@ -101,4 +101,12 @@ public class RegexDimExtractionFnTest
     Assert.assertTrue(extracted.contains("b"));
     Assert.assertTrue(extracted.contains("c"));
   }
+
+    @Test
+    public void testDigitalExtraction() {
+        String regex = "(^[0-9])";
+        String testString = "100005";
+        DimExtractionFn dimExtractionFn = new RegexDimExtractionFn(regex);
+        Assert.assertTrue(dimExtractionFn.apply(testString).contains("1"));
+    }
 }
