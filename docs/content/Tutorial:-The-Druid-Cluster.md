@@ -120,7 +120,7 @@ druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.db.connector.user=druid
 druid.db.connector.password=diurd
 
-druid.coordinator.startDelay=PT60s
+druid.coordinator.startDelay=PT70s
 ```
 
 To start the coordinator node:
