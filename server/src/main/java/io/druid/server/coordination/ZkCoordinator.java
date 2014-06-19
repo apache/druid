@@ -257,7 +257,6 @@ public class ZkCoordinator extends BaseZkCoordinator
                 log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
                    .addData("segment", segment)
                    .emit();
-                throw Throwables.propagate(e);
               }
             }
           },
