@@ -69,6 +69,19 @@ You should see a bunch of files:
 * run_example_client.sh
 * LICENSE, config, examples, lib directories
 
+#### Setting up Zookeeper
+
+Before we get started, we need to start Apache Zookeeper.
+
+```bash
+curl http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
+tar xzf zookeeper-3.4.5.tar.gz
+cd zookeeper-3.4.5
+cp conf/zoo_sample.cfg conf/zoo.cfg
+./bin/zkServer.sh start
+cd ..
+```
+
 Running Example Scripts
 -----------------------
 
