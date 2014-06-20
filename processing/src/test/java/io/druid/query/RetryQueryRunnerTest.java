@@ -203,11 +203,6 @@ public class RetryQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
-    actualResults = Sequences.toList(
-        runner.run(query, context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue("Should have nothing in missingSegment list", ((List) context.get(RetryQueryRunner.missingSegments)).size() == 0);
   }
@@ -292,11 +287,6 @@ public class RetryQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-
-    actualResults = Sequences.toList(
         runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
