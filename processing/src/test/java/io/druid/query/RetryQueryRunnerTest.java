@@ -117,6 +117,8 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return an empty sequence as a result", ((List) actualResults).size() == 0);
   }
 
+
+
   @Test
   public void testRetry() throws Exception
   {
@@ -209,6 +211,100 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue("Should have nothing in missingSegment list", ((List) context.get(RetryQueryRunner.missingSegments)).size() == 0);
   }
+
+  @Test
+  public void testRetryMultiple() throws Exception
+  {
+    Map<String, Object> context = new MapMaker().makeMap();
+    context.put("count", 0);
+    context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
+    RetryQueryRunner runner = new RetryQueryRunner(
+        new QueryRunner()
+        {
+          @Override
+          public Sequence run(Query query, Map context)
+          {
+            if ((int)context.get("count") < 3) {
+              ((List) context.get(RetryQueryRunner.missingSegments)).add(
+                  new SegmentDescriptor(
+                      new Interval(
+                          178888,
+                          1999999
+                      ), "test", 1
+                  )
+              );
+              context.put("count", (int)context.get("count") + 1);
+              return Sequences.empty();
+            } else {
+              ArrayList lst = new ArrayList();
+              lst.add("hello world");
+              return Sequences.simple(lst);
+            }
+          }
+        },
+        new QueryToolChest()
+        {
+          @Override
+          public QueryRunner mergeResults(QueryRunner runner)
+          {
+            return null;
+          }
+
+          @Override
+          public Sequence mergeSequences(Sequence seqOfSequences)
+          {
+            return new OrderedMergeSequence<Result<TimeseriesResultValue>>(getOrdering(), seqOfSequences);
+          }
+
+          @Override
+          public ServiceMetricEvent.Builder makeMetricBuilder(Query query)
+          {
+            return null;
+          }
+
+          @Override
+          public Function makePreComputeManipulatorFn(
+              Query query, MetricManipulationFn fn
+          )
+          {
+            return null;
+          }
+
+          @Override
+          public TypeReference getResultTypeReference()
+          {
+            return null;
+          }
+
+          public Ordering<Result<TimeseriesResultValue>> getOrdering()
+          {
+            return Ordering.natural();
+          }
+        },
+        new RetryQueryRunnerConfig()
+        {
+          private int numTries = 4;
+          private boolean returnPartialResults = true;
+
+          public int numTries() { return numTries; }
+          public boolean returnPartialResults() { return returnPartialResults; }
+        }
+    );
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    actualResults = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
+    Assert.assertTrue("Should have nothing in missingSegment list", ((List) context.get(RetryQueryRunner.missingSegments)).size() == 0);
+  }
+
 
   @Test(expected= SegmentMissingException.class)
   public void testException() throws Exception
