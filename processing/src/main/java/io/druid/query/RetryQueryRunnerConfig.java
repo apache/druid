@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class RetryQueryRunnerConfig
 {
   @JsonProperty
-  private int numTries = 1;
+  private int numTries = 0;
   private boolean returnPartialResults = false;
 
   public int numTries() { return numTries; }

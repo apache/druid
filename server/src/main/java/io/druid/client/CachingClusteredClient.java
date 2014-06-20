@@ -253,6 +253,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             addSequencesFromServer(listOfSequences);
             addSequencesFromCache(listOfSequences);
 
+
             Collections.sort(
                 listOfSequences,
                 Ordering.natural().onResultOf(Pair.<DateTime, Sequence<T>>lhsFn())
