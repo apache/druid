@@ -42,6 +42,7 @@ import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.RetryQueryRunner;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
 
@@ -144,7 +145,7 @@ public class QueryResource
       }
 
       Map<String, Object> context = new MapMaker().makeMap();
-      context.put("missingSegments", Lists.newArrayList());
+      context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
       Sequence results = query.run(texasRanger, context);
 
       if (results == null) {
@@ -167,7 +168,7 @@ public class QueryResource
       ) {
 
         String headerContext = "";
-        if (!((List)context.get("missingSegments")).isEmpty()) {
+        if (!((List)context.get(RetryQueryRunner.missingSegments)).isEmpty()) {
           headerContext = jsonMapper.writeValueAsString(context);
         }
 

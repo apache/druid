@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
-  public static String missingSegments = "missingSegments";
+  public static String missingSegments = RetryQueryRunner.missingSegments;
   private final QueryRunner<T> baseRunner;
   private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;
@@ -74,7 +74,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
         if (!config.returnPartialResults() && !((List) context.get(missingSegments)).isEmpty()) {
           String failedSegments = "";
-          for (SegmentDescriptor segment : (List<SegmentDescriptor>) context.get("missingSegments")) {
+          for (SegmentDescriptor segment : (List<SegmentDescriptor>) context.get(RetryQueryRunner.missingSegments)) {
             failedSegments = failedSegments + segment.toString() + " ";
           }
           throw new SegmentMissingException("The following segments are missing: " + failedSegments);

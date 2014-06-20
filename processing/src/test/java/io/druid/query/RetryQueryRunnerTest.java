@@ -48,7 +48,7 @@ public class RetryQueryRunnerTest
   public void testRunWithMissingSegments() throws Exception
   {
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put("missingSegments", Lists.newArrayList());
+    context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
     RetryQueryRunner runner = new RetryQueryRunner(
         new QueryRunner()
         {
@@ -122,7 +122,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new MapMaker().makeMap();
     context.put("count", 0);
-    context.put("missingSegments", Lists.newArrayList());
+    context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
     RetryQueryRunner runner = new RetryQueryRunner(
         new QueryRunner()
         {
@@ -214,7 +214,7 @@ public class RetryQueryRunnerTest
   public void testException() throws Exception
   {
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put("missingSegments", Lists.newArrayList());
+    context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
     RetryQueryRunner runner = new RetryQueryRunner(
         new QueryRunner()
         {

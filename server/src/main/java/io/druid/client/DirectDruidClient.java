@@ -178,7 +178,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   catch (IOException e) {
                     e.printStackTrace();
                   }
-                  ((List) context.get("missingSegments")).addAll(missingSegments);
+                  ((List) context.get(RetryQueryRunner.missingSegments)).addAll(missingSegments);
 
                   return super.handleResponse(response);
                 }

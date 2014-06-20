@@ -68,7 +68,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
         try {
           returningSeq = base.run(query, context);
         } catch (SegmentMissingException e) {
-          ((List)context.get("missingSegments")).add(((SpecificSegmentSpec) specificSpec).getDescriptor());
+          ((List)context.get(RetryQueryRunner.missingSegments)).add(((SpecificSegmentSpec) specificSpec).getDescriptor());
           returningSeq = Sequences.empty();
         }
         return returningSeq;
