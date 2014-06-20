@@ -252,20 +252,20 @@ public class TimeseriesQueryRunnerTest
   public void testTimeseries()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
-                                          QueryRunnerTestHelper.rowsCount,
-                                          new LongSumAggregatorFactory(
-                                              "idx",
-                                              "index"
-                                          ),
-                                          QueryRunnerTestHelper.qualityUniques
-                                      )
-                                  )
-                                  .build();
+                                                                         .dataSource(QueryRunnerTestHelper.dataSource)
+                                                                         .granularity(QueryRunnerTestHelper.dayGran)
+                                                                         .intervals(QueryRunnerTestHelper.firstToThird)
+                                                                         .aggregators(
+                                                                             Arrays.<AggregatorFactory>asList(
+                                                                                 QueryRunnerTestHelper.rowsCount,
+                                                                                 new LongSumAggregatorFactory(
+                                                                                     "idx",
+                                                                                     "index"
+                                                                                 ),
+                                                                                 QueryRunnerTestHelper.qualityUniques
+                                                                             )
+                                                                         )
+                                                                         .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
