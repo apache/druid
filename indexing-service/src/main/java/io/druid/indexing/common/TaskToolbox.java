@@ -49,7 +49,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -187,7 +186,8 @@ public class TaskToolbox
     return retVal;
   }
 
-  public void pushSegments(Iterable<DataSegment> segments) throws IOException {
+  public void pushSegments(Iterable<DataSegment> segments) throws IOException
+  {
     // Request segment pushes for each set
     final Multimap<Interval, DataSegment> segmentMultimap = Multimaps.index(
         segments,

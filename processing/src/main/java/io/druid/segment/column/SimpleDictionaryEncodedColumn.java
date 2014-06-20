@@ -24,6 +24,8 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 
+import java.io.IOException;
+
 /**
 */
 public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
@@ -83,5 +85,11 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
   public int getCardinality()
   {
     return lookups.size();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    lookups.close();
   }
 }

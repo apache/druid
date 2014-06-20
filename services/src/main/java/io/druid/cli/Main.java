@@ -25,13 +25,11 @@ import io.airlift.command.Help;
 import io.airlift.command.ParseException;
 import io.druid.cli.convert.ConvertProperties;
 import io.druid.cli.validate.DruidJsonValidator;
+import io.druid.guice.ExtensionsConfig;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 import java.util.Collection;
-import java.util.List;
 
 /**
  */
@@ -75,7 +73,7 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(CliPeon.class, CliInternalHadoopIndexer.class);
 
-    final Injector injector = Initialization.makeStartupInjector();
+    final Injector injector = GuiceInjectors.makeStartupInjector();
     final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
     final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
 

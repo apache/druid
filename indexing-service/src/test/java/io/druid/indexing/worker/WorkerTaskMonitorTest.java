@@ -20,11 +20,17 @@
 package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
+import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.SegmentLoaderFactory;
@@ -38,6 +44,7 @@ import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.OmniSegmentLoader;
@@ -61,6 +68,40 @@ import java.util.List;
 public class WorkerTaskMonitorTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final Injector injector = Guice.createInjector(
+      new com.google.inject.Module()
+      {
+        @Override
+        public void configure(Binder binder)
+        {
+          binder.bind(ColumnConfig.class).toInstance(
+              new ColumnConfig()
+              {
+                @Override
+                public int columnCacheSizeBytes()
+                {
+                  return 1024 * 1024;
+                }
+              }
+          );
+        }
+      }
+  );
+
+  static {
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+
+    jsonMapper.setInjectableValues(new GuiceInjectableValues(injector));
+    jsonMapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, jsonMapper.getSerializationConfig().getAnnotationIntrospector()
+        ),
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, jsonMapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
+    );
+  }
+
   private static final Joiner joiner = Joiner.on("/");
   private static final String basePath = "/test/druid";
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);

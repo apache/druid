@@ -17,34 +17,31 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.initialization;
+package io.druid.query;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.metamx.common.config.Config;
-import io.druid.guice.JsonConfigurator;
-import io.druid.guice.LazySingleton;
-import org.skife.config.ConfigurationObjectFactory;
+import com.metamx.common.concurrent.ExecutorServiceConfig;
+import io.druid.segment.column.ColumnConfig;
+import org.skife.config.Config;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
-import java.util.Properties;
-
-/**
- */
-public class ConfigModule implements Module
+public abstract class DruidProcessingConfig extends ExecutorServiceConfig implements ColumnConfig
 {
-  @Override
-  public void configure(Binder binder)
+  @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
+  public int intermediateComputeSizeBytes()
   {
-    binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-    binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+    return 1024 * 1024 * 1024;
   }
 
-  @Provides @LazySingleton
-  public ConfigurationObjectFactory makeFactory(Properties props)
+  @Override @Config(value = "${base_path}.numThreads")
+  public int getNumThreads()
   {
-    return Config.createFactory(props);
+    // default to leaving one core for background tasks
+    final int processors = Runtime.getRuntime().availableProcessors();
+    return processors > 1 ? processors - 1 : processors;
+  }
+
+  @Config(value = "${base_path}.columnCache.sizeBytes")
+  public int columnCacheSizeBytes()
+  {
+    return 1024 * 1024;
   }
 }

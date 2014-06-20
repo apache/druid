@@ -43,6 +43,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
