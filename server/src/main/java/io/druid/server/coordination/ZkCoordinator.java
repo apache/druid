@@ -20,7 +20,6 @@
 package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -236,11 +235,6 @@ public class ZkCoordinator extends BaseZkCoordinator
   public void removeSegment(final DataSegment segment, final DataSegmentChangeCallback callback)
   {
     try {
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-      if (!segmentInfoCacheFile.delete()) {
-        log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-      }
-
       announcer.unannounceSegment(segment);
 
       log.info("Completely removing [%s] in [%,d] millis", segment.getIdentifier(), config.getDropSegmentDelayMillis());
@@ -252,6 +246,11 @@ public class ZkCoordinator extends BaseZkCoordinator
             {
               try {
                 serverManager.dropSegment(segment);
+
+                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+                if (!segmentInfoCacheFile.delete()) {
+                  log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+                }
               }
               catch (Exception e) {
                 log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
