@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
-  public static String missingSegments = RetryQueryRunner.missingSegments;
+  public static String missingSegments = "missingSegments";
   private final QueryRunner<T> baseRunner;
   private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;

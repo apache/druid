@@ -27,6 +27,7 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.RetryQueryRunner;
 import io.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
