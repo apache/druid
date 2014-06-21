@@ -32,12 +32,14 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -142,7 +144,23 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new CardinalityAggregatorFactory(name, fieldNames, byRow);
+    return new HyperUniquesAggregatorFactory(name, name);
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Lists.transform(
+        fieldNames,
+        new Function<String, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(String input)
+          {
+            return new CardinalityAggregatorFactory(input, fieldNames, byRow);
+          }
+        }
+    );
   }
 
   @Override

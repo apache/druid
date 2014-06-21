@@ -23,11 +23,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
-import com.metamx.common.exception.FormattedException;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
@@ -95,7 +95,7 @@ public class RealtimeManager implements QuerySegmentWalker
   public void stop()
   {
     for (FireChief chief : chiefs.values()) {
-      Closeables.closeQuietly(chief);
+      CloseQuietly.close(chief);
     }
   }
 
@@ -185,7 +185,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
         long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
         while (firehose.hasMore()) {
-          final InputRow inputRow;
+          InputRow inputRow = null;
           try {
             try {
               inputRow = firehose.nextRow();
@@ -214,10 +214,11 @@ public class RealtimeManager implements QuerySegmentWalker
             }
             metrics.incrementProcessed();
           }
-          catch (FormattedException e) {
-            log.info(e, "unparseable line: %s", e.getDetails());
+          catch (ParseException e) {
+            if (inputRow != null) {
+              log.error(e, "unparseable line: %s", inputRow);
+            }
             metrics.incrementUnparseable();
-            continue;
           }
         }
       }
@@ -237,7 +238,7 @@ public class RealtimeManager implements QuerySegmentWalker
         throw e;
       }
       finally {
-        Closeables.closeQuietly(firehose);
+        CloseQuietly.close(firehose);
         if (normalExit) {
           plumber.finishJob();
           plumber = null;

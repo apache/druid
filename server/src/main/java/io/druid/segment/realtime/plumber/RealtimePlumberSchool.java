@@ -29,6 +29,7 @@ import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;

@@ -35,6 +35,7 @@ import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.Jerseys;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Handler;
@@ -90,7 +91,7 @@ public class JettyTest
   {
     setProperties();
     Injector injector = Initialization.makeInjectorWithModules(
-        Initialization.makeStartupInjector(), Lists.<Object>newArrayList(
+        GuiceInjectors.makeStartupInjector(), Lists.<Object>newArrayList(
         new Module()
         {
           @Override

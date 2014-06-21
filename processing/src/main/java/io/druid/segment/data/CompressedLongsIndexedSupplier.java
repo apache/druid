@@ -25,6 +25,7 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 
@@ -122,7 +123,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
       private void loadBuffer(int bufferNum)
       {
-        Closeables.closeQuietly(holder);
+        CloseQuietly.close(holder);
         holder = baseLongBuffers.get(bufferNum);
         buffer = holder.get();
         currIndex = bufferNum;

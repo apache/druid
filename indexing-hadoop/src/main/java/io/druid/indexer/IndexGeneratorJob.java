@@ -31,6 +31,7 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -425,7 +426,7 @@ public class IndexGeneratorJob implements Jobby
         if (caughtException == null) {
           Closeables.close(out, false);
         } else {
-          Closeables.closeQuietly(out);
+          CloseQuietly.close(out);
           throw Throwables.propagate(caughtException);
         }
       }
@@ -605,7 +606,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       finally {
-        Closeables.closeQuietly(in);
+        CloseQuietly.close(in);
       }
       out.closeEntry();
       context.progress();

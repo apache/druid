@@ -101,8 +101,9 @@ public class IntBufferIndexedInts implements IndexedInts, Comparable<IntBufferIn
     @Override
     public IntBufferIndexedInts fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-      buffer.limit(buffer.position() + numBytes);
-      return new IntBufferIndexedInts(buffer);
+      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+      return new IntBufferIndexedInts(readOnlyBuffer);
     }
 
     @Override

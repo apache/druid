@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,26 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server;
+package io.druid.segment.column;
 
-import com.metamx.common.concurrent.ExecutorServiceConfig;
-import org.skife.config.Config;
-
-/**
- */
-public abstract class DruidProcessingConfig extends ExecutorServiceConfig
+public interface ColumnConfig
 {
-  @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
-  public int intermediateComputeSizeBytes()
-  {
-    return 1024 * 1024 * 1024;
-  }
-
-  @Override @Config(value = "${base_path}.numThreads")
-  public int getNumThreads()
-  {
-    // default to leaving one core for background tasks
-    final int processors = Runtime.getRuntime().availableProcessors();
-    return processors > 1 ? processors - 1 : processors;
-  }
+  public int columnCacheSizeBytes();
 }

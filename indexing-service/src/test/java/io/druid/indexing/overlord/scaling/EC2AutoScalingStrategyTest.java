@@ -30,7 +30,7 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.google.common.collect.Lists;
 import io.druid.common.guava.DSuppliers;
 import io.druid.indexing.overlord.setup.EC2NodeData;
-import io.druid.indexing.overlord.setup.GalaxyUserData;
+import io.druid.indexing.overlord.setup.GalaxyEC2UserData;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
@@ -75,7 +75,6 @@ public class EC2AutoScalingStrategyTest
         .withPrivateIpAddress(IP);
 
     strategy = new EC2AutoScalingStrategy(
-        new DefaultObjectMapper(),
         amazonEC2Client,
         new SimpleResourceManagementConfig().setWorkerPort(8080).setWorkerVersion(""),
         DSuppliers.of(workerSetupData)
@@ -101,7 +100,7 @@ public class EC2AutoScalingStrategyTest
             1,
             "",
             new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo"),
-            new GalaxyUserData("env", "version", "type")
+            new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
         )
     );
 

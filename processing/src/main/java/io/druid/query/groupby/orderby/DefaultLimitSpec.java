@@ -87,10 +87,15 @@ public class DefaultLimitSpec implements LimitSpec
 
     if (limit == Integer.MAX_VALUE) {
       return new SortingFn(ordering);
-    }
-    else {
+    } else {
       return new TopNFunction(ordering, limit);
     }
+  }
+
+  @Override
+  public LimitSpec merge(LimitSpec other)
+  {
+    return this;
   }
 
   private Ordering<Row> makeComparator(
@@ -200,12 +205,18 @@ public class DefaultLimitSpec implements LimitSpec
     @Override
     public boolean equals(Object o)
     {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
 
       LimitingFn that = (LimitingFn) o;
 
-      if (limit != that.limit) return false;
+      if (limit != that.limit) {
+        return false;
+      }
 
       return true;
     }
@@ -232,12 +243,18 @@ public class DefaultLimitSpec implements LimitSpec
     @Override
     public boolean equals(Object o)
     {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
 
       SortingFn sortingFn = (SortingFn) o;
 
-      if (ordering != null ? !ordering.equals(sortingFn.ordering) : sortingFn.ordering != null) return false;
+      if (ordering != null ? !ordering.equals(sortingFn.ordering) : sortingFn.ordering != null) {
+        return false;
+      }
 
       return true;
     }
@@ -273,13 +290,21 @@ public class DefaultLimitSpec implements LimitSpec
     @Override
     public boolean equals(Object o)
     {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
 
       TopNFunction that = (TopNFunction) o;
 
-      if (limit != that.limit) return false;
-      if (sorter != null ? !sorter.equals(that.sorter) : that.sorter != null) return false;
+      if (limit != that.limit) {
+        return false;
+      }
+      if (sorter != null ? !sorter.equals(that.sorter) : that.sorter != null) {
+        return false;
+      }
 
       return true;
     }
@@ -296,13 +321,21 @@ public class DefaultLimitSpec implements LimitSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     DefaultLimitSpec that = (DefaultLimitSpec) o;
 
-    if (limit != that.limit) return false;
-    if (columns != null ? !columns.equals(that.columns) : that.columns != null) return false;
+    if (limit != that.limit) {
+      return false;
+    }
+    if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
+      return false;
+    }
 
     return true;
   }

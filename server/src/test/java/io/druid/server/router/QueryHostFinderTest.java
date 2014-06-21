@@ -126,6 +126,7 @@ public class QueryHostFinderTest
         new TimeBoundaryQuery(
             new TableDataSource("test"),
             new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01"))),
+            null,
             null
         )
     );

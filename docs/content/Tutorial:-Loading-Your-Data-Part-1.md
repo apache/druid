@@ -85,28 +85,23 @@ config/overlord/runtime.properties
 The configurations for the overlord node are as follows:
 
 ```bash
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
+druid.host=localhost
+druid.port=8087
+druid.service=overlord
 
--Ddruid.host=localhost
--Ddruid.port=8080
--Ddruid.service=overlord
+druid.zk.service.host=localhost
 
--Ddruid.zk.service.host=localhost
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.121"]
 
--Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.121"]
+druid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
+druid.db.connector.user=druid
+druid.db.connector.password=diurd
 
--Ddruid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
--Ddruid.db.connector.user=druid
--Ddruid.db.connector.password=diurd
-
--Ddruid.selectors.indexing.serviceName=overlord
--Ddruid.indexer.queue.startDelay=PT0M
--Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
--Ddruid.indexer.fork.property.druid.processing.numThreads=1
--Ddruid.indexer.fork.property.druid.computation.buffer.size=100000000
+druid.selectors.indexing.serviceName=overlord
+druid.indexer.queue.startDelay=PT0M
+druid.indexer.runner.javaOpts="-server -Xmx256m"
+druid.indexer.fork.property.druid.processing.numThreads=1
+druid.indexer.fork.property.druid.computation.buffer.size=100000000
 ```
 
 If you are interested in reading more about these configurations, see [here](Indexing-Service.html).
