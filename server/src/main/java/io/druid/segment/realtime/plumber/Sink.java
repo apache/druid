@@ -28,11 +28,13 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
-import io.druid.segment.realtime.Schema;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -48,20 +50,23 @@ public class Sink implements Iterable<FireHydrant>
 {
   private static final Logger log = new Logger(Sink.class);
 
-  private volatile FireHydrant currIndex;
+  private volatile FireHydrant currHydrant;
 
   private final Interval interval;
-  private final Schema schema;
+  private final DataSchema schema;
+  private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
 
   public Sink(
       Interval interval,
-      Schema schema,
+      DataSchema schema,
+      RealtimeTuningConfig config,
       String version
   )
   {
     this.schema = schema;
+    this.config = config;
     this.interval = interval;
     this.version = version;
 
@@ -70,12 +75,14 @@ public class Sink implements Iterable<FireHydrant>
 
   public Sink(
       Interval interval,
-      Schema schema,
+      DataSchema schema,
+      RealtimeTuningConfig config,
       String version,
       List<FireHydrant> hydrants
   )
   {
     this.schema = schema;
+    this.config = config;
     this.interval = interval;
     this.version = version;
 
@@ -100,31 +107,35 @@ public class Sink implements Iterable<FireHydrant>
     return interval;
   }
 
-  public FireHydrant getCurrIndex()
+  public FireHydrant getCurrHydrant()
   {
-    return currIndex;
+    return currHydrant;
   }
 
   public int add(InputRow row)
   {
-    if (currIndex == null) {
-      throw new IAE("No currIndex but given row[%s]", row);
+    if (currHydrant == null) {
+      throw new IAE("No currHydrant but given row[%s]", row);
     }
 
-    synchronized (currIndex) {
-      return currIndex.getIndex().add(row);
+    synchronized (currHydrant) {
+      IncrementalIndex index = currHydrant.getIndex();
+      if (index == null) {
+        return -1; // the hydrant was swapped without being replaced
+      }
+      return index.add(row);
     }
   }
 
   public boolean isEmpty()
   {
-    synchronized (currIndex) {
-      return hydrants.size() == 1 && currIndex.getIndex().isEmpty();
+    synchronized (currHydrant) {
+      return hydrants.size() == 1 && currHydrant.getIndex().isEmpty();
     }
   }
 
   /**
-   * If currIndex is A, creates a new index B, sets currIndex to B and returns A.
+   * If currHydrant is A, creates a new index B, sets currHydrant to B and returns A.
    *
    * @return the current index after swapping in a new one
    */
@@ -135,8 +146,8 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean swappable()
   {
-    synchronized (currIndex) {
-      return currIndex.getIndex() != null && currIndex.getIndex().size() != 0;
+    synchronized (currHydrant) {
+      return currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
     }
   }
 
@@ -158,33 +169,33 @@ public class Sink implements Iterable<FireHydrant>
           }
         }
         ),
-        schema.getShardSpec(),
+        config.getShardSpec(),
         null,
         0
     );
   }
 
-  private FireHydrant makeNewCurrIndex(long minTimestamp, Schema schema)
+  private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
     IncrementalIndex newIndex = new IncrementalIndex(
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(schema.getIndexGranularity())
-            .withSpatialDimensions(schema.getSpatialDimensions())
+            .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
+            .withSpatialDimensions(schema.getParser())
             .withMetrics(schema.getAggregators())
             .build()
     );
 
     FireHydrant old;
-    if (currIndex == null) {  // Only happens on initialization, cannot synchronize on null
-      old = currIndex;
-      currIndex = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
-      hydrants.add(currIndex);
+    if (currHydrant == null) {  // Only happens on initialization, cannot synchronize on null
+      old = currHydrant;
+      currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
+      hydrants.add(currHydrant);
     } else {
-      synchronized (currIndex) {
-        old = currIndex;
-        currIndex = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
-        hydrants.add(currIndex);
+      synchronized (currHydrant) {
+        old = currHydrant;
+        currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
+        hydrants.add(currHydrant);
       }
     }
 

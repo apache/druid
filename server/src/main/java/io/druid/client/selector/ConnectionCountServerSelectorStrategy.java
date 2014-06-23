@@ -20,14 +20,11 @@
 package io.druid.client.selector;
 
 import com.google.common.primitives.Ints;
-import com.metamx.common.ISE;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 public class ConnectionCountServerSelectorStrategy implements ServerSelectorStrategy
 {
@@ -41,25 +38,8 @@ public class ConnectionCountServerSelectorStrategy implements ServerSelectorStra
   };
 
   @Override
-  public QueryableDruidServer pick(
-      TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment
-  )
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    final Map.Entry<Integer, Set<QueryableDruidServer>> highestPriorityServers = prioritizedServers.pollLastEntry();
-
-    if (highestPriorityServers == null) {
-      return null;
-    }
-
-    final Set<QueryableDruidServer> servers = highestPriorityServers.getValue();
-    final int size = servers.size();
-    switch (size) {
-      case 0:
-        throw new ISE("[%s] Something hella weird going on here. We should not be here", segment.getIdentifier());
-      case 1:
-        return highestPriorityServers.getValue().iterator().next();
-      default:
-        return Collections.min(servers, comparator);
-    }
+    return Collections.min(servers, comparator);
   }
 }

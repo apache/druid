@@ -105,8 +105,10 @@ public class QueryToolChestModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    ComplexMetrics.registerSerde("hll+", new HllPlusComplexMetricSerde());
-
+    if (ComplexMetrics.getSerdeForType("hll+") == null) {
+      ComplexMetrics.registerSerde("hll+", new HllPlusComplexMetricSerde());
+    }
+    
     MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
 
     for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : mappings.entrySet()) {

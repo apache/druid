@@ -45,7 +45,7 @@ import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskStorageConfig;
-import io.druid.indexing.common.index.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.DbTaskStorage;

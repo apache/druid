@@ -21,18 +21,15 @@ package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
 
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -47,65 +44,47 @@ public class TimeseriesQueryEngine
       );
     }
 
-    return new BaseSequence<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>(
-        new BaseSequence.IteratorMaker<Result<TimeseriesResultValue>, Iterator<Result<TimeseriesResultValue>>>()
+    return QueryRunnerHelper.makeCursorBasedQuery(
+        adapter,
+        query.getQuerySegmentSpec().getIntervals(),
+        Filters.convertDimensionFilters(query.getDimensionsFilter()),
+        query.getGranularity(),
+        new Function<Cursor, Result<TimeseriesResultValue>>()
         {
+          private final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
+          private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
+
           @Override
-          public Iterator<Result<TimeseriesResultValue>> make()
+          public Result<TimeseriesResultValue> apply(Cursor cursor)
           {
-            return QueryRunnerHelper.makeCursorBasedQuery(
-                adapter,
-                query.getQuerySegmentSpec().getIntervals(),
-                Filters.convertDimensionFilters(query.getDimensionsFilter()),
-                query.getGranularity(),
-                new Function<Cursor, Result<TimeseriesResultValue>>()
-                {
-                  private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-                  private final List<PostAggregator> postAggregatorSpecs = query.getPostAggregatorSpecs();
+            Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
 
-                  private final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
+            if (skipEmptyBuckets && cursor.isDone()) {
+              return null;
+            }
 
-                  @Override
-                  public Result<TimeseriesResultValue> apply(Cursor cursor)
-                  {
-                    Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
-
-                    if (skipEmptyBuckets && cursor.isDone()) {
-                      return null;
-                    }
-
-                    while (!cursor.isDone()) {
-                      for (Aggregator aggregator : aggregators) {
-                        aggregator.aggregate();
-                      }
-                      cursor.advance();
-                    }
-
-                    TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
-
-                    for (Aggregator aggregator : aggregators) {
-                      bob.addMetric(aggregator);
-                    }
-
-                    Result<TimeseriesResultValue> retVal = bob.build();
-
-                    // cleanup
-                    for (Aggregator agg : aggregators) {
-                      agg.close();
-                    }
-
-                    return retVal;
-                  }
+            try {
+              while (!cursor.isDone()) {
+                for (Aggregator aggregator : aggregators) {
+                  aggregator.aggregate();
                 }
-            ).iterator();
-          }
+                cursor.advance();
+              }
 
-          @Override
-          public void cleanup(Iterator<Result<TimeseriesResultValue>> toClean)
-          {
-            // https://github.com/metamx/druid/issues/128
-            while (toClean.hasNext()) {
-              toClean.next();
+              TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
+
+              for (Aggregator aggregator : aggregators) {
+                bob.addMetric(aggregator);
+              }
+
+              Result<TimeseriesResultValue> retVal = bob.build();
+              return retVal;
+            }
+            finally {
+              // cleanup
+              for (Aggregator agg : aggregators) {
+                agg.close();
+              }
             }
           }
         }

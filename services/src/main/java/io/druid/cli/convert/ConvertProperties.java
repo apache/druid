@@ -22,7 +22,7 @@ package io.druid.cli.convert;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
@@ -196,7 +196,7 @@ public class ConvertProperties implements Runnable
     }
     finally {
       if (out != null) {
-        Closeables.closeQuietly(out);
+        CloseQuietly.close(out);
       }
     }
 

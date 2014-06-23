@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
 import java.util.concurrent.Executor;
@@ -72,7 +73,7 @@ public interface ServerView
      * @return UNREGISTER if the callback has completed its work and should be unregistered.  CONTINUE if the callback
      * should remain registered.
      */
-    public CallbackAction segmentAdded(DruidServer server, DataSegment segment);
+    public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment);
 
     /**
      * Called when a segment is removed from a server.
@@ -89,19 +90,19 @@ public interface ServerView
      * @return UNREGISTER if the callback has completed its work and should be unregistered.  CONTINUE if the callback
      * should remain registered.
      */
-    public CallbackAction segmentRemoved(DruidServer server, DataSegment segment);
+    public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment);
   }
 
   public static abstract class BaseSegmentCallback implements SegmentCallback
   {
     @Override
-    public CallbackAction segmentAdded(DruidServer server, DataSegment segment)
+    public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
     {
       return CallbackAction.CONTINUE;
     }
 
     @Override
-    public CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
+    public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
     {
       return CallbackAction.CONTINUE;
     }

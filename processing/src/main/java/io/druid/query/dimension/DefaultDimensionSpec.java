@@ -77,6 +77,12 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean preservesOrdering()
+  {
+    return true;
+  }
+
+  @Override
   public String toString()
   {
     return "DefaultDimensionSpec{" +

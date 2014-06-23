@@ -2,7 +2,7 @@
   "dataSource": "wikipedia",
   "timestampSpec" : {
     "column": "timestamp",
-    "format": "iso",
+    "format": "iso"
   },
   "dataSpec": {
     "format": "json",
@@ -41,7 +41,7 @@
   "partitionsSpec": {
     "targetPartitionSize": 5000000
   },
-  "updaterJobSpec": {
+  "metadataUpdateSpec": {
     "type": "db",
     "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
     "user": "druid",

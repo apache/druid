@@ -23,10 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
@@ -56,7 +59,10 @@ public class SearchQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()))
+        new SearchQueryRunnerFactory(
+            new SearchQueryQueryToolChest(new SearchQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
     );
   }
 

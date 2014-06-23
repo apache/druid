@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
@@ -44,10 +44,10 @@ public class DruidCoordinatorBalancerTest
 {
   private static final int MAX_SEGMENTS_TO_MOVE = 5;
   private DruidCoordinator coordinator;
-  private DruidServer druidServer1;
-  private DruidServer druidServer2;
-  private DruidServer druidServer3;
-  private DruidServer druidServer4;
+  private ImmutableDruidServer druidServer1;
+  private ImmutableDruidServer druidServer2;
+  private ImmutableDruidServer druidServer3;
+  private ImmutableDruidServer druidServer4;
   private DataSegment segment1;
   private DataSegment segment2;
   private DataSegment segment3;
@@ -58,10 +58,10 @@ public class DruidCoordinatorBalancerTest
   public void setUp() throws Exception
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
-    druidServer1 = EasyMock.createMock(DruidServer.class);
-    druidServer2 = EasyMock.createMock(DruidServer.class);
-    druidServer3 = EasyMock.createMock(DruidServer.class);
-    druidServer4 = EasyMock.createMock(DruidServer.class);
+    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServer4 = EasyMock.createMock(ImmutableDruidServer.class);
     segment1 = EasyMock.createMock(DataSegment.class);
     segment2 = EasyMock.createMock(DataSegment.class);
     segment3 = EasyMock.createMock(DataSegment.class);
@@ -156,8 +156,8 @@ public class DruidCoordinatorBalancerTest
 
     // Mock stuff that the coordinator needs
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
@@ -233,8 +233,8 @@ public class DruidCoordinatorBalancerTest
 
     // Mock stuff that the coordinator needs
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );
@@ -317,8 +317,8 @@ public class DruidCoordinatorBalancerTest
 
     // Mock stuff that the coordinator needs
     coordinator.moveSegment(
-        EasyMock.<String>anyObject(),
-        EasyMock.<String>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
+        EasyMock.<ImmutableDruidServer>anyObject(),
         EasyMock.<String>anyObject(),
         EasyMock.<LoadPeonCallback>anyObject()
     );

@@ -22,7 +22,7 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.exception.FormattedException;
+import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
@@ -40,10 +40,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  */
-public class KafkaSevenFirehoseFactory implements FirehoseFactory
+public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
 {
   private static final Logger log = new Logger(KafkaSevenFirehoseFactory.class);
 
@@ -55,14 +56,13 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
   public KafkaSevenFirehoseFactory(
       @JsonProperty("consumerProps") Properties consumerProps,
       @JsonProperty("feed") String feed,
+      // backwards compatible
       @JsonProperty("parser") ByteBufferInputRowParser parser
   )
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
-    this.parser = parser;
-
-    parser.addDimensionExclusion("feed");
+    this.parser = (parser == null) ? null : parser;
   }
 
   @JsonProperty
@@ -84,8 +84,23 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
   {
+    Set<String> newDimExclus = Sets.union(
+        firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
+        Sets.newHashSet("feed")
+    );
+    final ByteBufferInputRowParser theParser = firehoseParser.withParseSpec(
+        firehoseParser.getParseSpec()
+                      .withDimensionsSpec(
+                          firehoseParser.getParseSpec()
+                                        .getDimensionsSpec()
+                                        .withDimensionExclusions(
+                                            newDimExclus
+                                        )
+                      )
+    );
+
     final ConsumerConnector connector = Consumer.createJavaConsumerConnector(new ConsumerConfig(consumerProps));
 
     final Map<String, List<KafkaStream<Message>>> streams = connector.createMessageStreams(ImmutableMap.of(feed, 1));
@@ -107,7 +122,7 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
       }
 
       @Override
-      public InputRow nextRow() throws FormattedException
+      public InputRow nextRow()
       {
         final Message message = iter.next().message();
 
@@ -118,17 +133,9 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory
         return parseMessage(message);
       }
 
-      public InputRow parseMessage(Message message) throws FormattedException
+      public InputRow parseMessage(Message message)
       {
-        try {
-          return parser.parse(message.payload());
-        }
-        catch (Exception e) {
-          throw new FormattedException.Builder()
-              .withErrorCode(FormattedException.ErrorCode.UNPARSABLE_ROW)
-              .withMessage(String.format("Error parsing[%s], got [%s]", message.payload(), e.toString()))
-              .build();
-        }
+        return theParser.parse(message.payload());
       }
 
       @Override

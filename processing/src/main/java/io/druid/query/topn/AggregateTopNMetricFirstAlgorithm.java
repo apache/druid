@@ -31,7 +31,6 @@ import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -41,7 +40,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
-  private final Comparator<?> comparator;
   private final StupidPool<ByteBuffer> bufferPool;
 
   public AggregateTopNMetricFirstAlgorithm(
@@ -52,8 +50,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   {
     this.capabilities = capabilities;
     this.query = query;
-    this.comparator = query.getTopNMetricSpec()
-                           .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
     this.bufferPool = bufferPool;
   }
 
@@ -62,7 +58,12 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       DimensionSelector dimSelector, Cursor cursor
   )
   {
-    return new TopNParams(dimSelector, cursor, dimSelector.getValueCardinality(), Integer.MAX_VALUE);
+    return new TopNParams(
+        dimSelector,
+        cursor,
+        dimSelector.getValueCardinality(),
+        Integer.MAX_VALUE
+    );
   }
 
   @Override

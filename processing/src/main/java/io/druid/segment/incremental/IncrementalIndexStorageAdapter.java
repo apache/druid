@@ -23,12 +23,13 @@ package io.druid.segment.incremental;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.Bound;
-import com.metamx.common.guava.FunctionalIterator;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -125,10 +126,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Iterable<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
+  public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
     if (index.isEmpty()) {
-      return ImmutableList.of();
+      return Sequences.empty();
     }
 
     Interval actualIntervalTmp = interval;
@@ -136,7 +137,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
     if (!actualIntervalTmp.overlaps(dataInterval)) {
-      return ImmutableList.of();
+      return Sequences.empty();
     }
 
     if (actualIntervalTmp.getStart().isBefore(dataInterval.getStart())) {
@@ -148,295 +149,295 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval actualInterval = actualIntervalTmp;
 
-    return new Iterable<Cursor>()
-    {
-      @Override
-      public Iterator<Cursor> iterator()
-      {
-        return FunctionalIterator
-            .create(gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis()).iterator())
-            .transform(
-                new Function<Long, Cursor>()
-                {
-                  EntryHolder currEntry = new EntryHolder();
-                  private final ValueMatcher filterMatcher;
+    return Sequences.map(
+        Sequences.simple(gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis())),
+        new Function<Long, Cursor>()
+        {
+          EntryHolder currEntry = new EntryHolder();
+          private final ValueMatcher filterMatcher;
 
-                  {
-                    filterMatcher = makeFilterMatcher(filter, currEntry);
+          {
+            filterMatcher = makeFilterMatcher(filter, currEntry);
+          }
+
+          @Override
+          public Cursor apply(@Nullable final Long input)
+          {
+            final long timeStart = Math.max(input, actualInterval.getStartMillis());
+
+            return new Cursor()
+            {
+              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]>> baseIter;
+              private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Aggregator[]> cursorMap;
+              final DateTime time;
+              int numAdvanced = -1;
+              boolean done;
+
+              {
+                cursorMap = index.getSubMap(
+                    new IncrementalIndex.TimeAndDims(
+                        timeStart, new String[][]{}
+                    ),
+                    new IncrementalIndex.TimeAndDims(
+                        Math.min(actualInterval.getEndMillis(), gran.next(input)), new String[][]{}
+                    )
+                );
+                time = gran.toDateTime(input);
+
+                reset();
+              }
+
+              @Override
+              public DateTime getTime()
+              {
+                return time;
+              }
+
+              @Override
+              public void advance()
+              {
+                if (!baseIter.hasNext()) {
+                  done = true;
+                  return;
+                }
+
+                while (baseIter.hasNext()) {
+                  if (Thread.interrupted()) {
+                    throw new QueryInterruptedException();
                   }
 
+                  currEntry.set(baseIter.next());
+
+                  if (filterMatcher.matches()) {
+                    return;
+                  }
+                }
+
+                if (!filterMatcher.matches()) {
+                  done = true;
+                }
+              }
+
+              @Override
+              public void advanceTo(int offset)
+              {
+                int count = 0;
+                while (count < offset && !isDone()) {
+                  advance();
+                  count++;
+                }
+              }
+
+              @Override
+              public boolean isDone()
+              {
+                return done;
+              }
+
+              @Override
+              public void reset()
+              {
+                baseIter = cursorMap.entrySet().iterator();
+
+                if (numAdvanced == -1) {
+                  numAdvanced = 0;
+                } else {
+                  Iterators.advance(baseIter, numAdvanced);
+                }
+
+                if (Thread.interrupted()) {
+                  throw new QueryInterruptedException();
+                }
+
+                boolean foundMatched = false;
+                while (baseIter.hasNext()) {
+                  currEntry.set(baseIter.next());
+                  if (filterMatcher.matches()) {
+                    foundMatched = true;
+                    break;
+                  }
+
+                  numAdvanced++;
+                }
+
+                done = !foundMatched && (cursorMap.size() == 0 || !baseIter.hasNext());
+              }
+
+              @Override
+              public TimestampColumnSelector makeTimestampColumnSelector()
+              {
+                return new TimestampColumnSelector()
+                {
                   @Override
-                  public Cursor apply(@Nullable final Long input)
+                  public long getTimestamp()
                   {
-                    final long timeStart = Math.max(input, actualInterval.getStartMillis());
+                    return currEntry.getKey().getTimestamp();
+                  }
+                };
+              }
 
-                    return new Cursor()
+              @Override
+              public DimensionSelector makeDimensionSelector(String dimension)
+              {
+                final String dimensionName = dimension.toLowerCase();
+                final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimensionName);
+                if (dimValLookup == null) {
+                  return new NullDimensionSelector();
+                }
+
+                final int maxId = dimValLookup.size();
+                final int dimIndex = index.getDimensionIndex(dimensionName);
+
+                return new DimensionSelector()
+                {
+                  @Override
+                  public IndexedInts getRow()
+                  {
+                    final ArrayList<Integer> vals = Lists.newArrayList();
+                    if (dimIndex < currEntry.getKey().getDims().length) {
+                      final String[] dimVals = currEntry.getKey().getDims()[dimIndex];
+                      if (dimVals != null) {
+                        for (String dimVal : dimVals) {
+                          int id = dimValLookup.getId(dimVal);
+                          if (id < maxId) {
+                            vals.add(id);
+                          }
+                        }
+                      }
+                    }
+
+                    return new IndexedInts()
                     {
-                      private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]>> baseIter;
-                      private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Aggregator[]> cursorMap;
-                      final DateTime time;
-                      int numAdvanced = -1;
-                      boolean done;
-
+                      @Override
+                      public int size()
                       {
-                        cursorMap = index.getSubMap(
-                            new IncrementalIndex.TimeAndDims(
-                                timeStart, new String[][]{}
-                            ),
-                            new IncrementalIndex.TimeAndDims(
-                                Math.min(actualInterval.getEndMillis(), gran.next(input)), new String[][]{}
-                            )
-                        );
-                        time = gran.toDateTime(input);
-
-                        reset();
+                        return vals.size();
                       }
 
                       @Override
-                      public DateTime getTime()
+                      public int get(int index)
                       {
-                        return time;
+                        return vals.get(index);
                       }
 
                       @Override
-                      public void advance()
+                      public Iterator<Integer> iterator()
                       {
-                        if (!baseIter.hasNext()) {
-                          done = true;
-                          return;
-                        }
-
-                        while (baseIter.hasNext()) {
-                          currEntry.set(baseIter.next());
-
-                          if (filterMatcher.matches()) {
-                            return;
-                          }
-                        }
-
-                        if (!filterMatcher.matches()) {
-                          done = true;
-                        }
-                      }
-
-                      @Override
-                      public void advanceTo(int offset)
-                      {
-                        int count = 0;
-                        while (count < offset && !isDone()) {
-                          advance();
-                          count++;
-                        }
-                      }
-
-                      @Override
-                      public boolean isDone()
-                      {
-                        return done;
-                      }
-
-                      @Override
-                      public void reset()
-                      {
-                        baseIter = cursorMap.entrySet().iterator();
-
-                        if (numAdvanced == -1) {
-                          numAdvanced = 0;
-                        } else {
-                          Iterators.advance(baseIter, numAdvanced);
-                        }
-
-                        boolean foundMatched = false;
-                        while (baseIter.hasNext()) {
-                          currEntry.set(baseIter.next());
-                          if (filterMatcher.matches()) {
-                            foundMatched = true;
-                            break;
-                          }
-
-                          numAdvanced++;
-                        }
-
-                        done = !foundMatched && (cursorMap.size() == 0 || !baseIter.hasNext());
-                      }
-
-                      @Override
-                      public TimestampColumnSelector makeTimestampColumnSelector()
-                      {
-                        return new TimestampColumnSelector()
-                        {
-                          @Override
-                          public long getTimestamp()
-                          {
-                            return currEntry.getKey().getTimestamp();
-                          }
-                        };
-                      }
-
-                      @Override
-                      public DimensionSelector makeDimensionSelector(String dimension)
-                      {
-                        final String dimensionName = dimension.toLowerCase();
-                        final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimensionName);
-                        if (dimValLookup == null) {
-                          return new NullDimensionSelector();
-                        }
-
-                        final int maxId = dimValLookup.size();
-                        final int dimIndex = index.getDimensionIndex(dimensionName);
-
-                        return new DimensionSelector()
-                        {
-                          @Override
-                          public IndexedInts getRow()
-                          {
-                            final ArrayList<Integer> vals = Lists.newArrayList();
-                            if (dimIndex < currEntry.getKey().getDims().length) {
-                              final String[] dimVals = currEntry.getKey().getDims()[dimIndex];
-                              if (dimVals != null) {
-                                for (String dimVal : dimVals) {
-                                  int id = dimValLookup.getId(dimVal);
-                                  if (id < maxId) {
-                                    vals.add(id);
-                                  }
-                                }
-                              }
-                            }
-
-                            return new IndexedInts()
-                            {
-                              @Override
-                              public int size()
-                              {
-                                return vals.size();
-                              }
-
-                              @Override
-                              public int get(int index)
-                              {
-                                return vals.get(index);
-                              }
-
-                              @Override
-                              public Iterator<Integer> iterator()
-                              {
-                                return vals.iterator();
-                              }
-                            };
-                          }
-
-                          @Override
-                          public int getValueCardinality()
-                          {
-                            return maxId;
-                          }
-
-                          @Override
-                          public String lookupName(int id)
-                          {
-                            return dimValLookup.getValue(id);
-                          }
-
-                          @Override
-                          public int lookupId(String name)
-                          {
-                            return dimValLookup.getId(name);
-                          }
-                        };
-                      }
-
-                      @Override
-                      public FloatColumnSelector makeFloatColumnSelector(String columnName)
-                      {
-                        final String metricName = columnName.toLowerCase();
-                        final Integer metricIndexInt = index.getMetricIndex(metricName);
-                        if (metricIndexInt == null) {
-                          return new FloatColumnSelector()
-                          {
-                            @Override
-                            public float get()
-                            {
-                              return 0.0f;
-                            }
-                          };
-                        }
-
-                        final int metricIndex = metricIndexInt;
-
-                        return new FloatColumnSelector()
-                        {
-                          @Override
-                          public float get()
-                          {
-                            return currEntry.getValue()[metricIndex].getFloat();
-                          }
-                        };
-                      }
-
-                      @Override
-                      public ObjectColumnSelector makeObjectColumnSelector(String column)
-                      {
-                        final String columnName = column.toLowerCase();
-                        final Integer metricIndexInt = index.getMetricIndex(columnName);
-
-                        if (metricIndexInt != null) {
-                          final int metricIndex = metricIndexInt;
-
-                          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
-
-                          return new ObjectColumnSelector()
-                          {
-                            @Override
-                            public Class classOfObject()
-                            {
-                              return serde.getObjectStrategy().getClazz();
-                            }
-
-                            @Override
-                            public Object get()
-                            {
-                              return currEntry.getValue()[metricIndex].get();
-                            }
-                          };
-                        }
-
-                        final Integer dimensionIndexInt = index.getDimensionIndex(columnName);
-
-                        if (dimensionIndexInt != null) {
-                          final int dimensionIndex = dimensionIndexInt;
-                          return new ObjectColumnSelector<String>()
-                          {
-                            @Override
-                            public Class classOfObject()
-                            {
-                              return String.class;
-                            }
-
-                            @Override
-                            public String get()
-                            {
-                              final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
-                              if (dimVals == null || dimVals.length == 0) {
-                                return null;
-                              }
-                              if (dimVals.length == 1) {
-                                return dimVals[0];
-                              }
-                              throw new UnsupportedOperationException(
-                                  "makeObjectColumnSelector does not support multivalued columns"
-                              );
-                            }
-                          };
-                        }
-
-                        return null;
+                        return vals.iterator();
                       }
                     };
                   }
+
+                  @Override
+                  public int getValueCardinality()
+                  {
+                    return maxId;
+                  }
+
+                  @Override
+                  public String lookupName(int id)
+                  {
+                    return dimValLookup.getValue(id);
+                  }
+
+                  @Override
+                  public int lookupId(String name)
+                  {
+                    return dimValLookup.getId(name);
+                  }
+                };
+              }
+
+              @Override
+              public FloatColumnSelector makeFloatColumnSelector(String columnName)
+              {
+                final String metricName = columnName.toLowerCase();
+                final Integer metricIndexInt = index.getMetricIndex(metricName);
+                if (metricIndexInt == null) {
+                  return new FloatColumnSelector()
+                  {
+                    @Override
+                    public float get()
+                    {
+                      return 0.0f;
+                    }
+                  };
                 }
-            );
-      }
-    };
+
+                final int metricIndex = metricIndexInt;
+
+                return new FloatColumnSelector()
+                {
+                  @Override
+                  public float get()
+                  {
+                    return currEntry.getValue()[metricIndex].getFloat();
+                  }
+                };
+              }
+
+              @Override
+              public ObjectColumnSelector makeObjectColumnSelector(String column)
+              {
+                final String columnName = column.toLowerCase();
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
+
+                if (metricIndexInt != null) {
+                  final int metricIndex = metricIndexInt;
+
+                  final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
+
+                  return new ObjectColumnSelector()
+                  {
+                    @Override
+                    public Class classOfObject()
+                    {
+                      return serde.getObjectStrategy().getClazz();
+                    }
+
+                    @Override
+                    public Object get()
+                    {
+                      return currEntry.getValue()[metricIndex].get();
+                    }
+                  };
+                }
+
+                final Integer dimensionIndexInt = index.getDimensionIndex(columnName);
+
+                if (dimensionIndexInt != null) {
+                  final int dimensionIndex = dimensionIndexInt;
+                  return new ObjectColumnSelector<Object>()
+                  {
+                    @Override
+                    public Class classOfObject()
+                    {
+                      return Object.class;
+                    }
+
+                    @Override
+                    public Object get()
+                    {
+                      final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
+                      if (dimVals.length == 1) {
+                        return dimVals[0];
+                      }
+                      else if (dimVals.length == 0) {
+                        return null;
+                      }
+                      else {
+                        return dimVals;
+                      }
+                    }
+                  };
+                }
+
+                return null;
+              }
+            };
+          }
+        }
+    );
   }
 
   private ValueMatcher makeFilterMatcher(final Filter filter, final EntryHolder holder)

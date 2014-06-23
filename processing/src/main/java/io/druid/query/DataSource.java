@@ -24,15 +24,18 @@ package io.druid.query;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import java.util.List;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME,
               include = JsonTypeInfo.As.PROPERTY,
               property = "type",
               defaultImpl = LegacyDataSource.class)
 @JsonSubTypes({
                   @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
-                  @JsonSubTypes.Type(value = QueryDataSource.class, name = "query")
+                  @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
+                  @JsonSubTypes.Type(value = UnionDataSource.class, name = "union")
               })
 public interface DataSource
 {
-  public String getName();
+  public List<String> getNames();
 }

@@ -137,7 +137,8 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     }
 
     if (brokerServiceName == null) {
-      List<Rule> rules = ruleManager.getRulesWithDefault((query.getDataSource()).getName());
+      // For Union Queries tier will be selected on the rules for first dataSource.
+      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
 
       // find the rule that can apply to the entire set of intervals
       DateTime now = new DateTime();

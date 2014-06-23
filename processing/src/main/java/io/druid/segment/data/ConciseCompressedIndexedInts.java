@@ -123,8 +123,9 @@ public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<Con
     @Override
     public ImmutableConciseSet fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-      buffer.limit(buffer.position() + numBytes);
-      return new ImmutableConciseSet(buffer.asReadOnlyBuffer());
+      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+      return new ImmutableConciseSet(readOnlyBuffer);
     }
 
     @Override

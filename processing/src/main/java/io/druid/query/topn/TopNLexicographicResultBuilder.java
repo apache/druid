@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
@@ -40,6 +39,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String previousStop;
+  private final Comparator comparator;
   private final List<AggregatorFactory> aggFactories;
   private MinMaxPriorityQueue<DimValHolder> pQueue = null;
 
@@ -55,6 +55,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.previousStop = previousStop;
+    this.comparator = comparator;
     this.aggFactories = aggFactories;
 
     instantiatePQueue(threshold, comparator);
@@ -69,7 +70,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   {
     Map<String, Object> metricValues = Maps.newLinkedHashMap();
 
-    if (dimName.compareTo(previousStop) > 0) {
+    if (comparator.compare(dimName, previousStop) > 0) {
       metricValues.put(dimSpec.getOutputName(), dimName);
       Iterator<AggregatorFactory> aggsIter = aggFactories.iterator();
       for (Object metricVal : metricVals) {

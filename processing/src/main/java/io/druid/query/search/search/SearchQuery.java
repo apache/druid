@@ -112,6 +112,22 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @Override
+  public Query<Result<SearchResultValue>> withDataSource(DataSource dataSource)
+  {
+    return new SearchQuery(
+        dataSource,
+        dimFilter,
+        granularity,
+        limit,
+        getQuerySegmentSpec(),
+        dimensions,
+        querySpec,
+        sortSpec,
+        getContext()
+    );
+  }
+
+  @Override
   public SearchQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return new SearchQuery(

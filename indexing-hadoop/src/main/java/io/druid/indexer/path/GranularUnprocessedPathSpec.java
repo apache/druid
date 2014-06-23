@@ -26,8 +26,8 @@ import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.indexer.hadoop.FSSpideringIterator;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -72,7 +72,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
 
     final Path betaInput = new Path(getInputPath());
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
-    final Granularity segmentGranularity = ((UniformGranularitySpec) config.getGranularitySpec()).getGranularity();
+    final Granularity segmentGranularity = ((UniformGranularitySpec) config.getGranularitySpec()).getSegmentGranularity();
 
     Map<DateTime, Long> inputModifiedTimes = new TreeMap<DateTime, Long>(
         Comparators.inverse(Comparators.<Comparable>comparable())
@@ -93,7 +93,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
 
       String bucketOutput = String.format(
           "%s/%s",
-          config.getSegmentOutputPath(),
+          config.getSchema().getIOConfig().getSegmentOutputPath(),
           segmentGranularity.toPath(timeBucket)
       );
       for (FileStatus fileStatus : FSSpideringIterator.spiderIterable(fs, new Path(bucketOutput))) {
@@ -108,7 +108,14 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
       }
     }
 
-    config.setGranularitySpec(new UniformGranularitySpec(segmentGranularity, Lists.newArrayList(bucketsToRun)));
+    config.setGranularitySpec(
+        new UniformGranularitySpec(
+            segmentGranularity,
+            config.getGranularitySpec().getQueryGranularity(),
+            Lists.newArrayList(bucketsToRun),
+            segmentGranularity
+        )
+    );
 
     return super.addInputPaths(config, job);
   }

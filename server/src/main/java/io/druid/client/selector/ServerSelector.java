@@ -37,11 +37,11 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   private final Set<QueryableDruidServer> servers = Sets.newHashSet();
 
   private final DataSegment segment;
-  private final ServerSelectorStrategy strategy;
+  private final TierSelectorStrategy strategy;
 
   public ServerSelector(
       DataSegment segment,
-      ServerSelectorStrategy strategy
+      TierSelectorStrategy strategy
   )
   {
     this.segment = segment;
@@ -79,7 +79,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
   public QueryableDruidServer pick()
   {
     synchronized (this) {
-      TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers = Maps.newTreeMap();
+      final TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers = new TreeMap<>(strategy.getComparator());
       for (QueryableDruidServer server : servers) {
         Set<QueryableDruidServer> theServers = prioritizedServers.get(server.getServer().getPriority());
         if (theServers == null) {

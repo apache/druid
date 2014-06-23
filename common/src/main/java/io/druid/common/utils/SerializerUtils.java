@@ -46,13 +46,8 @@ public class SerializerUtils
 
   public void writeString(OutputSupplier<? extends OutputStream> supplier, String name) throws IOException
   {
-    OutputStream out = null;
-    try {
-      out = supplier.getOutput();
+    try (OutputStream out = supplier.getOutput()) {
       writeString(out, name);
-    }
-    finally {
-      Closeables.closeQuietly(out);
     }
   }
 

@@ -92,7 +92,9 @@ public class HyperUniquesSerde extends ComplexMetricSerde
           }
 
           for (String dimensionValue : dimValues) {
-            collector.add(hashFn.hashBytes(dimensionValue.getBytes(Charsets.UTF_8)).asBytes());
+            collector.add(
+                hashFn.hashBytes(dimensionValue.getBytes(Charsets.UTF_8)).asBytes()
+            );
           }
           return collector;
         }
@@ -126,8 +128,9 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       @Override
       public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        buffer.limit(buffer.position() + numBytes);
-        return HyperLogLogCollector.makeCollector(buffer);
+        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+        return HyperLogLogCollector.makeCollector(readOnlyBuffer);
       }
 
       @Override

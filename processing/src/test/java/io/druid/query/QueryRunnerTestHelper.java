@@ -19,12 +19,16 @@
 
 package io.druid.query;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -41,6 +45,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,8 +55,31 @@ import java.util.List;
  */
 public class QueryRunnerTestHelper
 {
+
+  public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
+  {
+    @Override
+    public void registerQuery(Query query, ListenableFuture future)
+    {
+
+    }
+  };
+
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
+  public static final UnionDataSource unionDataSource = new UnionDataSource(
+      Lists.transform(
+          Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), new Function<String, TableDataSource>()
+      {
+        @Nullable
+        @Override
+        public TableDataSource apply(@Nullable String input)
+        {
+          return new TableDataSource(input);
+        }
+      }
+      )
+  );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
   public static final String providerDimension = "proVider";
@@ -65,9 +93,28 @@ public class QueryRunnerTestHelper
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
+      "nindex",
+      Arrays.asList("placementish", "index"),
+      "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
+      "function reset() { return 0; }",
+      "function combine(a, b) { return a + b; }"
+  );
+  public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
+      "pishcount",
+      Arrays.asList("placementish", "index"),
+      "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
+      "function reset() { return 0; }",
+      "function combine(a, b) { return a + b; }"
+  );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
       "quality_uniques"
+  );
+  public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
+      "cardinality",
+      Arrays.asList("quality"),
+      false
   );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
@@ -165,6 +212,30 @@ public class QueryRunnerTestHelper
     );
   }
 
+  @SuppressWarnings("unchecked")
+  public static Collection<?> makeUnionQueryRunners(
+      QueryRunnerFactory factory
+  )
+      throws IOException
+  {
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    return Arrays.asList(
+        new Object[][]{
+            {
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
+            },
+            {
+                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
+            },
+            {
+                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            }
+        }
+    );
+  }
+
   public static <T> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
       Segment adapter
@@ -174,6 +245,27 @@ public class QueryRunnerTestHelper
         new BySegmentQueryRunner<T>(
             segmentId, adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
+        ),
+        factory.getToolchest()
+    );
+  }
+
+  public static <T> QueryRunner<T> makeUnionQueryRunner(
+      QueryRunnerFactory<T, Query<T>> factory,
+      Segment adapter
+  )
+  {
+    return new FinalizeResultsQueryRunner<T>(
+        factory.getToolchest().postMergeQueryDecoration(
+            factory.getToolchest().mergeResults(
+                new UnionQueryRunner<T>(
+                    new BySegmentQueryRunner<T>(
+                        segmentId, adapter.getDataInterval().getStart(),
+                        factory.createRunner(adapter)
+                    ),
+                    factory.getToolchest()
+                )
+            )
         ),
         factory.getToolchest()
     );

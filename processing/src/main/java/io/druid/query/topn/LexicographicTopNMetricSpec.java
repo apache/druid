@@ -43,6 +43,13 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
     @Override
     public int compare(String s, String s2)
     {
+      // null first
+      if (s == null) {
+        return -1;
+      }
+      if (s2 == null) {
+        return 1;
+      }
       return UnsignedBytes.lexicographicalComparator().compare(s.getBytes(Charsets.UTF_8), s2.getBytes(Charsets.UTF_8));
     }
   };
@@ -54,7 +61,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       @JsonProperty("previousStop") String previousStop
   )
   {
-    this.previousStop = (previousStop == null) ? "" : previousStop;
+    this.previousStop = previousStop;
   }
 
   @Override
@@ -85,13 +92,20 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       List<PostAggregator> postAggs
   )
   {
-    return new TopNLexicographicResultBuilder(timestamp, dimSpec, threshold, previousStop, comparator, aggFactories);
+    return new TopNLexicographicResultBuilder(
+        timestamp,
+        dimSpec,
+        threshold,
+        previousStop,
+        comparator,
+        aggFactories
+    );
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] previousStopBytes = previousStop.getBytes(Charsets.UTF_8);
+    byte[] previousStopBytes = previousStop == null ? new byte[]{} : previousStop.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + previousStopBytes.length)
                      .put(CACHE_TYPE_ID)
@@ -120,6 +134,12 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   }
 
   @Override
+  public boolean canBeOptimizedUnordered()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "LexicographicTopNMetricSpec{" +
@@ -130,12 +150,18 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     LexicographicTopNMetricSpec that = (LexicographicTopNMetricSpec) o;
 
-    if (previousStop != null ? !previousStop.equals(that.previousStop) : that.previousStop != null) return false;
+    if (previousStop != null ? !previousStop.equals(that.previousStop) : that.previousStop != null) {
+      return false;
+    }
 
     return true;
   }

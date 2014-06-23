@@ -68,6 +68,12 @@ public class RegexDimExtractionFn implements DimExtractionFn
   }
 
   @Override
+  public boolean preservesOrdering()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("regex(%s)", expr);

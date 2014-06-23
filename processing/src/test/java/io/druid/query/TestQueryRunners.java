@@ -1,11 +1,14 @@
 package io.druid.query;
 
 import com.google.common.base.Supplier;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
+import io.druid.query.timeseries.TimeseriesQueryEngine;
+import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
@@ -40,7 +43,11 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new TopNQueryRunnerFactory(pool, new TopNQueryQueryToolChest(topNConfig));
+    QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+        pool,
+        new TopNQueryQueryToolChest(topNConfig),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
@@ -51,7 +58,12 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = TimeseriesQueryRunnerFactory.create();
+    QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
+        new TimeseriesQueryQueryToolChest(new QueryConfig()),
+        new TimeseriesQueryEngine(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
+
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
@@ -62,7 +74,7 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()));
+    QueryRunnerFactory factory = new SearchQueryRunnerFactory(new SearchQueryQueryToolChest(new SearchQueryConfig()), QueryRunnerTestHelper.NOOP_QUERYWATCHER);
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
@@ -73,11 +85,10 @@ public class TestQueryRunners
       Segment adapter
   )
   {
-    QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory();
+    QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER);
     return new FinalizeResultsQueryRunner<T>(
         factory.createRunner(adapter),
         factory.getToolchest()
     );
   }
-
 }

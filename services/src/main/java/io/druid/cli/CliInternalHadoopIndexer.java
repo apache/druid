@@ -26,20 +26,19 @@ import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.HadoopDruidIndexerConfigBuilder;
 import io.druid.indexer.HadoopDruidIndexerJob;
+import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  */
 @Command(
     name = "hadoop-indexer",
-    description = "Runs the batch Hadoop Druid Indexer, see https://github.com/metamx/druid/wiki/Batch-ingestion for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/latest/Batch-ingestion.html for a description."
 )
 public class CliInternalHadoopIndexer implements Runnable
 {
@@ -66,10 +65,11 @@ public class CliInternalHadoopIndexer implements Runnable
   public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
   {
     try {
+      HadoopIngestionSpec spec;
       if (argumentSpec.startsWith("{")) {
-        return HadoopDruidIndexerConfigBuilder.fromString(argumentSpec);
+        return HadoopDruidIndexerConfig.fromString(argumentSpec);
       } else {
-        return HadoopDruidIndexerConfigBuilder.fromFile(new File(argumentSpec));
+        return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
       }
     }
     catch (Exception e) {

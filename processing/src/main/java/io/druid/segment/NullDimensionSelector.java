@@ -1,14 +1,35 @@
 package io.druid.segment;
 
+import com.google.common.collect.Iterators;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.SingleIndexedInts;
+
+import java.util.Iterator;
 
 public class NullDimensionSelector implements DimensionSelector
 {
   @Override
   public IndexedInts getRow()
   {
-    return new SingleIndexedInts(0);
+    return new IndexedInts()
+    {
+      @Override
+      public int size()
+      {
+        return 1;
+      }
+
+      @Override
+      public int get(int index)
+      {
+        return 0;
+      }
+
+      @Override
+      public Iterator<Integer> iterator()
+      {
+        return Iterators.singletonIterator(0);
+      }
+    };
   }
 
   @Override

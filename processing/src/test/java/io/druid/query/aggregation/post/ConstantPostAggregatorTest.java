@@ -56,7 +56,6 @@ public class ConstantPostAggregatorTest
   @Test
   public void testSerdeBackwardsCompatible() throws Exception
   {
-
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     ConstantPostAggregator aggregator = mapper.readValue(
         "{\"type\":\"constant\",\"name\":\"thistestbasicallydoesnothing unhappyface\",\"constantValue\":1}\n",
@@ -68,7 +67,6 @@ public class ConstantPostAggregatorTest
   @Test
   public void testSerde() throws Exception
   {
-
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     ConstantPostAggregator aggregator = new ConstantPostAggregator("aggregator", 2, null);
     ConstantPostAggregator aggregator1 = mapper.readValue(

@@ -22,8 +22,8 @@ package io.druid.segment;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
@@ -208,10 +208,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           {
             final boolean hasNext = currRow < numRows;
             if (!hasNext && !done) {
-              Closeables.closeQuietly(timestamps);
+              CloseQuietly.close(timestamps);
               for (Object metric : metrics) {
                 if (metric instanceof Closeable) {
-                  Closeables.closeQuietly((Closeable) metric);
+                  CloseQuietly.close((Closeable) metric);
                 }
               }
               done = true;

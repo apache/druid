@@ -26,7 +26,8 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.LineProcessor;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.impl.DelimitedDataSpec;
+import io.druid.data.input.impl.DelimitedParseSpec;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
@@ -34,6 +35,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -175,9 +177,14 @@ public class TestIndex
           new LineProcessor<Integer>()
           {
             StringInputRowParser parser = new StringInputRowParser(
-                new TimestampSpec("ts", "iso"),
-                new DelimitedDataSpec("\t", Arrays.asList(COLUMNS), Arrays.asList(DIMENSIONS), null),
-                Arrays.<String>asList()
+                new DelimitedParseSpec(
+                    new TimestampSpec("ts", "iso"),
+                    new DimensionsSpec(Arrays.asList(DIMENSIONS), null, null),
+                    "\t",
+                    "\u0001",
+                    Arrays.asList(COLUMNS)
+                ),
+                null, null, null, null
             );
             boolean runOnce = false;
             int lineCount = 0;

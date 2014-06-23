@@ -28,6 +28,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.InputRowParser;
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.HashtagEntity;
 import twitter4j.StallWarning;
@@ -82,7 +83,7 @@ import static java.lang.Thread.sleep;
  * @author pbaclace
  */
 @JsonTypeName("twitzer")
-public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
+public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowParser> {
   private static final Logger log = new Logger(TwitterSpritzerFirehoseFactory.class);
   /**
    * max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent
@@ -111,7 +112,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(InputRowParser parser) throws IOException
   {
     final ConnectionLifeCycleListener connectionLifeCycleListener = new ConnectionLifeCycleListener() {
       @Override
@@ -315,5 +316,11 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory {
         twitterStream.shutdown(); // invokes twitterStream.cleanUp()
       }
     };
+  }
+
+  @Override
+  public InputRowParser getParser()
+  {
+    return null;
   }
 }

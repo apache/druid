@@ -94,7 +94,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * );
  * }</pre>
  */
-public class IrcFirehoseFactory implements FirehoseFactory
+public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
 {
   private static final Logger log = new Logger(IrcFirehoseFactory.class);
 
@@ -102,6 +102,7 @@ public class IrcFirehoseFactory implements FirehoseFactory
   private final String host;
   private final List<String> channels;
   private final IrcDecoder decoder;
+  private final IrcParser parser;
 
   @JsonCreator
   public IrcFirehoseFactory(
@@ -115,10 +116,35 @@ public class IrcFirehoseFactory implements FirehoseFactory
     this.host = host;
     this.channels = channels;
     this.decoder = decoder;
+    this.parser = new IrcParser(decoder);
+  }
+
+  @JsonProperty
+  public String getNick()
+  {
+    return nick;
+  }
+
+  @JsonProperty
+  public String getHost()
+  {
+    return host;
+  }
+
+  @JsonProperty
+  public List<String> getChannels()
+  {
+    return channels;
+  }
+
+  @JsonProperty
+  public IrcDecoder getDecoder()
+  {
+    return decoder;
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(final IrcParser firehoseParser) throws IOException
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -201,7 +227,7 @@ public class IrcFirehoseFactory implements FirehoseFactory
           while(true) {
             Pair<DateTime, ChannelPrivMsg> nextMsg = queue.take();
             try {
-              nextRow = decoder.decodeMessage(nextMsg.lhs, nextMsg.rhs.getChannelName(), nextMsg.rhs.getText());
+              nextRow = firehoseParser.parse(nextMsg);
               if(nextRow != null) return true;
             }
             catch (IllegalArgumentException iae) {
@@ -241,6 +267,12 @@ public class IrcFirehoseFactory implements FirehoseFactory
         irc.disconnect("");
       }
     };
+  }
+
+  @Override
+  public IrcParser getParser()
+  {
+    return parser;
   }
 }
 

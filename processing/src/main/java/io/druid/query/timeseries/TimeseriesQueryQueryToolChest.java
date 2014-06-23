@@ -33,6 +33,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
@@ -122,7 +123,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4("timeseries")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -229,7 +230,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(runner, config.getChunkPeriod());
+    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(
+        runner,
+        config.getChunkPeriod()
+
+    );
   }
 
   public Ordering<Result<TimeseriesResultValue>> getOrdering()

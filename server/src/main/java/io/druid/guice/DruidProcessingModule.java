@@ -33,10 +33,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
-import io.druid.server.DruidProcessingConfig;
-import io.druid.server.VMUtils;
+import io.druid.common.utils.VMUtils;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
@@ -86,8 +86,8 @@ public class DruidProcessingModule implements Module
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
             String.format(
-                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.computation.buffer.size, or druid.processing.numThreads: "
-                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.computation.buffer.size[%,d] * ( druid.processing.numThreads[%,d] + 1 )",
+                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, or druid.processing.numThreads: "
+                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * ( druid.processing.numThreads[%,d] + 1 )",
                 maxDirectMemory,
                 memoryNeeded,
                 config.intermediateComputeSizeBytes(),

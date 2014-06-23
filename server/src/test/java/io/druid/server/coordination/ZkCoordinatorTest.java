@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
@@ -117,7 +119,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
         me,
         announcer,
         curator,
-        serverManager
+        serverManager,
+        ScheduledExecutors.createFactory(new Lifecycle())
     );
   }
 

@@ -42,8 +42,13 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.ArithmeticPostAggregator;
+import io.druid.query.aggregation.post.ConstantPostAggregator;
+import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
@@ -52,6 +57,7 @@ import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
+import io.druid.query.groupby.having.HavingSpec;
 import io.druid.query.groupby.having.OrHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.LimitSpec;
@@ -113,6 +119,7 @@ public class GroupByQueryRunnerTest
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         engine,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
         new GroupByQueryQueryToolChest(configSupplier, engine)
     );
@@ -202,6 +209,36 @@ public class GroupByQueryRunnerTest
             "rows",
             26L,
             "uniques",
+            QueryRunnerTestHelper.UNIQUES_9
+        )
+    );
+
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithCardinality()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.qualityCardinality
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow(
+            "2011-04-01",
+            "rows",
+            26L,
+            "cardinality",
             QueryRunnerTestHelper.UNIQUES_9
         )
     );
@@ -1026,6 +1063,278 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = runQuery(query);
     Assert.assertFalse(results.iterator().hasNext());
+  }
+
+  @Test
+  public void testSubqueryWithPostAggregators()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx_subagg", "index")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "idx_subpostagg", "+", Arrays.<PostAggregator>asList(
+                    new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
+                    new ConstantPostAggregator("thousand", 1000, 1000)
+                )
+                )
+
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongSumAggregatorFactory("rows", "rows"),
+                new LongSumAggregatorFactory("idx", "idx_subpostagg")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "idx", "+", Arrays.asList(
+                    new FieldAccessPostAggregator("the_idx_agg", "idx"),
+                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                )
+                )
+
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 11135.0),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 11118.0),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0),
+        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 13870.0),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0),
+        createExpectedRow("2011-04-01", "alias", "premium", "rows", 3L, "idx", 13900.0),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0),
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0),
+
+        createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 11147.0),
+        createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 11112.0),
+        createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 11166.0),
+        createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 11113.0),
+        createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 13447.0),
+        createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 11114.0),
+        createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 13505.0),
+        createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 11097.0),
+        createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 11126.0)
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testSubqueryWithPostAggregatorsAndHaving()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx_subagg", "index")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "idx_subpostagg",
+                    "+",
+                    Arrays.asList(
+                        new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
+                        new ConstantPostAggregator("thousand", 1000, 1000)
+                    )
+                )
+
+            )
+        )
+        .setHavingSpec(
+            new HavingSpec()
+            {
+              @Override
+              public boolean eval(Row row)
+              {
+                return (row.getFloatMetric("idx_subpostagg") < 3800);
+              }
+            }
+        )
+        .addOrderByColumn("alias")
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongSumAggregatorFactory("rows", "rows"),
+                new LongSumAggregatorFactory("idx", "idx_subpostagg")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "idx", "+", Arrays.asList(
+                    new FieldAccessPostAggregator("the_idx_agg", "idx"),
+                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                )
+                )
+
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 11135.0),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 1L, "idx", 11118.0),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0),
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0),
+
+        createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 11147.0),
+        createExpectedRow("2011-04-02", "alias", "business", "rows", 1L, "idx", 11112.0),
+        createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 11166.0),
+        createExpectedRow("2011-04-02", "alias", "health", "rows", 1L, "idx", 11113.0),
+        createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 13447.0),
+        createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 11114.0),
+        createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 13505.0),
+        createExpectedRow("2011-04-02", "alias", "technology", "rows", 1L, "idx", 11097.0),
+        createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 11126.0)
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testSubqueryWithMultiColumnAggregators()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimFilter(new JavaScriptDimFilter("provider", "function(dim){ return true; }"))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new DoubleSumAggregatorFactory("idx_subagg", "index"),
+                new JavaScriptAggregatorFactory(
+                    "js_agg",
+                    Arrays.asList("index", "provider"),
+                    "function(current, index, dim){return current + index + dim.length;}",
+                    "function(){return 0;}",
+                    "function(a,b){return a + b;}"
+                )
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "idx_subpostagg",
+                    "+",
+                    Arrays.asList(
+                        new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
+                        new ConstantPostAggregator("thousand", 1000, 1000)
+                    )
+                )
+
+            )
+        )
+        .setHavingSpec(
+            new HavingSpec()
+            {
+              @Override
+              public boolean eval(Row row)
+              {
+                return (row.getFloatMetric("idx_subpostagg") < 3800);
+              }
+            }
+        )
+        .addOrderByColumn("alias")
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongSumAggregatorFactory("rows", "rows"),
+                new LongSumAggregatorFactory("idx", "idx_subpostagg"),
+                new DoubleSumAggregatorFactory("js_outer_agg", "js_agg")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "idx", "+", Arrays.asList(
+                    new FieldAccessPostAggregator("the_idx_agg", "idx"),
+                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                )
+                )
+
+            )
+        )
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Arrays.asList(
+                    new OrderByColumnSpec(
+                        "alias",
+                        OrderByColumnSpec.Direction.DESCENDING
+                    )
+                ),
+                5
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0, "js_outer_agg", 123.92274475097656),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0, "js_outer_agg", 82.62254333496094),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0, "js_outer_agg", 125.58358001708984),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0, "js_outer_agg", 124.13470458984375),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0, "js_outer_agg", 162.74722290039062)
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   private Iterable<Row> runQuery(GroupByQuery query)

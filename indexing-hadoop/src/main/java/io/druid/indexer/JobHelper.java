@@ -63,7 +63,7 @@ public class JobHelper
 
     final Configuration conf = groupByJob.getConfiguration();
     final FileSystem fs = FileSystem.get(conf);
-    Path distributedClassPath = new Path(config.getWorkingPath(), "classpath");
+    Path distributedClassPath = new Path(config.getSchema().getTuningConfig().getWorkingPath(), "classpath");
 
     if (fs instanceof LocalFileSystem) {
       return;
@@ -74,7 +74,7 @@ public class JobHelper
       if (jarFile.getName().endsWith(".jar")) {
         final Path hdfsPath = new Path(distributedClassPath, jarFile.getName());
 
-        if (! existing.contains(hdfsPath)) {
+        if (!existing.contains(hdfsPath)) {
           if (jarFile.getName().endsWith("SNAPSHOT.jar") || !fs.exists(hdfsPath)) {
             log.info("Uploading jar to path[%s]", hdfsPath);
             ByteStreams.copy(
@@ -127,7 +127,8 @@ public class JobHelper
     }
   }
 
-  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config){
+  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  {
     String failedMessage = null;
     for (Jobby job : jobs) {
       if (failedMessage == null) {
@@ -137,8 +138,8 @@ public class JobHelper
       }
     }
 
-    if (!config.isLeaveIntermediate()) {
-      if (failedMessage == null || config.isCleanupOnFailure()) {
+    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
+      if (failedMessage == null || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {

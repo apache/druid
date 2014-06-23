@@ -20,15 +20,15 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
-import com.metamx.common.collect.MoreIterators;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.FunctionalIterator;
+import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.filter.Filter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -39,11 +39,11 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
-import io.druid.segment.data.SingleIndexedInts;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -110,7 +110,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return new DateTime(column.getLongSingleValueRow(0));
     }
     finally {
-      Closeables.closeQuietly(column);
+      CloseQuietly.close(column);
     }
   }
 
@@ -123,7 +123,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return new DateTime(column.getLongSingleValueRow(column.length() - 1));
     }
     finally {
-      Closeables.closeQuietly(column);
+      CloseQuietly.close(column);
     }
   }
 
@@ -134,14 +134,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Iterable<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
+  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
   {
     Interval actualInterval = interval;
 
     final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
 
     if (!actualInterval.overlaps(dataInterval)) {
-      return ImmutableList.of();
+      return Sequences.empty();
     }
 
     if (actualInterval.getStart().isBefore(dataInterval.getStart())) {
@@ -151,26 +151,26 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       actualInterval = actualInterval.withEnd(dataInterval.getEnd());
     }
 
-    final Iterable<Cursor> iterable;
+    final Sequence<Cursor> sequence;
     if (filter == null) {
-      iterable = new NoFilterCursorIterable(index, actualInterval, gran);
+      sequence = new NoFilterCursorSequenceBuilder(index, actualInterval, gran).build();
     } else {
       Offset offset = new ConciseOffset(filter.goConcise(new ColumnSelectorBitmapIndexSelector(index)));
 
-      iterable = new CursorIterable(index, actualInterval, gran, offset);
+      sequence = new CursorSequenceBuilder(index, actualInterval, gran, offset).build();
     }
 
-    return FunctionalIterable.create(iterable).keep(Functions.<Cursor>identity());
+    return Sequences.filter(sequence, Predicates.<Cursor>notNull());
   }
 
-  private static class CursorIterable implements Iterable<Cursor>
+  private static class CursorSequenceBuilder
   {
     private final ColumnSelector index;
     private final Interval interval;
     private final QueryGranularity gran;
     private final Offset offset;
 
-    public CursorIterable(
+    public CursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
         QueryGranularity gran,
@@ -183,23 +183,22 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       this.offset = offset;
     }
 
-    @Override
-    public Iterator<Cursor> iterator()
+    public Sequence<Cursor> build()
     {
       final Offset baseOffset = offset.clone();
 
+      final Map<String, DictionaryEncodedColumn> dictionaryColumnCache = Maps.newHashMap();
       final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
       final Map<String, Object> objectColumnCache = Maps.newHashMap();
 
       final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
 
-      final FunctionalIterator<Cursor> retVal = FunctionalIterator
-          .create(gran.iterable(interval.getStartMillis(), interval.getEndMillis()).iterator())
-          .transform(
+      return Sequences.withBaggage(
+          Sequences.map(
+              Sequences.simple(gran.iterable(interval.getStartMillis(), interval.getEndMillis())),
               new Function<Long, Cursor>()
               {
-
                 @Override
                 public Cursor apply(final Long input)
                 {
@@ -228,6 +227,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public void advance()
                     {
+                      if (Thread.interrupted()) {
+                        throw new QueryInterruptedException();
+                      }
                       cursorOffset.increment();
                     }
 
@@ -270,12 +272,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
                       final String dimensionName = dimension.toLowerCase();
+
+                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
                       final Column columnDesc = index.getColumn(dimensionName);
                       if (columnDesc == null) {
                         return new NullDimensionSelector();
                       }
 
-                      final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
+                      if (cachedColumn == null) {
+                          cachedColumn = columnDesc.getDictionaryEncoding();
+                          dictionaryColumnCache.put(dimensionName, cachedColumn);
+                      }
+
+                      final DictionaryEncodedColumn column = cachedColumn;
 
                       if (column == null) {
                         return new NullDimensionSelector();
@@ -314,7 +323,27 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            return new SingleIndexedInts(column.getSingleValueRow(cursorOffset.getOffset()));
+                            // using an anonymous class is faster than creating a class that stores a copy of the value
+                            return new IndexedInts()
+                            {
+                              @Override
+                              public int size()
+                              {
+                                return 1;
+                              }
+
+                              @Override
+                              public int get(int index)
+                              {
+                                return column.getSingleValueRow(cursorOffset.getOffset());
+                              }
+
+                              @Override
+                              public Iterator<Integer> iterator()
+                              {
+                                return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
+                              }
+                            };
                           }
 
                           @Override
@@ -387,12 +416,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         if (holder != null) {
                           final ColumnCapabilities capabilities = holder.getCapabilities();
 
-                          if (capabilities.hasMultipleValues()) {
-                            throw new UnsupportedOperationException(
-                                "makeObjectColumnSelector does not support multivalued columns"
-                            );
-                          }
-
                           if (capabilities.isDictionaryEncoded()) {
                             cachedColumnVals = holder.getDictionaryEncoding();
                           } else if (capabilities.getType() == ValueType.COMPLEX) {
@@ -414,6 +437,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       if (cachedColumnVals instanceof GenericColumn) {
                         final GenericColumn columnVals = (GenericColumn) cachedColumnVals;
                         final ValueType type = columnVals.getType();
+
+                        if (columnVals.hasMultipleValues()) {
+                          throw new UnsupportedOperationException(
+                              "makeObjectColumnSelector does not support multivalued GenericColumns"
+                          );
+                        }
 
                         if (type == ValueType.FLOAT) {
                           return new ObjectColumnSelector<Float>()
@@ -467,20 +496,48 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-                        return new ObjectColumnSelector<String>()
-                        {
-                          @Override
-                          public Class classOfObject()
+                        if (columnVals.hasMultipleValues()) {
+                          return new ObjectColumnSelector<Object>()
                           {
-                            return String.class;
-                          }
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return Object.class;
+                            }
 
-                          @Override
-                          public String get()
+                            @Override
+                            public Object get()
+                            {
+                              final IndexedInts multiValueRow = columnVals.getMultiValueRow(cursorOffset.getOffset());
+                              if (multiValueRow.size() == 0) {
+                                return null;
+                              } else if (multiValueRow.size() == 1) {
+                                return columnVals.lookupName(multiValueRow.get(1));
+                              } else {
+                                final String[] strings = new String[multiValueRow.size()];
+                                for (int i = 0 ; i < multiValueRow.size() ; i++) {
+                                  strings[i] = columnVals.lookupName(multiValueRow.get(i));
+                                }
+                                return strings;
+                              }
+                            }
+                          };
+                        } else {
+                          return new ObjectColumnSelector<String>()
                           {
-                            return columnVals.lookupName(columnVals.getSingleValueRow(cursorOffset.getOffset()));
-                          }
-                        };
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return String.class;
+                            }
+
+                            @Override
+                            public String get()
+                            {
+                              return columnVals.lookupName(columnVals.getSingleValueRow(cursorOffset.getOffset()));
+                            }
+                          };
+                        }
                       }
 
                       final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
@@ -502,27 +559,25 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   };
                 }
               }
-          );
-
-      // This after call is not perfect, if there is an exception during processing, it will never get called,
-      // but it's better than nothing and doing this properly all the time requires a lot more fixerating
-      return MoreIterators.after(
-          retVal,
-          new Runnable()
+          ),
+          new Closeable()
           {
             @Override
-            public void run()
+            public void close() throws IOException
             {
-              Closeables.closeQuietly(timestamps);
+              CloseQuietly.close(timestamps);
+              for (DictionaryEncodedColumn column : dictionaryColumnCache.values()) {
+                CloseQuietly.close(column);
+              }
               for (GenericColumn column : genericColumnCache.values()) {
-                Closeables.closeQuietly(column);
+                CloseQuietly.close(column);
               }
               for (ComplexColumn complexColumn : complexColumnCache.values()) {
-                Closeables.closeQuietly(complexColumn);
+                CloseQuietly.close(complexColumn);
               }
               for (Object column : objectColumnCache.values()) {
                 if(column instanceof Closeable) {
-                  Closeables.closeQuietly((Closeable) column);
+                  CloseQuietly.close((Closeable) column);
                 }
               }
             }
@@ -573,13 +628,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static class NoFilterCursorIterable implements Iterable<Cursor>
+  private static class NoFilterCursorSequenceBuilder
   {
     private final ColumnSelector index;
     private final Interval interval;
     private final QueryGranularity gran;
 
-    public NoFilterCursorIterable(
+    public NoFilterCursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
         QueryGranularity gran
@@ -596,18 +651,18 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      *
      * @return
      */
-    @Override
-    public Iterator<Cursor> iterator()
+    public Sequence<Cursor> build()
     {
+      final Map<String, DictionaryEncodedColumn> dictionaryColumnCache = Maps.newHashMap();
       final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
       final Map<String, Object> objectColumnCache = Maps.newHashMap();
 
       final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
 
-      final FunctionalIterator<Cursor> retVal = FunctionalIterator
-          .create(gran.iterable(interval.getStartMillis(), interval.getEndMillis()).iterator())
-          .transform(
+      return Sequences.withBaggage(
+          Sequences.map(
+              Sequences.simple(gran.iterable(interval.getStartMillis(), interval.getEndMillis())),
               new Function<Long, Cursor>()
               {
                 private int currRow = 0;
@@ -635,6 +690,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public void advance()
                     {
+                      if (Thread.interrupted()) {
+                        throw new QueryInterruptedException();
+                      }
                       ++currRow;
                     }
 
@@ -673,42 +731,48 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
                       final String dimensionName = dimension.toLowerCase();
-                      final Column column = index.getColumn(dimensionName);
+
+                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
+                      final Column columnDesc = index.getColumn(dimensionName);
+                      if (columnDesc == null) {
+                        return new NullDimensionSelector();
+                      }
+                      
+                      if (cachedColumn == null) {
+                        cachedColumn = columnDesc.getDictionaryEncoding();
+                        dictionaryColumnCache.put(dimensionName, cachedColumn);
+                      }
+
+                      final DictionaryEncodedColumn column = cachedColumn;
+
                       if (column == null) {
                         return new NullDimensionSelector();
-                      }
-
-                      final DictionaryEncodedColumn dict = column.getDictionaryEncoding();
-
-                      if (dict == null) {
-                        return new NullDimensionSelector();
-                      }
-                      else if (column.getCapabilities().hasMultipleValues()) {
+                      } else if (column.hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
                           public IndexedInts getRow()
                           {
-                            return dict.getMultiValueRow(currRow);
+                            return column.getMultiValueRow(currRow);
                           }
 
                           @Override
                           public int getValueCardinality()
                           {
-                            return dict.getCardinality();
+                            return column.getCardinality();
                           }
 
                           @Override
                           public String lookupName(int id)
                           {
-                            final String retVal = dict.lookupName(id);
+                            final String retVal = column.lookupName(id);
                             return retVal == null ? "" : retVal;
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
-                            return dict.lookupId(name);
+                            return column.lookupId(name);
                           }
                         };
                       } else {
@@ -717,25 +781,45 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            return new SingleIndexedInts(dict.getSingleValueRow(currRow));
+                            // using an anonymous class is faster than creating a class that stores a copy of the value
+                            return new IndexedInts()
+                            {
+                              @Override
+                              public int size()
+                              {
+                                return 1;
+                              }
+
+                              @Override
+                              public int get(int index)
+                              {
+                                return column.getSingleValueRow(currRow);
+                              }
+
+                              @Override
+                              public Iterator<Integer> iterator()
+                              {
+                                return Iterators.singletonIterator(column.getSingleValueRow(currRow));
+                              }
+                            };
                           }
 
                           @Override
                           public int getValueCardinality()
                           {
-                            return dict.getCardinality();
+                            return column.getCardinality();
                           }
 
                           @Override
                           public String lookupName(int id)
                           {
-                            return dict.lookupName(id);
+                            return column.lookupName(id);
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
-                            return dict.lookupId(name);
+                            return column.lookupId(name);
                           }
                         };
                       }
@@ -788,11 +872,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         Column holder = index.getColumn(columnName);
 
                         if (holder != null) {
-                          if (holder.getCapabilities().hasMultipleValues()) {
-                            throw new UnsupportedOperationException(
-                                "makeObjectColumnSelector does not support multivalued columns"
-                            );
-                          }
                           final ValueType type = holder.getCapabilities().getType();
 
                           if (holder.getCapabilities().isDictionaryEncoded()) {
@@ -816,6 +895,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       if (cachedColumnVals instanceof GenericColumn) {
                         final GenericColumn columnVals = (GenericColumn) cachedColumnVals;
                         final ValueType type = columnVals.getType();
+
+                        if (columnVals.hasMultipleValues()) {
+                          throw new UnsupportedOperationException(
+                              "makeObjectColumnSelector does not support multivalued GenericColumns"
+                          );
+                        }
 
                         if (type == ValueType.FLOAT) {
                           return new ObjectColumnSelector<Float>()
@@ -869,20 +954,48 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedColumnVals instanceof DictionaryEncodedColumn) {
                         final DictionaryEncodedColumn columnVals = (DictionaryEncodedColumn) cachedColumnVals;
-                        return new ObjectColumnSelector<String>()
-                        {
-                          @Override
-                          public Class classOfObject()
+                        if (columnVals.hasMultipleValues()) {
+                          return new ObjectColumnSelector<Object>()
                           {
-                            return String.class;
-                          }
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return Object.class;
+                            }
 
-                          @Override
-                          public String get()
+                            @Override
+                            public Object get()
+                            {
+                              final IndexedInts multiValueRow = columnVals.getMultiValueRow(currRow);
+                              if (multiValueRow.size() == 0) {
+                                return null;
+                              } else if (multiValueRow.size() == 1) {
+                                return columnVals.lookupName(multiValueRow.get(1));
+                              } else {
+                                final String[] strings = new String[multiValueRow.size()];
+                                for (int i = 0 ; i < multiValueRow.size() ; i++) {
+                                  strings[i] = columnVals.lookupName(multiValueRow.get(i));
+                                }
+                                return strings;
+                              }
+                            }
+                          };
+                        } else {
+                          return new ObjectColumnSelector<String>()
                           {
-                            return columnVals.lookupName(columnVals.getSingleValueRow(currRow));
-                          }
-                        };
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return String.class;
+                            }
+
+                            @Override
+                            public String get()
+                            {
+                              return columnVals.lookupName(columnVals.getSingleValueRow(currRow));
+                            }
+                          };
+                        }
                       }
 
                       final ComplexColumn columnVals = (ComplexColumn) cachedColumnVals;
@@ -904,25 +1017,25 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   };
                 }
               }
-          );
-
-      return MoreIterators.after(
-          retVal,
-          new Runnable()
+          ),
+          new Closeable()
           {
             @Override
-            public void run()
+            public void close() throws IOException
             {
-              Closeables.closeQuietly(timestamps);
+              CloseQuietly.close(timestamps);
+              for (DictionaryEncodedColumn column : dictionaryColumnCache.values()) {
+                CloseQuietly.close(column);
+              }
               for (GenericColumn column : genericColumnCache.values()) {
-                Closeables.closeQuietly(column);
+                CloseQuietly.close(column);
               }
               for (ComplexColumn complexColumn : complexColumnCache.values()) {
-                Closeables.closeQuietly(complexColumn);
+                CloseQuietly.close(complexColumn);
               }
               for (Object column : objectColumnCache.values()) {
                 if (column instanceof Closeable) {
-                  Closeables.closeQuietly((Closeable) column);
+                  CloseQuietly.close((Closeable) column);
                 }
               }
             }

@@ -33,8 +33,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.UniformGranularitySpec;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configurable;
@@ -48,6 +48,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -91,7 +92,11 @@ public class DetermineHashedPartitionsJob implements Jobby
       );
 
       JobHelper.injectSystemProperties(groupByJob);
-      groupByJob.setInputFormatClass(TextInputFormat.class);
+      if (config.isCombineText()) {
+        groupByJob.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        groupByJob.setInputFormatClass(TextInputFormat.class);
+      }
       groupByJob.setMapperClass(DetermineCardinalityMapper.class);
       groupByJob.setMapOutputKeyClass(LongWritable.class);
       groupByJob.setMapOutputValueClass(BytesWritable.class);
@@ -108,6 +113,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       JobHelper.setupClasspath(config, groupByJob);
 
       config.addInputPaths(groupByJob);
+      config.addJobProperties(groupByJob);
       config.intoConfiguration(groupByJob);
       FileOutputFormat.setOutputPath(groupByJob, config.makeGroupedDataDir());
 
@@ -136,7 +142,14 @@ public class DetermineHashedPartitionsJob implements Jobby
         {
         }
         );
-        config.setGranularitySpec(new UniformGranularitySpec(config.getGranularitySpec().getGranularity(), intervals));
+        config.setGranularitySpec(
+            new UniformGranularitySpec(
+                config.getGranularitySpec().getSegmentGranularity(),
+                config.getGranularitySpec().getQueryGranularity(),
+                intervals,
+                config.getGranularitySpec().getSegmentGranularity()
+            )
+        );
         log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());
       }
       Map<DateTime, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap(DateTimeComparator.getInstance());
@@ -149,22 +162,27 @@ public class DetermineHashedPartitionsJob implements Jobby
           fileSystem = partitionInfoPath.getFileSystem(groupByJob.getConfiguration());
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
-          Long cardinality = config.jsonMapper.readValue(
-            Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-        {
-        }
-        );
-        final int numberOfShards = (int) Math.ceil((double) cardinality / config.getTargetPartitionSize());
-
-        List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-        if (numberOfShards == 1) {
-          actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
-        } else {
-          for (int i = 0; i < numberOfShards; ++i) {
-            actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
-            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+          final Long numRows = config.jsonMapper.readValue(
+              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
+          {
           }
-        }
+          );
+
+          log.info("Found approximately [%,d] rows in data.", numRows);
+
+          final int numberOfShards = (int) Math.ceil((double) numRows / config.getTargetPartitionSize());
+
+          log.info("Creating [%,d] shards", numberOfShards);
+
+          List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
+          if (numberOfShards == 1) {
+            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+          } else {
+            for (int i = 0; i < numberOfShards; ++i) {
+              actualSpecs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, numberOfShards), shardCount++));
+              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
+            }
+          }
 
           shardSpecs.put(bucket, actualSpecs);
 
@@ -198,8 +216,8 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.setup(context);
-      rollupGranularity = getConfig().getRollupSpec().getRollupGranularity();
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      rollupGranularity = getConfig().getGranularitySpec().getQueryGranularity();
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       Optional<Set<Interval>> intervals = config.getSegmentGranularIntervals();
       if (intervals.isPresent()) {
         determineIntervals = false;
@@ -228,7 +246,9 @@ public class DetermineHashedPartitionsJob implements Jobby
       );
       Interval interval;
       if (determineIntervals) {
-        interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+        interval = config.getGranularitySpec()
+                         .getSegmentGranularity()
+                         .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
 
         if (!hyperLogLogs.containsKey(interval)) {
           hyperLogLogs.put(interval, HyperLogLogCollector.makeLatestCollector());
@@ -279,7 +299,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     }
 
     @Override
@@ -293,7 +313,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       for (BytesWritable value : values) {
         aggregate.fold(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()));
       }
-      Interval interval = config.getGranularitySpec().getGranularity().bucket(new DateTime(key.get()));
+      Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
@@ -371,7 +391,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     public void setConf(Configuration config)
     {
       this.config = config;
-      HadoopDruidIndexerConfig hadoopConfig = HadoopDruidIndexerConfigBuilder.fromConfiguration(config);
+      HadoopDruidIndexerConfig hadoopConfig = HadoopDruidIndexerConfig.fromConfiguration(config);
       if (hadoopConfig.getSegmentGranularIntervals().isPresent()) {
         determineIntervals = false;
         int reducerNumber = 0;

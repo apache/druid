@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -125,7 +125,7 @@ public class DruidClusterBridge
         {
           @Override
           public ServerView.CallbackAction segmentAdded(
-              DruidServer server, DataSegment segment
+              DruidServerMetadata server, DataSegment segment
           )
           {
             try {
@@ -147,7 +147,7 @@ public class DruidClusterBridge
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
             try {
               synchronized (lock) {
@@ -172,7 +172,7 @@ public class DruidClusterBridge
           {
             try {
               for (DataSegment dataSegment : server.getSegments().values()) {
-                serverRemovedSegment(dataSegmentAnnouncer, dataSegment, server);
+                serverRemovedSegment(dataSegmentAnnouncer, dataSegment, server.getMetadata());
               }
             }
             catch (Exception e) {
@@ -253,7 +253,7 @@ public class DruidClusterBridge
         log.warn(e, "Unable to close leaderLatch, ignoring");
       }
 
-      exec.shutdownNow();
+      exec.shutdown();
 
       started = false;
     }
@@ -338,7 +338,7 @@ public class DruidClusterBridge
         log.makeAlert(e, "Exception becoming leader")
            .emit();
         final LeaderLatch oldLatch = createNewLeaderLatch();
-        Closeables.closeQuietly(oldLatch);
+        CloseQuietly.close(oldLatch);
         try {
           leaderLatch.get().start();
         }
@@ -370,7 +370,7 @@ public class DruidClusterBridge
     }
   }
 
-  private void serverRemovedSegment(DataSegmentAnnouncer dataSegmentAnnouncer, DataSegment segment, DruidServer server)
+  private void serverRemovedSegment(DataSegmentAnnouncer dataSegmentAnnouncer, DataSegment segment, DruidServerMetadata server)
       throws IOException
   {
     Integer count = segments.get(segment);

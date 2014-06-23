@@ -23,20 +23,21 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.emitter.EmittingLogger;
+import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Period;
 
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 
@@ -44,144 +45,112 @@ import java.util.concurrent.ExecutorService;
  */
 public class RealtimePlumberSchool implements PlumberSchool
 {
-  public static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
+  private final ServiceEmitter emitter;
+  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final DataSegmentPusher dataSegmentPusher;
+  private final DataSegmentAnnouncer segmentAnnouncer;
+  private final SegmentPublisher segmentPublisher;
+  private final FilteredServerView serverView;
+  private final ExecutorService queryExecutorService;
 
-  private static final EmittingLogger log = new EmittingLogger(RealtimePlumberSchool.class);
-
+  // Backwards compatible
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final IndexGranularity segmentGranularity;
-
-  @JacksonInject
-  @NotNull
-  private volatile ServiceEmitter emitter;
-
-  @JacksonInject
-  @NotNull
-  private volatile QueryRunnerFactoryConglomerate conglomerate = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile DataSegmentPusher dataSegmentPusher = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile DataSegmentAnnouncer segmentAnnouncer = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile SegmentPublisher segmentPublisher = null;
-
-  @JacksonInject
-  @NotNull
-  private volatile ServerView serverView = null;
-
-  @JacksonInject
-  @NotNull
-  @Processing
-  private volatile ExecutorService queryExecutorService = null;
-
-  private volatile int maxPendingPersists;
-  private volatile VersioningPolicy versioningPolicy = null;
-  private volatile RejectionPolicyFactory rejectionPolicyFactory = null;
+  private final Granularity segmentGranularity;
+  private final VersioningPolicy versioningPolicy;
+  private final RejectionPolicyFactory rejectionPolicyFactory;
+  private final int maxPendingPersists;
 
   @JsonCreator
   public RealtimePlumberSchool(
+      @JacksonInject ServiceEmitter emitter,
+      @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
+      @JacksonInject DataSegmentPusher dataSegmentPusher,
+      @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
+      @JacksonInject SegmentPublisher segmentPublisher,
+      @JacksonInject FilteredServerView serverView,
+      @JacksonInject @Processing ExecutorService executorService,
+      // Backwards compatible
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
+    this.emitter = emitter;
+    this.conglomerate = conglomerate;
+    this.dataSegmentPusher = dataSegmentPusher;
+    this.segmentAnnouncer = segmentAnnouncer;
+    this.segmentPublisher = segmentPublisher;
+    this.serverView = serverView;
+    this.queryExecutorService = executorService;
     this.windowPeriod = windowPeriod;
     this.basePersistDirectory = basePersistDirectory;
     this.segmentGranularity = segmentGranularity;
-    this.versioningPolicy = new IntervalStartVersioningPolicy();
-    this.rejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
-    // Workaround for Jackson issue where if maxPendingPersists is null, all JacksonInjects fail
-    this.maxPendingPersists = RealtimePlumberSchool.DEFAULT_MAX_PENDING_PERSISTS;
-
-    Preconditions.checkNotNull(windowPeriod, "RealtimePlumberSchool requires a windowPeriod.");
-    Preconditions.checkNotNull(basePersistDirectory, "RealtimePlumberSchool requires a basePersistDirectory.");
-    Preconditions.checkNotNull(segmentGranularity, "RealtimePlumberSchool requires a segmentGranularity.");
-  }
-
-  @JsonProperty("versioningPolicy")
-  public void setVersioningPolicy(VersioningPolicy versioningPolicy)
-  {
     this.versioningPolicy = versioningPolicy;
-  }
-
-  @JsonProperty("rejectionPolicy")
-  public void setRejectionPolicyFactory(RejectionPolicyFactory factory)
-  {
-    this.rejectionPolicyFactory = factory;
-  }
-
-  @JsonProperty("maxPendingPersists")
-  public void setDefaultMaxPendingPersists(int maxPendingPersists)
-  {
+    this.rejectionPolicyFactory = rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists;
   }
 
-  public void setEmitter(ServiceEmitter emitter)
+  @Deprecated
+  public Period getWindowPeriod()
   {
-    this.emitter = emitter;
+    return windowPeriod;
   }
 
-  public void setConglomerate(QueryRunnerFactoryConglomerate conglomerate)
+  @Deprecated
+  public File getBasePersistDirectory()
   {
-    this.conglomerate = conglomerate;
-  }
-
-  public void setDataSegmentPusher(DataSegmentPusher dataSegmentPusher)
-  {
-    this.dataSegmentPusher = dataSegmentPusher;
-  }
-
-  public void setSegmentAnnouncer(DataSegmentAnnouncer segmentAnnouncer)
-  {
-    this.segmentAnnouncer = segmentAnnouncer;
-  }
-
-  public void setSegmentPublisher(SegmentPublisher segmentPublisher)
-  {
-    this.segmentPublisher = segmentPublisher;
-  }
-
-  public void setServerView(ServerView serverView)
-  {
-    this.serverView = serverView;
-  }
-
-  public void setQueryExecutorService(ExecutorService executorService)
-  {
-    this.queryExecutorService = executorService;
+    return basePersistDirectory;
   }
 
   @Override
-  public Plumber findPlumber(final Schema schema, final FireDepartmentMetrics metrics)
+  @JsonProperty
+  public Granularity getSegmentGranularity()
+  {
+    return segmentGranularity;
+  }
+
+  @Deprecated
+  public VersioningPolicy getVersioningPolicy()
+  {
+    return versioningPolicy;
+  }
+
+  @Deprecated
+  public RejectionPolicyFactory getRejectionPolicyFactory()
+  {
+    return rejectionPolicyFactory;
+  }
+
+  @Deprecated
+  public int getMaxPendingPersists()
+  {
+    return maxPendingPersists;
+  }
+
+  @Override
+  public Plumber findPlumber(
+      final DataSchema schema,
+      final RealtimeTuningConfig config,
+      final FireDepartmentMetrics metrics
+  )
   {
     verifyState();
 
-    final RejectionPolicy rejectionPolicy = rejectionPolicyFactory.create(windowPeriod);
-    log.info("Creating plumber using rejectionPolicy[%s]", rejectionPolicy);
-
     return new RealtimePlumber(
-        windowPeriod,
-        basePersistDirectory,
-        segmentGranularity,
         schema,
+        config,
         metrics,
-        rejectionPolicy,
         emitter,
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
-        versioningPolicy,
         dataSegmentPusher,
         segmentPublisher,
-        serverView,
-        maxPendingPersists
+        serverView
     );
   }
 

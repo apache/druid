@@ -19,8 +19,8 @@
 
 package io.druid.query.topn;
 
-import com.google.common.io.Closeables;
 import com.metamx.common.Pair;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.query.aggregation.BufferAggregator;
@@ -31,7 +31,6 @@ import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 
 /**
  */
@@ -40,7 +39,6 @@ public class PooledTopNAlgorithm
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
-  private final Comparator<?> comparator;
   private final StupidPool<ByteBuffer> bufferPool;
 
   public PooledTopNAlgorithm(
@@ -53,8 +51,6 @@ public class PooledTopNAlgorithm
 
     this.capabilities = capabilities;
     this.query = query;
-    this.comparator = query.getTopNMetricSpec()
-                           .getComparator(query.getAggregatorSpecs(), query.getPostAggregatorSpecs());
     this.bufferPool = bufferPool;
   }
 
@@ -115,11 +111,14 @@ public class PooledTopNAlgorithm
   }
 
 
-
   @Override
   protected int[] makeDimValSelector(PooledTopNParams params, int numProcessed, int numToProcess)
   {
     final TopNMetricSpecBuilder<int[]> arrayProvider = params.getArrayProvider();
+
+    if (!query.getDimensionSpec().preservesOrdering()) {
+      return arrayProvider.build();
+    }
 
     arrayProvider.ignoreFirstN(numProcessed);
     arrayProvider.keepOnlyN(numToProcess);
@@ -234,7 +233,7 @@ public class PooledTopNAlgorithm
     if (resultsBufHolder != null) {
       resultsBufHolder.get().clear();
     }
-    Closeables.closeQuietly(resultsBufHolder);
+    CloseQuietly.close(resultsBufHolder);
   }
 
   public static class PooledTopNParams extends TopNParams

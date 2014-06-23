@@ -22,7 +22,7 @@ package io.druid.indexer;
 import com.metamx.common.RE;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.indexer.granularity.GranularitySpec;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -39,7 +39,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   protected void setup(Context context)
       throws IOException, InterruptedException
   {
-    config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+    config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
   }
 

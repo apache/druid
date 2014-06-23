@@ -32,12 +32,16 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -134,6 +138,22 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new JavaScriptAggregatorFactory(name, Lists.newArrayList(name), fnCombine, fnReset, fnCombine);
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Lists.transform(
+        fieldNames,
+        new com.google.common.base.Function<String, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(String input)
+          {
+            return new JavaScriptAggregatorFactory(input, fieldNames, fnAggregate, fnReset, fnCombine);
+          }
+        }
+    );
   }
 
   @Override
@@ -263,6 +283,9 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         Context cx = Context.getCurrentContext();
         if (cx == null) {
           cx = contextFactory.enterContext();
+
+          // Disable primitive wrapping- we want Java strings and primitives to behave like JS entities.
+          cx.getWrapFactory().setJavaPrimitiveWrap(false);
         }
 
         final int size = selectorList.length;
@@ -272,7 +295,18 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         for (int i = 0 ; i < size ; i++) {
           final ObjectColumnSelector selector = selectorList[i];
           if (selector != null) {
-            args[i + 1] = selector.get();
+            final Object arg = selector.get();
+            if (arg != null && arg.getClass().isArray()) {
+              // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
+              // may have other issues too. Let's just copy the array and wrap that.
+              final Object[] arrayAsObjectArray = new Object[Array.getLength(arg)];
+              for (int j = 0; j < Array.getLength(arg); j++) {
+                arrayAsObjectArray[j] = Array.get(arg, j);
+              }
+              args[i + 1] = cx.newArray(scope, arrayAsObjectArray);
+            } else {
+              args[i + 1] = Context.javaToJS(arg, scope);
+            }
           }
         }
 

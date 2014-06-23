@@ -46,6 +46,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.TimestampColumnSelector;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -53,6 +54,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -133,17 +135,29 @@ public class IncrementalIndex implements Iterable<Row>
     );
   }
 
+  public int add(InputRow row)
+  {
+    // this is an ugly workaround to call ComplexMetricExtractor.extractValue at ingestion time
+    return add(row, true);
+  }
+
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
    * <p/>
-   * This is *not* thread-safe.  Calls to add() should always happen on the same thread.
+   *
+   * Calls to add() are thread safe.
+   *
+   * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
+   * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
    *
    * @param row the row of data to add
+   * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
+   *                                  value for aggregators that return metrics other than float.
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row)
+  public int add(InputRow row, final boolean deserializeComplexMetrics)
   {
     row = spatialDimensionRowFormatter.formatRow(row);
 
@@ -186,7 +200,7 @@ public class IncrementalIndex implements Iterable<Row>
       dims = newDims;
     }
 
-    TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
+    final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
 
     Aggregator[] aggs = facts.get(key);
     if (aggs == null) {
@@ -231,54 +245,108 @@ public class IncrementalIndex implements Iterable<Row>
                     final String typeName = agg.getTypeName();
                     final String columnName = column.toLowerCase();
 
-                    if (typeName.equals("float")) {
-                      return new ObjectColumnSelector<Float>()
+                      final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
                       {
                         @Override
                         public Class classOfObject()
                         {
-                          return Float.TYPE;
+                          return Object.class;
                         }
 
                         @Override
-                        public Float get()
+                        public Object get()
                         {
-                          return in.getFloatMetric(columnName);
+                          return in.getRaw(columnName);
+                        }
+                      };
+
+                    if(!deserializeComplexMetrics) {
+                      return rawColumnSelector;
+                    } else {
+                      if (typeName.equals("float")) {
+                        return rawColumnSelector;
+                      }
+
+                      final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+                      if (serde == null) {
+                        throw new ISE("Don't know how to handle type[%s]", typeName);
+                      }
+
+                      final ComplexMetricExtractor extractor = serde.getExtractor();
+                      return new ObjectColumnSelector()
+                      {
+                        @Override
+                        public Class classOfObject()
+                        {
+                          return extractor.extractedClass();
+                        }
+
+                        @Override
+                        public Object get()
+                        {
+                          return extractor.extractValue(in, columnName);
                         }
                       };
                     }
-
-                    final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-
-                    if (serde == null) {
-                      throw new ISE("Don't know how to handle type[%s]", typeName);
-                    }
-
-                    final ComplexMetricExtractor extractor = serde.getExtractor();
-
-                    return new ObjectColumnSelector()
-                    {
-                      @Override
-                      public Class classOfObject()
-                      {
-                        return extractor.extractedClass();
-                      }
-
-                      @Override
-                      public Object get()
-                      {
-                        return extractor.extractValue(in, columnName);
-                      }
-                    };
                   }
 
                   @Override
-                  public DimensionSelector makeDimensionSelector(String dimension)
+                  public DimensionSelector makeDimensionSelector(final String dimension)
                   {
-                    // we should implement this, but this is going to be rewritten soon anyways
-                    throw new UnsupportedOperationException(
-                        "Incremental index aggregation does not support dimension selectors"
-                    );
+                    final String dimensionName = dimension.toLowerCase();
+                    return new DimensionSelector()
+                    {
+                      @Override
+                      public IndexedInts getRow()
+                      {
+                        final List<String> dimensionValues = in.getDimension(dimensionName);
+                        final ArrayList<Integer> vals = Lists.newArrayList();
+                        if (dimensionValues != null) {
+                          for (int i = 0; i < dimensionValues.size(); ++i) {
+                            vals.add(i);
+                          }
+                        }
+
+                        return new IndexedInts()
+                        {
+                          @Override
+                          public int size()
+                          {
+                            return vals.size();
+                          }
+
+                          @Override
+                          public int get(int index)
+                          {
+                            return vals.get(index);
+                          }
+
+                          @Override
+                          public Iterator<Integer> iterator()
+                          {
+                            return vals.iterator();
+                          }
+                        };
+                      }
+
+                      @Override
+                      public int getValueCardinality()
+                      {
+                        throw new UnsupportedOperationException("value cardinality is unknown in incremental index");
+                      }
+
+                      @Override
+                      public String lookupName(int id)
+                      {
+                        return in.getDimension(dimensionName).get(id);
+                      }
+
+                      @Override
+                      public int lookupId(String name)
+                      {
+                        return in.getDimension(dimensionName).indexOf(name);
+                      }
+                    };
                   }
                 }
 

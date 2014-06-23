@@ -22,7 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -37,20 +37,21 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.GranularitySpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.IOConfig;
+import io.druid.segment.indexing.IngestionSpec;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfig;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.Schema;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -70,59 +71,77 @@ public class IndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(IndexTask.class);
 
-  @JsonIgnore
-  private final GranularitySpec granularitySpec;
+  private static String makeId(String id, IndexIngestionSpec ingestionSchema, String dataSource)
+  {
+    if (id == null) {
+      return String.format("index_%s_%s", makeDataSource(ingestionSchema, dataSource), new DateTime().toString());
+    }
 
-  @JsonProperty
-  private final List<SpatialDimensionSchema> spatialDimensions;
+    return id;
+  }
+
+  private static String makeDataSource(IndexIngestionSpec ingestionSchema, String dataSource)
+  {
+    if (ingestionSchema != null) {
+      return ingestionSchema.getDataSchema().getDataSource();
+    } else { // Backwards compatible
+      return dataSource;
+    }
+  }
+
+  private static Interval makeInterval(IndexIngestionSpec ingestionSchema, GranularitySpec granularitySpec)
+  {
+    GranularitySpec spec;
+    if (ingestionSchema != null) {
+      spec = ingestionSchema.getDataSchema().getGranularitySpec();
+    } else {
+      spec = granularitySpec;
+    }
+
+    return new Interval(
+        spec.bucketIntervals().get().first().getStart(),
+        spec.bucketIntervals().get().last().getEnd()
+    );
+  }
 
   @JsonIgnore
-  private final AggregatorFactory[] aggregators;
-
-  @JsonIgnore
-  private final QueryGranularity indexGranularity;
-
-  @JsonIgnore
-  private final int targetPartitionSize;
-
-  @JsonIgnore
-  private final FirehoseFactory firehoseFactory;
-
-  @JsonIgnore
-  private final int rowFlushBoundary;
+  private final IndexIngestionSpec ingestionSchema;
 
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
-      @JsonProperty("aggregators") AggregatorFactory[] aggregators,
-      @JsonProperty("indexGranularity") QueryGranularity indexGranularity,
-      @JsonProperty("targetPartitionSize") int targetPartitionSize,
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("rowFlushBoundary") int rowFlushBoundary
+      @JsonProperty("schema") IndexIngestionSpec ingestionSchema,
+      // Backwards Compatible
+      @JsonProperty("dataSource") final String dataSource,
+      @JsonProperty("granularitySpec") final GranularitySpec granularitySpec,
+      @JsonProperty("aggregators") final AggregatorFactory[] aggregators,
+      @JsonProperty("indexGranularity") final QueryGranularity indexGranularity,
+      @JsonProperty("targetPartitionSize") final int targetPartitionSize,
+      @JsonProperty("firehose") final FirehoseFactory firehoseFactory,
+      @JsonProperty("rowFlushBoundary") final int rowFlushBoundary
   )
   {
     super(
         // _not_ the version, just something uniqueish
-        id != null ? id : String.format("index_%s_%s", dataSource, new DateTime().toString()),
-        dataSource,
-        new Interval(
-            granularitySpec.bucketIntervals().get().first().getStart(),
-            granularitySpec.bucketIntervals().get().last().getEnd()
-        )
+        makeId(id, ingestionSchema, dataSource),
+        makeDataSource(ingestionSchema, dataSource),
+        makeInterval(ingestionSchema, granularitySpec)
     );
 
-    this.granularitySpec = Preconditions.checkNotNull(granularitySpec, "granularitySpec");
-    this.spatialDimensions = (spatialDimensions == null)
-                             ? Lists.<SpatialDimensionSchema>newArrayList()
-                             : spatialDimensions;
-    this.aggregators = aggregators;
-    this.indexGranularity = (indexGranularity == null) ? QueryGranularity.NONE : indexGranularity;
-    this.targetPartitionSize = targetPartitionSize;
-    this.firehoseFactory = Preconditions.checkNotNull(firehoseFactory, "firehoseFactory");
-    this.rowFlushBoundary = rowFlushBoundary;
+    if (ingestionSchema != null) {
+      this.ingestionSchema = ingestionSchema;
+    } else { // Backwards Compatible
+      this.ingestionSchema = new IndexIngestionSpec(
+          new DataSchema(
+              dataSource,
+              firehoseFactory.getParser(),
+              aggregators,
+              granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
+          ),
+          new IndexIOConfig(firehoseFactory),
+          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary)
+      );
+    }
   }
 
   @Override
@@ -131,9 +150,18 @@ public class IndexTask extends AbstractFixedIntervalTask
     return "index";
   }
 
+  @JsonProperty("schema")
+  public IndexIngestionSpec getIngestionSchema()
+  {
+    return ingestionSchema;
+  }
+
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    final int targetPartitionSize = ingestionSchema.getTuningConfig().getTargetPartitionSize();
+
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Set<DataSegment> segments = Sets.newHashSet();
 
@@ -152,13 +180,8 @@ public class IndexTask extends AbstractFixedIntervalTask
       for (final ShardSpec shardSpec : shardSpecs) {
         final DataSegment segment = generateSegment(
             toolbox,
-            new Schema(
-                getDataSource(),
-                spatialDimensions,
-                aggregators,
-                indexGranularity,
-                shardSpec
-            ),
+            ingestionSchema.getDataSchema(),
+            shardSpec,
             bucket,
             myLock.getVersion()
         );
@@ -171,11 +194,15 @@ public class IndexTask extends AbstractFixedIntervalTask
 
   private SortedSet<Interval> getDataIntervals() throws IOException
   {
+    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+
     SortedSet<Interval> retVal = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
-    try (Firehose firehose = firehoseFactory.connect()) {
+    try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
-        Interval interval = granularitySpec.getGranularity().bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+        Interval interval = granularitySpec.getSegmentGranularity()
+                                           .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
         retVal.add(interval);
       }
     }
@@ -189,6 +216,8 @@ public class IndexTask extends AbstractFixedIntervalTask
   {
     log.info("Determining partitions for interval[%s] with targetPartitionSize[%d]", interval, targetPartitionSize);
 
+    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+
     // The implementation of this determine partitions stuff is less than optimal.  Should be done better.
 
     // Blacklist dimensions that have multiple values per row
@@ -197,7 +226,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
 
     // Load data
-    try (Firehose firehose = firehoseFactory.connect()) {
+    try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         if (interval.contains(inputRow.getTimestampFromEpoch())) {
@@ -305,7 +334,8 @@ public class IndexTask extends AbstractFixedIntervalTask
 
   private DataSegment generateSegment(
       final TaskToolbox toolbox,
-      final Schema schema,
+      final DataSchema schema,
+      final ShardSpec shardSpec,
       final Interval interval,
       final String version
   ) throws IOException
@@ -319,9 +349,12 @@ public class IndexTask extends AbstractFixedIntervalTask
             interval.getStart(),
             interval.getEnd(),
             version,
-            schema.getShardSpec().getPartitionNum()
+            shardSpec.getPartitionNum()
         )
     );
+
+    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final int rowFlushBoundary = ingestionSchema.getTuningConfig().getRowFlushBoundary();
 
     // We need to track published segments.
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
@@ -344,16 +377,16 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     // Create firehose + plumber
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
-    final Firehose firehose = firehoseFactory.connect();
+    final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser());
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
         wrappedDataSegmentPusher,
         tmpDir
-    ).findPlumber(schema, metrics);
+    ).findPlumber(schema, new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec), metrics);
 
     // rowFlushBoundary for this job
-    final int myRowFlushBoundary = this.rowFlushBoundary > 0
+    final int myRowFlushBoundary = rowFlushBoundary > 0
                                    ? rowFlushBoundary
                                    : toolbox.getConfig().getDefaultRowFlushBoundary();
 
@@ -363,18 +396,16 @@ public class IndexTask extends AbstractFixedIntervalTask
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
-        if (shouldIndex(schema, interval, inputRow)) {
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink == null) {
-            throw new NullPointerException(
+        if (shouldIndex(shardSpec, interval, inputRow)) {
+          int numRows = plumber.add(inputRow);
+          if (numRows == -1) {
+            throw new ISE(
                 String.format(
                     "Was expecting non-null sink for timestamp[%s]",
                     new DateTime(inputRow.getTimestampFromEpoch())
                 )
             );
           }
-
-          int numRows = sink.add(inputRow);
           metrics.incrementProcessed();
 
           if (numRows >= myRowFlushBoundary) {
@@ -400,7 +431,7 @@ public class IndexTask extends AbstractFixedIntervalTask
           + " and output %,d rows",
           getId(),
           interval,
-          schema.getShardSpec().getPartitionNum(),
+          shardSpec.getPartitionNum(),
           metrics.processed() + metrics.unparseable() + metrics.thrownAway(),
           metrics.processed(),
           metrics.unparseable(),
@@ -420,50 +451,106 @@ public class IndexTask extends AbstractFixedIntervalTask
    *
    * @return true or false
    */
-  private boolean shouldIndex(final Schema schema, final Interval interval, final InputRow inputRow)
+  private boolean shouldIndex(
+      final ShardSpec shardSpec,
+      final Interval interval,
+      final InputRow inputRow
+  )
   {
-    return interval.contains(inputRow.getTimestampFromEpoch()) && schema.getShardSpec().isInChunk(inputRow);
+    return interval.contains(inputRow.getTimestampFromEpoch()) && shardSpec.isInChunk(inputRow);
   }
 
-  @JsonProperty
-  public GranularitySpec getGranularitySpec()
+  public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>
   {
-    return granularitySpec;
+    private final DataSchema dataSchema;
+    private final IndexIOConfig ioConfig;
+    private final IndexTuningConfig tuningConfig;
+
+    @JsonCreator
+    public IndexIngestionSpec(
+        @JsonProperty("dataSchema") DataSchema dataSchema,
+        @JsonProperty("ioConfig") IndexIOConfig ioConfig,
+        @JsonProperty("tuningConfig") IndexTuningConfig tuningConfig
+    )
+    {
+      super(dataSchema, ioConfig, tuningConfig);
+
+      this.dataSchema = dataSchema;
+      this.ioConfig = ioConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0) : tuningConfig;
+    }
+
+    @Override
+    @JsonProperty("dataSchema")
+    public DataSchema getDataSchema()
+    {
+      return dataSchema;
+    }
+
+    @Override
+    @JsonProperty("ioConfig")
+    public IndexIOConfig getIOConfig()
+    {
+      return ioConfig;
+    }
+
+    @Override
+    @JsonProperty("tuningConfig")
+    public IndexTuningConfig getTuningConfig()
+    {
+      return tuningConfig;
+    }
   }
 
-  @JsonProperty
-  public AggregatorFactory[] getAggregators()
+  @JsonTypeName("index")
+  public static class IndexIOConfig implements IOConfig
   {
-    return aggregators;
+    private final FirehoseFactory firehoseFactory;
+
+    @JsonCreator
+    public IndexIOConfig(
+        @JsonProperty("firehose") FirehoseFactory firehoseFactory
+    )
+    {
+      this.firehoseFactory = firehoseFactory;
+    }
+
+    @JsonProperty("firehose")
+    public FirehoseFactory getFirehoseFactory()
+    {
+      return firehoseFactory;
+    }
   }
 
-  @JsonProperty
-  public QueryGranularity getIndexGranularity()
+  @JsonTypeName("index")
+  public static class IndexTuningConfig implements TuningConfig
   {
-    return indexGranularity;
-  }
+    private static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
+    private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 500000;
 
-  @JsonProperty
-  public long getTargetPartitionSize()
-  {
-    return targetPartitionSize;
-  }
+    private final int targetPartitionSize;
+    private final int rowFlushBoundary;
 
-  @JsonProperty("firehose")
-  public FirehoseFactory getFirehoseFactory()
-  {
-    return firehoseFactory;
-  }
+    @JsonCreator
+    public IndexTuningConfig(
+        @JsonProperty("targetPartitionSize") int targetPartitionSize,
+        @JsonProperty("rowFlushBoundary") int rowFlushBoundary
+    )
+    {
+      this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
+      this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
+    }
 
-  @JsonProperty
-  public int getRowFlushBoundary()
-  {
-    return rowFlushBoundary;
-  }
+    @JsonProperty
+    public int getTargetPartitionSize()
+    {
+      return targetPartitionSize;
+    }
 
-  @JsonProperty
-  public List<SpatialDimensionSchema> getSpatialDimensions()
-  {
-    return spatialDimensions;
+    @JsonProperty
+    public int getRowFlushBoundary()
+    {
+      return rowFlushBoundary;
+    }
   }
 }

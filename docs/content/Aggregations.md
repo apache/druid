@@ -59,7 +59,8 @@ Computes an arbitrary JavaScript function over a set of columns (both metrics an
 All JavaScript functions must return numerical values.
 
 ```json
-{ "type": "javascript", "name": "<output_name>",
+{ "type": "javascript",
+  "name": "<output_name>",
   "fieldNames"  : [ <column1>, <column2>, ... ],
   "fnAggregate" : "function(current, column1, column2, ...) {
                      <updates partial aggregate (current) based on the current row values>
@@ -83,11 +84,78 @@ All JavaScript functions must return numerical values.
 }
 ```
 
-### Complex aggregators
+### Cardinality aggregator
 
-#### `hyperUnique` aggregator
+Computes the cardinality of a set of Druid dimensions, using HyperLogLog to estimate the cardinality.
 
-`hyperUnique` uses [Hyperloglog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension.
+```json
+{
+  "type": "cardinality",
+  "name": "<output_name>",
+  "fieldNames": [ <dimension1>, <dimension2>, ... ],
+  "byRow": <false | true> # (optional, defaults to false)
+}
+```
+
+#### Cardinality by value
+
+When setting `byRow` to `false` (the default) it computes the cardinality of the set composed of the union of all dimension values for all the given dimensions.
+
+* For a single dimension, this is equivalent to
+
+```sql
+SELECT COUNT(DISCTINCT(dimension)) FROM <datasource>
+```
+
+* For multiple dimensions, this is equivalent to something akin to
+
+```sql
+SELECT COUNT(DISTINCT(value)) FROM (
+  SELECT dim_1 as value FROM <datasource>
+  UNION
+  SELECT dim_2 as value FROM <datasource>
+  UNION
+  SELECT dim_3 as value FROM <datasource>
+)
+```
+
+#### Cardinality by row
+
+When setting `byRow` to `true` it computes the cardinality by row, i.e. the cardinality of distinct dimension combinations
+This is equivalent to something akin to
+
+```sql
+SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 FROM <datasource> GROUP BY DIM1, DIM2, DIM3
+```
+
+**Example**
+
+Determine the number of distinct categories items are assigned to.
+
+```json
+{
+  "type": "cardinality",
+  "name": "distinct_values",
+  "fieldNames": [ "main_category", "secondary_category" ]
+}
+```
+
+Determine the number of distinct   are assigned to.
+
+```json
+{
+  "type": "cardinality",
+  "name": "distinct_values",
+  "fieldNames": [ "", "secondary_category" ],
+  "byRow" : true
+}
+```
+
+## Complex Aggregations
+
+### HyperUnique aggregator
+
+Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a hyperUnique metric at indexing time.
 
 ```json
 { "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }

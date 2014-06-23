@@ -38,6 +38,7 @@ import com.metamx.common.guava.nary.TrinaryFn;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
+import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
@@ -72,6 +73,7 @@ import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -152,7 +154,7 @@ public class CachingClusteredClientTest
           "*",
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
-              new ConstantPostAggregator("constant", 2, 2 )
+              new ConstantPostAggregator("constant", 2, 2)
           )
       ),
       new ArithmeticPostAggregator(
@@ -160,7 +162,7 @@ public class CachingClusteredClientTest
           "/",
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
-              new ConstantPostAggregator("constant", 2, 2 )
+              new ConstantPostAggregator("constant", 2, 2)
           )
       )
   );
@@ -585,7 +587,8 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public  void testTopNOnPostAggMetricCaching() {
+  public void testTopNOnPostAggMetricCaching()
+  {
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .dimension(TOP_DIM)
@@ -689,6 +692,51 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-07T01"), "how4", "howdy4", "howwwwww4", "howww4",
             new DateTime("2011-01-08T01"), "how5", "howdy5", "howwwwww5", "howww5",
             new DateTime("2011-01-09T01"), "how6", "howdy6", "howwwwww6", "howww6"
+        )
+    );
+  }
+
+  @Test
+  public void testTimeBoundaryCaching() throws Exception
+  {
+    testQueryCaching(
+        client,
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource(CachingClusteredClientTest.DATA_SOURCE)
+              .intervals(CachingClusteredClientTest.SEG_SPEC)
+              .context(CachingClusteredClientTest.CONTEXT)
+              .build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeTimeBoundaryResult(new DateTime("2011-01-01"), new DateTime("2011-01-01"), new DateTime("2011-01-02")),
+
+        new Interval("2011-01-01/2011-01-03"),
+        makeTimeBoundaryResult(new DateTime("2011-01-02"), new DateTime("2011-01-02"), new DateTime("2011-01-03")),
+
+        new Interval("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("2011-01-05"), new DateTime("2011-01-05"), new DateTime("2011-01-10")),
+
+        new Interval("2011-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("2011-01-05T01"), new DateTime("2011-01-05T01"), new DateTime("2011-01-10"))
+    );
+  }
+
+  private Iterable<Result<TimeBoundaryResultValue>> makeTimeBoundaryResult(
+      DateTime timestamp,
+      DateTime minTime,
+      DateTime maxTime
+  )
+  {
+    return Arrays.asList(
+        new Result<>(
+            timestamp,
+            new TimeBoundaryResultValue(
+                ImmutableMap.of(
+                    TimeBoundaryQuery.MIN_TIME,
+                    minTime.toString(),
+                    TimeBoundaryQuery.MAX_TIME,
+                    maxTime.toString()
+                )
+            )
         )
     );
   }
@@ -914,7 +962,10 @@ public class CachingClusteredClientTest
         );
         serverExpectations.get(lastServer).addExpectation(expectation);
 
-        ServerSelector selector = new ServerSelector(expectation.getSegment(), new RandomServerSelectorStrategy());
+        ServerSelector selector = new ServerSelector(
+            expectation.getSegment(),
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        );
         selector.addServer(new QueryableDruidServer(lastServer, null));
 
         final PartitionChunk<ServerSelector> chunk;
@@ -1097,16 +1148,16 @@ public class CachingClusteredClientTest
               (DateTime) objects[i],
               new TimeseriesResultValue(
                   ImmutableMap.<String, Object>builder()
-                      .put("rows", objects[i + 1])
-                      .put("imps", objects[i + 2])
-                      .put("impers", objects[i + 2])
-                      .put("avg_imps_per_row",avg_impr)
-                      .put("avg_imps_per_row_half",avg_impr / 2)
-                      .put("avg_imps_per_row_double",avg_impr * 2)
-                      .build()
-                  )
+                              .put("rows", objects[i + 1])
+                              .put("imps", objects[i + 2])
+                              .put("impers", objects[i + 2])
+                              .put("avg_imps_per_row", avg_impr)
+                              .put("avg_imps_per_row_half", avg_impr / 2)
+                              .put("avg_imps_per_row_double", avg_impr * 2)
+                              .build()
               )
-          );
+          )
+      );
     }
     return retVal;
   }
@@ -1186,14 +1237,14 @@ public class CachingClusteredClientTest
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
             ImmutableMap.<String, Object>builder()
-                .put(TOP_DIM, objects[index])
-                .put("rows", rows)
-                .put("imps", imps)
-                .put("impers", imps)
-                .put("avg_imps_per_row", imps / rows)
-                .put("avg_imps_per_row_double", ((imps * 2) / rows))
-                .put("avg_imps_per_row_half", (imps / (rows * 2)))
-                .build()
+                        .put(TOP_DIM, objects[index])
+                        .put("rows", rows)
+                        .put("imps", imps)
+                        .put("impers", imps)
+                        .put("avg_imps_per_row", imps / rows)
+                        .put("avg_imps_per_row_double", ((imps * 2) / rows))
+                        .put("avg_imps_per_row_half", (imps / (rows * 2)))
+                        .build()
         );
         index += 3;
       }
@@ -1282,6 +1333,7 @@ public class CachingClusteredClientTest
                         )
                         .put(TopNQuery.class, new TopNQueryQueryToolChest(new TopNQueryConfig()))
                         .put(SearchQuery.class, new SearchQueryQueryToolChest(new SearchQueryConfig()))
+                        .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
                         .build()
         ),
         new TimelineServerView()

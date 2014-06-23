@@ -290,7 +290,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           @Override
           public CallbackAction apply(SegmentCallback input)
           {
-            return input.segmentAdded(container, inventory);
+            return input.segmentAdded(container.getMetadata(), inventory);
           }
         }
     );
@@ -319,7 +319,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           @Override
           public CallbackAction apply(SegmentCallback input)
           {
-            return input.segmentRemoved(container, segment);
+            return input.segmentRemoved(container.getMetadata(), segment);
           }
         }
     );

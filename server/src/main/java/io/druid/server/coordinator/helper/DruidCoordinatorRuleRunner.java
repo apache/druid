@@ -76,8 +76,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
-                                                                  .withReplicationManager(replicatorThrottler)
-                                                                  .build();
+                                                                       .withReplicationManager(replicatorThrottler)
+                                                                       .build();
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
@@ -94,10 +94,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       }
 
       if (!foundMatchingRule) {
-        log.makeAlert(
-            "Unable to find a matching rule for dataSource[%s]",
-            segment.getDataSource()
-        )
+        log.makeAlert("Unable to find a matching rule!")
+           .addData("dataSource", segment.getDataSource())
            .addData("segment", segment.getIdentifier())
            .emit();
       }

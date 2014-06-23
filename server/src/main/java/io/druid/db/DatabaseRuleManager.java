@@ -51,7 +51,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -125,7 +124,7 @@ public class DatabaseRuleManager
   private final Supplier<DatabaseRuleManagerConfig> config;
   private final Supplier<DbTablesConfig> dbTables;
   private final IDBI dbi;
-  private final AtomicReference<ConcurrentHashMap<String, List<Rule>>> rules;
+  private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
 
   private volatile ScheduledExecutorService exec;
 
@@ -146,8 +145,8 @@ public class DatabaseRuleManager
     this.dbTables = dbTables;
     this.dbi = dbi;
 
-    this.rules = new AtomicReference<ConcurrentHashMap<String, List<Rule>>>(
-        new ConcurrentHashMap<String, List<Rule>>()
+    this.rules = new AtomicReference<>(
+        ImmutableMap.<String, List<Rule>>of()
     );
   }
 
@@ -188,7 +187,7 @@ public class DatabaseRuleManager
         return;
       }
 
-      rules.set(new ConcurrentHashMap<String, List<Rule>>());
+      rules.set(ImmutableMap.<String, List<Rule>>of());
 
       started = false;
       exec.shutdownNow();
@@ -199,7 +198,7 @@ public class DatabaseRuleManager
   public void poll()
   {
     try {
-      ConcurrentHashMap<String, List<Rule>> newRules = new ConcurrentHashMap<String, List<Rule>>(
+      ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
           dbi.withHandle(
               new HandleCallback<Map<String, List<Rule>>>()
               {
@@ -309,12 +308,6 @@ public class DatabaseRuleManager
               }
             }
         );
-
-        ConcurrentHashMap<String, List<Rule>> existingRules = rules.get();
-        if (existingRules == null) {
-          existingRules = new ConcurrentHashMap<String, List<Rule>>();
-        }
-        existingRules.put(dataSource, newRules);
       }
       catch (Exception e) {
         log.error(e, String.format("Exception while overriding rule for %s", dataSource));

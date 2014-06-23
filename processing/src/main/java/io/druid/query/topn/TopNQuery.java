@@ -27,6 +27,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
+import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -154,6 +155,23 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         topNMetricSpec,
         threshold,
         querySegmentSpec,
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
+  @Override
+  public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
+  {
+    return new TopNQuery(
+        dataSource,
+        dimensionSpec,
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
         dimFilter,
         granularity,
         aggregatorSpecs,

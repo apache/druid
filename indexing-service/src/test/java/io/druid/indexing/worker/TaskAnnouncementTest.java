@@ -20,6 +20,7 @@
 package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.metamx.common.Granularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.RealtimeIndexTask;
@@ -27,7 +28,6 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.IndexGranularity;
 import io.druid.segment.realtime.Schema;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
@@ -42,12 +42,13 @@ public class TaskAnnouncementTest
     final Task task = new RealtimeIndexTask(
         "theid",
         new TaskResource("rofl", 2),
+        null,
         new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
         null,
         null,
         new Period("PT10M"),
         1,
-        IndexGranularity.HOUR,
+        Granularity.HOUR,
         null
     );
     final TaskStatus status = TaskStatus.running(task.getId());

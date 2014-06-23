@@ -21,7 +21,9 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicates;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
@@ -43,8 +45,8 @@ public class BatchServerInventoryViewProvider implements ServerInventoryViewProv
   private ObjectMapper jsonMapper = null;
 
   @Override
-  public ServerInventoryView get()
+  public BatchServerInventoryView get()
   {
-    return new BatchServerInventoryView(zkPaths, curator, jsonMapper);
+    return new BatchServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysTrue());
   }
 }

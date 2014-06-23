@@ -31,10 +31,10 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -61,6 +61,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -146,7 +147,11 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
 
-      job.setInputFormatClass(TextInputFormat.class);
+      if (config.isCombineText()) {
+        job.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        job.setInputFormatClass(TextInputFormat.class);
+      }
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(Text.class);
@@ -163,6 +168,7 @@ public class IndexGeneratorJob implements Jobby
       FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
 
       config.addInputPaths(job);
+      config.addJobProperties(job);
       config.intoConfiguration(job);
 
       JobHelper.setupClasspath(config, job);
@@ -254,9 +260,9 @@ public class IndexGeneratorJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
-      for (AggregatorFactory factory : config.getRollupSpec().getAggs()) {
+      for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
         metricNames.add(factory.getName().toLowerCase());
       }
 
@@ -272,10 +278,8 @@ public class IndexGeneratorJob implements Jobby
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
-      final DataRollupSpec rollupSpec = config.getRollupSpec();
-      final AggregatorFactory[] aggs = rollupSpec.getAggs().toArray(
-          new AggregatorFactory[rollupSpec.getAggs().size()]
-      );
+      //final DataRollupSpec rollupSpec = config.getRollupSpec();
+      final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
 
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs);
 
@@ -299,7 +303,7 @@ public class IndexGeneratorJob implements Jobby
         int numRows = index.add(inputRow);
         ++lineCount;
 
-        if (numRows >= rollupSpec.rowFlushBoundary) {
+        if (numRows >= config.getSchema().getTuningConfig().getRowFlushBoundary()) {
           log.info(
               "%,d lines to %,d rows in %,d millis",
               lineCount - runningTotalLineCount,
@@ -422,7 +426,7 @@ public class IndexGeneratorJob implements Jobby
         if (caughtException == null) {
           Closeables.close(out, false);
         } else {
-          Closeables.closeQuietly(out);
+          CloseQuietly.close(out);
           throw Throwables.propagate(caughtException);
         }
       }
@@ -453,7 +457,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getVersion(),
+          config.getSchema().getTuningConfig().getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,
@@ -602,7 +606,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       finally {
-        Closeables.closeQuietly(in);
+        CloseQuietly.close(in);
       }
       out.closeEntry();
       context.progress();
@@ -615,8 +619,8 @@ public class IndexGeneratorJob implements Jobby
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withSpatialDimensions(config.getDataSpec().getSpatialDimensions())
-              .withQueryGranularity(config.getRollupSpec().getRollupGranularity())
+              .withSpatialDimensions(config.getSchema().getDataSchema().getParser())
+              .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()
       );

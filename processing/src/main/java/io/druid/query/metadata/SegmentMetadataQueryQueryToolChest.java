@@ -35,6 +35,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -147,7 +148,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource().toString())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4(query.getType())
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))

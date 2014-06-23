@@ -22,6 +22,7 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -32,6 +33,8 @@ import org.apache.curator.framework.CuratorFramework;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -43,6 +46,7 @@ public class ZkCoordinator extends BaseZkCoordinator
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final ServerManager serverManager;
+  private final ScheduledExecutorService exec;
 
   @Inject
   public ZkCoordinator(
@@ -52,7 +56,8 @@ public class ZkCoordinator extends BaseZkCoordinator
       DruidServerMetadata me,
       DataSegmentAnnouncer announcer,
       CuratorFramework curator,
-      ServerManager serverManager
+      ServerManager serverManager,
+      ScheduledExecutorFactory factory
   )
   {
     super(jsonMapper, zkPaths, me, curator);
@@ -61,6 +66,8 @@ public class ZkCoordinator extends BaseZkCoordinator
     this.config = config;
     this.announcer = announcer;
     this.serverManager = serverManager;
+
+    this.exec = factory.create(1, "ZkCoordinator-Exec--%d");
   }
 
   @Override
@@ -225,17 +232,36 @@ public class ZkCoordinator extends BaseZkCoordinator
 
 
   @Override
-  public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void removeSegment(final DataSegment segment, final DataSegmentChangeCallback callback)
   {
     try {
-      serverManager.dropSegment(segment);
-
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-      if (!segmentInfoCacheFile.delete()) {
-        log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-      }
-
       announcer.unannounceSegment(segment);
+
+      log.info("Completely removing [%s] in [%,d] millis", segment.getIdentifier(), config.getDropSegmentDelayMillis());
+      exec.schedule(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              try {
+                serverManager.dropSegment(segment);
+
+                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+                if (!segmentInfoCacheFile.delete()) {
+                  log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+                }
+              }
+              catch (Exception e) {
+                log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
+                   .addData("segment", segment)
+                   .emit();
+              }
+            }
+          },
+          config.getDropSegmentDelayMillis(),
+          TimeUnit.MILLISECONDS
+      );
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to remove segment")

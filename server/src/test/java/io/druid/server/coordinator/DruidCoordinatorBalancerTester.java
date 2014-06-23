@@ -19,7 +19,7 @@
 
 package io.druid.server.coordinator;
 
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.timeline.DataSegment;
 
@@ -33,7 +33,7 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
   @Override
   protected void moveSegment(
       final BalancerSegmentHolder segment,
-      final DruidServer toServer,
+      final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
   )
   {

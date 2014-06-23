@@ -25,9 +25,14 @@ import com.metamx.common.logger.Logger;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.DefaultConsumer;
+import com.rabbitmq.client.Envelope;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.ConsumerCancelledException;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -39,6 +44,8 @@ import net.jodah.lyra.retry.RetryPolicy;
 import net.jodah.lyra.util.Duration;
 
 import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * A FirehoseFactory for RabbitMQ.
@@ -93,7 +100,7 @@ import java.io.IOException;
  * For more information on RabbitMQ high availability please see:
  * <a href="http://www.rabbitmq.com/ha.html">http://www.rabbitmq.com/ha.html</a>.
  */
-public class RabbitMQFirehoseFactory implements FirehoseFactory
+public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
   private static final Logger log = new Logger(RabbitMQFirehoseFactory.class);
 
@@ -119,14 +126,18 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
+    final StringInputRowParser stringParser = firehoseParser;
+
     ConnectionOptions lyraOptions = new ConnectionOptions(this.connectionFactory);
     Config lyraConfig = new Config()
-        .withRecoveryPolicy(new RetryPolicy()
-            .withMaxRetries(config.getMaxRetries())
-            .withRetryInterval(Duration.seconds(config.getRetryIntervalSeconds()))
-            .withMaxDuration(Duration.seconds(config.getMaxDurationSeconds())));
+        .withRecoveryPolicy(
+            new RetryPolicy()
+                .withMaxRetries(config.getMaxRetries())
+                .withRetryInterval(Duration.seconds(config.getRetryIntervalSeconds()))
+                .withMaxDuration(Duration.seconds(config.getMaxDurationSeconds()))
+        );
 
     String queue = config.getQueue();
     String exchange = config.getExchange();
@@ -138,26 +149,30 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
 
     final Connection connection = Connections.create(lyraOptions, lyraConfig);
 
-    connection.addShutdownListener(new ShutdownListener()
-    {
-      @Override
-      public void shutdownCompleted(ShutdownSignalException cause)
-      {
-        log.warn(cause, "Connection closed!");
-      }
-    });
+    connection.addShutdownListener(
+        new ShutdownListener()
+        {
+          @Override
+          public void shutdownCompleted(ShutdownSignalException cause)
+          {
+            log.warn(cause, "Connection closed!");
+          }
+        }
+    );
 
     final Channel channel = connection.createChannel();
     channel.queueDeclare(queue, durable, exclusive, autoDelete, null);
     channel.queueBind(queue, exchange, routingKey);
-    channel.addShutdownListener(new ShutdownListener()
-    {
-      @Override
-      public void shutdownCompleted(ShutdownSignalException cause)
-      {
-        log.warn(cause, "Channel closed!");
-      }
-    });
+    channel.addShutdownListener(
+        new ShutdownListener()
+        {
+          @Override
+          public void shutdownCompleted(ShutdownSignalException cause)
+          {
+            log.warn(cause, "Channel closed!");
+          }
+        }
+    );
 
     // We create a QueueingConsumer that will not auto-acknowledge messages since that
     // happens on commit().
@@ -170,7 +185,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
        * Storing the latest delivery as a member variable should be safe since this will only be run
        * by a single thread.
        */
-      private QueueingConsumer.Delivery delivery;
+      private Delivery delivery;
 
       /**
        * Store the latest delivery tag to be able to commit (acknowledge) the message delivery up to
@@ -212,7 +227,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
           return null;
         }
 
-        return parser.parse(new String(delivery.getBody()));
+        return stringParser.parse(new String(delivery.getBody()));
       }
 
       @Override
@@ -252,5 +267,48 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory
         connection.close();
       }
     };
+  }
+
+  @Override
+  public ByteBufferInputRowParser getParser()
+  {
+    return parser;
+  }
+
+  private static class QueueingConsumer extends DefaultConsumer
+  {
+    private final BlockingQueue<Delivery> _queue;
+
+    public QueueingConsumer(Channel ch) {
+      this(ch, new LinkedBlockingQueue<Delivery>());
+    }
+
+    public QueueingConsumer(Channel ch, BlockingQueue<Delivery> q) {
+      super(ch);
+      this._queue = q;
+    }
+
+    @Override public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
+      _queue.clear();
+    }
+
+    @Override public void handleCancel(String consumerTag) throws IOException {
+      _queue.clear();
+    }
+
+    @Override public void handleDelivery(String consumerTag,
+                                         Envelope envelope,
+                                         AMQP.BasicProperties properties,
+                                         byte[] body)
+      throws IOException
+    {
+      this._queue.add(new Delivery(envelope, properties, body));
+    }
+
+    public Delivery nextDelivery()
+      throws InterruptedException, ShutdownSignalException, ConsumerCancelledException
+    {
+      return _queue.take();
+    }
   }
 }
