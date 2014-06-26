@@ -89,6 +89,9 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
     "user": "username",
     "password": "passmeup",
     "segmentTable": "segments"
+  },
+  "jobProperties": {
+    "mapreduce.job.queuename": "default"
   }
 }
 ```
