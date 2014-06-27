@@ -64,7 +64,7 @@ Example JavaScript aggregator:
   "function": "function(delta, total) { return 100 * Math.abs(delta) / total; }"
 }
 ```
-### `hyperUniqueCardinality` post-aggregator
+### HyperUnique Cardinality post-aggregator
 
 The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object such that it can be used in post aggregations.
 
@@ -90,8 +90,7 @@ It can be used in a sample calculation as so:
   }
 ```
 
-
-### Example Usage
+#### Example Usage
 
 In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called "total".
 
@@ -122,5 +121,70 @@ The format of the query JSON is as follows:
   }
   ...
 }
+```
 
+### Approximate Histogram post-aggregators
+
+Post-aggregators used to transform opaque approximate histogram objects
+into actual histogram representations, and to compute various distribution metrics.
+
+#### equal buckets post-aggregator
+
+Computes a visual representation of the approximate histogram with a given number of equal-sized bins
+
+```json
+{ "type" : "equalBuckets", "name" : <output_name>, "fieldName" : <aggregator_name>,
+  "numBuckets" : <count> }
+```
+
+#### buckets post-aggregator
+
+Computes a visual representation given an initial breakpoint, offset, and a bucket size.
+
+```json
+{ "type" : "buckets", "name" : <output_name>, "fieldName" : <aggregator_name>,
+  "bucketSize" : <bucket_size>, "offset" : <offset> }
+```
+
+#### custom buckets post-aggregator
+
+Computes a visual representation of the approximate histogram with bins laid out according to the given breaks
+
+```json
+{ "type" : "customBuckets", "name" : <output_name>, "fieldName" : <aggregator_name>,
+  "breaks" : [ <value>, <value>, ... ] }
+```
+
+#### min post-aggregator
+
+Returns the minimum value of the underlying approximate histogram aggregator
+
+```json
+{ "type" : "min", "name" : <output_name>, "fieldName" : <aggregator_name> }
+```
+
+#### max post-aggregator
+
+Returns the maximum value of the underlying approximate histogram aggregator
+
+```json
+{ "type" : "max", "name" : <output_name>, "fieldName" : <aggregator_name> }
+```
+
+#### quantile post-aggregator
+
+Computes a single quantile based on the underlying approximate histogram aggregator
+
+```json
+{ "type" : "quantile", "name" : <output_name>, "fieldName" : <aggregator_name>,
+  "probability" : <quantile> }
+```
+
+#### quantiles post-aggregator
+
+Computes an array of quantiles based on the underlying approximate histogram aggregator
+
+```json
+{ "type" : "quantiles", "name" : <output_name>, "fieldName" : <aggregator_name>,
+  "probabilities" : [ <quantile>, <quantile>, ... ] }
 ```

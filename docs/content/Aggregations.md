@@ -155,8 +155,33 @@ Determine the number of distinct   are assigned to.
 
 ### HyperUnique aggregator
 
-Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a hyperUnique metric at indexing time.
+Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a "hyperUnique" metric at indexing time.
 
 ```json
 { "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
+
+### ApproxHistogram aggregator
+
+This aggregator is based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf) to compute approximate histograms.
+
+To use this feature, an "approxHistogram" aggregator must be included at indexing time. The ingestion aggregator can only apply to numeric values. To query for results, an "approxHistogramFold" aggregator must be included in the query.
+
+```json
+{
+  "type" : "approxHistogram(ingestion), approxHistogramFold(query)",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "resolution" : <integer>,
+  "numBuckets" : <integer>,
+  "lowerLimit" : <float>,
+  "upperLimit" : <float>
+}
+```
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`resolution`|Number of centroids (data points) to store. The higher the resolution, the more accurate results are, but the slower computation will be.|50|
+|`numBuckets`|Number of output buckets for the resulting histogram.|7|
+|`lowerLimit`/`upperLimit`|Restrict the approximation to the given range. The values outside this range will be aggregated into two centroids. Counts of values outside this range are still maintained. |-INF/+INF|
+

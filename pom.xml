@@ -59,6 +59,7 @@
         <module>kafka-seven</module>
         <module>kafka-eight</module>
         <module>rabbitmq</module>
+        <module>histogram</module>
     </modules>
 
     <dependencyManagement>
