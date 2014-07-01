@@ -110,8 +110,9 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       @Override
       public ApproximateHistogram fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        buffer.limit(buffer.position() + numBytes);
-        return ApproximateHistogram.fromBytes(buffer);
+        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+        readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+        return ApproximateHistogram.fromBytes(readOnlyBuffer);
       }
 
       @Override
