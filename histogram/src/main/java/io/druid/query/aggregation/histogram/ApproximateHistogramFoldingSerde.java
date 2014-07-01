@@ -67,19 +67,25 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       @Override
       public ApproximateHistogram extractValue(InputRow inputRow, String metricName)
       {
-        List<String> dimValues = inputRow.getDimension(metricName);
-        if (dimValues != null && dimValues.size() > 0) {
-          Iterator<String> values = dimValues.iterator();
+        Object rawValue = inputRow.getRaw(metricName);
 
-          ApproximateHistogram h = new ApproximateHistogram();
-
-          while (values.hasNext()) {
-            float value = Float.parseFloat(values.next());
-            h.offer(value);
-          }
-          return h;
+        if (rawValue instanceof ApproximateHistogram) {
+          return (ApproximateHistogram) rawValue;
         } else {
-          return new ApproximateHistogram(0);
+          List<String> dimValues = inputRow.getDimension(metricName);
+          if (dimValues != null && dimValues.size() > 0) {
+            Iterator<String> values = dimValues.iterator();
+
+            ApproximateHistogram h = new ApproximateHistogram();
+
+            while (values.hasNext()) {
+              float value = Float.parseFloat(values.next());
+              h.offer(value);
+            }
+            return h;
+          } else {
+            return new ApproximateHistogram(0);
+          }
         }
       }
     };
