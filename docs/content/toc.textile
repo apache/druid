@@ -79,6 +79,7 @@ h2. Experimental
 * "About Experimental Features":./About-Experimental-Features.html
 * "Geographic Queries":./GeographicQueries.html
 * "Select Query":./SelectQuery.html
+* "Approximate Histograms and Quantiles":./ApproxHisto.html
 
 h2. Development
 * "Versioning":./Versioning.html
