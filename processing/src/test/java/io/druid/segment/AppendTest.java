@@ -51,10 +51,6 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
-import io.druid.segment.QueryableIndex;
-import io.druid.segment.QueryableIndexSegment;
-import io.druid.segment.Segment;
-import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Before;
@@ -459,12 +455,28 @@ public class AppendTest
 
     SearchQuery query = makeSearchQuery();
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    QueryRunner runner2 = TestQueryRunners.makeSearchQueryRunner(segment2);
     TestHelper.assertExpectedResults(expectedResults, runner.run(query));
-/*  TODO: this is broken.  Actually, it's a bug in the appending code that keeps dimension values around that don't
-    TODO: exist anymore.  The bug should be fixed and this uncommented
-    TestHelper.assertExpectedResults(expectedResults, runner2.run(query));
-*/
+  }
+
+  @Test
+  public void testSearchWithOverlap()
+  {
+    List<Result<SearchResultValue>> expectedResults = Arrays.asList(
+        new Result<SearchResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SearchResultValue(
+                Arrays.<SearchHit>asList(
+                    new SearchHit(placementishDimension, "a"),
+                    new SearchHit(placementDimension, "mezzanine"),
+                    new SearchHit(providerDimension, "total_market")
+                )
+            )
+        )
+    );
+
+    SearchQuery query = makeSearchQuery();
+    QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment2);
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
   }
 
   @Test

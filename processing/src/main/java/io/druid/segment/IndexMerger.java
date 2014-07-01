@@ -322,12 +322,6 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-/*
-    if (indexes.size() < 2) {
-      throw new ISE("Too few indexes provided for append [%d].", indexes.size());
-    }
-*/
-
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(
             indexes,
