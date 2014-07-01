@@ -98,4 +98,12 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   {
     return false;
   }
+
+  @Override
+  public String toString()
+  {
+    return "JavascriptDimExtractionFn{" +
+           "function='" + function + '\'' +
+           '}';
+  }
 }

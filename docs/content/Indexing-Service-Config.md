@@ -69,10 +69,9 @@ A sample worker setup spec is shown below:
     "keyName":"keyName"
   },
   "userData":{
-    "classType":"galaxy",
-    "env":"druid",
-    "version":"druid_version",
-    "type":"sample_cluster/worker"
+    "impl":"string",
+    "data":"version=:VERSION:",
+    "versionReplacementString":":VERSION:"
   }
 }
 ```
@@ -81,8 +80,8 @@ Issuing a GET request at the same URL will return the current worker setup spec 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`minVersion`|The coordinator only assigns tasks to workers with a version greater than the minVersion. If this is not specified, the minVersion will be the same as the coordinator version.|none|
+|`minVersion`|The coordinator only assigns tasks to workers with a version greater than the minVersion. If this is not specified, the minVersion will be druid.indexer.runner.minWorkerVersion.|none|
 |`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
 |`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
-|`nodeData`|A JSON object that contains metadata about new nodes to create.|none|
-|`userData`|A JSON object that contains metadata about how the node should register itself on startup. This data is sent with node creation requests.|none|
+|`nodeData`|A JSON object that describes how to launch new nodes. Currently, only EC2 is supported.|none; required|
+|`userData`|A JSON object that describes how to configure new nodes. Currently, only EC2 is supported. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|

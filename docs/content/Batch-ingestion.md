@@ -89,6 +89,9 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
     "user": "username",
     "password": "passmeup",
     "segmentTable": "segments"
+  },
+  "jobProperties": {
+    "mapreduce.job.queuename": "default"
   }
 }
 ```
@@ -109,6 +112,7 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
 |leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool).|no|
 |partitionsSpec|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.|no|
 |metadataUpdateSpec|a specification of how to update the metadata for the druid cluster these segments belong to.|yes|
+|jobProperties|a map of properties to add to the Hadoop job configuration.|no|
 
 ### Path specification
 

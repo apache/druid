@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.segment.ReferenceCountingSegment;
@@ -52,7 +52,7 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
       return new ResourceClosingSequence<T>(baseSequence, closeable);
     }
     catch (RuntimeException e) {
-      Closeables.closeQuietly(closeable);
+      CloseQuietly.close(closeable);
       throw e;
     }
   }

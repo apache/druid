@@ -17,37 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.data;
+package io.druid.guice;
 
-import com.google.common.collect.Iterators;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.metamx.common.config.Config;
+import io.druid.guice.JsonConfigurator;
+import io.druid.guice.LazySingleton;
+import org.skife.config.ConfigurationObjectFactory;
 
-import java.util.Iterator;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import java.util.Properties;
 
 /**
-*/
-public class SingleIndexedInts implements IndexedInts
+ */
+public class ConfigModule implements Module
 {
-  private final int value;
-
-  public SingleIndexedInts(int value) {
-    this.value = value;
+  @Override
+  public void configure(Binder binder)
+  {
+    binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+    binder.bind(JsonConfigurator.class).in(LazySingleton.class);
   }
 
-  @Override
-  public int size()
+  @Provides @LazySingleton
+  public ConfigurationObjectFactory makeFactory(Properties props)
   {
-    return 1;
-  }
-
-  @Override
-  public int get(int index)
-  {
-    return value;
-  }
-
-  @Override
-  public Iterator<Integer> iterator()
-  {
-    return Iterators.singletonIterator(value);
+    return Config.createFactory(props);
   }
 }

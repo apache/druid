@@ -35,6 +35,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -180,6 +181,7 @@ public class TestIndex
                     new TimestampSpec("ts", "iso"),
                     new DimensionsSpec(Arrays.asList(DIMENSIONS), null, null),
                     "\t",
+                    "\u0001",
                     Arrays.asList(COLUMNS)
                 ),
                 null, null, null, null

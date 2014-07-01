@@ -27,7 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
@@ -222,6 +222,6 @@ public class SQLRunner
       }
     }
 
-    Closeables.closeQuietly(stdInput);
+    CloseQuietly.close(stdInput);
   }
 }

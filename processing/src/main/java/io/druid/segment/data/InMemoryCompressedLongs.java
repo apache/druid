@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 
@@ -163,7 +164,7 @@ public class InMemoryCompressedLongs implements IndexedLongs
   private void loadBuffer(int bufferNum)
   {
     loadBuffer = null;
-    Closeables.closeQuietly(holder);
+    CloseQuietly.close(holder);
     final byte[] compressedBytes = compressedBuffers.get(bufferNum);
     holder = strategy.fromByteBuffer(ByteBuffer.wrap(compressedBytes), compressedBytes.length);
     loadBuffer = holder.get();

@@ -153,7 +153,7 @@ druid.indexer.logs.s3Bucket=#{LOGS_BUCKET}
 druid.indexer.logs.s3Prefix=prod/logs/v1
 
 # Dedicate more resources to peons
-druid.indexer.runner.javaOpts=-server -Xmx6g -Xms6g -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+druid.indexer.runner.javaOpts=-server -Xmx3g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 druid.indexer.runner.taskDir=/mnt/persistent/task/
 druid.indexer.task.taskDir=/mnt/persistent/task/
 druid.indexer.task.chathandler.type=announce

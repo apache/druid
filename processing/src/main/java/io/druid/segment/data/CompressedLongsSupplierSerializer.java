@@ -100,17 +100,11 @@ public class CompressedLongsSupplierSerializer
     
     flattener.close();
 
-    OutputStream out = null;
-    try {
-      out = consolidatedOut.getOutput();
-
+    try (OutputStream out = consolidatedOut.getOutput()) {
       out.write(CompressedLongsIndexedSupplier.version);
       out.write(Ints.toByteArray(numInserted));
       out.write(Ints.toByteArray(sizePer));
       ByteStreams.copy(flattener.combineStreams(), out);
-    }
-    finally {
-      Closeables.closeQuietly(out);
     }
   }
 }

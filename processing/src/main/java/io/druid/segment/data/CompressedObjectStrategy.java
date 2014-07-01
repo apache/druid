@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
@@ -74,7 +74,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       buf.put(outputBytes, 0, numDecompressedBytes);
       buf.flip();
 
-      Closeables.closeQuietly(outputBytesHolder);
+      CloseQuietly.close(outputBytesHolder);
 
       return new ResourceHolder<T>()
       {
@@ -105,7 +105,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
 
     final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder();
     LZFChunk chunk = encoder.get().encodeChunk(buf.array(), 0, buf.array().length);
-    Closeables.closeQuietly(encoder);
+    CloseQuietly.close(encoder);
 
     return chunk.getData();
   }

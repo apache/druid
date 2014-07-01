@@ -20,10 +20,11 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import com.metamx.common.guava.CloseQuietly;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -32,6 +33,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
@@ -46,9 +49,13 @@ import java.util.Iterator;
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
  */
-public class GenericIndexed<T> implements Indexed<T>
+public class GenericIndexed<T> implements Indexed<T>, Closeable
 {
   private static final byte version = 0x1;
+
+  public static final int INITIAL_CACHE_CAPACITY = 16384;
+
+  private int indexOffset;
 
   public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy)
   {
@@ -73,14 +80,14 @@ public class GenericIndexed<T> implements Indexed<T>
         allowReverseLookup = false;
       }
       if (prevVal instanceof Closeable) {
-        Closeables.closeQuietly((Closeable) prevVal);
+        CloseQuietly.close((Closeable) prevVal);
       }
 
       prevVal = next;
       ++count;
     }
     if (prevVal instanceof Closeable) {
-      Closeables.closeQuietly((Closeable) prevVal);
+      CloseQuietly.close((Closeable) prevVal);
     }
 
     ByteArrayOutputStream headerBytes = new ByteArrayOutputStream(4 + (count * 4));
@@ -98,7 +105,7 @@ public class GenericIndexed<T> implements Indexed<T>
         valueBytes.write(bytes);
 
         if (object instanceof Closeable) {
-          Closeables.closeQuietly((Closeable) object);
+          CloseQuietly.close((Closeable) object);
         }
       }
     }
@@ -114,11 +121,44 @@ public class GenericIndexed<T> implements Indexed<T>
     return new GenericIndexed<T>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
   }
 
+  private static class SizedLRUMap<K, V> extends LinkedHashMap<K, V>
+  {
+    final Map<K, Integer> sizes = Maps.newHashMap();
+    int numBytes = 0;
+    int maxBytes = 0;
+
+    public SizedLRUMap(int initialCapacity, int maxBytes)
+    {
+      super(initialCapacity, 0.75f, true);
+      this.maxBytes = maxBytes;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest)
+    {
+      if (numBytes > maxBytes) {
+        numBytes -= sizes.remove(eldest.getKey());
+        return true;
+      }
+      return false;
+    }
+
+    public V put(K key, V value, int size)
+    {
+      numBytes += size;
+      sizes.put(key, size);
+      return super.put(key, value);
+    }
+  }
+
   private final ByteBuffer theBuffer;
   private final ObjectStrategy<T> strategy;
   private final boolean allowReverseLookup;
   private final int size;
 
+  private final boolean cacheable;
+  private final ThreadLocal<ByteBuffer> cachedBuffer;
+  private final ThreadLocal<SizedLRUMap<Integer, T>> cachedValues;
   private final int valuesOffset;
 
   GenericIndexed(
@@ -132,7 +172,45 @@ public class GenericIndexed<T> implements Indexed<T>
     this.allowReverseLookup = allowReverseLookup;
 
     size = theBuffer.getInt();
+    indexOffset = theBuffer.position();
     valuesOffset = theBuffer.position() + (size << 2);
+
+    this.cachedBuffer = new ThreadLocal<ByteBuffer>()
+    {
+      @Override
+      protected ByteBuffer initialValue()
+      {
+        return theBuffer.asReadOnlyBuffer();
+      }
+    };
+
+    this.cacheable = false;
+    this.cachedValues = new ThreadLocal<>();
+  }
+
+  /**
+   * Creates a copy of the given indexed with the given cache size
+   * The resulting copy must be closed to release resources used by the cache
+   */
+  GenericIndexed(GenericIndexed<T> other, final int maxBytes)
+  {
+    this.theBuffer = other.theBuffer;
+    this.strategy = other.strategy;
+    this.allowReverseLookup = other.allowReverseLookup;
+    this.size = other.size;
+    this.indexOffset = other.indexOffset;
+    this.valuesOffset = other.valuesOffset;
+    this.cachedBuffer = other.cachedBuffer;
+
+    this.cachedValues = new ThreadLocal<SizedLRUMap<Integer, T>>() {
+      @Override
+      protected SizedLRUMap<Integer, T> initialValue()
+      {
+        return new SizedLRUMap<>(INITIAL_CACHE_CAPACITY, maxBytes);
+      }
+    };
+
+    this.cacheable = strategy instanceof CacheableObjectStrategy;
   }
 
   @Override
@@ -157,24 +235,41 @@ public class GenericIndexed<T> implements Indexed<T>
       throw new IAE(String.format("Index[%s] >= size[%s]", index, size));
     }
 
-    ByteBuffer myBuffer = theBuffer.asReadOnlyBuffer();
-    int startOffset = 4;
-    int endOffset;
+    if(cacheable) {
+      final T cached = cachedValues.get().get(index);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    // using a cached copy of the buffer instead of making a read-only copy every time get() is called is faster
+    final ByteBuffer copyBuffer = this.cachedBuffer.get();
+
+    final int startOffset;
+    final int endOffset;
 
     if (index == 0) {
-      endOffset = myBuffer.getInt();
+      startOffset = 4;
+      endOffset = copyBuffer.getInt(indexOffset);
     } else {
-      myBuffer.position(myBuffer.position() + ((index - 1) * 4));
-      startOffset = myBuffer.getInt() + 4;
-      endOffset = myBuffer.getInt();
+      copyBuffer.position(indexOffset + ((index - 1) * 4));
+      startOffset = copyBuffer.getInt() + 4;
+      endOffset = copyBuffer.getInt();
     }
 
     if (startOffset == endOffset) {
       return null;
     }
 
-    myBuffer.position(valuesOffset + startOffset);
-    return strategy.fromByteBuffer(myBuffer, endOffset - startOffset);
+    copyBuffer.position(valuesOffset + startOffset);
+    final int size = endOffset - startOffset;
+    // fromByteBuffer must not modify the buffer limit
+    final T value = strategy.fromByteBuffer(copyBuffer, size);
+
+    if(cacheable) {
+      cachedValues.get().put(index, value, size);
+    }
+    return value;
   }
 
   @Override
@@ -220,6 +315,25 @@ public class GenericIndexed<T> implements Indexed<T>
     channel.write(theBuffer.asReadOnlyBuffer());
   }
 
+  /**
+   * The returned GenericIndexed must be closed to release the underlying memory
+   * @param maxBytes
+   * @return
+   */
+  public GenericIndexed<T> withCache(int maxBytes)
+  {
+    return new GenericIndexed<>(this, maxBytes);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    if(cacheable) {
+      cachedValues.get().clear();
+      cachedValues.remove();
+    }
+  }
+
   public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
   {
     byte versionFromBuffer = buffer.get();
@@ -241,7 +355,7 @@ public class GenericIndexed<T> implements Indexed<T>
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static ObjectStrategy<String> stringStrategy = new ObjectStrategy<String>()
+  public static ObjectStrategy<String> stringStrategy = new CacheableObjectStrategy<String>()
   {
     @Override
     public Class<? extends String> getClazz()
@@ -250,9 +364,9 @@ public class GenericIndexed<T> implements Indexed<T>
     }
 
     @Override
-    public String fromByteBuffer(ByteBuffer buffer, int numBytes)
+    public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      byte[] bytes = new byte[numBytes];
+      final byte[] bytes = new byte[numBytes];
       buffer.get(bytes);
       return new String(bytes, Charsets.UTF_8);
     }

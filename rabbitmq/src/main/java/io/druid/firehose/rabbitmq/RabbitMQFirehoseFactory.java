@@ -128,7 +128,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
-    final StringInputRowParser stringParser = (StringInputRowParser) firehoseParser;
+    final StringInputRowParser stringParser = firehoseParser;
 
     ConnectionOptions lyraOptions = new ConnectionOptions(this.connectionFactory);
     Config lyraConfig = new Config()

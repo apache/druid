@@ -19,24 +19,32 @@
 
 package io.druid.indexing.overlord.setup;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import io.druid.guice.annotations.Json;
+import org.apache.commons.codec.binary.Base64;
 
 /**
  */
-public class GalaxyUserData
+public class GalaxyEC2UserData implements EC2UserData<GalaxyEC2UserData>
 {
-  public final String env;
-  public final String version;
-  public final String type;
+  private final ObjectMapper jsonMapper;
+  private final String env;
+  private final String version;
+  private final String type;
 
   @JsonCreator
-  public GalaxyUserData(
+  public GalaxyEC2UserData(
+      @JacksonInject @Json ObjectMapper jsonMapper,
       @JsonProperty("env") String env,
       @JsonProperty("version") String version,
       @JsonProperty("type") String type
   )
   {
+    this.jsonMapper = jsonMapper;
     this.env = env;
     this.version = version;
     this.type = type;
@@ -60,9 +68,21 @@ public class GalaxyUserData
     return type;
   }
 
-  public GalaxyUserData withVersion(String ver)
+  @Override
+  public GalaxyEC2UserData withVersion(String ver)
   {
-    return new GalaxyUserData(env, ver, type);
+    return new GalaxyEC2UserData(jsonMapper, env, ver, type);
+  }
+
+  @Override
+  public String getUserDataBase64()
+  {
+    try {
+      return Base64.encodeBase64String(jsonMapper.writeValueAsBytes(this));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   @Override

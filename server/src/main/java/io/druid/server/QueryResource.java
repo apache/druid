@@ -22,20 +22,16 @@ package io.druid.server;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
-import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.Accumulators;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
-import com.metamx.common.guava.YieldingAccumulators;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -51,7 +47,6 @@ import org.joda.time.DateTime;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -59,12 +54,10 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 import java.util.UUID;
 
 /**
@@ -131,8 +124,8 @@ public class QueryResource
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     final ObjectWriter jsonWriter = req.getParameter("pretty") == null
-                              ? objectMapper.writer()
-                              : objectMapper.writerWithDefaultPrettyPrinter();
+                                    ? objectMapper.writer()
+                                    : objectMapper.writerWithDefaultPrettyPrinter();
 
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
@@ -231,10 +224,20 @@ public class QueryResource
                 new DateTime(),
                 req.getRemoteAddr(),
                 query,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "interrupted", true, "reason", e.toString()))
+                new QueryStats(
+                    ImmutableMap.<String, Object>of(
+                        "success",
+                        false,
+                        "interrupted",
+                        true,
+                        "reason",
+                        e.toString()
+                    )
+                )
             )
         );
-      } catch (Exception e2) {
+      }
+      catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
       return Response.serverError().entity(
