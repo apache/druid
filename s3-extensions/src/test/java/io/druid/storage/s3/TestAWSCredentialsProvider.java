@@ -3,6 +3,7 @@ package io.druid.storage.s3;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
+import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -13,17 +14,16 @@ import java.io.PrintWriter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 public class TestAWSCredentialsProvider {
   @Test
   public void testWithFixedAWSKeys() {
     S3StorageDruidModule module = new S3StorageDruidModule();
 
-    AWSCredentialsConfig config = mock(AWSCredentialsConfig.class);
-    doReturn("accessKeySample").when(config).getAccessKey();
-    doReturn("secretKeySample").when(config).getSecretKey();
+    AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
+    EasyMock.expect(config.getAccessKey()).andReturn("accessKeySample").atLeastOnce();
+    EasyMock.expect(config.getSecretKey()).andReturn("secretKeySample").atLeastOnce();
+    EasyMock.replay(config);
 
     AWSCredentialsProvider provider = module.getAWSCredentialsProvider(config);
     AWSCredentials credentials = provider.getCredentials();
@@ -41,14 +41,15 @@ public class TestAWSCredentialsProvider {
   public void testWithFileSessionCredentials() throws IOException {
     S3StorageDruidModule module = new S3StorageDruidModule();
 
-    AWSCredentialsConfig config = mock(AWSCredentialsConfig.class);
-    doReturn("").when(config).getAccessKey();
-    doReturn("").when(config).getSecretKey();
+    AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
+    EasyMock.expect(config.getAccessKey()).andReturn("");
+    EasyMock.expect(config.getSecretKey()).andReturn("");
     File file = folder.newFile();
     PrintWriter out = new PrintWriter(file.getAbsolutePath());
     out.println("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample");
     out.close();
-    doReturn(file.getAbsolutePath()).when(config).getFileSessionCredentials();
+    EasyMock.expect(config.getFileSessionCredentials()).andReturn(file.getAbsolutePath()).atLeastOnce();
+    EasyMock.replay(config);
 
     AWSCredentialsProvider provider = module.getAWSCredentialsProvider(config);
     AWSCredentials credentials = provider.getCredentials();

@@ -8,7 +8,10 @@ public class AWSSessionCredentialsAdapter extends AWSSessionCredentials {
 
   public AWSSessionCredentialsAdapter(AWSCredentialsProvider provider) {
     super(null, null, null);
-    this.provider = provider;
+    if(provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials)
+      this.provider = provider;
+    else
+      throw new IllegalArgumentException("provider does not contain session credentials");
   }
 
   @Override
@@ -18,7 +21,7 @@ public class AWSSessionCredentialsAdapter extends AWSSessionCredentials {
 
   @Override
   public String getVersionPrefix() {
-    return "Netflix AWSSessionCredentialsAdapter, version: ";
+    return "AWSSessionCredentialsAdapter, version: ";
   }
 
   @Override
@@ -32,12 +35,8 @@ public class AWSSessionCredentialsAdapter extends AWSSessionCredentials {
   }
 
   public String getSessionToken() {
-    if (provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials) {
-      com.amazonaws.auth.AWSSessionCredentials sessionCredentials =
-          (com.amazonaws.auth.AWSSessionCredentials) provider.getCredentials();
-      return sessionCredentials.getSessionToken();
-    } else {
-      return "";
-    }
+    com.amazonaws.auth.AWSSessionCredentials sessionCredentials =
+        (com.amazonaws.auth.AWSSessionCredentials) provider.getCredentials();
+    return sessionCredentials.getSessionToken();
   }
 }

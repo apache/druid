@@ -13,9 +13,9 @@ import java.util.Properties;
 
 public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
   private final String sessionCredentials;
-  private String sessionToken;
-  private String accessKey;
-  private String secretKey;
+  private volatile String sessionToken;
+  private volatile String accessKey;
+  private volatile String secretKey;
 
   public FileSessionCredentialsProvider(String sessionCredentials) {
     this.sessionCredentials = sessionCredentials;
