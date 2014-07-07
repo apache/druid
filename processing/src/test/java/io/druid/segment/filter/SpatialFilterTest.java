@@ -62,6 +62,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -479,8 +480,8 @@ public class SpatialFilterTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+      HashMap<String,Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -566,8 +567,8 @@ public class SpatialFilterTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+      HashMap<String,Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

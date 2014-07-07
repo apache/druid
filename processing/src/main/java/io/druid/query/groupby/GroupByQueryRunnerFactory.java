@@ -45,6 +45,8 @@ import io.druid.query.QueryWatcher;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -100,7 +102,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                   return new QueryRunner<Row>()
                   {
                     @Override
-                    public Sequence<Row> run(final Query<Row> query)
+                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
                     {
 
                       ListenableFuture<Sequence<Row>> future = queryExecutor.submit(
@@ -110,7 +112,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                             public Sequence<Row> call() throws Exception
                             {
                               return new ExecutorExecutingSequence<Row>(
-                                  input.run(query),
+                                  input.run(query, context),
                                   queryExecutor
                               );
                             }
@@ -166,7 +168,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input)
+    public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
     {
       if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);

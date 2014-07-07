@@ -25,7 +25,6 @@ import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryWatcher;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -38,6 +37,7 @@ import io.druid.segment.column.ValueType;
 import junit.framework.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -102,6 +102,7 @@ public class SegmentAnalyzerTest
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
         new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null
     );
-    return Sequences.toList(query.run(runner), Lists.<SegmentAnalysis>newArrayList());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());
   }
 }

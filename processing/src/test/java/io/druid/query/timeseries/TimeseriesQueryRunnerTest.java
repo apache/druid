@@ -52,6 +52,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -100,9 +101,10 @@ public class TimeseriesQueryRunnerTest
 
     DateTime expectedEarliest = new DateTime("2011-01-12");
     DateTime expectedLast = new DateTime("2011-04-15");
+    HashMap<String,Object> context = new HashMap<String, Object>();
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -166,8 +168,9 @@ public class TimeseriesQueryRunnerTest
     DateTime expectedEarliest = new DateTime("2011-01-12");
     DateTime expectedLast = new DateTime("2011-04-15");
 
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Result<TimeseriesResultValue> result = results.iterator().next();
@@ -212,9 +215,9 @@ public class TimeseriesQueryRunnerTest
 
     DateTime expectedEarliest = new DateTime("2011-01-12");
     DateTime expectedLast = new DateTime("2011-04-15");
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -278,9 +281,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -325,9 +328,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -367,9 +370,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -406,7 +409,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        runner.run(query2),
+        runner.run(query2, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults2, results2);
@@ -457,9 +460,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -499,9 +502,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -539,7 +542,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        runner.run(query2),
+        runner.run(query2, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults2, results2);
@@ -572,9 +575,9 @@ public class TimeseriesQueryRunnerTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -622,9 +625,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -672,9 +675,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -722,9 +725,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -772,9 +775,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -822,9 +825,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -880,9 +883,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -938,9 +941,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -996,9 +999,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1052,9 +1055,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1114,9 +1117,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1158,9 +1161,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1202,9 +1205,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1260,9 +1263,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1300,8 +1303,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1340,8 +1344,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1358,7 +1363,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
         runner.run(
             Druids.newTimeseriesQueryBuilder()
@@ -1367,12 +1372,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            context
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1389,7 +1395,7 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
         runner.run(
             Druids.newTimeseriesQueryBuilder()
@@ -1399,12 +1405,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            context
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1450,7 +1457,7 @@ public class TimeseriesQueryRunnerTest
                                            )
                                        )
                                        .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
         runner.run(
             Druids.newTimeseriesQueryBuilder()
@@ -1460,12 +1467,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            context
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1513,7 +1521,7 @@ public class TimeseriesQueryRunnerTest
                                            )
                                        )
                                        .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
         runner.run(
             Druids.newTimeseriesQueryBuilder()
@@ -1523,12 +1531,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            context
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
