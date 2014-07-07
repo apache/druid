@@ -66,7 +66,8 @@ public class CompressedLongsIndexedSupplierTest
     supplier = CompressedLongsIndexedSupplier.fromLongBuffer(
         LongBuffer.wrap(vals),
         5,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        CompressedObjectStrategy.CompressionStrategy.LZ4
     );
 
     indexed = supplier.get();
@@ -78,7 +79,7 @@ public class CompressedLongsIndexedSupplierTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedLongsIndexedSupplier theSupplier = CompressedLongsIndexedSupplier.fromLongBuffer(
-        LongBuffer.wrap(vals), 5, ByteOrder.nativeOrder()
+        LongBuffer.wrap(vals), 5, ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
