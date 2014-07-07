@@ -26,10 +26,12 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
+import io.druid.server.DruidNode;
 import io.druid.server.initialization.ExtensionsConfig;
-import junit.framework.Assert;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -42,30 +44,10 @@ import java.util.Set;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class InitializationTest
 {
-  private String oldService;
-  private String oldHost;
-  private String oldPort;
-
-  @Before
-  public void messWithSystemProperties()
-  {
-    // required to test Initialization.makeInjectorWithModules
-    oldService = System.setProperty("druid.service", "test-service");
-    oldHost = System.setProperty("druid.host", "test-host");
-    oldPort = System.setProperty("druid.port", "8080");
-  }
-
-  @After
-  public void cleanup()
-  {
-    System.setProperty("druid.service", oldService == null ? "" : oldService);
-    System.setProperty("druid.host", oldHost == null ? "" : oldHost);
-    System.setProperty("druid.port", oldPort == null ? "" : oldPort);
-  }
-
   @Test
   public void test01InitialModulesEmpty() throws Exception
   {
+    Initialization.clearLoadedModules();
     Assert.assertEquals(
         "Initial set of loaded modules must be empty",
         0,
@@ -118,7 +100,20 @@ public class InitializationTest
   public void test04MakeInjectorWithModules() throws Exception
   {
     Injector startupInjector = Initialization.makeStartupInjector();
-    Injector injector = Initialization.makeInjectorWithModules(startupInjector, ImmutableList.of());
+    Injector injector = Initialization.makeInjectorWithModules(
+        startupInjector, ImmutableList.<Object>of(
+            new com.google.inject.Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", "localhost", -1)
+                );
+              }
+            }
+        )
+    );
     Assert.assertNotNull(injector);
   }
 

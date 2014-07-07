@@ -26,9 +26,9 @@ import java.util.List;
 
 /**
  * Processing related interface
- *
+ * <p/>
  * An AggregatorFactory is an object that knows how to generate an Aggregator using a ColumnSelectorFactory.
- *
+ * <p/>
  * This is useful as an abstraction to allow Aggregator classes to be written in terms of MetricSelector objects
  * without making any assumptions about how they are pulling values out of the base data.  That is, the data is
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
@@ -37,7 +37,9 @@ import java.util.List;
 public interface AggregatorFactory
 {
   public Aggregator factorize(ColumnSelectorFactory metricFactory);
+
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
+
   public Comparator getComparator();
 
   /**
@@ -48,6 +50,7 @@ public interface AggregatorFactory
    *
    * @param lhs The left hand side of the combine
    * @param rhs The right hand side of the combine
+   *
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
   public Object combine(Object lhs, Object rhs);
@@ -62,10 +65,18 @@ public interface AggregatorFactory
   public AggregatorFactory getCombiningFactory();
 
   /**
+   * Gets a list of all columns that this AggregatorFactory will scan
+   *
+   * @return AggregatorFactories for the columns to scan of the parent AggregatorFactory
+   */
+  public List<AggregatorFactory> getRequiredColumns();
+
+  /**
    * A method that knows how to "deserialize" the object from whatever form it might have been put into
    * in order to transfer via JSON.
    *
    * @param object the object to deserialize
+   *
    * @return the deserialized object
    */
   public Object deserialize(Object object);
@@ -75,13 +86,17 @@ public interface AggregatorFactory
    * intermediate format than their final resultant output.
    *
    * @param object the object to be finalized
+   *
    * @return the finalized value that should be returned for the initial query
    */
   public Object finalizeComputation(Object object);
 
   public String getName();
+
   public List<String> requiredFields();
+
   public byte[] getCacheKey();
+
   public String getTypeName();
 
   /**

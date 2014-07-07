@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.api.client.util.Lists;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
 import com.google.common.io.ByteStreams;
@@ -128,8 +129,8 @@ public class QueryResource
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     final ObjectWriter jsonWriter = req.getParameter("pretty") == null
-                              ? objectMapper.writer()
-                              : objectMapper.writerWithDefaultPrettyPrinter();
+                                    ? objectMapper.writer()
+                                    : objectMapper.writerWithDefaultPrettyPrinter();
 
     try {
       requestQuery = ByteStreams.toByteArray(req.getInputStream());
@@ -146,34 +147,33 @@ public class QueryResource
 
       Map<String, Object> context = new MapMaker().makeMap();
       context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
-      Sequence results = query.run(texasRanger, context);
-
-      if (results == null) {
+      Sequence res = query.run(texasRanger, context);
+      final Sequence results;
+      if (res == null) {
         results = Sequences.empty();
+      } else {
+        results = res;
       }
 
-      try (
-          final Yielder yielder = results.toYielder(
-              null,
-              new YieldingAccumulator()
-              {
-                @Override
-                public Object accumulate(Object accumulated, Object in)
-                {
-                  yield();
-                  return in;
-                }
-              }
-          )
-      ) {
+      final Yielder yielder = results.toYielder(
+          null,
+          new YieldingAccumulator()
+          {
+            @Override
+            public Object accumulate(Object accumulated, Object in)
+            {
+              yield();
+              return in;
+            }
+          }
+      );
 
+      try {
         String headerContext = "";
         if (!((List)context.get(RetryQueryRunner.missingSegments)).isEmpty()) {
           headerContext = jsonMapper.writeValueAsString(context);
         }
-
         long requestTime = System.currentTimeMillis() - start;
-
         emitter.emit(
             new ServiceMetricEvent.Builder()
                 .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
@@ -207,6 +207,7 @@ public class QueryResource
                   @Override
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
+                    // json serializer will always close the yielder
                     jsonWriter.writeValue(outputStream, yielder);
                     outputStream.close();
                   }
@@ -217,6 +218,15 @@ public class QueryResource
             .header("Context", headerContext)
             .build();
       }
+      catch (Exception e) {
+        // make sure to close yieder if anything happened before starting to serialize the response.
+        yielder.close();
+        throw Throwables.propagate(e);
+      }
+      finally {
+        // do not close yielder here, since we do not want to close the yielder prior to
+        // StreamingOutput having iterated over all the results
+      }
     }
     catch (QueryInterruptedException e) {
       try {
@@ -226,10 +236,20 @@ public class QueryResource
                 new DateTime(),
                 req.getRemoteAddr(),
                 query,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "interrupted", true, "reason", e.toString()))
+                new QueryStats(
+                    ImmutableMap.<String, Object>of(
+                        "success",
+                        false,
+                        "interrupted",
+                        true,
+                        "reason",
+                        e.toString()
+                    )
+                )
             )
         );
-      } catch (Exception e2) {
+      }
+      catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
       return Response.serverError().entity(

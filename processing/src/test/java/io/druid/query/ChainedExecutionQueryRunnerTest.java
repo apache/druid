@@ -67,6 +67,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     final CountDownLatch queriesStarted = new CountDownLatch(2);
+    final CountDownLatch queriesInterrupted = new CountDownLatch(2);
     final CountDownLatch queryIsRegistered = new CountDownLatch(1);
 
     Capture<ListenableFuture> capturedFuture = new Capture<>();
@@ -88,9 +89,9 @@ public class ChainedExecutionQueryRunnerTest
 
     EasyMock.replay(watcher);
 
-    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted);
-    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted);
-    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted);
+    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
+    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
+    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         Ordering.<Integer>natural(),
@@ -138,11 +139,14 @@ public class ChainedExecutionQueryRunnerTest
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
       cause = (QueryInterruptedException)e.getCause();
     }
+    Assert.assertTrue(queriesInterrupted.await(500, TimeUnit.MILLISECONDS));
     Assert.assertNotNull(cause);
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(runner1.hasStarted);
     Assert.assertTrue(runner2.hasStarted);
-    Assert.assertFalse(runner3.hasStarted);
+    Assert.assertTrue(runner1.interrupted);
+    Assert.assertTrue(runner2.interrupted);
+    Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
     Assert.assertFalse(runner1.hasCompleted);
     Assert.assertFalse(runner2.hasCompleted);
     Assert.assertFalse(runner3.hasCompleted);
@@ -171,6 +175,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     final CountDownLatch queriesStarted = new CountDownLatch(2);
+    final CountDownLatch queriesInterrupted = new CountDownLatch(2);
     final CountDownLatch queryIsRegistered = new CountDownLatch(1);
 
     Capture<ListenableFuture> capturedFuture = new Capture<>();
@@ -192,9 +197,9 @@ public class ChainedExecutionQueryRunnerTest
 
     EasyMock.replay(watcher);
 
-    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted);
-    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted);
-    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted);
+    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
+    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
+    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         Ordering.<Integer>natural(),
@@ -211,7 +216,7 @@ public class ChainedExecutionQueryRunnerTest
               .dataSource("test")
               .intervals("2014/2015")
               .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
-              .context(ImmutableMap.<String, Object>of("timeout", (100), "queryId", "test"))
+              .context(ImmutableMap.<String, Object>of("timeout", 100, "queryId", "test"))
               .build(),
         context
     );
@@ -231,10 +236,10 @@ public class ChainedExecutionQueryRunnerTest
     Assert.assertTrue(queryIsRegistered.await(1, TimeUnit.SECONDS));
     Assert.assertTrue(queriesStarted.await(1, TimeUnit.SECONDS));
 
-    // cancel the query
     Assert.assertTrue(capturedFuture.hasCaptured());
     ListenableFuture future = capturedFuture.getValue();
 
+    // wait for query to time out
     QueryInterruptedException cause = null;
     try {
       resultFuture.get();
@@ -243,11 +248,14 @@ public class ChainedExecutionQueryRunnerTest
       Assert.assertEquals("Query timeout", e.getCause().getMessage());
       cause = (QueryInterruptedException)e.getCause();
     }
+    Assert.assertTrue(queriesInterrupted.await(500, TimeUnit.MILLISECONDS));
     Assert.assertNotNull(cause);
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(runner1.hasStarted);
     Assert.assertTrue(runner2.hasStarted);
-    Assert.assertFalse(runner3.hasStarted);
+    Assert.assertTrue(runner1.interrupted);
+    Assert.assertTrue(runner2.interrupted);
+    Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
     Assert.assertFalse(runner1.hasCompleted);
     Assert.assertFalse(runner2.hasCompleted);
     Assert.assertFalse(runner3.hasCompleted);
@@ -257,21 +265,27 @@ public class ChainedExecutionQueryRunnerTest
 
   private static class DyingQueryRunner implements QueryRunner<Integer>
   {
-    private final CountDownLatch latch;
+    private final CountDownLatch start;
+    private final CountDownLatch stop;
+
     private boolean hasStarted = false;
     private boolean hasCompleted = false;
+    private boolean interrupted = false;
 
-    public DyingQueryRunner(CountDownLatch latch)
+    public DyingQueryRunner(CountDownLatch start, CountDownLatch stop)
     {
-      this.latch = latch;
+      this.start = start;
+      this.stop = stop;
     }
 
     @Override
     public Sequence<Integer> run(Query<Integer> query, Map<String, Object> context)
     {
       hasStarted = true;
-      latch.countDown();
+      start.countDown();
       if (Thread.interrupted()) {
+        interrupted = true;
+        stop.countDown();
         throw new QueryInterruptedException("I got killed");
       }
 
@@ -280,10 +294,13 @@ public class ChainedExecutionQueryRunnerTest
         Thread.sleep(500);
       }
       catch (InterruptedException e) {
+        interrupted = true;
+        stop.countDown();
         throw new QueryInterruptedException("I got killed");
       }
 
       hasCompleted = true;
+      stop.countDown();
       return Sequences.simple(Lists.newArrayList(123));
     }
   }

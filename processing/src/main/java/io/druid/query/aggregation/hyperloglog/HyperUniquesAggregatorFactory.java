@@ -73,12 +73,13 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
       return Aggregators.noopAggregator();
     }
 
-    if (HyperLogLogCollector.class.isAssignableFrom(selector.classOfObject())) {
+    final Class classOfObject = selector.classOfObject();
+    if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
       return new HyperUniquesAggregator(name, selector);
     }
 
     throw new IAE(
-        "Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, selector.classOfObject()
+        "Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject
     );
   }
 
@@ -91,12 +92,13 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
       return Aggregators.noopBufferAggregator();
     }
 
-    if (HyperLogLogCollector.class.isAssignableFrom(selector.classOfObject())) {
+    final Class classOfObject = selector.classOfObject();
+    if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
       return new HyperUniquesBufferAggregator(selector);
     }
 
     throw new IAE(
-        "Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, selector.classOfObject()
+        "Incompatible type for metric[%s], expected a HyperUnique, got a %s", fieldName, classOfObject
     );
   }
 
@@ -129,6 +131,12 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new HyperUniquesAggregatorFactory(name, name);
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

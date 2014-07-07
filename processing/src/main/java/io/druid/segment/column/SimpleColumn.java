@@ -20,7 +20,7 @@
 package io.druid.segment.column;
 
 import com.google.common.base.Supplier;
-import com.google.common.io.Closeables;
+import com.metamx.common.guava.CloseQuietly;
 
 /**
  */
@@ -68,7 +68,7 @@ class SimpleColumn implements Column
       return column.length();
     }
     finally {
-      Closeables.closeQuietly(column);
+      CloseQuietly.close(column);
     }
   }
 

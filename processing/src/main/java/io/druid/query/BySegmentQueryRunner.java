@@ -28,6 +28,7 @@ import com.metamx.common.guava.Yielders;
 import com.metamx.common.guava.YieldingAccumulator;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -55,16 +56,11 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, Map<String, Object> context)
   {
     if (query.getContextBySegment(false)) {
+
       final Sequence<T> baseSequence = base.run(query, context);
-      return new Sequence<T>()
-      {
-        @Override
-        public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
-        {
-          List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
-
-          return accumulator.accumulate(
-              initValue,
+      final List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
+      return Sequences.simple(
+          Arrays.asList(
               (T) new Result<BySegmentResultValueClass<T>>(
                   timestamp,
                   new BySegmentResultValueClass<T>(
@@ -73,29 +69,8 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
                       query.getIntervals().get(0)
                   )
               )
-          );
-        }
-
-        @Override
-        public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
-        {
-          List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
-
-          final OutType retVal = accumulator.accumulate(
-              initValue,
-              (T) new Result<BySegmentResultValueClass<T>>(
-                  timestamp,
-                  new BySegmentResultValueClass<T>(
-                      results,
-                      segmentIdentifier,
-                      query.getIntervals().get(0)
-                  )
-              )
-          );
-
-          return Yielders.done(retVal, null);
-        }
-      };
+          )
+      );
     }
     return base.run(query, context);
   }

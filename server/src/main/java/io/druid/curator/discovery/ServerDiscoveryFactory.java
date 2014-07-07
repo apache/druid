@@ -25,6 +25,7 @@ import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
 import java.io.IOException;
+import java.util.Collection;
 
 /**
  */
@@ -58,6 +59,12 @@ public class ServerDiscoveryFactory
 
     @Override
     public ServiceInstance<T> getInstance() throws Exception
+    {
+      return null;
+    }
+
+    @Override
+    public Collection<ServiceInstance<T>> getAllInstances() throws Exception
     {
       return null;
     }

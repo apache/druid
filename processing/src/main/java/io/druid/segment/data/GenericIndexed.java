@@ -21,9 +21,9 @@ package io.druid.segment.data;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Ordering;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import com.metamx.common.guava.CloseQuietly;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -73,14 +73,14 @@ public class GenericIndexed<T> implements Indexed<T>
         allowReverseLookup = false;
       }
       if (prevVal instanceof Closeable) {
-        Closeables.closeQuietly((Closeable) prevVal);
+        CloseQuietly.close((Closeable) prevVal);
       }
 
       prevVal = next;
       ++count;
     }
     if (prevVal instanceof Closeable) {
-      Closeables.closeQuietly((Closeable) prevVal);
+      CloseQuietly.close((Closeable) prevVal);
     }
 
     ByteArrayOutputStream headerBytes = new ByteArrayOutputStream(4 + (count * 4));
@@ -98,7 +98,7 @@ public class GenericIndexed<T> implements Indexed<T>
         valueBytes.write(bytes);
 
         if (object instanceof Closeable) {
-          Closeables.closeQuietly((Closeable) object);
+          CloseQuietly.close((Closeable) object);
         }
       }
     }

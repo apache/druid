@@ -27,6 +27,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
@@ -64,8 +65,6 @@ public class HadoopIndexTask extends AbstractTask
   static {
     extensionsConfig = Initialization.makeStartupInjector().getInstance(ExtensionsConfig.class);
   }
-
-  public static String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";
 
   private static String getTheDataSource(HadoopIngestionSpec spec, HadoopIngestionSpec config)
   {
@@ -115,9 +114,14 @@ public class HadoopIndexTask extends AbstractTask
     Preconditions.checkArgument(this.spec.getTuningConfig().getWorkingPath() == null, "workingPath must be absent");
     Preconditions.checkArgument(this.spec.getIOConfig().getMetadataUpdateSpec() == null, "updaterJobSpec must be absent");
 
-    this.hadoopDependencyCoordinates = hadoopDependencyCoordinates == null ? Arrays.<String>asList(
-        hadoopCoordinates == null ? DEFAULT_HADOOP_COORDINATES : hadoopCoordinates
-    ) : hadoopDependencyCoordinates;
+    if (hadoopDependencyCoordinates != null) {
+      this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
+    } else if (hadoopCoordinates != null) {
+      this.hadoopDependencyCoordinates = ImmutableList.of(hadoopCoordinates);
+    } else {
+      // Will be defaulted to something at runtime, based on taskConfig.
+      this.hadoopDependencyCoordinates = null;
+    }
   }
 
   @Override
@@ -158,6 +162,10 @@ public class HadoopIndexTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
+                                                          ? hadoopDependencyCoordinates
+                                                          : toolbox.getConfig().getDefaultHadoopCoordinates();
+
     final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
 
     final List<URL> extensionURLs = Lists.newArrayList();
@@ -174,7 +182,7 @@ public class HadoopIndexTask extends AbstractTask
     final List<URL> driverURLs = Lists.newArrayList();
     driverURLs.addAll(nonHadoopURLs);
     // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-    for (String hadoopDependencyCoordinate : hadoopDependencyCoordinates) {
+    for (String hadoopDependencyCoordinate : finalHadoopDependencyCoordinates) {
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
           aetherClient, hadoopDependencyCoordinate
       );

@@ -31,18 +31,13 @@ import com.ircclouds.irc.api.domain.messages.ChannelPrivMsg;
 import com.ircclouds.irc.api.listeners.VariousMessageListenerAdapter;
 import com.ircclouds.irc.api.state.IIRCState;
 import com.metamx.common.Pair;
-import com.metamx.common.exception.FormattedException;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.InputRowParser;
-import io.druid.data.input.impl.ParseSpec;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;

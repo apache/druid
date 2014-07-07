@@ -68,8 +68,8 @@ public class TimeBoundaryQueryQueryToolChest
       return segments;
     }
 
-    final T first = segments.get(0);
-    final T second = segments.get(segments.size() - 1);
+    final T min = segments.get(0);
+    final T max = segments.get(segments.size() - 1);
 
     return Lists.newArrayList(
         Iterables.filter(
@@ -79,8 +79,8 @@ public class TimeBoundaryQueryQueryToolChest
               @Override
               public boolean apply(T input)
               {
-                return input.getInterval().overlaps(first.getInterval()) || input.getInterval()
-                    .overlaps(second.getInterval());
+                return (min != null && input.getInterval().overlaps(min.getInterval())) ||
+                       (max != null && input.getInterval().overlaps(max.getInterval()));
               }
             }
         )
@@ -112,7 +112,7 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<TimeBoundaryResultValue>>(getOrdering(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -147,9 +147,9 @@ public class TimeBoundaryQueryQueryToolChest
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
         return ByteBuffer.allocate(2)
-            .put(TIMEBOUNDARY_QUERY)
-            .put(query.getCacheKey())
-            .array();
+                         .put(TIMEBOUNDARY_QUERY)
+                         .put(query.getCacheKey())
+                         .array();
       }
 
       @Override
@@ -178,11 +178,11 @@ public class TimeBoundaryQueryQueryToolChest
         {
           @Override
           @SuppressWarnings("unchecked")
-          public Result<TimeBoundaryResultValue> apply(@Nullable Object input)
+          public Result<TimeBoundaryResultValue> apply(Object input)
           {
             List<Object> result = (List<Object>) input;
 
-            return new Result<TimeBoundaryResultValue>(
+            return new Result<>(
                 new DateTime(result.get(0)),
                 new TimeBoundaryResultValue(result.get(1))
             );
@@ -193,7 +193,7 @@ public class TimeBoundaryQueryQueryToolChest
       @Override
       public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
       {
-        return new MergeSequence<Result<TimeBoundaryResultValue>>(getOrdering(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

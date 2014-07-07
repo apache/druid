@@ -585,7 +585,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 
     // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
     // on a worker - this avoids overflowing a worker with tasks
-    Stopwatch timeoutStopwatch = new Stopwatch();
+    Stopwatch timeoutStopwatch = Stopwatch.createUnstarted();
     timeoutStopwatch.start();
     synchronized (statusLock) {
       while (!isWorkerRunningTask(theWorker, task.getId())) {

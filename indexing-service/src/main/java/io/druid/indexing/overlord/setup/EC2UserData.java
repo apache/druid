@@ -17,32 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.groupby.orderby;
+package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
-import io.druid.data.input.Row;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.dimension.DimensionSpec;
-
-import java.util.List;
 
 /**
+ * Represents any user data that may be needed to launch EC2 instances.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopLimitSpec.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "impl", defaultImpl = GalaxyEC2UserData.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultLimitSpec.class)
+    @JsonSubTypes.Type(name = "galaxy", value = GalaxyEC2UserData.class),
+    @JsonSubTypes.Type(name = "string", value = StringEC2UserData.class)
 })
-public interface LimitSpec
+public interface EC2UserData<T extends EC2UserData>
 {
-  public Function<Sequence<Row>, Sequence<Row>> build(
-      List<DimensionSpec> dimensions,
-      List<AggregatorFactory> aggs,
-      List<PostAggregator> postAggs
-  );
+  /**
+   * Return a copy of this instance with a different worker version. If no changes are needed (possibly because the
+   * user data does not depend on the worker version) then it is OK to return "this".
+   */
+  public EC2UserData<T> withVersion(String version);
 
-  public LimitSpec merge(LimitSpec other);
+  public String getUserDataBase64();
 }

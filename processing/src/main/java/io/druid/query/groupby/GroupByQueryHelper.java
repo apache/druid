@@ -24,12 +24,14 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -53,7 +55,7 @@ public class GroupByQueryHelper
         new Function<AggregatorFactory, AggregatorFactory>()
         {
           @Override
-          public AggregatorFactory apply(@Nullable AggregatorFactory input)
+          public AggregatorFactory apply(AggregatorFactory input)
           {
             return input.getCombiningFactory();
           }
@@ -64,7 +66,7 @@ public class GroupByQueryHelper
         new Function<DimensionSpec, String>()
         {
           @Override
-          public String apply(@Nullable DimensionSpec input)
+          public String apply(DimensionSpec input)
           {
             return input.getOutputName();
           }
@@ -83,14 +85,14 @@ public class GroupByQueryHelper
       @Override
       public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
       {
-        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
+        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions), false) > config.getMaxResults()) {
           throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
         }
 
         return accumulated;
       }
     };
-    return new Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>>(index, accumulator);
+    return new Pair<>(index, accumulator);
   }
 
 }

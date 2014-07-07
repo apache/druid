@@ -32,6 +32,7 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import org.joda.time.DateTime;
 
 import java.util.Iterator;
 import java.util.List;
@@ -63,7 +64,7 @@ public class TimeBoundaryQueryRunnerFactory
       ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeBoundaryResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<Result<TimeBoundaryResultValue>>(
+    return new ChainedExecutionQueryRunner<>(
         queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
     );
   }
@@ -95,7 +96,7 @@ public class TimeBoundaryQueryRunnerFactory
 
       final TimeBoundaryQuery legacyQuery = (TimeBoundaryQuery) input;
 
-      return new BaseSequence<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>(
+      return new BaseSequence<>(
           new BaseSequence.IteratorMaker<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>()
           {
             @Override
@@ -107,10 +108,18 @@ public class TimeBoundaryQueryRunnerFactory
                 );
               }
 
+              final DateTime minTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)
+                                       ? null
+                                       : adapter.getMinTime();
+              final DateTime maxTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)
+                                       ? null
+                                       : adapter.getMaxTime();
+
+
               return legacyQuery.buildResult(
                   adapter.getInterval().getStart(),
-                  adapter.getMinTime(),
-                  adapter.getMaxTime()
+                  minTime,
+                  maxTime
               ).iterator();
             }
 
