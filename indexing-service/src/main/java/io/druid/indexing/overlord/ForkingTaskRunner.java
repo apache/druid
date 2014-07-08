@@ -42,6 +42,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
@@ -74,6 +75,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private static final Splitter whiteSpaceSplitter = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
 
   private final ForkingTaskRunnerConfig config;
+  private final TaskConfig taskConfig;
   private final Properties props;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode node;
@@ -86,6 +88,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   @Inject
   public ForkingTaskRunner(
       ForkingTaskRunnerConfig config,
+      TaskConfig taskConfig,
       WorkerConfig workerConfig,
       Properties props,
       TaskLogPusher taskLogPusher,
@@ -94,6 +97,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   )
   {
     this.config = config;
+    this.taskConfig = taskConfig;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
     this.jsonMapper = jsonMapper;
@@ -119,7 +123,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                       public TaskStatus call()
                       {
                         final String attemptUUID = UUID.randomUUID().toString();
-                        final File taskDir = new File(config.getTaskDir(), task.getId());
+                        final File taskDir = new File(taskConfig.getBaseTaskDir(), task.getId());
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;

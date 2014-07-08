@@ -154,8 +154,7 @@ druid.indexer.logs.s3Prefix=prod/logs/v1
 
 # Dedicate more resources to peons
 druid.indexer.runner.javaOpts=-server -Xmx3g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
-druid.indexer.runner.taskDir=/mnt/persistent/task/
-druid.indexer.task.taskDir=/mnt/persistent/task/
+druid.indexer.task.baseTaskDir=/mnt/persistent/task/
 druid.indexer.task.chathandler.type=announce
 
 druid.indexer.fork.property.druid.indexer.hadoopWorkingPath=/tmp/druid-indexing
