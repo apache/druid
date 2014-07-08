@@ -48,7 +48,6 @@ Middle managers pass their configurations down to their child peons. The middle 
 |`druid.worker.capacity`|Maximum number of tasks the middle manager can accept.|Number of available processors - 1|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|false|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
-|`druid.indexer.runner.taskDir`|Temporary intermediate directory used during task execution.|/tmp/persistent|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
 |`druid.indexer.runner.javaOpts`|-X Java options to run the peon in its own JVM.|""|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
