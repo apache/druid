@@ -25,12 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 
 import java.util.List;
+import java.util.Map;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
@@ -74,4 +76,22 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
            '}';
   }
 
+  @Override
+  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  {
+    final ImmutableMap.Builder<Integer, ShardSpec> shardSpecsMapBuilder = ImmutableMap.builder();
+    for (ShardSpec spec : shardSpecs) {
+      shardSpecsMapBuilder.put(spec.getPartitionNum(), spec);
+    }
+    final Map<Integer, ShardSpec> shardSpecMap = shardSpecsMapBuilder.build();
+
+    return new ShardSpecLookup()
+    {
+      @Override
+      public ShardSpec getShardSpec(InputRow row)
+      {
+        return shardSpecMap.get((long) hash(row) % getPartitions());
+      }
+    };
+  }
 }
