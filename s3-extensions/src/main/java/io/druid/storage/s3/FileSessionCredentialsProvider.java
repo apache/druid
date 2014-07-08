@@ -23,12 +23,16 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.base.Charsets;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
   private final String sessionCredentials;
@@ -36,9 +40,20 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
   private volatile String accessKey;
   private volatile String secretKey;
 
+  private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
+      new ThreadFactoryBuilder().setNameFormat("FileSessionCredentialsProviderRefresh-%d").build()
+  );
+
   public FileSessionCredentialsProvider(String sessionCredentials) {
     this.sessionCredentials = sessionCredentials;
     refresh();
+
+    scheduler.scheduleAtFixedRate(new Runnable() {
+      @Override
+      public void run() {
+        refresh();
+      }
+    }, 1, 1, TimeUnit.HOURS); // refresh every hour
   }
 
   @Override
