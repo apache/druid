@@ -41,7 +41,8 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
   private volatile String secretKey;
 
   private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-      new ThreadFactoryBuilder().setNameFormat("FileSessionCredentialsProviderRefresh-%d").build()
+      new ThreadFactoryBuilder().setNameFormat("FileSessionCredentialsProviderRefresh-%d")
+          .setDaemon(true).build()
   );
 
   public FileSessionCredentialsProvider(String sessionCredentials) {
