@@ -25,14 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
@@ -79,18 +79,25 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
-    final ImmutableMap.Builder<Integer, ShardSpec> shardSpecsMapBuilder = ImmutableMap.builder();
-    for (ShardSpec spec : shardSpecs) {
-      shardSpecsMapBuilder.put(spec.getPartitionNum(), spec);
+    // Sort on basis of partitionNumber
+    Collections.sort(
+        shardSpecs, new Comparator<ShardSpec>()
+    {
+      @Override
+      public int compare(ShardSpec o1, ShardSpec o2)
+      {
+        return Integer.compare(o1.getPartitionNum(), o2.getPartitionNum());
+      }
     }
-    final Map<Integer, ShardSpec> shardSpecMap = shardSpecsMapBuilder.build();
+    );
 
     return new ShardSpecLookup()
     {
       @Override
       public ShardSpec getShardSpec(InputRow row)
       {
-        return shardSpecMap.get((long) hash(row) % getPartitions());
+        int index = (int) ((long) hash(row)) % getPartitions();
+        return shardSpecs.get(index);
       }
     };
   }

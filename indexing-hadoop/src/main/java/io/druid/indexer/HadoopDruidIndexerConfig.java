@@ -36,17 +36,16 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
-import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
@@ -63,7 +62,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -194,9 +192,8 @@ public class HadoopDruidIndexerConfig
           Lists.transform(
               entry.getValue(), new Function<HadoopyShardSpec, ShardSpec>()
           {
-            @Nullable
             @Override
-            public ShardSpec apply(@Nullable HadoopyShardSpec input)
+            public ShardSpec apply(HadoopyShardSpec input)
             {
               return input.getActualSpec();
             }
