@@ -41,7 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.26.5</metamx.java-util.version>
         <apache.curator.version>2.5.0</apache.curator.version>
-        <druid.api.version>0.2.5</druid.api.version>
+        <druid.api.version>0.2.5-SNAPSHOT</druid.api.version>
     </properties>
 
     <modules>

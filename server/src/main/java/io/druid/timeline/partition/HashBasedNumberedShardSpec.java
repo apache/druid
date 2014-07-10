@@ -30,8 +30,6 @@ import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
@@ -79,24 +77,12 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
-    // Sort on basis of partitionNumber
-    Collections.sort(
-        shardSpecs, new Comparator<ShardSpec>()
-    {
-      @Override
-      public int compare(ShardSpec o1, ShardSpec o2)
-      {
-        return Integer.compare(o1.getPartitionNum(), o2.getPartitionNum());
-      }
-    }
-    );
-
     return new ShardSpecLookup()
     {
       @Override
       public ShardSpec getShardSpec(InputRow row)
       {
-        int index = (int) ((long) hash(row)) % getPartitions();
+        int index = Math.abs(hash(row) % getPartitions());
         return shardSpecs.get(index);
       }
     };
