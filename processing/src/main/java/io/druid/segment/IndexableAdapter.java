@@ -19,11 +19,14 @@
 
 package io.druid.segment;
 
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
 
 /**
+ * An adapter to an index
  */
 public interface IndexableAdapter
 {
@@ -31,9 +34,9 @@ public interface IndexableAdapter
 
   int getNumRows();
 
-  Indexed<String> getAvailableDimensions();
+  Indexed<String> getDimensionNames();
 
-  Indexed<String> getAvailableMetrics();
+  Indexed<String> getMetricNames();
 
   Indexed<String> getDimValueLookup(String dimension);
 
@@ -42,4 +45,6 @@ public interface IndexableAdapter
   IndexedInts getInverteds(String dimension, String value);
 
   String getMetricType(String metric);
+
+  ColumnCapabilities getCapabilities(String column);
 }

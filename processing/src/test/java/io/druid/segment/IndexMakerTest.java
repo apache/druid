@@ -38,7 +38,7 @@ import java.util.Arrays;
 
 /**
  */
-public class IndexMergerTest
+public class IndexMakerTest
 {
   @Test
   public void testPersistCaseInsensitive() throws Exception
@@ -49,7 +49,7 @@ public class IndexMergerTest
 
     final File tempDir = Files.createTempDir();
     try {
-      QueryableIndex index = IndexIO.loadIndex(IndexMerger.persist(toPersist, tempDir));
+      QueryableIndex index = IndexIO.loadIndex(IndexMaker.persist(toPersist, tempDir));
 
       Assert.assertEquals(2, index.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
@@ -88,20 +88,24 @@ public class IndexMergerTest
     final File tempDir2 = Files.createTempDir();
     final File mergedDir = Files.createTempDir();
     try {
-      QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tempDir1));
+      QueryableIndex index1 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1));
 
       Assert.assertEquals(2, index1.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
       Assert.assertEquals(2, index1.getColumnNames().size());
 
-      QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2));
+      QueryableIndex index2 = IndexIO.loadIndex(IndexMaker.persist(toPersist2, tempDir2));
 
       Assert.assertEquals(2, index2.getTimeColumn().getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
       Assert.assertEquals(2, index2.getColumnNames().size());
 
       QueryableIndex merged = IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, mergedDir)
+          IndexMaker.mergeQueryableIndex(
+              Arrays.asList(index1, index2),
+              new AggregatorFactory[]{},
+              mergedDir
+          )
       );
 
       Assert.assertEquals(3, merged.getTimeColumn().getLength());
@@ -141,10 +145,10 @@ public class IndexMergerTest
           )
       );
 
-      final QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir1));
-      final QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir2));
+      final QueryableIndex index1 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tmpDir1));
+      final QueryableIndex index2 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tmpDir2));
       final QueryableIndex merged = IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
+          IndexMaker.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
       );
 
       Assert.assertEquals(1, index1.getTimeColumn().getLength());
@@ -155,7 +159,8 @@ public class IndexMergerTest
 
       Assert.assertEquals(1, merged.getTimeColumn().getLength());
       Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
-    } finally {
+    }
+    finally {
       FileUtils.deleteQuietly(tmpDir1);
       FileUtils.deleteQuietly(tmpDir2);
       FileUtils.deleteQuietly(tmpDir3);

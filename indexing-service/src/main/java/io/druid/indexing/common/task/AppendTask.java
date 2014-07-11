@@ -27,7 +27,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
 import io.druid.segment.Rowboat;
@@ -106,7 +106,7 @@ public class AppendTask extends MergeTaskBase
       );
     }
 
-    return IndexMerger.append(adapters, outDir);
+    return IndexMaker.append(adapters, outDir);
   }
 
   @Override

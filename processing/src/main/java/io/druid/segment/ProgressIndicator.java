@@ -17,19 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
 
 /**
  */
-public interface ColumnCapabilities
+public interface ProgressIndicator
 {
-  public ValueType getType();
+  public void progress();
 
-  public boolean isDictionaryEncoded();
-  public boolean isRunLengthEncoded();
-  public boolean hasBitmapIndexes();
-  public boolean hasSpatialIndexes();
-  public boolean hasMultipleValues();
+  public void start();
 
-  public ColumnCapabilitiesImpl merge(ColumnCapabilities other);
+  public void stop();
+
+  public void startSection(String section);
+
+  public void progressSection(String section, String message);
+
+  public void stopSection(String section);
 }

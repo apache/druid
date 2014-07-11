@@ -33,7 +33,7 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
@@ -349,7 +349,7 @@ public class RealtimePlumber implements Plumber
                 indexes.add(queryableIndex);
               }
 
-              mergedFile = IndexMerger.mergeQueryableIndex(
+              mergedFile = IndexMaker.mergeQueryableIndex(
                   indexes,
                   schema.getAggregators(),
                   mergedTarget
@@ -714,7 +714,7 @@ public class RealtimePlumber implements Plumber
       try {
         int numRows = indexToPersist.getIndex().size();
 
-        File persistedFile = IndexMerger.persist(
+        File persistedFile = IndexMaker.persist(
             indexToPersist.getIndex(),
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
         );

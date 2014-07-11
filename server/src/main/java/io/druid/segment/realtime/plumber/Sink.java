@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -40,7 +39,6 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -187,7 +185,7 @@ public class Sink implements Iterable<FireHydrant>
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(minTimestamp)
             .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withSpatialDimensions(schema.getParser())
+            .withDimensionsSpec(schema.getParser())
             .withMetrics(schema.getAggregators())
             .build(),
         new OffheapBufferPool(bufferSize)
