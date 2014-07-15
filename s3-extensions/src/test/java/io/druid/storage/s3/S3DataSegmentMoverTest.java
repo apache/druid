@@ -133,15 +133,18 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public StorageObject getObjectDetails(String bucketName, String objectKey) throws ServiceException
+    public S3Object[] listObjects(String bucketName, String objectKey, String separator)
     {
-      if (isObjectInBucket(bucketName, objectKey)) {
-        final S3Object object = new S3Object(objectKey);
-        object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
-        return object;
-      } else {
-        return null;
+      try {
+        if (isObjectInBucket(bucketName, objectKey)) {
+          final S3Object object = new S3Object(objectKey);
+          object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
+          return new S3Object[]{object};
+        }
+      } catch (ServiceException e) {
+        // return empty list
       }
+      return new S3Object[]{};
     }
 
     @Override
