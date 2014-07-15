@@ -22,16 +22,16 @@ package io.druid.query.groupby.having;
 import io.druid.data.input.Row;
 
 /**
- * A "having" spec that always evaluates to true
+ * A "having" spec that always evaluates to false
  */
-public class AlwaysHavingSpec implements HavingSpec
+public class NeverHavingSpec implements HavingSpec
 {
-  private static final byte CACHE_KEY = 0x0;
+  private static final byte CACHE_KEY = 0x1;
 
   @Override
   public boolean eval(Row row)
   {
-    return true;
+    return false;
   }
 
   @Override

@@ -59,7 +59,7 @@ public class SelectQueryRunnerTest
   {
     return QueryRunnerTestHelper.makeQueryRunners(
         new SelectQueryRunnerFactory(
-            new SelectQueryQueryToolChest(new QueryConfig(), new DefaultObjectMapper()),
+            new SelectQueryQueryToolChest(new SelectQueryConfig(), new DefaultObjectMapper()),
             new SelectQueryEngine(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )

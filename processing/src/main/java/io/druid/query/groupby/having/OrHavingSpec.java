@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
+import io.druid.query.Result;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
@@ -31,23 +33,27 @@ import java.util.List;
  */
 public class OrHavingSpec implements HavingSpec
 {
+  private static final byte CACHE_KEY = 0x7;
+
   private List<HavingSpec> havingSpecs;
 
   @JsonCreator
-  public OrHavingSpec(@JsonProperty("havingSpecs") List<HavingSpec> havingSpecs) {
+  public OrHavingSpec(@JsonProperty("havingSpecs") List<HavingSpec> havingSpecs)
+  {
     this.havingSpecs = havingSpecs == null ? ImmutableList.<HavingSpec>of() : havingSpecs;
   }
 
   @JsonProperty("havingSpecs")
-  public List<HavingSpec> getHavingSpecs(){
+  public List<HavingSpec> getHavingSpecs()
+  {
     return havingSpecs;
   }
 
   @Override
   public boolean eval(Row row)
   {
-    for(HavingSpec havingSpec: havingSpecs) {
-      if(havingSpec.eval(row)){
+    for (HavingSpec havingSpec : havingSpecs) {
+      if (havingSpec.eval(row)) {
         return true;
       }
     }
@@ -56,14 +62,39 @@ public class OrHavingSpec implements HavingSpec
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    final byte[][] havingBytes = new byte[havingSpecs.size()][];
+    int havingBytesSize = 0;
+    int index = 0;
+    for (HavingSpec havingSpec : havingSpecs) {
+      havingBytes[index] = havingSpec.getCacheKey();
+      havingBytesSize += havingBytes[index].length;
+      ++index;
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(1 + havingBytesSize).put(CACHE_KEY);
+    for (byte[] havingByte : havingBytes) {
+      buffer.put(havingByte);
+    }
+    return buffer.array();
+  }
+
+  @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     OrHavingSpec that = (OrHavingSpec) o;
 
-    if (havingSpecs != null ? !havingSpecs.equals(that.havingSpecs) : that.havingSpecs != null) return false;
+    if (havingSpecs != null ? !havingSpecs.equals(that.havingSpecs) : that.havingSpecs != null) {
+      return false;
+    }
 
     return true;
   }

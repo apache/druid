@@ -17,26 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.groupby.having;
+package io.druid.query.select;
 
-import io.druid.data.input.Row;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.query.QueryConfig;
 
 /**
- * A "having" spec that always evaluates to true
  */
-public class AlwaysHavingSpec implements HavingSpec
+public class SelectQueryConfig extends QueryConfig
 {
-  private static final byte CACHE_KEY = 0x0;
+  @JsonProperty
+  private int maxResultsToCache = 10000;
 
   @Override
-  public boolean eval(Row row)
+  public int getMaxResultsToCache()
   {
-    return true;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new byte[]{CACHE_KEY};
+    return maxResultsToCache;
   }
 }

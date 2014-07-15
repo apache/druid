@@ -25,10 +25,12 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import io.druid.TestUtil;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import junit.framework.Assert;
+import org.joda.time.DateTime;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -177,6 +179,12 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    public DateTime getTimestamp()
+    {
+      return new DateTime(0);
+    }
+
+    @Override
     public List<String> getDimension(String s)
     {
       return null;
@@ -190,6 +198,12 @@ public class HashBasedNumberedShardSpecTest
 
     @Override
     public float getFloatMetric(String s)
+    {
+      return 0;
+    }
+
+    @Override
+    public int compareTo(Row o)
     {
       return 0;
     }

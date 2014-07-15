@@ -35,5 +35,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 
   public Function<CacheType, T> pullFromCache();
 
+  public int getCacheLimit();
+
   public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences);
 }

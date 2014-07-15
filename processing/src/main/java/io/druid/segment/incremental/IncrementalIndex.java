@@ -534,7 +534,7 @@ public class IncrementalIndex implements Iterable<Row>
                   }
                 }
 
-                return new MapBasedRow(timeAndDims.getTimestamp(), theVals);
+                return new MapBasedRow(gran.toDateTime(timeAndDims.getTimestamp()), theVals);
               }
             }
         );

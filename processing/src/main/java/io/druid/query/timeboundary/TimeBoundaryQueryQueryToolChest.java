@@ -190,6 +190,12 @@ public class TimeBoundaryQueryQueryToolChest
       }
 
       @Override
+      public int getCacheLimit()
+      {
+        return Integer.MAX_VALUE;
+      }
+
+      @Override
       public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
       {
         return new MergeSequence<>(getOrdering(), seqOfSequences);

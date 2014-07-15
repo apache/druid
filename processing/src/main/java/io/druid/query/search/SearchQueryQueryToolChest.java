@@ -73,6 +73,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
   private final SearchQueryConfig config;
 
   @Inject
@@ -245,6 +246,13 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             );
           }
         };
+      }
+
+
+      @Override
+      public int getCacheLimit()
+      {
+        return config.getMaxResultsToCache();
       }
 
       @Override

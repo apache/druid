@@ -72,6 +72,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
   private final TopNQueryConfig config;
 
   @Inject
@@ -365,6 +366,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             return new Result<TopNResultValue>(timestamp, new TopNResultValue(retVal));
           }
         };
+      }
+
+      @Override
+      public int getCacheLimit()
+      {
+        return config.getMaxResultsToCache();
       }
 
       @Override

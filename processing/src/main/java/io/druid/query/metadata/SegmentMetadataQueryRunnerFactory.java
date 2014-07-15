@@ -55,16 +55,19 @@ import java.util.concurrent.TimeoutException;
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
   private static final SegmentAnalyzer analyzer = new SegmentAnalyzer();
-  private static final SegmentMetadataQueryQueryToolChest toolChest = new SegmentMetadataQueryQueryToolChest();
   private static final Logger log = new Logger(SegmentMetadataQueryRunnerFactory.class);
 
+
+  private final SegmentMetadataQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
   @Inject
   public SegmentMetadataQueryRunnerFactory(
+      SegmentMetadataQueryQueryToolChest toolChest,
       QueryWatcher queryWatcher
   )
   {
+    this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
   }
 
