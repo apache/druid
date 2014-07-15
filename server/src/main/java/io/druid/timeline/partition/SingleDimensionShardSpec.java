@@ -20,6 +20,7 @@
 package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
@@ -92,6 +93,24 @@ public class SingleDimensionShardSpec implements ShardSpec
   public int getPartitionNum()
   {
     return partitionNum;
+  }
+
+  @Override
+  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  {
+    return new ShardSpecLookup()
+    {
+      @Override
+      public ShardSpec getShardSpec(InputRow row)
+      {
+        for (ShardSpec spec : shardSpecs) {
+          if (spec.isInChunk(row)) {
+            return spec;
+          }
+        }
+        throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
+      }
+    };
   }
 
   public void setPartitionNum(int partitionNum)
