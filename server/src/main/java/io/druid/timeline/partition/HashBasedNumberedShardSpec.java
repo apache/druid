@@ -74,4 +74,17 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
            '}';
   }
 
+  @Override
+  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  {
+    return new ShardSpecLookup()
+    {
+      @Override
+      public ShardSpec getShardSpec(InputRow row)
+      {
+        int index = Math.abs(hash(row) % getPartitions());
+        return shardSpecs.get(index);
+      }
+    };
+  }
 }
