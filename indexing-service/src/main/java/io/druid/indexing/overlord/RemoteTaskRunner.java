@@ -24,12 +24,14 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
@@ -73,6 +75,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,7 +105,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
   private static final Joiner JOINER = Joiner.on("/");
-
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
   private final ZkPathsConfig zkPaths;
@@ -111,9 +113,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private final PathChildrenCache workerPathCache;
   private final Supplier<WorkerSetupData> workerSetupData;
   private final HttpClient httpClient;
-
   // all workers that exist in ZK
   private final ConcurrentMap<String, ZkWorker> zkWorkers = new ConcurrentHashMap<>();
+  private final Set<String> blackListedWorkers = Sets.newHashSet();
   // payloads of pending tasks, which we remember just long enough to assign to workers
   private final ConcurrentMap<String, Task> pendingTaskPayloads = new ConcurrentHashMap<>();
   // tasks that have not yet been assigned to a worker
@@ -122,11 +124,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private final RemoteTaskRunnerWorkQueue runningTasks = new RemoteTaskRunnerWorkQueue();
   // tasks that are complete but not cleaned up yet
   private final RemoteTaskRunnerWorkQueue completeTasks = new RemoteTaskRunnerWorkQueue();
-
   private final ExecutorService runPendingTasksExec = Executors.newSingleThreadExecutor();
-
   private final Object statusLock = new Object();
-
   private volatile boolean started = false;
 
   public RemoteTaskRunner(
@@ -254,6 +253,43 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   public Collection<ZkWorker> getWorkers()
   {
     return ImmutableList.copyOf(zkWorkers.values());
+  }
+
+  @Override
+  public Collection<ZkWorker> getBlackListedWorkers()
+  {
+    return ImmutableList.copyOf(
+        Maps.filterEntries(
+            zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
+        {
+          @Override
+          public boolean apply(
+              Map.Entry<String, ZkWorker> worker
+          )
+          {
+            return blackListedWorkers.contains(worker);
+          }
+        }
+        ).values()
+    );
+  }
+
+  @Override
+  public void blackListWorker(String workerHost)
+  {
+    if (zkWorkers.containsKey(workerHost)) {
+      log.info("worker %s added to blackList, No more tasks will be assigned to the worker", workerHost);
+      blackListedWorkers.add(workerHost);
+    } else {
+      log.warn("Asked to blackList unknown worker", workerHost);
+    }
+  }
+
+  @Override
+  public void whiteListWorker(String workerHost)
+  {
+    log.info("worker %s whiteListed", workerHost);
+    blackListedWorkers.remove(workerHost);
   }
 
   @Override
@@ -782,6 +818,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           log.error(e, "Exception closing worker[%s]!", worker.getHost());
         }
         zkWorkers.remove(worker.getHost());
+        blackListedWorkers.remove(worker.getHost());
       }
     }
   }
@@ -810,7 +847,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     final String minWorkerVer = workerSetupDataMinVer == null ? config.getMinWorkerVersion() : workerSetupDataMinVer;
 
     for (ZkWorker zkWorker : sortedWorkers) {
-      if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
+      if (zkWorker.canRunTask(task)
+          && zkWorker.isValidVersion(minWorkerVer)
+          && !blackListedWorkers.contains(zkWorker.getWorker().getHost())) {
         return zkWorker;
       }
     }

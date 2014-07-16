@@ -140,6 +140,24 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
+  public void blackListWorker(String workerHost)
+  {
+    // Nothing to do.
+  }
+
+  @Override
+  public void whiteListWorker(String workerHost)
+  {
+    // Nothing to do.
+  }
+
+  @Override
+  public Collection<ZkWorker> getBlackListedWorkers()
+  {
+    return ImmutableList.of();
+  }
+
+  @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
     return getQueryRunnerImpl(query);

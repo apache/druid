@@ -52,4 +52,11 @@ public interface TaskRunner
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks();
 
   public Collection<ZkWorker> getWorkers();
-}
+
+  public void blackListWorker(String workerHost);
+
+  public void whiteListWorker(String workerHost);
+
+  public Collection<ZkWorker> getBlackListedWorkers();
+
+  }
