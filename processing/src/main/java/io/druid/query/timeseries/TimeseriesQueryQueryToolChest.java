@@ -221,12 +221,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       }
 
       @Override
-      public int getCacheLimit()
-      {
-        return config.getMaxResultsToCache();
-      }
-
-      @Override
       public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
       {
         return new MergeSequence<Result<TimeseriesResultValue>>(getOrdering(), seqOfSequences);

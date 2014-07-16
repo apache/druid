@@ -160,7 +160,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
-    return Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs()));
+    return Sequences.map(
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+        new Function<Row, Row>()
+        {
+          @Override
+          public Row apply(Row input)
+          {
+            final MapBasedRow row = (MapBasedRow) input;
+            return new MapBasedRow(
+                query.getGranularity()
+                     .toDateTime(row.getTimestampFromEpoch()),
+                row.getEvent()
+            );
+          }
+        }
+    );
   }
 
   private IncrementalIndex makeIncrementalIndex(GroupByQuery query, Sequence<Row> rows)
@@ -179,7 +194,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
     return new OrderedMergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
-    //return new ConcatSequence<>(seqOfSequences);
   }
 
   @Override
@@ -339,12 +353,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             );
           }
         };
-      }
-
-      @Override
-      public int getCacheLimit()
-      {
-        return configSupplier.get().getMaxResultsToCache();
       }
 
       @Override

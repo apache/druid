@@ -227,12 +227,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
 
       @Override
-      public int getCacheLimit()
-      {
-        return config.getMaxResultsToCache();
-      }
-
-      @Override
       public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
       {
         return new MergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);

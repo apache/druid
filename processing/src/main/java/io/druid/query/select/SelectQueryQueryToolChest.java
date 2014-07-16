@@ -71,11 +71,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       {
       };
 
-  private final SelectQueryConfig config;
+  private final QueryConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public SelectQueryQueryToolChest(SelectQueryConfig config, ObjectMapper jsonMapper)
+  public SelectQueryQueryToolChest(QueryConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
     this.jsonMapper = jsonMapper;
@@ -266,12 +266,6 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             );
           }
         };
-      }
-
-      @Override
-      public int getCacheLimit()
-      {
-        return config.getMaxResultsToCache();
       }
 
       @Override

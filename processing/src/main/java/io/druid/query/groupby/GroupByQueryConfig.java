@@ -35,9 +35,6 @@ public class GroupByQueryConfig extends QueryConfig
   @JsonProperty
   private int maxResults = 500000;
 
-  @JsonProperty
-  private int maxResultsToCache = 10000;
-
   public boolean isSingleThreaded()
   {
     return singleThreaded;
@@ -56,11 +53,5 @@ public class GroupByQueryConfig extends QueryConfig
   public int getMaxResults()
   {
     return maxResults;
-  }
-
-  @Override
-  public int getMaxResultsToCache()
-  {
-    return maxResultsToCache;
   }
 }

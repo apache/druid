@@ -29,16 +29,8 @@ public class QueryConfig
   @JsonProperty
   private Period chunkPeriod = new Period();
 
-  @JsonProperty
-  private int maxResultsToCache = Integer.MAX_VALUE;
-
   public Period getChunkPeriod()
   {
     return chunkPeriod;
-  }
-
-  public int getMaxResultsToCache()
-  {
-    return maxResultsToCache;
   }
 }

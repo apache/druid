@@ -117,11 +117,11 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                       final int priority = query.getContextPriority(0);
                       final boolean bySegment = query.getContextBySegment(false);
 
-                      final ListenableFuture<Boolean> future = queryExecutor.submit(
-                          new AbstractPrioritizedCallable<Boolean>(priority)
+                      final ListenableFuture<Void> future = queryExecutor.submit(
+                          new AbstractPrioritizedCallable<Void>(priority)
                           {
                             @Override
-                            public Boolean call() throws Exception
+                            public Void call() throws Exception
                             {
                               if (bySegment) {
                                 input.run(queryParam)
@@ -129,11 +129,11 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                                          bySegmentAccumulatorPair.lhs,
                                          bySegmentAccumulatorPair.rhs
                                      );
-                                return true;
+                              } else {
+                                input.run(query).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
-                              input.run(query).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-                              return true;
+                              return null;
                             }
                           }
                       );

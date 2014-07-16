@@ -84,30 +84,30 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
     if (Iterables.isEmpty(queryables)) {
       log.warn("No queryables found.");
     }
-    ListenableFuture<List<Boolean>> futures = Futures.allAsList(
+    ListenableFuture<List<Void>> futures = Futures.allAsList(
         Lists.newArrayList(
             Iterables.transform(
                 queryables,
-                new Function<QueryRunner<T>, ListenableFuture<Boolean>>()
+                new Function<QueryRunner<T>, ListenableFuture<Void>>()
                 {
                   @Override
-                  public ListenableFuture<Boolean> apply(final QueryRunner<T> input)
+                  public ListenableFuture<Void> apply(final QueryRunner<T> input)
                   {
                     return exec.submit(
-                        new AbstractPrioritizedCallable<Boolean>(priority)
+                        new AbstractPrioritizedCallable<Void>(priority)
                         {
                           @Override
-                          public Boolean call() throws Exception
+                          public Void call() throws Exception
                           {
                             try {
                               if (bySegment) {
                                 input.run(queryParam)
                                      .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
-                                return true;
+                              } else {
+                                input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
-                              input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-                              return true;
+                              return null;
                             }
                             catch (QueryInterruptedException e) {
                               throw Throwables.propagate(e);

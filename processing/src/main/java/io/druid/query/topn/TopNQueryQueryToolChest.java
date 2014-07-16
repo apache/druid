@@ -369,12 +369,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public int getCacheLimit()
-      {
-        return config.getMaxResultsToCache();
-      }
-
-      @Override
       public Sequence<Result<TopNResultValue>> mergeSequences(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
       {
         return new MergeSequence<Result<TopNResultValue>>(getOrdering(), seqOfSequences);

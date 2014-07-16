@@ -248,13 +248,6 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         };
       }
 
-
-      @Override
-      public int getCacheLimit()
-      {
-        return config.getMaxResultsToCache();
-      }
-
       @Override
       public Sequence<Result<SearchResultValue>> mergeSequences(Sequence<Sequence<Result<SearchResultValue>>> seqOfSequences)
       {

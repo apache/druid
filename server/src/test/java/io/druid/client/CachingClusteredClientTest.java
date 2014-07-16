@@ -32,7 +32,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -84,7 +83,6 @@ import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
-import io.druid.query.select.SelectQueryConfig;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -779,7 +777,7 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client,
         new SelectQueryQueryToolChest(
-            new SelectQueryConfig(),
+            new QueryConfig(),
             jsonMapper
         )
     );
@@ -1620,13 +1618,7 @@ public class CachingClusteredClientTest
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];
-
-      //List values = Lists.newArrayList();
-      //while (index < objects.length && !(objects[index] instanceof DateTime)) {
       retVal.add(new MapBasedRow(timestamp, (Map) objects[index++]));
-      //}
-
-      //retVal.add(new Result<>(timestamp, values));
     }
     return retVal;
   }
@@ -1663,7 +1655,7 @@ public class CachingClusteredClientTest
                         .put(SearchQuery.class, new SearchQueryQueryToolChest(new SearchQueryConfig()))
                         .put(
                             SelectQuery.class,
-                            new SelectQueryQueryToolChest(new SelectQueryConfig(), jsonMapper)
+                            new SelectQueryQueryToolChest(new QueryConfig(), jsonMapper)
                         )
                         .put(
                             GroupByQuery.class,
