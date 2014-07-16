@@ -289,7 +289,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   public void whiteListWorker(String workerHost)
   {
     log.info("worker %s whiteListed", workerHost);
-    blackListedWorkers.remove(workerHost);
+    if (blackListedWorkers.remove(workerHost)) {
+      runPendingTasks();
+    }
   }
 
   @Override
