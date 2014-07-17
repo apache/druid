@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
@@ -37,6 +38,7 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -59,6 +61,14 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+
+  private final QueryConfig config;
+
+  @Inject
+  public SegmentMetadataQueryQueryToolChest(QueryConfig config)
+  {
+    this.config = config;
+  }
 
   @Override
   public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)

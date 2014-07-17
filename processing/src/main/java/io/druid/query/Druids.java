@@ -35,6 +35,8 @@ import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.select.PagingSpec;
+import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -942,5 +944,159 @@ public class Druids
   public static SegmentMetadataQueryBuilder newSegmentMetadataQueryBuilder()
   {
     return new SegmentMetadataQueryBuilder();
+  }
+
+  /**
+   * A Builder for SelectQuery.
+   * <p/>
+   * Required: dataSource(), intervals() must be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   SelectQuery query = new SelectQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .interval("2010/2013")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see io.druid.query.select.SelectQuery
+   */
+  public static class SelectQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private Map<String, Object> context;
+    private DimFilter dimFilter;
+    private QueryGranularity granularity;
+    private List<String> dimensions;
+    private List<String> metrics;
+    private PagingSpec pagingSpec;
+
+    public SelectQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      context = null;
+      dimFilter = null;
+      granularity = QueryGranularity.ALL;
+      dimensions = Lists.newArrayList();
+      metrics = Lists.newArrayList();
+      pagingSpec = null;
+    }
+
+    public SelectQuery build()
+    {
+      return new SelectQuery(
+          dataSource,
+          querySegmentSpec,
+          dimFilter,
+          granularity,
+          dimensions,
+          metrics,
+          pagingSpec,
+          context
+      );
+    }
+
+    public SelectQueryBuilder copy(SelectQueryBuilder builder)
+    {
+      return new SelectQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .context(builder.context);
+    }
+
+    public SelectQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public SelectQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public SelectQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public SelectQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public SelectQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public SelectQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+
+    public SelectQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value);
+      return this;
+    }
+
+    public SelectQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
+      for (String val : values) {
+        fields.add(new SelectorDimFilter(dimensionName, val));
+      }
+      dimFilter = new OrDimFilter(fields);
+      return this;
+    }
+
+    public SelectQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
+      return this;
+    }
+
+    public SelectQueryBuilder granularity(String g)
+    {
+      granularity = QueryGranularity.fromString(g);
+      return this;
+    }
+
+    public SelectQueryBuilder granularity(QueryGranularity g)
+    {
+      granularity = g;
+      return this;
+    }
+
+    public SelectQueryBuilder dimensions(List<String> d)
+    {
+      dimensions = d;
+      return this;
+    }
+
+    public SelectQueryBuilder metrics(List<String> m)
+    {
+      metrics = m;
+      return this;
+    }
+
+    public SelectQueryBuilder pagingSpec(PagingSpec p)
+    {
+      pagingSpec = p;
+      return this;
+    }
+  }
+
+  public static SelectQueryBuilder newSelectQueryBuilder()
+  {
+    return new SelectQueryBuilder();
   }
 }

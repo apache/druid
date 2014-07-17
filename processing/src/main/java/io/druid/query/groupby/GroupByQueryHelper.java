@@ -24,21 +24,18 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
-import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class GroupByQueryHelper
 {
-  public static Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> createIndexAccumulatorPair(
+  public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config
   )
@@ -80,13 +77,18 @@ public class GroupByQueryHelper
         aggs.toArray(new AggregatorFactory[aggs.size()])
     );
 
-    Accumulator<IncrementalIndex, Row> accumulator = new Accumulator<IncrementalIndex, Row>()
+    Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {
       @Override
-      public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
+      public IncrementalIndex accumulate(IncrementalIndex accumulated, T in)
       {
-        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions), false) > config.getMaxResults()) {
-          throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+        if (in instanceof Row) {
+          if (accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions), false)
+              > config.getMaxResults()) {
+            throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+          }
+        } else {
+          throw new ISE("Unable to accumulate something of type [%s]", in.getClass());
         }
 
         return accumulated;
@@ -95,4 +97,18 @@ public class GroupByQueryHelper
     return new Pair<>(index, accumulator);
   }
 
+  public static <T> Pair<List, Accumulator<List, T>> createBySegmentAccumulatorPair()
+  {
+    List init = Lists.newArrayList();
+    Accumulator<List, T> accumulator = new Accumulator<List, T>()
+    {
+      @Override
+      public List accumulate(List accumulated, T in)
+      {
+        accumulated.add(in);
+        return accumulated;
+      }
+    };
+    return new Pair<>(init, accumulator);
+  }
 }

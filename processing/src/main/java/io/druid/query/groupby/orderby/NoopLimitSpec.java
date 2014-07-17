@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.metamx.common.guava.Sequence;
 import io.druid.data.input.Row;
+import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -33,6 +34,8 @@ import java.util.List;
  */
 public class NoopLimitSpec implements LimitSpec
 {
+  private static final byte CACHE_KEY = 0x0;
+
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
@@ -62,5 +65,11 @@ public class NoopLimitSpec implements LimitSpec
   @Override
   public int hashCode() {
     return 0;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[]{CACHE_KEY};
   }
 }

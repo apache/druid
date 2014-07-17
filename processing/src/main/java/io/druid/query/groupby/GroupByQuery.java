@@ -51,7 +51,6 @@ import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -111,14 +110,14 @@ public class GroupByQuery extends BaseQuery<Row>
           new Function<Sequence<Row>, Sequence<Row>>()
           {
             @Override
-            public Sequence<Row> apply(@Nullable Sequence<Row> input)
+            public Sequence<Row> apply(Sequence<Row> input)
             {
               return Sequences.filter(
                   input,
                   new Predicate<Row>()
                   {
                     @Override
-                    public boolean apply(@Nullable Row input)
+                    public boolean apply(Row input)
                     {
                       return GroupByQuery.this.havingSpec.eval(input);
                     }

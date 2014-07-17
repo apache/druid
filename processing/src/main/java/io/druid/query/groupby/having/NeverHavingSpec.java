@@ -17,41 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client.cache;
+package io.druid.query.groupby.having;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.Query;
+import io.druid.data.input.Row;
 
-import java.util.Arrays;
-import java.util.List;
-
-public class CacheConfig
+/**
+ * A "having" spec that always evaluates to false
+ */
+public class NeverHavingSpec implements HavingSpec
 {
-  public static String USE_CACHE = "useCache";
-  public static String POPULATE_CACHE = "populateCache";
+  private static final byte CACHE_KEY = 0x1;
 
-  @JsonProperty
-  private boolean useCache = true;
-
-  @JsonProperty
-  private boolean populateCache = true;
-
-  @JsonProperty
-  private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
-
-  public boolean isPopulateCache()
+  @Override
+  public boolean eval(Row row)
   {
-    return populateCache;
+    return false;
   }
 
-  public boolean isUseCache()
+  @Override
+  public byte[] getCacheKey()
   {
-    return useCache;
-  }
-
-  public boolean isQueryCacheable(Query query)
-  {
-    // O(n) impl, but I don't think we'll ever have a million query types here
-    return !unCacheable.contains(query.getType());
+    return new byte[]{CACHE_KEY};
   }
 }

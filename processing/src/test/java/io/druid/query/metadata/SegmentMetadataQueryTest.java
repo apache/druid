@@ -26,6 +26,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -45,7 +46,9 @@ public class SegmentMetadataQueryTest
 {
   @SuppressWarnings("unchecked")
   private final QueryRunner runner = makeQueryRunner(
-      new SegmentMetadataQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+      new SegmentMetadataQueryRunnerFactory(
+          new SegmentMetadataQueryQueryToolChest(new QueryConfig()),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER)
   );
   private ObjectMapper mapper = new DefaultObjectMapper();
 
