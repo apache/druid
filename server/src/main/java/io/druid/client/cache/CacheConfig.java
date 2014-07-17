@@ -20,7 +20,6 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
 import io.druid.query.Query;
 
 import java.util.Arrays;
@@ -52,6 +51,7 @@ public class CacheConfig
 
   public boolean isQueryCacheable(Query query)
   {
-    return !Sets.newHashSet(unCacheable).contains(query.getType());
+    // O(n) impl, but I don't think we'll ever have a million query types here
+    return !unCacheable.contains(query.getType());
   }
 }
