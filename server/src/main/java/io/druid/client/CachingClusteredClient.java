@@ -127,9 +127,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = query.getContextUseCache(true)
                              && strategy != null
-                             && cacheConfig.isUseCache();
+                             && cacheConfig.isUseCache()
+                             && cacheConfig.isQueryCacheable(query);
     final boolean populateCache = query.getContextPopulateCache(true)
-                                  && strategy != null && cacheConfig.isPopulateCache();
+                                  && strategy != null
+                                  && cacheConfig.isPopulateCache()
+                                  && cacheConfig.isQueryCacheable(query);
     final boolean isBySegment = query.getContextBySegment(false);
 
 
@@ -239,6 +242,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         }
 
         descriptors.add(segment.rhs);
+        System.out.println(
+            String.format(
+                "Server %s has %s_%s_%s",
+                server.getHost(),
+                segment.rhs.getInterval(),
+                segment.rhs.getPartitionNumber(),
+                segment.rhs.getVersion()
+            )
+        );
       }
     }
 

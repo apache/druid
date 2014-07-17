@@ -81,7 +81,7 @@ public class GroupByQueryEngine
     this.intermediateResultsBufferPool = intermediateResultsBufferPool;
   }
 
-  public Sequence<Row> process(final GroupByQuery query, StorageAdapter storageAdapter)
+  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter)
   {
     if (storageAdapter == null) {
       throw new ISE(
@@ -104,41 +104,41 @@ public class GroupByQueryEngine
 
     return Sequences.concat(
         Sequences.withBaggage(
-        Sequences.map(
-          cursors,
-          new Function<Cursor, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(@Nullable final Cursor cursor)
-            {
-              return new BaseSequence<Row, RowIterator>(
-                  new BaseSequence.IteratorMaker<Row, RowIterator>()
+            Sequences.map(
+                cursors,
+                new Function<Cursor, Sequence<Row>>()
+                {
+                  @Override
+                  public Sequence<Row> apply(final Cursor cursor)
                   {
-                    @Override
-                    public RowIterator make()
-                    {
-                      return new RowIterator(query, cursor, bufferHolder.get(), config.get());
-                    }
+                    return new BaseSequence<>(
+                        new BaseSequence.IteratorMaker<Row, RowIterator>()
+                        {
+                          @Override
+                          public RowIterator make()
+                          {
+                            return new RowIterator(query, cursor, bufferHolder.get(), config.get());
+                          }
 
-                    @Override
-                    public void cleanup(RowIterator iterFromMake)
-                    {
-                      CloseQuietly.close(iterFromMake);
-                    }
+                          @Override
+                          public void cleanup(RowIterator iterFromMake)
+                          {
+                            CloseQuietly.close(iterFromMake);
+                          }
+                        }
+                    );
                   }
-              );
+                }
+            ),
+            new Closeable()
+            {
+              @Override
+              public void close() throws IOException
+              {
+                CloseQuietly.close(bufferHolder);
+              }
             }
-          }
-        ),
-        new Closeable()
-        {
-          @Override
-          public void close() throws IOException
-          {
-            CloseQuietly.close(bufferHolder);
-          }
-        }
-      )
+        )
     );
   }
 

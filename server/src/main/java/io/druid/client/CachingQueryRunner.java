@@ -78,14 +78,16 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
     final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null
-                                  && cacheConfig.isPopulateCache();
+                                  && cacheConfig.isPopulateCache()
+                                  && cacheConfig.isQueryCacheable(query);
 
     final boolean useCache = query.getContextUseCache(true)
-        && strategy != null
-        && cacheConfig.isUseCache();
+                             && strategy != null
+                             && cacheConfig.isUseCache()
+                             && cacheConfig.isQueryCacheable(query);
 
     final Cache.NamedKey key;
-    if(strategy != null && (useCache || populateCache)) {
+    if (strategy != null && (useCache || populateCache)) {
       key = CacheUtil.computeSegmentCacheKey(
           segmentIdentifier,
           segmentDescriptor,
@@ -95,10 +97,10 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       key = null;
     }
 
-    if(useCache) {
+    if (useCache) {
       final Function cacheFn = strategy.pullFromCache();
       final byte[] cachedResult = cache.get(key);
-      if(cachedResult != null) {
+      if (cachedResult != null) {
         final TypeReference cacheObjectClazz = strategy.getCacheObjectClazz();
 
         return Sequences.map(

@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
-import java.util.Set;
 
 public class LinearShardSpec implements ShardSpec
 {
