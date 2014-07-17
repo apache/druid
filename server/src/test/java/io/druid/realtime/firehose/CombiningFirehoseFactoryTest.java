@@ -24,9 +24,11 @@ import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.utils.Runnables;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -74,6 +76,18 @@ public class CombiningFirehoseFactoryTest
       public long getTimestampFromEpoch()
       {
         return timestamp;
+      }
+
+      @Override
+      public DateTime getTimestamp()
+      {
+        return new DateTime(timestamp);
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return 0;
       }
 
       @Override
