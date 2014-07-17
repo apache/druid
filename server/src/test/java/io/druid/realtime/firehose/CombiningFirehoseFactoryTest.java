@@ -42,16 +42,15 @@ public class CombiningFirehoseFactoryTest
   public void testCombiningfirehose() throws IOException
   {
     List<InputRow> list1 = Arrays.asList(makeRow(1, 1), makeRow(2, 2));
-    List<InputRow> list2 = Arrays.asList(makeRow(3, 3), makeRow(4, 4));
+    List<InputRow> list2 = Arrays.asList(makeRow(3, 3), makeRow(4, 4), makeRow(5, 5));
     FirehoseFactory combiningFactory = new CombiningFirehoseFactory(
         Arrays.<FirehoseFactory>asList(
-            new ListFirehoseFactory(
-                list1
-            ), new ListFirehoseFactory(list2)
+            new ListFirehoseFactory(list1),
+            new ListFirehoseFactory(list2)
         )
     );
     final Firehose firehose = combiningFactory.connect(null);
-    for (int i = 1; i < 5; i++) {
+    for (int i = 1; i < 6; i++) {
       Assert.assertTrue(firehose.hasMore());
       final InputRow inputRow = firehose.nextRow();
       Assert.assertEquals(i, inputRow.getTimestampFromEpoch());
@@ -133,7 +132,7 @@ public class CombiningFirehoseFactoryTest
         @Override
         public void close() throws IOException
         {
-          //
+          // Do nothing
         }
       };
     }

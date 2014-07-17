@@ -42,12 +42,9 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
-import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.common.task.AbstractTask;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.select.EventHolder;
 import io.druid.segment.Cursor;
@@ -139,10 +136,10 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   @Override
   public Firehose connect(InputRowParser inputRowParser) throws IOException, ParseException
   {
-    log.info("Connecting firehose: IngestSegmentFirehose[%s,%s]", dataSource, interval);
+    log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
     // better way to achieve this is to pass toolbox to Firehose, The instance is initialized Lazily on connect method.
     final TaskToolbox toolbox = injector.getInstance(TaskToolboxFactory.class).build(
-        new IngestTask("Ingest-Task-Id", dataSource)
+        new ReIngestTask("Ingest-Task-Id", dataSource)
     );
 
     try {

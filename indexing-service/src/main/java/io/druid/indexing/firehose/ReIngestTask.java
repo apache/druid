@@ -25,9 +25,9 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 
-public class IngestTask extends AbstractTask
+public class ReIngestTask extends AbstractTask
 {
-  public IngestTask(
+  public ReIngestTask(
       @JsonProperty("id") final String id,
       @JsonProperty("dataSource") final String dataSource
   )
@@ -38,7 +38,7 @@ public class IngestTask extends AbstractTask
   @Override
   public String getType()
   {
-    return "Ingest-Task";
+    return "reingest";
   }
 
   @Override
