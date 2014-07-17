@@ -51,13 +51,13 @@ public class WorkerCuratorCoordinator
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
   private final CuratorFramework curatorFramework;
-  private final Worker worker;
   private final Announcer announcer;
 
   private final String baseAnnouncementsPath;
   private final String baseTaskPath;
   private final String baseStatusPath;
 
+  private volatile Worker worker;
   private volatile boolean started;
 
   @Inject
@@ -253,10 +253,10 @@ public class WorkerCuratorCoordinator
   {
     synchronized (lock) {
       if (!started) {
-        log.error("Cannot update worker! Not Started!");
-        return;
+        throw new ISE("Cannot update worker! Not Started!");
       }
 
+      this.worker = newWorker;
       announcer.update(getAnnouncementsPathForWorker(), jsonMapper.writeValueAsBytes(newWorker));
     }
   }

@@ -91,6 +91,7 @@ public class WorkerResourceTest
     curatorCoordinator.start();
 
     workerResource = new WorkerResource(
+        worker,
         curatorCoordinator,
         null
     );

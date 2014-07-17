@@ -48,31 +48,36 @@ import java.io.InputStream;
 public class WorkerResource
 {
   private static final Logger log = new Logger(WorkerResource.class);
+  private static String DISABLED_VERSION = "";
 
+  private final Worker enabledWorker;
+  private final Worker disabledWorker;
   private final WorkerCuratorCoordinator curatorCoordinator;
   private final ForkingTaskRunner taskRunner;
 
   @Inject
   public WorkerResource(
+      Worker worker,
       WorkerCuratorCoordinator curatorCoordinator,
       ForkingTaskRunner taskRunner
 
   ) throws Exception
   {
+    this.enabledWorker = worker;
+    this.disabledWorker = new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), DISABLED_VERSION);
     this.curatorCoordinator = curatorCoordinator;
     this.taskRunner = taskRunner;
   }
+
 
   @POST
   @Path("/disable")
   @Produces("application/json")
   public Response doDisable()
   {
-    final Worker worker = curatorCoordinator.getWorker();
-    final Worker newWorker = new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), "");
     try {
-      curatorCoordinator.updateWorkerAnnouncement(newWorker);
-      return Response.ok(ImmutableMap.of(worker.getHost(), "disabled")).build();
+      curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
+      return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled")).build();
     }
     catch (Exception e) {
       return Response.serverError().build();
@@ -84,10 +89,24 @@ public class WorkerResource
   @Produces("application/json")
   public Response doEnable()
   {
-    final Worker worker = curatorCoordinator.getWorker();
     try {
-      curatorCoordinator.updateWorkerAnnouncement(worker);
-      return Response.ok(ImmutableMap.of(worker.getHost(), "enabled")).build();
+      curatorCoordinator.updateWorkerAnnouncement(enabledWorker);
+      return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled")).build();
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
+  }
+
+  @GET
+  @Path("/disabled")
+  @Produces("application/json")
+  public Response isEnabled()
+  {
+    try {
+      final Worker theWorker = curatorCoordinator.getWorker();
+      final boolean disabled = theWorker.getVersion().equalsIgnoreCase(DISABLED_VERSION);
+      return Response.ok(ImmutableMap.of(theWorker.getHost(), disabled)).build();
     }
     catch (Exception e) {
       return Response.serverError().build();
