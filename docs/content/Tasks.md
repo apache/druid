@@ -220,7 +220,7 @@ Kill tasks delete all information about a segment and removes it from deep stora
     "type": "kill",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "segments": <JSON list of DataSegment objects to append>
+    "interval" : <all_segments_in_this_interval_will_die!>
 }
 ```
 
