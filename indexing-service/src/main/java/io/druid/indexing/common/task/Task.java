@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.firehose.IngestTask;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
@@ -53,7 +54,8 @@ import io.druid.query.QueryRunner;
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
     @JsonSubTypes.Type(name = "version_converter", value = VersionConverterTask.class),
-    @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterTask.SubTask.class)
+    @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterTask.SubTask.class),
+    @JsonSubTypes.Type(name = "ingest-task", value = IngestTask.class)
 })
 public interface Task
 {

@@ -153,12 +153,14 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
           Ordering.<String>natural().nullsFirst()
       );
-      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(
-          interval
-      );
+
       for (DataSegment segment : usedSegments) {
         timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
       }
+      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(
+          interval
+      );
+
       List<String> dims;
       if (dimensions != null) {
         dims = dimensions;
@@ -221,33 +223,6 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   public InputRowParser getParser()
   {
     return null;
-  }
-
-  private static class IngestTask extends AbstractTask
-  {
-
-    protected IngestTask(String id, String dataSource)
-    {
-      super(id, dataSource);
-    }
-
-    @Override
-    public String getType()
-    {
-      return "Ingest-Task";
-    }
-
-    @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
-    {
-      return true;
-    }
-
-    @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
-    {
-      return TaskStatus.success(getId());
-    }
   }
 
   public class IngestSegmentFirehose implements Firehose
