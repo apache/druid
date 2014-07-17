@@ -27,6 +27,8 @@ Standalone real-time nodes can be updated one at a time in a rolling fashion.
 
 Overlord nodes will try to launch new middle manager nodes and terminate old ones without dropping data. This process is based on the configuration `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your overlord node, the `VERSION` value should be increased.
 
+The config `druid.indexer.autoscale.workerVersion=#{VERSION}` also needs to be set.
+
 ### Without Autoscaling
 
 Middle managers can be updated in a rolling fashion based on API.
