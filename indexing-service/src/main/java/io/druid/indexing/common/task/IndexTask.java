@@ -19,10 +19,13 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -53,12 +56,14 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -107,6 +112,8 @@ public class IndexTask extends AbstractFixedIntervalTask
   @JsonIgnore
   private final IndexIngestionSpec ingestionSchema;
 
+  private final ObjectMapper jsonMapper;
+
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
@@ -118,7 +125,8 @@ public class IndexTask extends AbstractFixedIntervalTask
       @JsonProperty("indexGranularity") final QueryGranularity indexGranularity,
       @JsonProperty("targetPartitionSize") final int targetPartitionSize,
       @JsonProperty("firehose") final FirehoseFactory firehoseFactory,
-      @JsonProperty("rowFlushBoundary") final int rowFlushBoundary
+      @JsonProperty("rowFlushBoundary") final int rowFlushBoundary,
+      @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(
@@ -139,9 +147,10 @@ public class IndexTask extends AbstractFixedIntervalTask
               granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
           ),
           new IndexIOConfig(firehoseFactory),
-          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary)
+          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary, null)
       );
     }
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -175,7 +184,15 @@ public class IndexTask extends AbstractFixedIntervalTask
       if (targetPartitionSize > 0) {
         shardSpecs = determinePartitions(bucket, targetPartitionSize);
       } else {
-        shardSpecs = ImmutableList.<ShardSpec>of(new NoneShardSpec());
+        int numShards = ingestionSchema.getTuningConfig().getNumShards();
+        if (numShards > 0) {
+          shardSpecs = Lists.newArrayList();
+          for (int i = 0; i < numShards; i++) {
+            shardSpecs.add(new HashBasedNumberedShardSpec(i, numShards, jsonMapper));
+          }
+        } else {
+          shardSpecs = ImmutableList.<ShardSpec>of(new NoneShardSpec());
+        }
       }
       for (final ShardSpec shardSpec : shardSpecs) {
         final DataSegment segment = generateSegment(
@@ -206,6 +223,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         retVal.add(interval);
       }
     }
+
     return retVal;
   }
 
@@ -477,7 +495,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0) : tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null) : tuningConfig;
     }
 
     @Override
@@ -530,15 +548,22 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     private final int targetPartitionSize;
     private final int rowFlushBoundary;
+    private final int numShards;
 
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
-        @JsonProperty("rowFlushBoundary") int rowFlushBoundary
-    )
+        @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
+        @JsonProperty("numShards") @Nullable Integer numShards
+        )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
       this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
+      this.numShards = numShards == null ? -1 : numShards;
+      Preconditions.checkArgument(
+          this.targetPartitionSize == -1 || this.numShards == -1,
+          "targetPartitionsSize and shardCount both cannot be set"
+      );
     }
 
     @JsonProperty
@@ -551,6 +576,12 @@ public class IndexTask extends AbstractFixedIntervalTask
     public int getRowFlushBoundary()
     {
       return rowFlushBoundary;
+    }
+
+    @JsonProperty
+    public int getNumShards()
+    {
+      return numShards;
     }
   }
 }
