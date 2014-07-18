@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -37,6 +38,8 @@ import java.util.List;
  */
 public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
+  private static final EmittingLogger log = new EmittingLogger(CombiningFirehoseFactory.class);
+
   private final List<FirehoseFactory> delegateFactoryList;
 
   @JsonCreator
@@ -86,10 +89,20 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
           if (currentFirehose != null) {
             currentFirehose.close();
           }
+
           currentFirehose = firehoseFactoryIterator.next().connect(parser);
         }
         catch (IOException e) {
-          Throwables.propagate(e);
+          if (currentFirehose != null) {
+            try {
+              currentFirehose.close();
+            }
+            catch (IOException e2) {
+              log.error(e, "Unable to close currentFirehose!");
+              throw Throwables.propagate(e2);
+            }
+          }
+          throw Throwables.propagate(e);
         }
       }
     }
