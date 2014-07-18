@@ -84,12 +84,6 @@ public class CombiningFirehoseFactoryTest
       }
 
       @Override
-      public int compareTo(Row o)
-      {
-        return 0;
-      }
-
-      @Override
       public List<String> getDimension(String dimension)
       {
         return Lists.newArrayList();
@@ -107,6 +101,11 @@ public class CombiningFirehoseFactoryTest
         return null;
       }
 
+      @Override
+      public int compareTo(Row o)
+      {
+        return 0;
+      }
     };
   }
 
