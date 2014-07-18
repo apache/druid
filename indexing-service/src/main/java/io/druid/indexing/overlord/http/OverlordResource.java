@@ -354,10 +354,63 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/worker/{workerhost}/blacklist")
+  @Produces("application/json")
+  public Response blackListWorker(@PathParam("workerhost") final String workerhost)
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            taskRunner.blackListWorker(workerhost);
+            return Response.ok().build();
+          }
+        }
+    );
+  }
+
+  @GET
+  @Path("/worker/{workerhost}/whitelist")
+  @Produces("application/json")
+  public Response whiteListWorker(@PathParam("workerhost") final String workerhost)
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            taskRunner.whiteListWorker(workerhost);
+            return Response.ok().build();
+          }
+        }
+    );
+  }
+
+  @GET
   @Path("/workers")
   @Produces("application/json")
-  public Response getWorkers()
+  public Response getWorkers(
+      @QueryParam("blacklist") String blacklist
+  )
   {
+    if (blacklist != null) {
+      return asLeaderWith(
+          taskMaster.getTaskRunner(),
+          new Function<TaskRunner, Response>()
+          {
+            @Override
+            public Response apply(TaskRunner taskRunner)
+            {
+              return Response.ok(taskRunner.getBlackListedWorkers()).build();
+            }
+          }
+      );
+    }
     return asLeaderWith(
         taskMaster.getTaskRunner(),
         new Function<TaskRunner, Response>()

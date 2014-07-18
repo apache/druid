@@ -359,6 +359,62 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
   }
 
+  @Test
+  public void testBlackList() throws Exception
+  {
+    cf.create()
+      .creatingParentsIfNeeded()
+      .withMode(CreateMode.EPHEMERAL)
+      .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(TaskStatus.success(task.getId())));
+
+    doSetup();
+    remoteTaskRunner.blackListWorker("worker");
+    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"));
+    remoteTaskRunner.run(task1);
+    Assert.assertFalse(taskAnnounced(task1.getId()));
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getPendingTasks().size() == 1;
+              }
+            }
+        )
+    );
+    remoteTaskRunner.whiteListWorker("worker");
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getPendingTasks().size() == 0;
+              }
+            }
+        )
+    );
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRunningTasks().size() == 1;
+              }
+            }
+        )
+    );
+
+
+  }
+
   private void doSetup() throws Exception
   {
     makeWorker();

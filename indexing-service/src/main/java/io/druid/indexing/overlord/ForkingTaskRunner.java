@@ -363,6 +363,24 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
+  public void blackListWorker(String workerHost)
+  {
+    // Nothing to do.
+  }
+
+  @Override
+  public void whiteListWorker(String workerHost)
+  {
+    // Nothing to do.
+  }
+
+  @Override
+  public Collection<ZkWorker> getBlackListedWorkers()
+  {
+    return ImmutableList.of();
+  }
+
+  @Override
   public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskid, final long offset)
   {
     final ProcessHolder processHolder;
