@@ -22,7 +22,7 @@ The following configs only apply if the overlord is running in remote mode:
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task as been assigned to a middle manager before throwing an error.|PT5M|
-|`druid.indexer.runner.minWorkerVersion`|The minimum middle manager version to send tasks to. |none|
+|`druid.indexer.runner.minWorkerVersion`|The minimum middle manager version to send tasks to. |"0"|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the overlord should expect middle managers to compress Znodes.|false|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
 
@@ -80,7 +80,6 @@ Issuing a GET request at the same URL will return the current worker setup spec 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`minVersion`|The coordinator only assigns tasks to workers with a version greater than the minVersion. If this is not specified, the minVersion will be druid.indexer.runner.minWorkerVersion.|none|
 |`minNumWorkers`|The minimum number of workers that can be in the cluster at any given time.|0|
 |`maxNumWorkers`|The maximum number of workers that can be in the cluster at any given time.|0|
 |`nodeData`|A JSON object that describes how to launch new nodes. Currently, only EC2 is supported.|none; required|

@@ -373,6 +373,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
         Throwable e
     )
     {
+      log.error(e, "Error processing query response");
       // throwing an exception here may cause resource leak
       try {
         handleException(objectMapper, asyncContext, e);
