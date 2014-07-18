@@ -45,6 +45,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
+import io.druid.indexing.common.task.NoopTask;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.select.EventHolder;
 import io.druid.segment.Cursor;
@@ -138,8 +139,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   {
     log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
     // better way to achieve this is to pass toolbox to Firehose, The instance is initialized Lazily on connect method.
+    // Noop Task is just used to create the toolbox and list segments.
     final TaskToolbox toolbox = injector.getInstance(TaskToolboxFactory.class).build(
-        new ReIngestTask("Ingest-Task-Id", dataSource)
+        new NoopTask("reingest", 0, 0, null, null)
     );
 
     try {
