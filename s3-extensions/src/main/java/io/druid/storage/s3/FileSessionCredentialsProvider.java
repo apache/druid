@@ -25,7 +25,10 @@ import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -80,12 +83,10 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
   @Override
   public void refresh() {
     try {
-      List<String> lines = Files.readAllLines(Paths.get(sessionCredentials), Charsets.UTF_8);
       Properties props = new Properties();
-      for (String line : lines) {
-        String[] tokens = line.split("=");
-        props.put(tokens[0], tokens[1]);
-      }
+      InputStream is = new FileInputStream(new File(sessionCredentials));
+      props.load(is);
+      is.close();
 
       sessionToken = props.getProperty("sessionToken");
       accessKey = props.getProperty("accessKey");
