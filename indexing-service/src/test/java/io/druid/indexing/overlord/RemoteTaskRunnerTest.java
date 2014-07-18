@@ -380,7 +380,7 @@ public class RemoteTaskRunnerTest
         },
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
-        DSuppliers.of(new AtomicReference<WorkerSetupData>(new WorkerSetupData("0", 0, 1, null, null, null))),
+        DSuppliers.of(new AtomicReference<WorkerSetupData>(new WorkerSetupData(0, 1, null, null, null))),
         null
     );
 
