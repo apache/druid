@@ -31,6 +31,9 @@ public class AWSCredentialsConfig
   @JsonProperty
   private String secretKey = "";
 
+  @JsonProperty
+  private String fileSessionCredentials = "";
+
   public String getAccessKey()
   {
     return accessKey;
@@ -40,4 +43,6 @@ public class AWSCredentialsConfig
   {
     return secretKey;
   }
+
+  public String getFileSessionCredentials() { return fileSessionCredentials; }
 }
