@@ -19,6 +19,8 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -67,16 +69,19 @@ public class TaskSerdeTest
         QueryGranularity.NONE,
         10000,
         new LocalFirehoseFactory(new File("lol"), "rofl", null),
-        -1
+        -1,
+        jsonMapper
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    InjectableValues inject = new InjectableValues.Std()
+        .addValue(ObjectMapper.class, jsonMapper);
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
+    final IndexTask task2 = jsonMapper.reader(Task.class).with(inject).readValue(json);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());

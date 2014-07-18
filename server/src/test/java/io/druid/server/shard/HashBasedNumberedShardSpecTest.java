@@ -26,6 +26,7 @@ import com.metamx.common.ISE;
 import io.druid.TestUtil;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
@@ -43,7 +44,7 @@ public class HashBasedNumberedShardSpecTest
   {
 
     final ShardSpec spec = TestUtil.MAPPER.readValue(
-        TestUtil.MAPPER.writeValueAsBytes(new HashBasedNumberedShardSpec(1, 2)),
+        TestUtil.MAPPER.writeValueAsBytes(new HashBasedNumberedShardSpec(1, 2, TestUtil.MAPPER)),
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
@@ -65,9 +66,9 @@ public class HashBasedNumberedShardSpecTest
   public void testPartitionChunks()
   {
     final List<ShardSpec> specs = ImmutableList.<ShardSpec>of(
-        new HashBasedNumberedShardSpec(0, 3),
-        new HashBasedNumberedShardSpec(1, 3),
-        new HashBasedNumberedShardSpec(2, 3)
+        new HashBasedNumberedShardSpec(0, 3, TestUtil.MAPPER),
+        new HashBasedNumberedShardSpec(1, 3, TestUtil.MAPPER),
+        new HashBasedNumberedShardSpec(2, 3, TestUtil.MAPPER)
     );
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
@@ -141,7 +142,7 @@ public class HashBasedNumberedShardSpecTest
         int partitions
     )
     {
-      super(partitionNum, partitions);
+      super(partitionNum, partitions, TestUtil.MAPPER);
     }
 
     @Override
