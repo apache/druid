@@ -99,14 +99,14 @@ public class WorkerResource
   }
 
   @GET
-  @Path("/disabled")
+  @Path("/enabled")
   @Produces("application/json")
   public Response isEnabled()
   {
     try {
       final Worker theWorker = curatorCoordinator.getWorker();
-      final boolean disabled = theWorker.getVersion().equalsIgnoreCase(DISABLED_VERSION);
-      return Response.ok(ImmutableMap.of(theWorker.getHost(), disabled)).build();
+      final boolean enabled = !theWorker.getVersion().equalsIgnoreCase(DISABLED_VERSION);
+      return Response.ok(ImmutableMap.of(theWorker.getHost(), enabled)).build();
     }
     catch (Exception e) {
       return Response.serverError().build();
