@@ -27,8 +27,8 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
-import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
@@ -113,7 +113,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -141,7 +141,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -157,7 +157,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -188,7 +188,7 @@ public class SimpleResourceManagementStrategyTest
     EasyMock.expect(autoScalingStrategy.ipToIdLookup(EasyMock.<List<String>>anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
     EasyMock.expect(autoScalingStrategy.terminateWithIds(EasyMock.<List<String>>anyObject()))
-                    .andReturn(null);
+            .andReturn(null);
     EasyMock.expect(autoScalingStrategy.provision()).andReturn(
         new AutoScalingData(Lists.<String>newArrayList("fake"))
     );
@@ -196,7 +196,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -214,7 +214,7 @@ public class SimpleResourceManagementStrategyTest
 
     provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
@@ -248,7 +248,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -278,7 +278,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -293,7 +293,7 @@ public class SimpleResourceManagementStrategyTest
 
     terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -319,7 +319,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(NoopTask.create()),
@@ -337,7 +337,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(NoopTask.create()),
@@ -412,7 +412,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
@@ -421,7 +421,7 @@ public class SimpleResourceManagementStrategyTest
 
     boolean provisionedSomething = simpleResourceManagementStrategy.doProvision(
         Arrays.<RemoteTaskRunnerWorkItem>asList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
         ),
         Arrays.<ZkWorker>asList(
             new TestZkWorker(null)
