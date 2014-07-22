@@ -91,7 +91,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
             )
         ), "/druid/v2/*"
     );
-    queries.addFilter(GzipFilter.class, "/druid/v2/*", null);
+    queries.addFilter(AsyncGzipFilter.class, "/druid/v2/*", null);
     queries.addFilter(GuiceFilter.class, "/status/*", null);
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
