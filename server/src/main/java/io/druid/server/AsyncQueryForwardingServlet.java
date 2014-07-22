@@ -37,6 +37,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -66,6 +67,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   private static final Joiner COMMA_JOIN = Joiner.on(",");
 
+  private final ServerConfig config;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
@@ -74,6 +76,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   private final RequestLogger requestLogger;
 
   public AsyncQueryForwardingServlet(
+      ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
@@ -82,6 +85,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       RequestLogger requestLogger
   )
   {
+    this.config = config;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
@@ -95,6 +99,8 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       throws ServletException, IOException
   {
     final AsyncContext asyncContext = req.startAsync(req, res);
+    // default async timeout to be same as maxIdleTime for now
+    asyncContext.setTimeout(config.getMaxIdleTime().toStandardDuration().getMillis());
     asyncContext.start(
         new Runnable()
         {
