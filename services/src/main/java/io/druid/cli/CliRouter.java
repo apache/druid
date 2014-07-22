@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.RoutingDruidClient;
@@ -42,6 +43,8 @@ import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.server.router.TieredBrokerHostSelector;
+import io.druid.server.router.TieredBrokerSelectorStrategiesProvider;
+import io.druid.server.router.TieredBrokerSelectorStrategy;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -79,6 +82,10 @@ public class CliRouter extends ServerRunnable
             binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
             binder.bind(QueryHostFinder.class).in(LazySingleton.class);
             binder.bind(RoutingDruidClient.class).in(LazySingleton.class);
+            binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>(){})
+                      .toProvider(TieredBrokerSelectorStrategiesProvider.class)
+                      .in(LazySingleton.class);
+
 
             binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 

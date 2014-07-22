@@ -54,6 +54,10 @@ public class TieredBrokerConfig
   @NotNull
   private Period pollPeriod = new Period("PT1M");
 
+  @JsonProperty
+  @NotNull
+  private String strategies = "[{\"type\":\"timeBoundary\"},{\"type\":\"priority\"}]";
+
   // tier, <bard, numThreads>
   public LinkedHashMap<String, String> getTierToBrokerMap()
   {
@@ -87,5 +91,10 @@ public class TieredBrokerConfig
   public Period getPollPeriod()
   {
     return pollPeriod;
+  }
+
+  public String getStrategies()
+  {
+    return strategies;
   }
 }
