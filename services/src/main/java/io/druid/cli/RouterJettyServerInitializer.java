@@ -38,7 +38,7 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.servlets.AsyncGzipFilter;
 
 /**
  */
@@ -85,12 +85,11 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
             )
         ), "/druid/v2/*"
     );
-    queries.addFilter(GzipFilter.class, "/druid/v2/*", null);
+    queries.addFilter(AsyncGzipFilter.class, "/druid/v2/*", null);
     queries.addFilter(GuiceFilter.class, "/status/*", null);
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addFilter(GzipFilter.class, "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
