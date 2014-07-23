@@ -19,6 +19,7 @@
 
 package io.druid.server.router;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -30,7 +31,6 @@ import io.druid.client.selector.HostSelector;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.query.Query;
-import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
@@ -50,6 +50,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
   private final TieredBrokerConfig tierConfig;
   private final ServerDiscoveryFactory serverDiscoveryFactory;
   private final ConcurrentHashMap<String, ServerDiscoverySelector> selectorMap = new ConcurrentHashMap<>();
+  private final List<TieredBrokerSelectorStrategy> strategies;
 
   private final Object lock = new Object();
 
@@ -59,12 +60,14 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
   public TieredBrokerHostSelector(
       CoordinatorRuleManager ruleManager,
       TieredBrokerConfig tierConfig,
-      ServerDiscoveryFactory serverDiscoveryFactory
+      ServerDiscoveryFactory serverDiscoveryFactory,
+      List<TieredBrokerSelectorStrategy> strategies
   )
   {
     this.ruleManager = ruleManager;
     this.tierConfig = tierConfig;
     this.serverDiscoveryFactory = serverDiscoveryFactory;
+    this.strategies = strategies;
   }
 
   @LifecycleStart
@@ -128,12 +131,12 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
 
     String brokerServiceName = null;
 
-    // Somewhat janky way of always selecting highest priority broker for this type of query
-    if (query instanceof TimeBoundaryQuery) {
-      brokerServiceName = Iterables.getFirst(
-          tierConfig.getTierToBrokerMap().values(),
-          tierConfig.getDefaultBrokerServiceName()
-      );
+    for (TieredBrokerSelectorStrategy strategy : strategies) {
+      final Optional<String> optionalName = strategy.getBrokerServiceName(tierConfig, query);
+      if (optionalName.isPresent()) {
+        brokerServiceName = optionalName.get();
+        break;
+      }
     }
 
     if (brokerServiceName == null) {

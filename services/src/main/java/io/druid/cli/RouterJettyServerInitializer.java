@@ -29,6 +29,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import org.eclipse.jetty.server.Handler;
@@ -44,6 +45,7 @@ import org.eclipse.jetty.servlets.AsyncGzipFilter;
  */
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
+  private final ServerConfig config;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
@@ -53,6 +55,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
   @Inject
   public RouterJettyServerInitializer(
+      ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
@@ -61,6 +64,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       RequestLogger requestLogger
   )
   {
+    this.config = config;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
@@ -76,6 +80,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     queries.addServlet(
         new ServletHolder(
             new AsyncQueryForwardingServlet(
+                config,
                 jsonMapper,
                 smileMapper,
                 hostFinder,
