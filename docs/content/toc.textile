@@ -73,7 +73,7 @@ h2. Architecture
 *** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
-** "MySQL":./MySQL.html
+** "Metadata Storage":./MySQL.html
 ** "ZooKeeper":./ZooKeeper.html
 
 h2. Experimental
