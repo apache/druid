@@ -40,7 +40,6 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.AsyncGzipFilter;
-import org.eclipse.jetty.servlets.GzipFilter;
 
 /**
  */
@@ -96,7 +95,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addFilter(GzipFilter.class, "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
