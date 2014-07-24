@@ -49,7 +49,7 @@ h2. Querying
 ** "DimensionSpecs":./DimensionSpecs.html
 * Query Types
 ** "GroupBy":./GroupByQuery.html
-*** "OrderBy":./OrderBy.html
+*** "LimitSpec":./LimitSpec.html
 *** "Having":./Having.html
 ** "Search":./SearchQuery.html
 *** "SearchQuerySpec":./SearchQuerySpec.html
