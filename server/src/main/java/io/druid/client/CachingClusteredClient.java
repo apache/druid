@@ -242,15 +242,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         }
 
         descriptors.add(segment.rhs);
-        System.out.println(
-            String.format(
-                "Server %s has %s_%s_%s",
-                server.getHost(),
-                segment.rhs.getInterval(),
-                segment.rhs.getPartitionNumber(),
-                segment.rhs.getVersion()
-            )
-        );
       }
     }
 
