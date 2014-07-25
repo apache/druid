@@ -98,7 +98,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   protected void doGet(HttpServletRequest req, HttpServletResponse res)
       throws ServletException, IOException
   {
-    final AsyncContext asyncContext = req.startAsync(req, res);
+    final AsyncContext asyncContext = req.startAsync();
     asyncContext.setTimeout(0);
 
     final HttpResponseHandler<ServletOutputStream, ServletOutputStream> responseHandler =
