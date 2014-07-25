@@ -148,7 +148,6 @@ public class QueryResource
         );
       }
 
-
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
