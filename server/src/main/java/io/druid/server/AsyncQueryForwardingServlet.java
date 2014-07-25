@@ -154,7 +154,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
 
       URI rewrittenURI = rewriteURI(hostFinder.getHost(query), req);
 
-
       final AsyncContext asyncContext = req.startAsync();
       // let proxy http client timeout
       asyncContext.setTimeout(0);
@@ -232,7 +231,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
                 log.error(logError, "Unable to log query [%s]!", query);
               }
 
-              log.makeAlert(throwable, "Exception handling request [%s]", id)
+              log.makeAlert(throwable, "Exception handling request [%s]", query.getId())
                  .addData("query", query)
                  .addData("peer", req.getRemoteAddr())
                  .emit();
