@@ -135,9 +135,6 @@ public class AsyncQueryForwardingServlet extends HttpServlet
   @Override
   protected void doPost(final HttpServletRequest req, final HttpServletResponse res) throws ServletException, IOException
   {
-    final String id = req.getHeader("X-Client");
-    log.info("query id [%s]", id);
-
     final long start = System.currentTimeMillis();
     final boolean isSmile = QueryResource.APPLICATION_SMILE.equals(req.getContentType());
     final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
