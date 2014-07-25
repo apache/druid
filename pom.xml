@@ -324,17 +324,17 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.2.1.v20140609</version>
+                <version>9.2.2.v20140723</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.2.1.v20140609</version>
+                <version>9.2.2.v20140723</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.2.1.v20140609</version>
+                <version>9.2.2.v20140723</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>

@@ -38,6 +38,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,7 +73,7 @@ public class RoutingDruidClient<IntermediateType, FinalType>
   }
 
   public ListenableFuture<FinalType> postQuery(
-      String url,
+      URI uri,
       Query query,
       HttpResponseHandler<IntermediateType, FinalType> responseHandler
   )
@@ -80,9 +81,9 @@ public class RoutingDruidClient<IntermediateType, FinalType>
     final ListenableFuture<FinalType> future;
 
     try {
-      log.debug("Querying url[%s]", url);
+      log.debug("Querying url[%s]", uri);
       future = httpClient
-          .post(new URL(url))
+          .post(uri.toURL())
           .setContent(objectMapper.writeValueAsBytes(query))
           .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? QueryResource.APPLICATION_SMILE : QueryResource.APPLICATION_JSON)
           .go(responseHandler);
@@ -115,13 +116,13 @@ public class RoutingDruidClient<IntermediateType, FinalType>
   }
 
   public ListenableFuture<FinalType> get(
-      String url,
+      URI uri,
       HttpResponseHandler<IntermediateType, FinalType> responseHandler
   )
   {
     try {
       return httpClient
-          .get(new URL(url))
+          .get(uri.toURL())
           .go(responseHandler);
     }
     catch (IOException e) {
@@ -130,13 +131,13 @@ public class RoutingDruidClient<IntermediateType, FinalType>
   }
 
   public ListenableFuture<FinalType> delete(
-      String url,
+      URI uri,
       HttpResponseHandler<IntermediateType, FinalType> responseHandler
   )
   {
     try {
       return httpClient
-          .delete(new URL(url))
+          .delete(uri.toURL())
           .go(responseHandler);
     }
     catch (IOException e) {

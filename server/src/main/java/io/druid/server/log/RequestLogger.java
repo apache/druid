@@ -21,9 +21,11 @@ package io.druid.server.log;
 
 import io.druid.server.RequestLogLine;
 
+import java.io.IOException;
+
 /**
  */
 public interface RequestLogger
 {
-  public void log(RequestLogLine requestLogLine) throws Exception;
+  public void log(RequestLogLine requestLogLine) throws IOException;
 }
