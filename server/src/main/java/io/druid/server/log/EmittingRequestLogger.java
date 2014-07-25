@@ -30,6 +30,7 @@ import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.Map;
 
 public class EmittingRequestLogger implements RequestLogger
@@ -44,7 +45,7 @@ public class EmittingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(final RequestLogLine requestLogLine) throws Exception
+  public void log(final RequestLogLine requestLogLine) throws IOException
   {
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }

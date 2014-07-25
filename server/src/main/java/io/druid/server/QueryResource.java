@@ -148,6 +148,16 @@ public class QueryResource
         );
       }
 
+      if ((boolean) query.getContextValue("b", false)) {
+        System.out.println("***NEW QUERY***");
+        while (true) {
+          System.out.println("SLEEPING");
+          Thread.sleep(10000);
+        }
+      } else if ((boolean) query.getContextValue("a", false)) {
+        return Response.ok("hi").build();
+      }
+
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }

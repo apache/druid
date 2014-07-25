@@ -80,7 +80,6 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     queries.addServlet(
         new ServletHolder(
             new AsyncQueryForwardingServlet(
-                config,
                 jsonMapper,
                 smileMapper,
                 hostFinder,
