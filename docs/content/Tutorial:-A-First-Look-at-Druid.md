@@ -289,7 +289,7 @@ and put the following in there:
   "dataSource": "wikipedia", 
   "granularity": "all", 
   "dimensions": [ "page" ], 
-  "orderBy": {
+  "limitSpec": {
      "type": "default", 
      "columns": [ { "dimension": "edit_count", "direction": "DESCENDING" } ], 
      "limit": 10

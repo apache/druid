@@ -306,7 +306,7 @@ and put the following in there:
     "dataSource": "twitterstream",
     "granularity": "all",
     "dimensions": ["htags"],
-    "orderBy": {"type":"default", "columns":[{"dimension": "tweets", "direction":"DESCENDING"}], "limit":5},
+    "limitSpec": {"type":"default", "columns":[{"dimension": "tweets", "direction":"DESCENDING"}], "limit":5},
     "aggregations":[
       { "type": "longSum", "fieldName": "tweets", "name": "tweets"}
     ],
@@ -315,7 +315,7 @@ and put the following in there:
 }
 ```
 
-Woah! Our query just got a way more complicated. Now we have these "Filters":Filters.html things and this "LimitSpec":LimitSpec.html thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [LimitSpec](LimitSpec.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 

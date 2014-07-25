@@ -251,7 +251,7 @@ and put the following in there:
     "dataSource": "webstream", 
     "granularity": "all", 
     "dimensions": [ "geo_region" ], 
-    "orderBy": {
+    "limitSpec": {
         "type": "default", 
         "columns": [
             { "dimension": "known_users",  "direction": "DESCENDING" }
