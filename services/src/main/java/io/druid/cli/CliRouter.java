@@ -26,17 +26,15 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.client.RoutingDruidClient;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.guice.HttpClientModule;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Self;
+import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.router.CoordinatorRuleManager;
 import io.druid.server.router.QueryHostFinder;
@@ -68,7 +66,7 @@ public class CliRouter extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new HttpClientModule("druid.router.http", Router.class),
+        new JettyHttpClientModule("druid.router.http", Router.class),
         new Module()
         {
           @Override
@@ -81,11 +79,9 @@ public class CliRouter extends ServerRunnable
 
             binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
             binder.bind(QueryHostFinder.class).in(LazySingleton.class);
-            binder.bind(RoutingDruidClient.class).in(LazySingleton.class);
             binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>(){})
                       .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                       .in(LazySingleton.class);
-
 
             binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 

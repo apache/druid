@@ -17,28 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.guice.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
 import com.google.inject.Binder;
-import com.google.inject.Binding;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provider;
-import com.google.inject.TypeLiteral;
-import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Global;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 
-import javax.net.ssl.SSLContext;
-import javax.validation.constraints.Min;
 import java.lang.annotation.Annotation;
 
 /**
@@ -80,15 +69,13 @@ public class HttpClientModule implements Module
             .annotatedWith(annotation)
             .toProvider(new HttpClientProvider(annotation))
             .in(LazySingleton.class);
-    }
-    else if (annotationClazz != null) {
+    } else if (annotationClazz != null) {
       JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
       binder.bind(HttpClient.class)
             .annotatedWith(annotationClazz)
             .toProvider(new HttpClientProvider(annotationClazz))
             .in(LazySingleton.class);
-    }
-    else {
+    } else {
       JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class);
       binder.bind(HttpClient.class)
             .toProvider(new HttpClientProvider())
@@ -96,76 +83,37 @@ public class HttpClientModule implements Module
     }
   }
 
-  public static class DruidHttpClientConfig
+  public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
-    @JsonProperty
-    @Min(0)
-    private int numConnections = 5;
-
-    @JsonProperty
-    private Period readTimeout = new Period("PT15M");
-
-    public int getNumConnections()
-    {
-      return numConnections;
-    }
-
-    public Duration getReadTimeout()
-    {
-      return readTimeout == null ? null : readTimeout.toStandardDuration();
-    }
-  }
-
-  public static class HttpClientProvider implements Provider<HttpClient>
-  {
-    private final Key<Supplier<DruidHttpClientConfig>> configKey;
-    private final Key<SSLContext> sslContextKey;
-
-    private Provider<Supplier<DruidHttpClientConfig>> configProvider;
-    private Provider<Lifecycle> lifecycleProvider;
-    private Binding<SSLContext> sslContextBinding;
-
     public HttpClientProvider()
     {
-      configKey = Key.get(new TypeLiteral<Supplier<DruidHttpClientConfig>>(){});
-      sslContextKey = Key.get(SSLContext.class);
     }
 
     public HttpClientProvider(Annotation annotation)
     {
-      configKey = Key.get(new TypeLiteral<Supplier<DruidHttpClientConfig>>(){}, annotation);
-      sslContextKey = Key.get(SSLContext.class, annotation);
+      super(annotation);
     }
 
-    public HttpClientProvider(Class<? extends Annotation> annotation)
+    public HttpClientProvider(Class<? extends Annotation> annotationClazz)
     {
-      configKey = Key.get(new TypeLiteral<Supplier<DruidHttpClientConfig>>(){}, annotation);
-      sslContextKey = Key.get(SSLContext.class, annotation);
-    }
-
-    @Inject
-    public void configure(Injector injector)
-    {
-      configProvider = injector.getProvider(configKey);
-      sslContextBinding = injector.getExistingBinding(sslContextKey);
-      lifecycleProvider = injector.getProvider(Lifecycle.class);
+      super(annotationClazz);
     }
 
     @Override
     public HttpClient get()
     {
-      final DruidHttpClientConfig config = configProvider.get().get();
+      final DruidHttpClientConfig config = getConfigProvider().get().get();
 
       final HttpClientConfig.Builder builder = HttpClientConfig
           .builder()
           .withNumConnections(config.getNumConnections())
           .withReadTimeout(config.getReadTimeout());
 
-      if (sslContextBinding != null) {
-        builder.withSslContext(sslContextBinding.getProvider().get());
+      if (getSslContextBinding() != null) {
+        builder.withSslContext(getSslContextBinding().getProvider().get());
       }
 
-      return HttpClientInit.createClient(builder.build(), lifecycleProvider.get());
+      return HttpClientInit.createClient(builder.build(), getLifecycleProvider().get());
     }
   }
 }
