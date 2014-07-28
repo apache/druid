@@ -508,7 +508,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               if (multiValueRow.size() == 0) {
                                 return null;
                               } else if (multiValueRow.size() == 1) {
-                                return columnVals.lookupName(multiValueRow.get(1));
+                                return columnVals.lookupName(multiValueRow.get(0));
                               } else {
                                 final String[] strings = new String[multiValueRow.size()];
                                 for (int i = 0 ; i < multiValueRow.size() ; i++) {
