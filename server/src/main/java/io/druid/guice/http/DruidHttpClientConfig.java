@@ -17,19 +17,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query;
+package io.druid.guice.http;
 
-import com.google.common.base.Joiner;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 
-import java.util.List;
+import javax.validation.constraints.Min;
 
-public class DataSourceUtil
+/**
+ */
+
+public class DruidHttpClientConfig
 {
-  public static final Joiner COMMA_JOIN = Joiner.on(",");
+  @JsonProperty
+  @Min(0)
+  private int numConnections = 5;
 
-  public static String getMetricName(DataSource dataSource)
+  @JsonProperty
+  private Period readTimeout = new Period("PT15M");
+
+  public int getNumConnections()
   {
-    final List<String> names = dataSource.getNames();
-    return names.size() == 1 ? names.get(0) : names.toString();
+    return numConnections;
+  }
+
+  public Duration getReadTimeout()
+  {
+    return readTimeout == null ? null : readTimeout.toStandardDuration();
   }
 }

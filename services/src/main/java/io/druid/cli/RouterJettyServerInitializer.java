@@ -24,14 +24,14 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.client.RoutingDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.JettyServerInitializer;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.Router;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
@@ -45,30 +45,27 @@ import org.eclipse.jetty.servlets.AsyncGzipFilter;
  */
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
-  private final ServerConfig config;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
-  private final RoutingDruidClient routingDruidClient;
+  private final HttpClient httpClient;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
   @Inject
   public RouterJettyServerInitializer(
-      ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
-      RoutingDruidClient routingDruidClient,
+      @Router HttpClient httpClient,
       ServiceEmitter emitter,
       RequestLogger requestLogger
   )
   {
-    this.config = config;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
-    this.routingDruidClient = routingDruidClient;
+    this.httpClient = httpClient;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
   }
@@ -83,7 +80,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
                 jsonMapper,
                 smileMapper,
                 hostFinder,
-                routingDruidClient,
+                httpClient,
                 emitter,
                 requestLogger
             )
