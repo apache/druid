@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
@@ -48,6 +49,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
   private final HttpClient httpClient;
+  private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
   @Inject
@@ -56,6 +58,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
       @Router HttpClient httpClient,
+      ServiceEmitter emitter,
       RequestLogger requestLogger
   )
   {
@@ -63,6 +66,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
     this.httpClient = httpClient;
+    this.emitter = emitter;
     this.requestLogger = requestLogger;
   }
 
@@ -77,6 +81,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
                 smileMapper,
                 hostFinder,
                 httpClient,
+                emitter,
                 requestLogger
             )
         ), "/druid/v2/*"
