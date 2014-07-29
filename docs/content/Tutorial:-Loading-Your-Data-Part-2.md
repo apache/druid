@@ -109,22 +109,27 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
     {
       "schema": {
         "dataSource": "wikipedia",
-        "aggregators" : [{
-           "type" : "count",
-           "name" : "count"
-          }, {
-           "type" : "doubleSum",
-           "name" : "added",
-           "fieldName" : "added"
-          }, {
-           "type" : "doubleSum",
-           "name" : "deleted",
-           "fieldName" : "deleted"
-          }, {
-           "type" : "doubleSum",
-           "name" : "delta",
-           "fieldName" : "delta"
-        }],
+        "aggregators" : [
+          {
+            "type" : "count",
+            "name" : "count"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "added",
+            "fieldName" : "added"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "deleted",
+            "fieldName" : "deleted"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "delta",
+            "fieldName" : "delta"
+          }
+        ],
         "indexGranularity": "none"
       },
       "config": {
@@ -196,13 +201,15 @@ Note: This config uses a "test" [rejection policy](Plumber.html) which will acce
 Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) to the real-time node should yield valid results:
 
 ```json
-[ {
-  "timestamp" : "2013-08-31T01:02:33.000Z",
-  "result" : {
-    "minTime" : "2013-08-31T01:02:33.000Z",
-    "maxTime" : "2013-08-31T12:41:27.000Z"
+[
+  {
+    "timestamp" : "2013-08-31T01:02:33.000Z",
+    "result" : {
+      "minTime" : "2013-08-31T01:02:33.000Z",
+      "maxTime" : "2013-08-31T12:41:27.000Z"
+    }
   }
-} ]
+]
 ```
 
 Batch Ingestion
@@ -287,22 +294,27 @@ Examining the contents of the file, you should find:
       },
       "targetPartitionSize" : 5000000,
       "rollupSpec" : {
-        "aggs": [{
+        "aggs": [
+          {
             "type" : "count",
             "name" : "count"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "added",
             "fieldName" : "added"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "deleted",
             "fieldName" : "deleted"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "delta",
             "fieldName" : "delta"
-        }],
+          }
+        ],
         "rollupGranularity" : "none"
       }
     }
@@ -329,3 +341,60 @@ Additional Information
 ----------------------
 
 Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
+
+
+Further Reading
+---------------------
+
+Ingesting from Kafka 8
+---------------------------------
+
+
+Continuing from the Kafka 7 examples, to support Kafka 8, a couple changes need to be made:
+
+- Update realtime node's configs for Kafka 8 extensions
+  - e.g.
+    - `druid.extensions.coordinates=[...,"io.druid.extensions:druid-kafka-seven:0.6.121",...]`
+    - becomes
+    - `druid.extensions.coordinates=[...,"io.druid.extensions:druid-kafka-eight:0.6.121",...]`
+- Update realtime task config for changed keys
+  - `firehose.type`, `plumber.rejectionPolicyFactory`, and all of `firehose.consumerProps` changes.
+
+```json
+
+    "firehose" : {
+        "type" : "kafka-0.8",
+        "consumerProps" : {
+            "zookeeper.connect": "localhost:2181",
+            "zookeeper.connection.timeout.ms": "15000",
+            "zookeeper.session.timeout.ms": "15000",
+            "zookeeper.sync.time.ms": "5000",
+            "group.id": "topic-pixel-local",
+            "fetch.message.max.bytes": "1048586",
+            "auto.offset.reset": "largest",
+            "auto.commit.enable": "false"
+        },
+        "feed" : "druidtest",
+        "parser" : {
+            "timestampSpec" : {
+                "column" : "utcdt",
+                "format" : "iso"
+            },
+            "data" : {
+                "format" : "json"
+            },
+            "dimensionExclusions" : [
+                "wp"
+            ]
+        }
+    },
+    "plumber" : {
+        "type" : "realtime",
+        "windowPeriod" : "PT10m",
+        "segmentGranularity":"hour",
+        "basePersistDirectory" : "/tmp/realtime/basePersist",
+        "rejectionPolicyFactory": {
+            "type": "messageTime"
+        }
+    }
+```
