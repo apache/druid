@@ -72,8 +72,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       );
     }
     response.flushBuffer();
-
-    throw new IOException(exception);
   }
 
   private final ObjectMapper jsonMapper;
@@ -132,15 +130,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
             )
         );
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        response.setContentType(QueryResource.APPLICATION_JSON);
         objectMapper.writeValue(
             response.getOutputStream(),
             ImmutableMap.of("error", errorMessage)
         );
 
-        throw e;
+        return;
       }
       catch (Exception e) {
         handleException(response, objectMapper, e);
+        return;
       }
     }
 
