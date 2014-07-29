@@ -107,7 +107,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                         child.getData(), DataSegmentChangeRequest.class
                     );
 
-                    log.info("New node[%s] with request[%s]", path, request.asString());
+                    log.info("New request[%s] with node[%s].", request.asString(), path);
 
                     try {
                       request.go(
@@ -122,7 +122,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                               try {
                                 if (!hasRun) {
                                   curator.delete().guaranteed().forPath(path);
-                                  log.info("Completed request and deleting node[%s]", path);
+                                  log.info("Completed request [%s]", request.asString());
                                   hasRun = true;
                                 }
                               }
@@ -156,7 +156,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
 
                     break;
                   case CHILD_REMOVED:
-                    log.info("node[%s] was removed", event.getData().getPath());
+                    log.info("Node[%s] was removed", event.getData().getPath());
                     break;
                   default:
                     log.info("Ignoring event[%s]", event);
