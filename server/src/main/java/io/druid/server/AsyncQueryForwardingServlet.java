@@ -107,10 +107,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     String host = hostFinder.getDefaultHost();
     Query inputQuery = null;
     boolean hasContent = request.getContentLength() > 0 || request.getContentType() != null;
+    boolean isQuery = request.getMethod().equalsIgnoreCase(HttpMethod.POST.asString());
     long startTime = System.currentTimeMillis();
 
     // queries only exist for POST
-    if (request.getMethod().equalsIgnoreCase(HttpMethod.POST.asString())) {
+    if (isQuery) {
       try {
         inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
@@ -235,7 +236,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       );
     }
 
-    proxyRequest.send(newProxyResponseListener(request, response));
+    if (isQuery) {
+      proxyRequest.send(newMetricsEmittingProxyResponseListener(request, response, inputQuery, startTime));
+    } else {
+      proxyRequest.send(newProxyResponseListener(request, response));
+    }
   }
 
   @Override
@@ -256,6 +261,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     }
     return URI.create(uri.toString());
   }
+
+  private Response.Listener newMetricsEmittingProxyResponseListener(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Query query,
+      long start
+  )
+  {
+    return new MetricsEmittingProxyResponseListener(request, response, query, start);
+  }
+
 
   private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
   {
