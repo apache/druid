@@ -107,7 +107,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     String host = hostFinder.getDefaultHost();
     Query inputQuery = null;
     boolean hasContent = request.getContentLength() > 0 || request.getContentType() != null;
-    boolean isQuery = request.getMethod().equalsIgnoreCase(HttpMethod.POST.asString());
+    boolean isQuery = request.getMethod().equals(HttpMethod.POST.asString());
     long startTime = System.currentTimeMillis();
 
     // queries only exist for POST
@@ -140,20 +140,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       }
     }
 
-    final int requestId = getRequestId(request);
-
     URI rewrittenURI = rewriteURI(host, request);
-
-    if (_log.isDebugEnabled()) {
-      StringBuffer uri = request.getRequestURL();
-      if (request.getQueryString() != null) {
-        uri.append("?").append(request.getQueryString());
-      }
-      if (_log.isDebugEnabled()) {
-        _log.debug("{} rewriting: {} -> {}", requestId, uri, rewrittenURI);
-      }
-    }
-
     if (rewrittenURI == null) {
       onRewriteFailed(request, response);
       return;
@@ -200,41 +187,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     }
 
     customizeProxyRequest(proxyRequest, request);
-
-    if (_log.isDebugEnabled()) {
-      StringBuilder builder = new StringBuilder(request.getMethod());
-      builder.append(" ").append(request.getRequestURI());
-      String query = request.getQueryString();
-      if (query != null) {
-        builder.append("?").append(query);
-      }
-      builder.append(" ").append(request.getProtocol()).append("\r\n");
-      for (Enumeration<String> headerNames = request.getHeaderNames(); headerNames.hasMoreElements(); ) {
-        String headerName = headerNames.nextElement();
-        builder.append(headerName).append(": ");
-        for (Enumeration<String> headerValues = request.getHeaders(headerName); headerValues.hasMoreElements(); ) {
-          String headerValue = headerValues.nextElement();
-          if (headerValue != null) {
-            builder.append(headerValue);
-          }
-          if (headerValues.hasMoreElements()) {
-            builder.append(",");
-          }
-        }
-        builder.append("\r\n");
-      }
-      builder.append("\r\n");
-
-      _log.debug(
-          "{} proxying to upstream:{}{}{}{}",
-          requestId,
-          System.lineSeparator(),
-          builder,
-          proxyRequest,
-          System.lineSeparator(),
-          proxyRequest.getHeaders().toString().trim()
-      );
-    }
 
     if (isQuery) {
       proxyRequest.send(newMetricsEmittingProxyResponseListener(request, response, inputQuery, startTime));
