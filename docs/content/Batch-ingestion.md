@@ -83,7 +83,7 @@ The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Tim
     "type": "hashed"
     "targetPartitionSize": 5000000
   },
-  "metadataUpdateSpec": {
+  "updaterJobSpec": {
     "type": "db",
     "connectURI": "jdbc:mysql:\/\/localhost:7980\/test_db",
     "user": "username",
