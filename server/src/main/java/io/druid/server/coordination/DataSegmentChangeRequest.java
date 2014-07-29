@@ -33,4 +33,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface DataSegmentChangeRequest
 {
   public void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback);
+
+  public String asString();
 }

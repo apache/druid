@@ -72,7 +72,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
         return;
       }
 
-      log.info("Starting zkCoordinator for server[%s]", me);
+      log.info("Starting zkCoordinator for server[%s]", me.getName());
 
       final String loadQueueLocation = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName());
       final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
@@ -107,7 +107,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                         child.getData(), DataSegmentChangeRequest.class
                     );
 
-                    log.info("New node[%s] with segmentClass[%s]", path, request.getClass());
+                    log.info("New node[%s] with request[%s]", path, request.asString());
 
                     try {
                       request.go(
@@ -122,7 +122,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                               try {
                                 if (!hasRun) {
                                   curator.delete().guaranteed().forPath(path);
-                                  log.info("Completed processing and removing entry for node[%s]", path);
+                                  log.info("Completed request and deleting node[%s]", path);
                                   hasRun = true;
                                 }
                               }
@@ -131,8 +131,9 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                                   curator.delete().guaranteed().forPath(path);
                                 }
                                 catch (Exception e1) {
-                                  log.info(e1, "Failed to delete node[%s], but ignoring exception.", path);
+                                  log.error(e1, "Failed to delete node[%s], but ignoring exception.", path);
                                 }
+                                log.error(e, "Exception while removing node[%s]", path);
                                 throw Throwables.propagate(e);
                               }
                             }
@@ -144,7 +145,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                         curator.delete().guaranteed().forPath(path);
                       }
                       catch (Exception e1) {
-                        log.info(e1, "Failed to delete node[%s], but ignoring exception.", path);
+                        log.error(e1, "Failed to delete node[%s], but ignoring exception.", path);
                       }
 
                       log.makeAlert(e, "Segment load/unload: uncaught exception.")
@@ -155,7 +156,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
 
                     break;
                   case CHILD_REMOVED:
-                    log.info("[%s] was removed", event.getData().getPath());
+                    log.info("node[%s] was removed", event.getData().getPath());
                     break;
                   default:
                     log.info("Ignoring event[%s]", event);

@@ -28,4 +28,10 @@ public class SegmentChangeRequestNoop implements DataSegmentChangeRequest
   {
     // do nothing
   }
+
+  @Override
+  public String asString()
+  {
+    return "noop";
+  }
 }
