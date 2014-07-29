@@ -58,7 +58,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 {
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
 
-  private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Throwable exception)
+  private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
     if (!response.isCommitted()) {
@@ -72,6 +72,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       );
     }
     response.flushBuffer();
+
+    throw new IOException(exception);
   }
 
   private final ObjectMapper jsonMapper;
@@ -134,6 +136,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
             response.getOutputStream(),
             ImmutableMap.of("error", errorMessage)
         );
+
+        throw e;
       }
       catch (Exception e) {
         handleException(response, objectMapper, e);
