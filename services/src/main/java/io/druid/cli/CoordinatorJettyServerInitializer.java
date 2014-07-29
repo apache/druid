@@ -19,9 +19,11 @@
 
 package io.druid.cli;
 
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Handler;
@@ -32,11 +34,20 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.util.resource.Resource;
 
 /**
  */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
+  private final DruidCoordinatorConfig config;
+
+  @Inject
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config)
+  {
+    this.config = config;
+  }
+
   @Override
   public void initialize(Server server, Injector injector)
   {
@@ -45,7 +56,12 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
     root.addServlet(holderPwd, "/");
-    root.setResourceBase(DruidCoordinator.class.getClassLoader().getResource("static").toExternalForm());
+    if(config.getConsoleStatic() == null) {
+      root.setBaseResource(Resource.newClassPathResource("static"));
+    } else {
+      root.setResourceBase(config.getConsoleStatic());
+    }
+
     root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
     root.addFilter(GzipFilter.class, "/*", null);
 
