@@ -49,6 +49,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Enumeration;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -116,6 +117,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
         inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
           host = hostFinder.getHost(inputQuery);
+          if (inputQuery.getId() == null) {
+            inputQuery = inputQuery.withId(UUID.randomUUID().toString());
+          }
         }
       }
       catch (IOException e) {
