@@ -9,7 +9,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.135</version>
+        <version>0.6.136-SNAPSHOT</version>
     </parent>
 
     <dependencies>
