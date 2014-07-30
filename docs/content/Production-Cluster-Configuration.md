@@ -57,7 +57,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/overlord
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.133"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.134"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -139,7 +139,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/middlemanager
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.133","io.druid.extensions:druid-kafka-seven:0.6.133"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.134","io.druid.extensions:druid-kafka-seven:0.6.134"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -157,6 +157,7 @@ druid.indexer.logs.s3Prefix=prod/logs/v1
 # Dedicate more resources to peons
 druid.indexer.runner.javaOpts=-server -Xmx3g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 druid.indexer.task.baseTaskDir=/mnt/persistent/task/
+druid.indexer.task.chathandler.type=announce
 
 druid.indexer.fork.property.druid.indexer.hadoopWorkingPath=/tmp/druid-indexing
 druid.indexer.fork.property.druid.computation.buffer.size=536870912
@@ -285,7 +286,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/historical
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.133"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.134"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod

@@ -111,7 +111,7 @@ public class CliPeon extends GuiceRunnable
                 binder,
                 "druid.indexer.task.chathandler.type",
                 Key.get(ChatHandlerProvider.class),
-                Key.get(ServiceAnnouncingChatHandlerProvider.class, LazySingleton.class)
+                Key.get(NoopChatHandlerProvider.class)
             );
             final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
                 binder, Key.get(ChatHandlerProvider.class)

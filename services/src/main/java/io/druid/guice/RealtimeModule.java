@@ -65,7 +65,7 @@ public class RealtimeModule implements Module
         binder,
         "druid.realtime.chathandler.type",
         Key.get(ChatHandlerProvider.class),
-        Key.get(ServiceAnnouncingChatHandlerProvider.class)
+        Key.get(NoopChatHandlerProvider.class)
     );
     final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
         binder, Key.get(ChatHandlerProvider.class)
