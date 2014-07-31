@@ -26,7 +26,8 @@ public class SegmentChangeRequestNoop implements DataSegmentChangeRequest
   @Override
   public void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback)
   {
-    // do nothing
+    // just execute the callback and do nothing else
+    callback.execute();
   }
 
   @Override
