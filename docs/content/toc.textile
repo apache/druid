@@ -28,17 +28,17 @@ h2. Configuration
 * "Realtime":Realtime-Config.html
 
 h2. Data Ingestion
+* "Ingestion FAQ":./Ingestion-FAQ.html
 * "Realtime":./Realtime-ingestion.html
 * "Batch":./Batch-ingestion.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
 * "Data Formats":./Data_formats.html
-* "Ingestion FAQ":./Ingestion-FAQ.html
 
 h2. Operations
+* "Performance FAQ":./Performance-FAQ.html
 * "Extending Druid":./Modules.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
-* "Performance FAQ":./Performance-FAQ.html
 
 h2. Querying
 * "Querying":./Querying.html
