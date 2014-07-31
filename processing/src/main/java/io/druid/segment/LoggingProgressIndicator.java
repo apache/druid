@@ -41,7 +41,7 @@ public class LoggingProgressIndicator extends AbstractProgressIndicator
   public LoggingProgressIndicator(String progressName)
   {
     this.progressName = progressName;
-    this.global = new Stopwatch();
+    this.global = Stopwatch.createUnstarted();
   }
 
   @Override
@@ -69,9 +69,8 @@ public class LoggingProgressIndicator extends AbstractProgressIndicator
     if (sectionWatch != null) {
       throw new ISE("[%s]: Cannot start progress tracker for [%s]. It is already started.", progressName, section);
     }
-    sectionWatch = new Stopwatch();
+    sectionWatch = Stopwatch.createStarted();
     sections.put(section, sectionWatch);
-    sectionWatch.start();
   }
 
   @Override
