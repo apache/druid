@@ -208,7 +208,7 @@ public class LoadQueuePeon
       }
     }
 
-    log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment);
+    log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
     segmentsToDrop.add(holder);
     doNext();
   }
