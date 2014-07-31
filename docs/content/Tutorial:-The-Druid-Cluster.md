@@ -48,7 +48,7 @@ CREATE database druid;
 #### Setting up Zookeeper
 
 ```bash
-curl http://www.motorlogy.com/apache/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
+curl http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
 tar xzf zookeeper-3.4.5.tar.gz
 cd zookeeper-3.4.5
 cp conf/zoo_sample.cfg conf/zoo.cfg
@@ -120,7 +120,7 @@ druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.db.connector.user=druid
 druid.db.connector.password=diurd
 
-druid.coordinator.startDelay=PT60s
+druid.coordinator.startDelay=PT70s
 ```
 
 To start the coordinator node:

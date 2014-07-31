@@ -29,7 +29,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -37,6 +36,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.Pair;
 import com.metamx.common.RE;
 import com.metamx.common.guava.BaseSequence;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -242,7 +242,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public void cleanup(JsonParserIterator<T> iterFromMake)
           {
-            Closeables.closeQuietly(iterFromMake);
+            CloseQuietly.close(iterFromMake);
           }
         }
     );
@@ -285,7 +285,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         return false;
       }
       if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-        Closeables.closeQuietly(jp);
+        CloseQuietly.close(jp);
         return false;
       }
 

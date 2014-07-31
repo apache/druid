@@ -54,7 +54,7 @@ public class CardinalityAggregator implements Aggregator
       // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
       if (size == 1) {
         final String value = selector.lookupName(row.get(0));
-        hasher.putString(value != null ? value : NULL_STRING);
+        hasher.putUnencodedChars(value != null ? value : NULL_STRING);
       } else if (size != 0) {
         final String[] values = new String[size];
         for (int i = 0; i < size; ++i) {
@@ -67,7 +67,7 @@ public class CardinalityAggregator implements Aggregator
           if (i != 0) {
             hasher.putChar(SEPARATOR);
           }
-          hasher.putString(values[i]);
+          hasher.putUnencodedChars(values[i]);
         }
       }
     }
@@ -79,7 +79,7 @@ public class CardinalityAggregator implements Aggregator
     for (final DimensionSelector selector : selectors) {
       for (final Integer index : selector.getRow()) {
         final String value = selector.lookupName(index);
-        collector.add(hashFn.hashString(value == null ? NULL_STRING : value).asBytes());
+        collector.add(hashFn.hashUnencodedChars(value == null ? NULL_STRING : value).asBytes());
       }
     }
   }

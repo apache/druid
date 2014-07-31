@@ -21,9 +21,11 @@ package io.druid.segment.column;
 
 import io.druid.segment.data.IndexedInts;
 
+import java.io.Closeable;
+
 /**
  */
-public interface DictionaryEncodedColumn
+public interface DictionaryEncodedColumn extends Closeable
 {
   public int length();
   public boolean hasMultipleValues();

@@ -148,8 +148,12 @@ public class DruidClusterBridgeTest
         0
     );
     DbSegmentPublisher dbSegmentPublisher = EasyMock.createMock(DbSegmentPublisher.class);
+    EasyMock.replay(dbSegmentPublisher);
     DatabaseSegmentManager databaseSegmentManager = EasyMock.createMock(DatabaseSegmentManager.class);
+    EasyMock.replay(databaseSegmentManager);
     ServerView serverView = EasyMock.createMock(ServerView.class);
+    EasyMock.replay(serverView);
+
     BridgeZkCoordinator bridgeZkCoordinator = new BridgeZkCoordinator(
         jsonMapper,
         zkPathsConfig,
@@ -163,9 +167,9 @@ public class DruidClusterBridgeTest
     Announcer announcer = new Announcer(remoteCf, Executors.newSingleThreadExecutor());
     announcer.start();
     announcer.announce(zkPathsConfig.getAnnouncementsPath() + "/" + me.getHost(), jsonMapper.writeValueAsBytes(me));
+
     BatchDataSegmentAnnouncer batchDataSegmentAnnouncer = EasyMock.createMock(BatchDataSegmentAnnouncer.class);
     BatchServerInventoryView batchServerInventoryView = EasyMock.createMock(BatchServerInventoryView.class);
-
     EasyMock.expect(batchServerInventoryView.getInventory()).andReturn(
         Arrays.asList(
             new DruidServer("1", "localhost", 117, "historical", DruidServer.DEFAULT_TIER, 0),
@@ -183,8 +187,9 @@ public class DruidClusterBridgeTest
     EasyMock.expectLastCall();
     batchServerInventoryView.start();
     EasyMock.expectLastCall();
+    batchServerInventoryView.stop();
+    EasyMock.expectLastCall();
     EasyMock.replay(batchServerInventoryView);
-
 
     DruidClusterBridge bridge = new DruidClusterBridge(
         jsonMapper,
@@ -222,13 +227,40 @@ public class DruidClusterBridgeTest
       retry++;
     }
 
+    boolean verified = verifyUpdate(jsonMapper, path, remoteCf);
+    retry = 0;
+    while (!verified) {
+      if (retry > 5) {
+        throw new ISE("No updates to bridge node occurred");
+      }
+
+      Thread.sleep(100);
+      retry++;
+
+      verified = verifyUpdate(jsonMapper, path, remoteCf);
+    }
+
+    announcer.stop();
+    bridge.stop();
+
+    remoteCf.close();
+    remoteCluster.close();
+    localCf.close();
+    localCluster.close();
+
+    EasyMock.verify(batchServerInventoryView);
+    EasyMock.verify(dbSegmentPublisher);
+    EasyMock.verify(databaseSegmentManager);
+    EasyMock.verify(serverView);
+  }
+
+  private boolean verifyUpdate(ObjectMapper jsonMapper, String path, CuratorFramework remoteCf) throws Exception
+  {
     DruidServerMetadata announced = jsonMapper.readValue(
         remoteCf.getData().forPath(path),
         DruidServerMetadata.class
     );
 
-    Assert.assertEquals(118, announced.getMaxSize());
-
-    EasyMock.verify(batchServerInventoryView);
+    return (118 == announced.getMaxSize());
   }
 }

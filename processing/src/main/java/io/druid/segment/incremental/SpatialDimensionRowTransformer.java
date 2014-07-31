@@ -23,12 +23,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Floats;
 import com.metamx.common.ISE;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 
@@ -135,14 +137,20 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
-      public Object getRaw(String dimension) {
+      public Object getRaw(String dimension)
+      {
         return row.getRaw(dimension);
       }
 
       @Override
       public float getFloatMetric(String metric)
       {
-        return row.getFloatMetric(metric);
+        try {
+          return row.getFloatMetric(metric);
+        }
+        catch (ParseException e) {
+          throw Throwables.propagate(e);
+        }
       }
 
       @Override

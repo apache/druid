@@ -79,6 +79,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final DruidNode node;
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
+  private final PortFinder portFinder;
 
   private final Map<String, ForkingTaskRunnerWorkItem> tasks = Maps.newHashMap();
 
@@ -97,6 +98,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.taskLogPusher = taskLogPusher;
     this.jsonMapper = jsonMapper;
     this.node = node;
+    this.portFinder = new PortFinder(config.getStartPort());
 
     this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workerConfig.getCapacity()));
   }
@@ -121,7 +123,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;
-
+                        final int childPort = portFinder.findUnusedPort();
                         try {
                           final Closer closer = Closer.create();
                           try {
@@ -154,7 +156,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
 
                               final List<String> command = Lists.newArrayList();
-                              final int childPort = findUnusedPort();
                               final String childHost = String.format("%s:%d", node.getHostNoPort(), childPort);
 
                               command.add(config.getJavaCommand());
@@ -258,7 +259,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 taskWorkItem.processHolder.process.destroy();
                               }
                             }
-
+                            portFinder.markPortUnused(childPort);
                             log.info("Removing temporary directory: %s", attemptDir);
                             FileUtils.deleteDirectory(attemptDir);
                           }

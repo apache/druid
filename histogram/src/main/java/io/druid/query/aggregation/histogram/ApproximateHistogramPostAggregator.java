@@ -17,61 +17,52 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.setup;
+package io.druid.query.aggregation.histogram;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.query.aggregation.PostAggregator;
 
-/**
- */
-public class GalaxyUserData
+import java.util.Comparator;
+import java.util.Map;
+
+public abstract class ApproximateHistogramPostAggregator implements PostAggregator
 {
-  public final String env;
-  public final String version;
-  public final String type;
+  private static final Comparator COMPARATOR = ApproximateHistogramAggregator.COMPARATOR;
 
-  @JsonCreator
-  public GalaxyUserData(
-      @JsonProperty("env") String env,
-      @JsonProperty("version") String version,
-      @JsonProperty("type") String type
+  private final String name;
+  private final String fieldName;
+
+  public ApproximateHistogramPostAggregator(
+      String name,
+      String fieldName
   )
   {
-    this.env = env;
-    this.version = version;
-    this.type = type;
-  }
-
-  @JsonProperty
-  public String getEnv()
-  {
-    return env;
-  }
-
-  @JsonProperty
-  public String getVersion()
-  {
-    return version;
-  }
-
-  @JsonProperty
-  public String getType()
-  {
-    return type;
-  }
-
-  public GalaxyUserData withVersion(String ver)
-  {
-    return new GalaxyUserData(env, ver, type);
+    this.name = name;
+    this.fieldName = fieldName;
   }
 
   @Override
-  public String toString()
+  public Comparator getComparator()
   {
-    return "GalaxyUserData{" +
-           "env='" + env + '\'' +
-           ", version='" + version + '\'' +
-           ", type='" + type + '\'' +
-           '}';
+    return COMPARATOR;
   }
+
+  @Override
+  public abstract Object compute(Map<String, Object> values);
+
+  @Override
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getFieldName()
+  {
+    return fieldName;
+  }
+
+  @Override
+  public abstract String toString();
 }

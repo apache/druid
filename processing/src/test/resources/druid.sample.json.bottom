@@ -1,0 +1,49 @@
+[
+   {
+      "timestamp":"2011-01-12T00:00:00.000Z",
+      "placement":"preferred",
+      "placementish":["a", "preferred"]
+   },
+   {
+      "timestamp":"2011-01-13T00:00:00.000Z",
+      "provider":"total_market",
+      "placement":"preferred",
+      "placementish":["h", "preferred"],
+      "index":100.000000
+   },
+   {
+      "timestamp":"2011-01-13T00:00:00.000Z",
+      "provider":"total_market",
+      "quality":"business",
+      "placement":"mezzanine",
+      "placementish":["p", "preferred"],
+      "index":100.000000
+   },
+   {
+      "timestamp":"2011-01-12T00:00:00.000Z",
+      "placementish":"preferred",
+      "provider":"spot",
+      "index":100.000000
+   },
+   {
+      "timestamp":"2011-01-12T00:00:00.000Z",
+      "placementish":["p", "preferred"],
+      "placement":["q", "mezzanine"],
+      "index":100.000000
+   },
+   {
+      "timestamp":"2011-01-12T00:00:00.000Z",
+      "placement":"preferred",
+      "index":100.000000
+   },
+   {
+      "timestamp":"2011-01-12T00:00:00.000Z",
+      "provider":"",
+      "index":100.000000
+   },
+   {
+      "timestamp":"2011-01-12T00:00:00.000Z",
+      "provider":["", "spot"],
+      "index":100.000000
+   }
+]

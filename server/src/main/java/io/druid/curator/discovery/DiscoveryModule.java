@@ -407,6 +407,12 @@ public class DiscoveryModule implements Module
     }
 
     @Override
+    public Collection<ServiceInstance<T>> getAllInstances() throws Exception
+    {
+      return null;
+    }
+
+    @Override
     public void noteError(ServiceInstance<T> tServiceInstance) {
 
     }

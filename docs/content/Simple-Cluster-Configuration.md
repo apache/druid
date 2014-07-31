@@ -37,6 +37,7 @@ Configuration:
 -Ddruid.selectors.indexing.serviceName=overlord
 -Ddruid.indexer.queue.startDelay=PT0M
 -Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
+-Ddruid.indexer.runner.startPort=8088
 -Ddruid.indexer.fork.property.druid.processing.numThreads=1
 -Ddruid.indexer.fork.property.druid.computation.buffer.size=100000000
 ```

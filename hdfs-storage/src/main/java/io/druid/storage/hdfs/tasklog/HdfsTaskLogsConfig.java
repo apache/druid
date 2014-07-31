@@ -16,38 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+package io.druid.storage.hdfs.tasklog;
 
-package io.druid.segment.data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.google.common.collect.Iterators;
-
-import java.util.Iterator;
+import javax.validation.constraints.NotNull;
 
 /**
-*/
-public class SingleIndexedInts implements IndexedInts
+ * Indexer hdfs task logs configuration
+ *
+ * Created by Frank Ren on 6/20/14.
+ */
+public class HdfsTaskLogsConfig
 {
-  private final int value;
+    @JsonProperty
+    @NotNull
+    private String directory;
 
-  public SingleIndexedInts(int value) {
-    this.value = value;
-  }
-
-  @Override
-  public int size()
-  {
-    return 1;
-  }
-
-  @Override
-  public int get(int index)
-  {
-    return value;
-  }
-
-  @Override
-  public Iterator<Integer> iterator()
-  {
-    return Iterators.singletonIterator(value);
-  }
+    public String getDirectory()
+    {
+        return directory;
+    }
 }
+

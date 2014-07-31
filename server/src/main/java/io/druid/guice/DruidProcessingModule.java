@@ -19,7 +19,6 @@
 
 package io.druid.guice;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -31,17 +30,16 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
+import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.offheap.OffheapBufferPool;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
-import io.druid.server.DruidProcessingConfig;
-import io.druid.server.VMUtils;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
