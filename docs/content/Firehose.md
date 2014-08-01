@@ -36,9 +36,39 @@ See [Examples](Examples.html). This firehose connects directly to the twitter sp
 
 See [Examples](Examples.html). This firehose creates a stream of random numbers.
 
-#### RabbitMqFirehouse
+#### RabbitMqFirehose
 
 This firehose ingests events from a define rabbit-mq queue.
+
+#### IngestSegmentFirehose
+
+This Firehose can be used to read the data from existing druid segments.
+It can be used ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+A sample ingest firehose spec is shown below -
+
+```json
+{
+    "type"    : "ingestSegment",
+    "dataSource"   : "wikipedia",
+    "interval" : "2013-01-01/2013-01-02",
+    "dimensions":[],
+    "metrics":[]
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|ingestSegment. Type of firehose|yes|
+|dataSource|A String defining the data source to fetch rows from, very similar to a table in a relational database|yes|
+|interval|A String representing ISO-8601 Interval. This defines the time range to fetch the data over.|yes|
+|dimensions|The list of dimensions to select. If left empty, all dimensions are selected.|no|
+|metrics|The list of metrics to select. If left empty, all metrics are returned.|no|
+|filter| See [Filters](Filters.html)|yes|
+
+
+
+
+
 
 Parsing Data
 ------------

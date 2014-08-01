@@ -1,25 +1,16 @@
-
 <!-- Start page_header include -->
-<div class="navbar navbar-inverse navbar-static-top">
-  <div class="container druid-navbar">
+<div class="navbar navbar-inverse navbar-static-top druid-nav">
+  <div class="container">
     <div class="navbar-header">
       <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="/">Druid</a>
     </div>
     <div class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
-        <li {% if page.id == 'home' %} class="active"{% endif %}><a href="/">Home</a></li>
-        <li {% if page.sectionid == 'druid' %} class="active"{% endif %}><a href="/druid.html">What is Druid?</a></li>
-        <li {% if page.sectionid == 'downloads' %} class="active"{% endif %}><a href="/downloads.html">Downloads</a></li>
         <li {% if page.sectionid == 'docs' %} class="active"{% endif %}><a href="https://github.com/metamx/druid/wiki">Documentation</a></li>
-        <li {% if page.sectionid == 'community' %} class="active"{% endif %}><a href="/community.html">Community</a></li>
-        <li {% if page.sectionid == 'faq' %} class="active"{% endif %}><a href="/faq.html">FAQ</a></li>
-        <li {% if page.sectionid == 'blog' %} class="active"{% endif %}><a href="/blog">Blog</a></li>
-	<li class="divider"></li>
       </ul>
     </div>
   </div>

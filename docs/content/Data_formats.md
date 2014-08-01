@@ -4,7 +4,7 @@ layout: doc_page
 Data Formats for Ingestion
 ==========================
 
-Druid can ingest data in JSON, CSV, or TSV. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest CSV or TSV data.
+Druid can ingest data in JSON, CSV, or custom delimited data such as TSV. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest CSV or other delimited data.
 
 ## Formatting the Data
 The following are three samples of the data used in the [Wikipedia example](Tutorial:-Loading-Your-Data-Part-1.html).
@@ -41,8 +41,8 @@ _TSV_
 
 Note that the CSV and TSV data do not contain column heads. This becomes important when you specify the data for ingesting.
 
-## Configuring Ingestion For the Indexing Service
-If you use the [indexing service](Indexing-Service.html) for ingesting the data, a [task](Tasks.html) must be configured and submitted. Tasks are configured with a JSON object which, among other things, specifies the data source and type. In the Wikipedia example, JSON data was read from a local file. The task spec contains a firehose element to specify this:
+## Configuration
+All forms of Druid ingestion require some form of schema object. An example blob of json pertaining to the data format may look something like this:
 
 ```json
     "firehose" : {

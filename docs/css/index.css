@@ -1,21 +1,12 @@
-.sub-text {
-   margin-top: 20px;
-   margin-bottom: 50px;
-}
-
 .main-marketing {
-   margin-bottom: 50px;
+  padding: 30px 0 30px 0;
 }
 
 .main-marketing a {
-   color: #000000;
+   color: #333;
 }
 
-h2 {
+.main-marketing h2 {
+   margin-top: 20px;
    font-weight: 400;
-   font-size: 30px;
-}
-
-.main-marketing img {
-   margin-bottom: 40px;
 }
