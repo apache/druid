@@ -39,6 +39,7 @@ h2. Operations
 * "Extending Druid":./Modules.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
 * "Performance FAQ":./Performance-FAQ.html
+* "Logging":./Logging.html
 
 h2. Querying
 * "Querying":./Querying.html
