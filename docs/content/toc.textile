@@ -26,11 +26,14 @@ h2. Configuration
 * "Historical":Historical-Config.html
 * "Broker":Broker-Config.html
 * "Realtime":Realtime-Config.html
+* "Configuring Logging":./Logging.html
 
 h2. Data Ingestion
 * "Ingestion FAQ":./Ingestion-FAQ.html
 * "Realtime":./Realtime-ingestion.html
+** "Kafka-0.8.x Ingestion":./Kafka-Eight.html
 * "Batch":./Batch-ingestion.html
+** "Different Hadoop Versions":./Other-Hadoop.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
 * "Data Formats":./Data_formats.html
@@ -39,8 +42,6 @@ h2. Operations
 * "Performance FAQ":./Performance-FAQ.html
 * "Extending Druid":./Modules.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
-* "Performance FAQ":./Performance-FAQ.html
-* "Logging":./Logging.html
 
 h2. Querying
 * "Querying":./Querying.html
