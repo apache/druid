@@ -7,7 +7,8 @@ Time boundary queries return the earliest and latest data points of a data set. 
 ```json
 {
     "queryType" : "timeBoundary",
-    "dataSource": "sample_datasource"
+    "dataSource": "sample_datasource",
+    "bound"     : < "maxTime" | "minTime" > # optional, defaults to returning both timestamps if not set 
 }
 ```
 
@@ -17,6 +18,7 @@ There are 3 main parts to a time boundary query:
 |--------|-----------|---------|
 |queryType|This String should always be "timeBoundary"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
+|bound   | Optional, set to `maxTime` or `minTime` to return only the latest or earliest timestamp. Default to returning both if not set| no |
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 The format of the result is:
