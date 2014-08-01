@@ -1,12 +1,17 @@
 ---
 layout: doc_page
 ---
+
 Querying
 ========
 
-Queries are made using an HTTP REST style request to a [Broker](Broker.html), [Historical](Historical.html), or [Realtime](Realtime.html) node. The query is expressed in JSON and each of these node types expose the same REST query interface.
+Queries are made using an HTTP REST style request to a [Broker](Broker.html),
+[Historical](Historical.html), or [Realtime](Realtime.html) node. The
+query is expressed in JSON and each of these node types expose the same
+REST query interface.
 
-We start by describing an example query with additional comments that mention possible variations. Query operators are also summarized in a table below.
+We start by describing an example query with additional comments that mention
+possible variations. Query operators are also summarized in a table below.
 
 Example Query "rand"
 --------------------
@@ -145,7 +150,7 @@ Query Cancellation
 ------------------
 
 Queries can be cancelled explicitely using their unique identifier.  If the
-query identifier is set at the time of query, or is known, the following
+query identifier is set at the time of query, or is otherwise known, the following
 endpoint can be used on the broker or router to cancel the query.
 
 ```sh
