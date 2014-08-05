@@ -419,10 +419,9 @@ public class ServerManager implements QuerySegmentWalker
                             return toolChest.makeMetricBuilder(input);
                           }
                         },
-                        new ReferenceCountingSegmentQueryRunner<T>(factory, adapter)
-                    )
-                        .withWaitMeasuredFromNow()
-                        .withMetricName("scan/time"),
+                        new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
+                        "scan/time"
+                    ).withWaitMeasuredFromNow(),
                     cacheConfig
                 )
             )

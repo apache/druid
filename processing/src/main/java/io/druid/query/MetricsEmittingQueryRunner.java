@@ -47,17 +47,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryRunner<T> queryRunner
   )
   {
-    this(emitter, builderFn, queryRunner, -1);
-  }
-
-  public MetricsEmittingQueryRunner(
-      ServiceEmitter emitter,
-      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
-      QueryRunner<T> queryRunner,
-      long creationTime
-  )
-  {
-    this(emitter, builderFn, queryRunner, creationTime, DEFAULT_METRIC_NAME);
+    this(emitter, builderFn, queryRunner, DEFAULT_METRIC_NAME);
   }
 
   public MetricsEmittingQueryRunner(
@@ -75,13 +65,18 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     this.metricName = metricName;
   }
 
-
-  public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
+  public MetricsEmittingQueryRunner(
+      ServiceEmitter emitter,
+      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
+      QueryRunner<T> queryRunner,
+      String metricName
+  )
   {
-    return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis());
+    this(emitter, builderFn, queryRunner, -1, metricName);
   }
 
-  public MetricsEmittingQueryRunner<T> withMetricName(String metricName)
+
+  public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
   {
     return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis(), metricName);
   }
