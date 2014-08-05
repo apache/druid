@@ -33,7 +33,7 @@ import java.io.IOException;
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
-  private static String DEFAULT_METRIC_NAME = "query/time";
+  private static final String DEFAULT_METRIC_NAME = "query/time";
 
   private final ServiceEmitter emitter;
   private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
