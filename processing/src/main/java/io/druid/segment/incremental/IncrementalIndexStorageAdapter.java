@@ -566,10 +566,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final Bound bound)
     {
-      if (!dimension.endsWith(".geo")) {
-        return new BooleanValueMatcher(false);
-      }
-
       Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
