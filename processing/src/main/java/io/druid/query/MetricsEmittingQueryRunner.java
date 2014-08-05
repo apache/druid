@@ -81,7 +81,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis());
   }
 
-  public MetricsEmittingQueryRunner<T> withWaitMetricName(String metricName)
+  public MetricsEmittingQueryRunner<T> withMetricName(String metricName)
   {
     return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis(), metricName);
   }
