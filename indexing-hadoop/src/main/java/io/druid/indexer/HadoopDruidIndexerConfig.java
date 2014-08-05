@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Maps;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -30,25 +31,28 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
+import io.druid.timeline.partition.ShardSpecLookup;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -81,7 +85,7 @@ public class HadoopDruidIndexerConfig
 
   static {
     injector = Initialization.makeInjectorWithModules(
-        Initialization.makeStartupInjector(),
+        GuiceInjectors.makeStartupInjector(),
         ImmutableList.<Object>of(
             new Module()
             {
@@ -166,20 +170,52 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
+  private volatile ColumnConfig columnConfig;
+  private volatile Map<DateTime,ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
+  private volatile Map<ShardSpec, HadoopyShardSpec> hadoopShardSpecLookup = Maps.newHashMap();
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
       final @JsonProperty("schema") HadoopIngestionSpec schema
   )
   {
+    this.columnConfig = columnConfig;
     this.schema = schema;
     this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+    for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : schema.getTuningConfig().getShardSpecs().entrySet()) {
+      if (entry.getValue() == null || entry.getValue().isEmpty()) {
+        continue;
+      }
+      final ShardSpec actualSpec = entry.getValue().get(0).getActualSpec();
+      shardSpecLookups.put(
+          entry.getKey(), actualSpec.getLookup(
+          Lists.transform(
+              entry.getValue(), new Function<HadoopyShardSpec, ShardSpec>()
+          {
+            @Override
+            public ShardSpec apply(HadoopyShardSpec input)
+            {
+              return input.getActualSpec();
+            }
+          }
+          )
+      )
+      );
+      for (HadoopyShardSpec hadoopyShardSpec : entry.getValue()) {
+        hadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
+      }
+    }
   }
 
   @JsonProperty
   public HadoopIngestionSpec getSchema()
   {
     return schema;
+  }
+
+  public ColumnConfig getColumnConfig()
+  {
+    return columnConfig;
   }
 
   public String getDataSource()
@@ -297,25 +333,17 @@ public class HadoopDruidIndexerConfig
       return Optional.absent();
     }
 
-    final List<HadoopyShardSpec> shards = schema.getTuningConfig().getShardSpecs().get(timeBucket.get().getStart());
-    if (shards == null || shards.isEmpty()) {
-      return Optional.absent();
-    }
+    final ShardSpec actualSpec = shardSpecLookups.get(timeBucket.get().getStart()).getShardSpec(inputRow);
+    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(actualSpec);
 
-    for (final HadoopyShardSpec hadoopyShardSpec : shards) {
-      final ShardSpec actualSpec = hadoopyShardSpec.getActualSpec();
-      if (actualSpec.isInChunk(inputRow)) {
-        return Optional.of(
-            new Bucket(
-                hadoopyShardSpec.getShardNum(),
-                timeBucket.get().getStart(),
-                actualSpec.getPartitionNum()
-            )
-        );
-      }
-    }
+    return Optional.of(
+        new Bucket(
+            hadoopyShardSpec.getShardNum(),
+            timeBucket.get().getStart(),
+            actualSpec.getPartitionNum()
+        )
+    );
 
-    throw new ISE("row[%s] doesn't fit in any shard[%s]", inputRow, shards);
   }
 
   public Optional<Set<Interval>> getSegmentGranularIntervals()

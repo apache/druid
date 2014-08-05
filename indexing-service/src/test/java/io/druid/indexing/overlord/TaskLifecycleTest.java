@@ -43,6 +43,8 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
+import io.druid.indexing.common.TestUtils;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
@@ -248,7 +250,8 @@ public class TaskLifecycleTest
                 IR("2010-01-02T01", "a", "c", 1)
             )
         ),
-        -1
+        -1,
+        TestUtils.MAPPER
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -296,7 +299,8 @@ public class TaskLifecycleTest
         QueryGranularity.NONE,
         10000,
         newMockExceptionalFirehoseFactory(),
-        -1
+        -1,
+        TestUtils.MAPPER
     );
 
     final TaskStatus status = runTask(indexTask);

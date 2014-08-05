@@ -45,7 +45,6 @@ public class HadoopDruidIndexerConfigTest
     }
   }
 
-
   @Test
   public void shouldMakeHDFSCompliantSegmentOutputPath()
   {

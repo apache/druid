@@ -33,6 +33,24 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 
   public RemoteTaskRunnerWorkItem(
       String taskId,
+      Worker worker
+  )
+  {
+    this(taskId, SettableFuture.<TaskStatus>create(), worker);
+  }
+
+  public RemoteTaskRunnerWorkItem(
+      String taskId,
+      DateTime createdTime,
+      DateTime queueInsertionTime,
+      Worker worker
+  )
+  {
+    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker);
+  }
+
+  private RemoteTaskRunnerWorkItem(
+      String taskId,
       SettableFuture<TaskStatus> result,
       Worker worker
   )
@@ -42,7 +60,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
     this.worker = worker;
   }
 
-  public RemoteTaskRunnerWorkItem(
+  private RemoteTaskRunnerWorkItem(
       String taskId,
       SettableFuture<TaskStatus> result,
       DateTime createdTime,

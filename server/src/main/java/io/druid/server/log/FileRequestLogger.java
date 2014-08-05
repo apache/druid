@@ -110,7 +110,7 @@ public class FileRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws Exception
+  public void log(RequestLogLine requestLogLine) throws IOException
   {
     synchronized (lock) {
       fileWriter.write(

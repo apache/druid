@@ -27,6 +27,7 @@ import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
@@ -169,6 +170,12 @@ public class RealtimeManagerTest
       }
 
       @Override
+      public DateTime getTimestamp()
+      {
+        return new DateTime(timestamp);
+      }
+
+      @Override
       public List<String> getDimension(String dimension)
       {
         return Lists.newArrayList();
@@ -184,6 +191,12 @@ public class RealtimeManagerTest
       public Object getRaw(String dimension)
       {
         return null;
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return 0;
       }
     };
   }

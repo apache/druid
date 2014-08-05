@@ -51,6 +51,7 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
@@ -322,12 +323,6 @@ public class IndexMerger
     if (!outDir.mkdirs()) {
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
-
-/*
-    if (indexes.size() < 2) {
-      throw new ISE("Too few indexes provided for append [%d].", indexes.size());
-    }
-*/
 
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(

@@ -27,10 +27,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import io.druid.guice.ExtensionsConfig;
+import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ExtensionsConfig;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -58,7 +59,7 @@ public class InitializationTest
   @Test
   public void test02MakeStartupInjector() throws Exception
   {
-    Injector startupInjector = Initialization.makeStartupInjector();
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Assert.assertNotNull(startupInjector);
     Assert.assertNotNull(startupInjector.getInstance(ObjectMapper.class));
   }
@@ -66,7 +67,7 @@ public class InitializationTest
   @Test
   public void test03ClassLoaderExtensionsLoading()
   {
-    Injector startupInjector = Initialization.makeStartupInjector();
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
 
     Function<DruidModule, String> fnClassName = new Function<DruidModule, String>()
         {
@@ -99,7 +100,7 @@ public class InitializationTest
   @Test
   public void test04MakeInjectorWithModules() throws Exception
   {
-    Injector startupInjector = Initialization.makeStartupInjector();
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(
         startupInjector, ImmutableList.<Object>of(
             new com.google.inject.Module()

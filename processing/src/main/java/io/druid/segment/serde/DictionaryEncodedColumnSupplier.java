@@ -33,21 +33,28 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
   private final GenericIndexed<String> dictionary;
   private final VSizeIndexedInts singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
+  private final int lookupCacheSize;
 
   public DictionaryEncodedColumnSupplier(
       GenericIndexed<String> dictionary,
       VSizeIndexedInts singleValuedColumn,
-      VSizeIndexed multiValuedColumn
+      VSizeIndexed multiValuedColumn,
+      int lookupCacheSize
   )
   {
     this.dictionary = dictionary;
     this.singleValuedColumn = singleValuedColumn;
     this.multiValuedColumn = multiValuedColumn;
+    this.lookupCacheSize = lookupCacheSize;
   }
 
   @Override
   public DictionaryEncodedColumn get()
   {
-    return new SimpleDictionaryEncodedColumn(singleValuedColumn, multiValuedColumn, dictionary);
+    return new SimpleDictionaryEncodedColumn(
+        singleValuedColumn,
+        multiValuedColumn,
+        lookupCacheSize > 0 ? dictionary.withCache(lookupCacheSize) : dictionary
+    );
   }
 }

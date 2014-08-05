@@ -95,7 +95,6 @@ public class EC2AutoScalingStrategyTest
   {
     workerSetupData.set(
         new WorkerSetupData(
-            "0",
             0,
             1,
             "",

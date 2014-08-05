@@ -26,6 +26,7 @@ import com.google.inject.Binder;
 import io.druid.data.input.ProtoBufInputRowParser;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import io.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
@@ -53,7 +54,8 @@ public class FirehoseModule implements DruidModule
                 new NamedType(TimedShutoffFirehoseFactory.class, "timed"),
                 new NamedType(IrcFirehoseFactory.class, "irc"),
                 new NamedType(LocalFirehoseFactory.class, "local"),
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                new NamedType(CombiningFirehoseFactory.class, "combining")
             )
     );
   }

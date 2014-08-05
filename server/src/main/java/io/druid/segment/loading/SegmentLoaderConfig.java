@@ -37,6 +37,9 @@ public class SegmentLoaderConfig
   @JsonProperty("deleteOnRemove")
   private boolean deleteOnRemove = true;
 
+  @JsonProperty("dropSegmentDelayMillis")
+  private int dropSegmentDelayMillis = 30 * 1000; // 30 seconds
+
   @JsonProperty
   private File infoDir = null;
 
@@ -48,6 +51,11 @@ public class SegmentLoaderConfig
   public boolean isDeleteOnRemove()
   {
     return deleteOnRemove;
+  }
+
+  public int getDropSegmentDelayMillis()
+  {
+    return dropSegmentDelayMillis;
   }
 
   public File getInfoDir()
@@ -72,9 +80,10 @@ public class SegmentLoaderConfig
   public String toString()
   {
     return "SegmentLoaderConfig{" +
-           "locations=" + getLocations() +
-           ", deleteOnRemove=" + isDeleteOnRemove() +
-           ", infoDir=" + getInfoDir() +
+           "locations=" + locations +
+           ", deleteOnRemove=" + deleteOnRemove +
+           ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
+           ", infoDir=" + infoDir +
            '}';
   }
 }

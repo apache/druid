@@ -32,7 +32,9 @@ import com.google.common.primitives.Floats;
 import com.metamx.common.ISE;
 import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.List;
@@ -129,6 +131,12 @@ public class SpatialDimensionRowFormatter
       }
 
       @Override
+      public DateTime getTimestamp()
+      {
+        return row.getTimestamp();
+      }
+
+      @Override
       public List<String> getDimension(String dimension)
       {
         List<String> retVal = spatialLookup.get(dimension);
@@ -156,6 +164,12 @@ public class SpatialDimensionRowFormatter
       public String toString()
       {
         return row.toString();
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return getTimestamp().compareTo(o.getTimestamp());
       }
     };
 

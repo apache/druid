@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -37,14 +36,13 @@ import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
 import io.druid.guice.DbConnectorModule;
-import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
-import io.druid.guice.HttpClientModule;
+import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
-import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.ParsersModule;
@@ -56,12 +54,8 @@ import io.druid.guice.StorageNodeModule;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.jackson.JacksonModule;
-import io.druid.server.initialization.ConfigModule;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.ExtensionsConfig;
 import io.druid.server.initialization.JettyServerModule;
-import io.druid.server.initialization.PropertiesModule;
 import io.druid.server.metrics.MetricsModule;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
@@ -85,6 +79,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -352,25 +347,6 @@ public class Initialization
     }
 
     return Guice.createInjector(Modules.override(defaultModules.getModules()).with(actualModules.getModules()));
-  }
-
-  public static Injector makeStartupInjector()
-  {
-    return Guice.createInjector(
-        new DruidGuiceExtensions(),
-        new JacksonModule(),
-        new PropertiesModule("runtime.properties"),
-        new ConfigModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bind(DruidSecondaryModule.class);
-            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-          }
-        }
-    );
   }
 
   private static class ModuleList

@@ -22,18 +22,20 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
+import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Row;
+import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
@@ -44,6 +46,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.incremental.IncrementalIndex;
 
 import java.util.List;
 import java.util.Map;
@@ -90,8 +93,9 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   {
     // mergeRunners should take ListeningExecutorService at some point
     final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
+
     if (config.get().isSingleThreaded()) {
-      return new ConcatQueryRunner<Row>(
+      return new ConcatQueryRunner<>(
           Sequences.map(
               Sequences.simple(queryRunners),
               new Function<QueryRunner<Row>, QueryRunner<Row>>()
@@ -104,34 +108,54 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                     @Override
                     public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
                     {
+                      final GroupByQuery queryParam = (GroupByQuery) query;
+                      final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper
+                          .createIndexAccumulatorPair(
+                              queryParam,
+                              config.get()
+                          );
+                      final Pair<List, Accumulator<List, Row>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
+                      final int priority = query.getContextPriority(0);
+                      final boolean bySegment = query.getContextBySegment(false);
 
-                      ListenableFuture<Sequence<Row>> future = queryExecutor.submit(
-                          new Callable<Sequence<Row>>()
+                      final ListenableFuture<Void> future = queryExecutor.submit(
+                          new AbstractPrioritizedCallable<Void>(priority)
                           {
                             @Override
-                            public Sequence<Row> call() throws Exception
+                            public Void call() throws Exception
                             {
-                              return new ExecutorExecutingSequence<Row>(
-                                  input.run(query, context),
-                                  queryExecutor
-                              );
+                              if (bySegment) {
+                                input.run(queryParam, context)
+                                     .accumulate(
+                                         bySegmentAccumulatorPair.lhs,
+                                         bySegmentAccumulatorPair.rhs
+                                     );
+                              } else {
+                                input.run(query, context).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                              }
+
+                              return null;
                             }
                           }
                       );
                       try {
                         queryWatcher.registerQuery(query, future);
-                        final Number timeout = query.getContextValue("timeout", (Number)null);
-                        return timeout == null ? future.get() : future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+                        final Number timeout = query.getContextValue("timeout", (Number) null);
+                        if (timeout == null) {
+                          future.get();
+                        } else {
+                          future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+                        }
                       }
                       catch (InterruptedException e) {
                         log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
                         future.cancel(true);
                         throw new QueryInterruptedException("Query interrupted");
                       }
-                      catch(CancellationException e) {
+                      catch (CancellationException e) {
                         throw new QueryInterruptedException("Query cancelled");
                       }
-                      catch(TimeoutException e) {
+                      catch (TimeoutException e) {
                         log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
                         future.cancel(true);
                         throw new QueryInterruptedException("Query timeout");
@@ -139,6 +163,12 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                       catch (ExecutionException e) {
                         throw Throwables.propagate(e.getCause());
                       }
+
+                      if (bySegment) {
+                        return Sequences.simple(bySegmentAccumulatorPair.lhs);
+                      }
+
+                      return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null));
                     }
                   };
                 }
@@ -146,7 +176,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, new RowOrdering(), config, queryWatcher, queryRunners);
+      return new GroupByParallelQueryRunner(queryExecutor, config, queryWatcher, queryRunners);
     }
   }
 
@@ -175,15 +205,6 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
       }
 
       return engine.process((GroupByQuery) input, adapter);
-    }
-  }
-
-  private static class RowOrdering extends Ordering<Row>
-  {
-    @Override
-    public int compare(Row left, Row right)
-    {
-      return Longs.compare(left.getTimestampFromEpoch(), right.getTimestampFromEpoch());
     }
   }
 }

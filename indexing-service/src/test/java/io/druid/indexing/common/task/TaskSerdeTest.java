@@ -19,6 +19,8 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -48,6 +50,8 @@ import java.io.File;
 
 public class TaskSerdeTest
 {
+  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
   @Test
   public void testIndexTaskSerde() throws Exception
   {
@@ -65,17 +69,19 @@ public class TaskSerdeTest
         QueryGranularity.NONE,
         10000,
         new LocalFirehoseFactory(new File("lol"), "rofl", null),
-        -1
+        -1,
+        jsonMapper
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    InjectableValues inject = new InjectableValues.Std()
+        .addValue(ObjectMapper.class, jsonMapper);
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
+    final IndexTask task2 = jsonMapper.reader(Task.class).with(inject).readValue(json);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());
@@ -102,7 +108,6 @@ public class TaskSerdeTest
         )
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -131,7 +136,6 @@ public class TaskSerdeTest
         new Interval("2010-01-01/P1D")
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -153,7 +157,6 @@ public class TaskSerdeTest
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -177,7 +180,6 @@ public class TaskSerdeTest
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -208,7 +210,6 @@ public class TaskSerdeTest
         null
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -251,7 +252,6 @@ public class TaskSerdeTest
         new Interval("2010-01-01/P1D")
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -269,7 +269,6 @@ public class TaskSerdeTest
   @Test
   public void testDeleteTaskFromJson() throws Exception
   {
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final DeleteTask task = (DeleteTask) jsonMapper.readValue(
         "{\"type\":\"delete\",\"dataSource\":\"foo\",\"interval\":\"2010-01-01/P1D\"}",
         Task.class
@@ -300,7 +299,6 @@ public class TaskSerdeTest
         )
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -325,7 +323,6 @@ public class TaskSerdeTest
         new Interval("2010-01-01/P1D")
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -350,7 +347,6 @@ public class TaskSerdeTest
         new Interval("2010-01-01/P1D")
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -375,7 +371,6 @@ public class TaskSerdeTest
         ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what")
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -434,7 +429,6 @@ public class TaskSerdeTest
         null
     );
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String json = jsonMapper.writeValueAsString(task);
     final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
 

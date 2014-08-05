@@ -25,9 +25,3 @@ echo " "
 echo "        The following self-contained jars (and more) have been built:"
 echo " "
 find . -name '*-selfcontained.jar'
-echo " "
-echo "For examples, see: "
-echo " "
-ls -1 examples/*/*sh
-echo " "
-echo "See also http://druid.io/docs/latest"

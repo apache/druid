@@ -9,7 +9,7 @@ There are two ways to setup Druid: download a tarball, or build it from source.
 
 # Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.121-bin.tar.gz).
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.137-bin.tar.gz).
 Download this bad boy to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
@@ -306,7 +306,7 @@ and put the following in there:
     "dataSource": "twitterstream",
     "granularity": "all",
     "dimensions": ["htags"],
-    "orderBy": {"type":"default", "columns":[{"dimension": "tweets", "direction":"DESCENDING"}], "limit":5},
+    "limitSpec": {"type":"default", "columns":[{"dimension": "tweets", "direction":"DESCENDING"}], "limit":5},
     "aggregations":[
       { "type": "longSum", "fieldName": "tweets", "name": "tweets"}
     ],
@@ -315,7 +315,7 @@ and put the following in there:
 }
 ```
 
-Woah! Our query just got a way more complicated. Now we have these "Filters":Filters.html things and this "OrderBy":OrderBy.html thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [LimitSpec](LimitSpec.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 

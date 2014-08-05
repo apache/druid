@@ -24,13 +24,14 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.client.RoutingDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.Router;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
@@ -38,7 +39,7 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.servlets.AsyncGzipFilter;
 
 /**
  */
@@ -47,7 +48,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
-  private final RoutingDruidClient routingDruidClient;
+  private final HttpClient httpClient;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
@@ -56,7 +57,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
-      RoutingDruidClient routingDruidClient,
+      @Router HttpClient httpClient,
       ServiceEmitter emitter,
       RequestLogger requestLogger
   )
@@ -64,7 +65,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
-    this.routingDruidClient = routingDruidClient;
+    this.httpClient = httpClient;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
   }
@@ -79,18 +80,17 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
                 jsonMapper,
                 smileMapper,
                 hostFinder,
-                routingDruidClient,
+                httpClient,
                 emitter,
                 requestLogger
             )
         ), "/druid/v2/*"
     );
-    queries.addFilter(GzipFilter.class, "/druid/v2/*", null);
+    queries.addFilter(AsyncGzipFilter.class, "/druid/v2/*", null);
     queries.addFilter(GuiceFilter.class, "/status/*", null);
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addFilter(GzipFilter.class, "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();

@@ -274,9 +274,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       @Override
       public boolean apply(ZkWorker zkWorker)
       {
-        final String minVersion = workerSetupData.getMinVersion() != null
-                                  ? workerSetupData.getMinVersion()
-                                  : config.getWorkerVersion();
+        final String minVersion = config.getWorkerVersion();
         if (minVersion == null) {
           throw new ISE("No minVersion found! It should be set in your runtime properties or configuration database.");
         }

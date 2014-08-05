@@ -17,6 +17,7 @@ h2. Getting Started
 h2. Booting a Druid Cluster
 * "Simple Cluster Configuration":Simple-Cluster-Configuration.html
 * "Production Cluster Configuration":Production-Cluster-Configuration.html
+* "Rolling Cluster Updates":Rolling-Updates.html
 
 h2. Configuration
 * "Common Configuration":Configuration.html
@@ -25,19 +26,22 @@ h2. Configuration
 * "Historical":Historical-Config.html
 * "Broker":Broker-Config.html
 * "Realtime":Realtime-Config.html
+* "Configuring Logging":./Logging.html
 
 h2. Data Ingestion
+* "Ingestion FAQ":./Ingestion-FAQ.html
 * "Realtime":./Realtime-ingestion.html
+** "Kafka-0.8.x Ingestion":./Kafka-Eight.html
 * "Batch":./Batch-ingestion.html
+** "Different Hadoop Versions":./Other-Hadoop.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
 * "Data Formats":./Data_formats.html
-* "Ingestion FAQ":./Ingestion-FAQ.html
 
 h2. Operations
+* "Performance FAQ":./Performance-FAQ.html
 * "Extending Druid":./Modules.html
 * "Booting a Production Cluster":./Booting-a-production-cluster.html
-* "Performance FAQ":./Performance-FAQ.html
 
 h2. Querying
 * "Querying":./Querying.html
@@ -48,7 +52,7 @@ h2. Querying
 ** "DimensionSpecs":./DimensionSpecs.html
 * Query Types
 ** "GroupBy":./GroupByQuery.html
-*** "OrderBy":./OrderBy.html
+*** "LimitSpec":./LimitSpec.html
 *** "Having":./Having.html
 ** "Search":./SearchQuery.html
 *** "SearchQuerySpec":./SearchQuerySpec.html
@@ -72,13 +76,14 @@ h2. Architecture
 *** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
-** "MySQL":./MySQL.html
+** "Metadata Storage":./MySQL.html
 ** "ZooKeeper":./ZooKeeper.html
 
 h2. Experimental
 * "About Experimental Features":./About-Experimental-Features.html
 * "Geographic Queries":./GeographicQueries.html
 * "Select Query":./SelectQuery.html
+* "Approximate Histograms and Quantiles":./ApproxHisto.html
 
 h2. Development
 * "Versioning":./Versioning.html

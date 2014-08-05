@@ -37,7 +37,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 h3. Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.121-bin.tar.gz)
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.137-bin.tar.gz)
 Download this file to a directory of your choosing.
 You can extract the awesomeness within by issuing:
 
@@ -48,7 +48,7 @@ tar zxvf druid-services-*-bin.tar.gz
 Not too lost so far right? That's great! If you cd into the directory:
 
 ```
-cd druid-services-0.6.121
+cd druid-services-0.6.137
 ```
 
 You should see a bunch of files:
@@ -251,7 +251,7 @@ and put the following in there:
     "dataSource": "webstream", 
     "granularity": "all", 
     "dimensions": [ "geo_region" ], 
-    "orderBy": {
+    "limitSpec": {
         "type": "default", 
         "columns": [
             { "dimension": "known_users",  "direction": "DESCENDING" }
@@ -267,7 +267,7 @@ and put the following in there:
 }
 ```
 
-Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [LimitSpec](LimitSpec.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 

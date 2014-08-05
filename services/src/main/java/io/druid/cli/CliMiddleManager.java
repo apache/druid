@@ -35,6 +35,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
@@ -75,6 +76,7 @@ public class CliMiddleManager extends ServerRunnable
           {
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
+            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);

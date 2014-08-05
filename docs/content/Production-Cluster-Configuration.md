@@ -4,6 +4,8 @@ layout: doc_page
 Production Cluster Configuration
 ================================
 
+__This configuration is an example of what a production cluster could look like. Many other hardware combinations are possible! Cheaper hardware is absolutely possible.__
+
 This production Druid cluster assumes that MySQL and Zookeeper are already set up. The deep storage that is used for examples is S3 and memcached is used for a distributed cache.
 
 The nodes that respond to queries (Historical, Broker, and Middle manager nodes) will use as many cores as are available, depending on usage, so it is best to keep these on dedicated machines. The upper limit of effectively utilized cores is not well characterized yet and would depend on types of queries, query load, and the schema. Historical daemons should have a heap a size of at least 1GB per core for normal usage, but could be squeezed into a smaller heap for testing. Since in-memory caching is essential for good performance, even more RAM is better. Broker nodes will use RAM for caching, so they do more than just route queries. SSDs are highly recommended for Historical nodes not all data is loaded in available memory.
@@ -55,7 +57,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/overlord
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.121"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.137"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -137,7 +139,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/middlemanager
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.121","io.druid.extensions:druid-kafka-seven:0.6.121"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.137","io.druid.extensions:druid-kafka-seven:0.6.137"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -153,9 +155,8 @@ druid.indexer.logs.s3Bucket=#{LOGS_BUCKET}
 druid.indexer.logs.s3Prefix=prod/logs/v1
 
 # Dedicate more resources to peons
-druid.indexer.runner.javaOpts=-server -Xmx6g -Xms6g -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
-druid.indexer.runner.taskDir=/mnt/persistent/task/
-druid.indexer.task.taskDir=/mnt/persistent/task/
+druid.indexer.runner.javaOpts=-server -Xmx3g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+druid.indexer.task.baseTaskDir=/mnt/persistent/task/
 druid.indexer.task.chathandler.type=announce
 
 druid.indexer.fork.property.druid.indexer.hadoopWorkingPath=/tmp/druid-indexing
@@ -285,7 +286,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/historical
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.121"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.137"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
