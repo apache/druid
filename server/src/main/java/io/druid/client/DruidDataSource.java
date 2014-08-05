@@ -114,19 +114,23 @@ public class DruidDataSource
   @Override
   public String toString()
   {
-    return "DruidDataSource{" +
-           "properties=" + properties +
-           ", partitions=" + segmentsHolder.toString() +
-           '}';
+    synchronized (lock) {
+      return "DruidDataSource{" +
+             "properties=" + properties +
+             ", partitions=" + segmentsHolder.toString() +
+             '}';
+    }
   }
 
   public ImmutableDruidDataSource toImmutableDruidDataSource()
   {
-    return new ImmutableDruidDataSource(
-        name,
-        ImmutableMap.copyOf(properties),
-        ImmutableMap.copyOf(partitionNames),
-        ImmutableSet.copyOf(segmentsHolder)
-    );
+    synchronized (lock) {
+      return new ImmutableDruidDataSource(
+          name,
+          ImmutableMap.copyOf(properties),
+          ImmutableMap.copyOf(partitionNames),
+          ImmutableSet.copyOf(segmentsHolder)
+      );
+    }
   }
 }
