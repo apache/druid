@@ -12,7 +12,7 @@ You can provision individual servers, loading Druid onto each machine (or buildi
 
 [Apache Whirr](http://whirr.apache.org/) is a set of libraries for launching cloud services. For Druid, Whirr serves as an easy way to launch a cluster in Amazon AWS by using simple commands and configuration files (called *recipes*).
 
-**NOTE:** Whirr will install Druid 0.6.137. Also, it doesn't work with JDK1.7.0_55. JDK1.7.0_45 recommended.
+**NOTE:** Whirr will install Druid 0.6.115 (an older version of Druid). Also, it doesn't work with JDK1.7.0_55. JDK1.7.0_45 recommended.
 
 You'll need an AWS account, S3 Bucket and an EC2 key pair from that account so that Whirr can connect to the cloud via the EC2 API. If you haven't generated a key pair, see the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) or see this [Whirr FAQ](http://whirr.apache.org/faq.html#how-do-i-find-my-cloud-credentials).
 

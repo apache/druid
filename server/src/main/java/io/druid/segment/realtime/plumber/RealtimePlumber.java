@@ -786,7 +786,7 @@ public class RealtimePlumber implements Plumber
           public boolean apply(final DataSegment segment)
           {
             return
-                schema.getDataSource().equals(segment.getDataSource())
+                schema.getDataSource().equalsIgnoreCase(segment.getDataSource())
                 && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 && Iterables.any(
                     sinks.keySet(), new Predicate<Long>()
