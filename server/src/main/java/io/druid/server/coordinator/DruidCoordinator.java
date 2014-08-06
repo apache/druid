@@ -57,7 +57,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
-import io.druid.server.coordinator.helper.DruidCoordinatorCleanupAvailable;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
@@ -829,7 +829,7 @@ public class DruidCoordinator
                 }
               },
               new DruidCoordinatorRuleRunner(DruidCoordinator.this),
-              new DruidCoordinatorCleanupAvailable(DruidCoordinator.this),
+              new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
               new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
               new DruidCoordinatorLogger()

@@ -41,11 +41,11 @@ import java.util.Set;
 
 /**
  */
-public class DruidCoordinatorCleanupAvailable implements DruidCoordinatorHelper
+public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 {
   private final DruidCoordinator coordinator;
 
-  public DruidCoordinatorCleanupAvailable(
+  public DruidCoordinatorCleanupUnneeded(
       DruidCoordinator coordinator
   )
   {
