@@ -35,8 +35,6 @@ public class CompressedLongBufferObjectStrategy extends FixedSizeCompressedObjec
     return new CompressedLongBufferObjectStrategy(order, compression, sizePer);
   }
 
-  private final int sizePer;
-
   private CompressedLongBufferObjectStrategy(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
     super(
@@ -67,14 +65,8 @@ public class CompressedLongBufferObjectStrategy extends FixedSizeCompressedObjec
             return into.asLongBuffer().put(from);
           }
         },
-        compression
+        compression,
+        sizePer
     );
-    this.sizePer = sizePer;
-  }
-
-  @Override
-  public int getSize()
-  {
-    return sizePer;
   }
 }

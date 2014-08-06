@@ -25,16 +25,22 @@ import java.nio.ByteOrder;
 
 public abstract class FixedSizeCompressedObjectStrategy<T extends Buffer> extends CompressedObjectStrategy<T>
 {
+  private final int sizePer;
+
   protected FixedSizeCompressedObjectStrategy(
       ByteOrder order,
       BufferConverter<T> converter,
-      CompressionStrategy compression
+      CompressionStrategy compression,
+      int sizePer
   )
   {
     super(order, converter, compression);
+    this.sizePer = sizePer;
   }
 
-  public abstract int getSize();
+  public int getSize() {
+    return sizePer;
+  }
 
   @Override
   protected ByteBuffer bufferFor(T val)

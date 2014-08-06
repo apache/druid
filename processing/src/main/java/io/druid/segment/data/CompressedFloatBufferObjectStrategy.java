@@ -35,8 +35,6 @@ public class CompressedFloatBufferObjectStrategy extends FixedSizeCompressedObje
     return new CompressedFloatBufferObjectStrategy(order, compression, sizePer);
   }
 
-  private final int sizePer;
-
   private CompressedFloatBufferObjectStrategy(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
     super(
@@ -67,14 +65,8 @@ public class CompressedFloatBufferObjectStrategy extends FixedSizeCompressedObje
             return into.asFloatBuffer().put(from);
           }
         },
-        compression
+        compression,
+        sizePer
     );
-    this.sizePer = sizePer;
-  }
-
-  @Override
-  public int getSize()
-  {
-    return sizePer;
   }
 }
