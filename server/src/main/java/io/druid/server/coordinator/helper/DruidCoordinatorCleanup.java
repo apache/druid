@@ -63,27 +63,31 @@ public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
     Set<DataSegment> availableSegments = params.getAvailableSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    // Drop segments that no longer exist in the available segments configuration
-    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
-      for (ServerHolder serverHolder : serverHolders) {
-        ImmutableDruidServer server = serverHolder.getServer();
+    // Drop segments that no longer exist in the available segments configuration, if it has been populated. (It might
+    // not have been loaded yet since it's filled asynchronously. But it's also filled atomically, so if there are any
+    // segments at all, we should have all of them.)
+    if (!availableSegments.isEmpty()) {
+      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
+        for (ServerHolder serverHolder : serverHolders) {
+          ImmutableDruidServer server = serverHolder.getServer();
 
-        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          for (DataSegment segment : dataSource.getSegments()) {
-            if (!availableSegments.contains(segment)) {
-              LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
+          for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+            for (DataSegment segment : dataSource.getSegments()) {
+              if (!availableSegments.contains(segment)) {
+                LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
-              if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-                queuePeon.dropSegment(
-                    segment, new LoadPeonCallback()
-                {
-                  @Override
-                  public void execute()
-                  {
-                  }
+                if (!queuePeon.getSegmentsToDrop().contains(segment)) {
+                  queuePeon.dropSegment(
+                      segment, new LoadPeonCallback()
+                      {
+                        @Override
+                        public void execute()
+                        {
+                        }
+                      }
+                  );
+                  stats.addToTieredStat("unneededCount", server.getTier(), 1);
                 }
-                );
-                stats.addToTieredStat("unneededCount", server.getTier(), 1);
               }
             }
           }
