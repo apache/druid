@@ -33,10 +33,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
-import io.druid.server.DruidProcessingConfig;
-import io.druid.server.VMUtils;
+import io.druid.common.utils.VMUtils;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;

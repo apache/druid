@@ -108,7 +108,9 @@ public class CliCoordinator extends ServerRunnable
 
             LifecycleModule.register(binder, DruidCoordinator.class);
 
-            binder.bind(JettyServerInitializer.class).toInstance(new CoordinatorJettyServerInitializer());
+            binder.bind(JettyServerInitializer.class)
+                  .to(CoordinatorJettyServerInitializer.class);
+
             Jerseys.addResource(binder, BackwardsCompatibleInfoResource.class);
             Jerseys.addResource(binder, InfoResource.class);
             Jerseys.addResource(binder, BackwardsCompatibleCoordinatorResource.class);

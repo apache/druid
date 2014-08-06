@@ -20,53 +20,65 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.HttpResponseHandler;
-import io.druid.client.RoutingDruidClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.druid.server.router.Router;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.api.Response;
+import org.eclipse.jetty.client.api.Result;
+import org.eclipse.jetty.client.util.BytesContentProvider;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.proxy.AsyncProxyServlet;
 import org.joda.time.DateTime;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.net.URI;
+import java.util.Enumeration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class does async query processing and should be merged with QueryResource at some point
  */
-@WebServlet(asyncSupported = true)
-public class AsyncQueryForwardingServlet extends HttpServlet
+public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 {
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
-  private static final Charset UTF8 = Charset.forName("UTF-8");
-  private static final String DISPATCHED = "dispatched";
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
+
+  private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
+      throws IOException
+  {
+    if (!response.isCommitted()) {
+      final String errorMessage = exception.getMessage() == null ? "null exception" : exception.getMessage();
+
+      response.resetBuffer();
+      response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+      objectMapper.writeValue(
+          response.getOutputStream(),
+          ImmutableMap.of("error", errorMessage)
+      );
+    }
+    response.flushBuffer();
+  }
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
-  private final RoutingDruidClient routingDruidClient;
+  private final HttpClient httpClient;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
@@ -74,7 +86,7 @@ public class AsyncQueryForwardingServlet extends HttpServlet
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
-      RoutingDruidClient routingDruidClient,
+      @Router HttpClient httpClient,
       ServiceEmitter emitter,
       RequestLogger requestLogger
   )
@@ -82,261 +94,183 @@ public class AsyncQueryForwardingServlet extends HttpServlet
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
-    this.routingDruidClient = routingDruidClient;
+    this.httpClient = httpClient;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
   }
 
   @Override
-  protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
-      throws ServletException, IOException
+  protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
   {
-    OutputStream out = null;
-    AsyncContext ctx = null;
+    final boolean isSmile = QueryResource.APPLICATION_SMILE.equals(request.getContentType());
+    final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
 
-    try {
-      ctx = req.startAsync(req, resp);
-      final AsyncContext asyncContext = ctx;
+    String host = hostFinder.getDefaultHost();
+    Query inputQuery = null;
+    boolean hasContent = request.getContentLength() > 0 || request.getContentType() != null;
+    boolean isQuery = request.getMethod().equals(HttpMethod.POST.asString());
+    long startTime = System.currentTimeMillis();
 
-      if (req.getAttribute(DISPATCHED) != null) {
+    // queries only exist for POST
+    if (isQuery) {
+      try {
+        inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
+        if (inputQuery != null) {
+          host = hostFinder.getHost(inputQuery);
+          if (inputQuery.getId() == null) {
+            inputQuery = inputQuery.withId(UUID.randomUUID().toString());
+          }
+        }
+      }
+      catch (IOException e) {
+        log.warn(e, "Exception parsing query");
+        final String errorMessage = e.getMessage() == null ? "no error message" : e.getMessage();
+        requestLogger.log(
+            new RequestLogLine(
+                new DateTime(),
+                request.getRemoteAddr(),
+                null,
+                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", errorMessage))
+            )
+        );
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        response.setContentType(QueryResource.APPLICATION_JSON);
+        objectMapper.writeValue(
+            response.getOutputStream(),
+            ImmutableMap.of("error", errorMessage)
+        );
+
         return;
       }
-
-      out = resp.getOutputStream();
-      final OutputStream outputStream = out;
-
-      final String host = hostFinder.getDefaultHost();
-
-      final HttpResponseHandler<OutputStream, OutputStream> responseHandler = new HttpResponseHandler<OutputStream, OutputStream>()
-      {
-        @Override
-        public ClientResponse<OutputStream> handleResponse(HttpResponse response)
-        {
-          resp.setStatus(response.getStatus().getCode());
-          resp.setContentType("application/json");
-
-          try {
-            ChannelBuffer buf = response.getContent();
-            buf.readBytes(outputStream, buf.readableBytes());
-          }
-          catch (Exception e) {
-            asyncContext.complete();
-            throw Throwables.propagate(e);
-          }
-
-          return ClientResponse.finished(outputStream);
-        }
-
-        @Override
-        public ClientResponse<OutputStream> handleChunk(
-            ClientResponse<OutputStream> clientResponse, HttpChunk chunk
-        )
-        {
-          try {
-            ChannelBuffer buf = chunk.getContent();
-            buf.readBytes(outputStream, buf.readableBytes());
-          }
-          catch (Exception e) {
-            asyncContext.complete();
-            throw Throwables.propagate(e);
-          }
-          return clientResponse;
-        }
-
-        @Override
-        public ClientResponse<OutputStream> done(ClientResponse<OutputStream> clientResponse)
-        {
-          final OutputStream obj = clientResponse.getObj();
-          try {
-            resp.flushBuffer();
-            outputStream.close();
-          }
-          catch (Exception e) {
-            throw Throwables.propagate(e);
-          }
-          finally {
-            asyncContext.complete();
-          }
-
-          return ClientResponse.finished(obj);
-        }
-
-        @Override
-        public void exceptionCaught(
-            ClientResponse<OutputStream> clientResponse,
-            Throwable e
-        )
-        {
-          handleException(resp, asyncContext, e);
-        }
-      };
-
-      asyncContext.start(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              routingDruidClient.get(makeUrl(host, req), responseHandler);
-            }
-          }
-      );
-
-      asyncContext.dispatch();
-      req.setAttribute(DISPATCHED, true);
+      catch (Exception e) {
+        handleException(response, objectMapper, e);
+        return;
+      }
     }
-    catch (Exception e) {
-      handleException(resp, ctx,  e);
+
+    URI rewrittenURI = rewriteURI(host, request);
+    if (rewrittenURI == null) {
+      onRewriteFailed(request, response);
+      return;
+    }
+
+    final Request proxyRequest = getHttpClient().newRequest(rewrittenURI)
+                                                .method(request.getMethod())
+                                                .version(HttpVersion.fromString(request.getProtocol()));
+
+    // Copy headers
+    for (Enumeration<String> headerNames = request.getHeaderNames(); headerNames.hasMoreElements(); ) {
+      String headerName = headerNames.nextElement();
+
+      if (HttpHeader.TRANSFER_ENCODING.is(headerName)) {
+        hasContent = true;
+      }
+
+      for (Enumeration<String> headerValues = request.getHeaders(headerName); headerValues.hasMoreElements(); ) {
+        String headerValue = headerValues.nextElement();
+        if (headerValue != null) {
+          proxyRequest.header(headerName, headerValue);
+        }
+      }
+    }
+
+    // Add proxy headers
+    addViaHeader(proxyRequest);
+
+    addXForwardedHeaders(proxyRequest, request);
+
+    final AsyncContext asyncContext = request.startAsync();
+    // We do not timeout the continuation, but the proxy request
+    asyncContext.setTimeout(0);
+    proxyRequest.timeout(
+        getTimeout(), TimeUnit.MILLISECONDS
+    );
+
+    if (hasContent) {
+      if (inputQuery != null) {
+        proxyRequest.content(new BytesContentProvider(jsonMapper.writeValueAsBytes(inputQuery)));
+      } else {
+        proxyRequest.content(proxyRequestContent(proxyRequest, request));
+      }
+    }
+
+    customizeProxyRequest(proxyRequest, request);
+
+    if (isQuery) {
+      proxyRequest.send(newMetricsEmittingProxyResponseListener(request, response, inputQuery, startTime));
+    } else {
+      proxyRequest.send(newProxyResponseListener(request, response));
     }
   }
 
   @Override
-  protected void doPost(
-      final HttpServletRequest req, final HttpServletResponse resp
-  ) throws ServletException, IOException
+  protected HttpClient createHttpClient() throws ServletException
   {
-    final long start = System.currentTimeMillis();
-    Query query = null;
-    String queryId;
+    return httpClient;
+  }
 
-    final boolean isSmile = "application/smile".equals(req.getContentType());
+  private URI rewriteURI(final String host, final HttpServletRequest req)
+  {
+    final StringBuilder uri = new StringBuilder("http://");
 
-    final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
-
-    OutputStream out = null;
-    AsyncContext ctx = null;
-
-    try {
-      ctx = req.startAsync(req, resp);
-      final AsyncContext asyncContext = ctx;
-
-      if (req.getAttribute(DISPATCHED) != null) {
-        return;
-      }
-
-      query = objectMapper.readValue(req.getInputStream(), Query.class);
-      queryId = query.getId();
-      if (queryId == null) {
-        queryId = UUID.randomUUID().toString();
-        query = query.withId(queryId);
-      }
-
-      if (log.isDebugEnabled()) {
-        log.debug("Got query [%s]", query);
-      }
-
-      out = resp.getOutputStream();
-      final OutputStream outputStream = out;
-
-      final String host = hostFinder.getHost(query);
-
-      final Query theQuery = query;
-      final String theQueryId = queryId;
-
-      final HttpResponseHandler<OutputStream, OutputStream> responseHandler = new HttpResponseHandler<OutputStream, OutputStream>()
-      {
-        @Override
-        public ClientResponse<OutputStream> handleResponse(HttpResponse response)
-        {
-          resp.setStatus(response.getStatus().getCode());
-          resp.setContentType("application/x-javascript");
-
-          try {
-            ChannelBuffer buf = response.getContent();
-            buf.readBytes(outputStream, buf.readableBytes());
-          }
-          catch (Exception e) {
-            asyncContext.complete();
-            throw Throwables.propagate(e);
-          }
-          return ClientResponse.finished(outputStream);
-        }
-
-        @Override
-        public ClientResponse<OutputStream> handleChunk(
-            ClientResponse<OutputStream> clientResponse, HttpChunk chunk
-        )
-        {
-          try {
-            ChannelBuffer buf = chunk.getContent();
-            buf.readBytes(outputStream, buf.readableBytes());
-          }
-          catch (Exception e) {
-            asyncContext.complete();
-            throw Throwables.propagate(e);
-          }
-          return clientResponse;
-        }
-
-        @Override
-        public ClientResponse<OutputStream> done(ClientResponse<OutputStream> clientResponse)
-        {
-          final long requestTime = System.currentTimeMillis() - start;
-
-          log.debug("Request time: %d", requestTime);
-
-          emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setUser2(DataSourceUtil.getMetricName(theQuery.getDataSource()))
-                  .setUser4(theQuery.getType())
-                  .setUser5(COMMA_JOIN.join(theQuery.getIntervals()))
-                  .setUser6(String.valueOf(theQuery.hasFilters()))
-                  .setUser7(req.getRemoteAddr())
-                  .setUser8(theQueryId)
-                  .setUser9(theQuery.getDuration().toPeriod().toStandardMinutes().toString())
-                  .build("request/time", requestTime)
-          );
-
-          final OutputStream obj = clientResponse.getObj();
-          try {
-            requestLogger.log(
-                new RequestLogLine(
-                    new DateTime(),
-                    req.getRemoteAddr(),
-                    theQuery,
-                    new QueryStats(ImmutableMap.<String, Object>of("request/time", requestTime, "success", true))
-                )
-            );
-
-            resp.flushBuffer();
-            outputStream.close();
-          }
-          catch (Exception e) {
-            throw Throwables.propagate(e);
-          }
-          finally {
-            asyncContext.complete();
-          }
-
-          return ClientResponse.finished(obj);
-        }
-
-        @Override
-        public void exceptionCaught(
-            ClientResponse<OutputStream> clientResponse,
-            Throwable e
-        )
-        {
-          handleException(resp, asyncContext, e);
-        }
-      };
-
-      asyncContext.start(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              routingDruidClient.post(makeUrl(host, req), theQuery, responseHandler);
-            }
-          }
-      );
-
-      asyncContext.dispatch();
-      req.setAttribute(DISPATCHED, true);
+    uri.append(host);
+    uri.append(req.getRequestURI());
+    final String queryString = req.getQueryString();
+    if (queryString != null) {
+      uri.append("?").append(queryString);
     }
-    catch (Exception e) {
-      handleException(resp, ctx, e);
+    return URI.create(uri.toString());
+  }
+
+  private Response.Listener newMetricsEmittingProxyResponseListener(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Query query,
+      long start
+  )
+  {
+    return new MetricsEmittingProxyResponseListener(request, response, query, start);
+  }
+
+
+  private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
+  {
+    private final HttpServletRequest req;
+    private final HttpServletResponse res;
+    private final Query query;
+    private final long start;
+
+    public MetricsEmittingProxyResponseListener(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        Query query,
+        long start
+    )
+    {
+      super(request, response);
+
+      this.req = request;
+      this.res = response;
+      this.query = query;
+      this.start = start;
+    }
+
+    @Override
+    public void onComplete(Result result)
+    {
+      final long requestTime = System.currentTimeMillis() - start;
+      emitter.emit(
+          new ServiceMetricEvent.Builder()
+              .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
+              .setUser3(String.valueOf(query.getContextPriority(0)))
+              .setUser4(query.getType())
+              .setUser5(DataSourceUtil.COMMA_JOIN.join(query.getIntervals()))
+              .setUser6(String.valueOf(query.hasFilters()))
+              .setUser7(req.getRemoteAddr())
+              .setUser8(query.getId())
+              .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
+              .build("request/time", requestTime)
+      );
 
       try {
         requestLogger.log(
@@ -344,50 +278,56 @@ public class AsyncQueryForwardingServlet extends HttpServlet
                 new DateTime(),
                 req.getRemoteAddr(),
                 query,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", e.toString()))
+                new QueryStats(
+                    ImmutableMap.<String, Object>of(
+                        "request/time",
+                        requestTime,
+                        "success",
+                        true
+                    )
+                )
             )
         );
       }
-      catch (Exception e2) {
-        log.error(e2, "Unable to log query [%s]!", query);
+      catch (Exception e) {
+        log.error(e, "Unable to log query [%s]!", query);
       }
 
-      log.makeAlert(e, "Exception handling request")
+      super.onComplete(result);
+    }
+
+    @Override
+    public void onFailure(Response response, Throwable failure)
+    {
+      try {
+        final String errorMessage = failure.getMessage();
+        requestLogger.log(
+            new RequestLogLine(
+                new DateTime(),
+                req.getRemoteAddr(),
+                query,
+                new QueryStats(
+                    ImmutableMap.<String, Object>of(
+                        "success",
+                        false,
+                        "exception",
+                        errorMessage == null ? "no message" : errorMessage
+                    )
+                )
+            )
+        );
+      }
+      catch (IOException logError) {
+        log.error(logError, "Unable to log query [%s]!", query);
+      }
+
+      log.makeAlert(failure, "Exception handling request")
+         .addData("exception", failure.toString())
          .addData("query", query)
          .addData("peer", req.getRemoteAddr())
          .emit();
-    }
-  }
 
-  private String makeUrl(final String host, final HttpServletRequest req)
-  {
-    final String queryString = req.getQueryString();
-    final String requestURI = req.getRequestURI() == null ? "" : req.getRequestURI();
-
-    if (queryString == null) {
-      return String.format("http://%s%s", host, requestURI);
-    }
-    return String.format("http://%s%s?%s", host, requestURI, queryString);
-  }
-
-  private static void handleException(HttpServletResponse resp, AsyncContext ctx, Throwable e)
-  {
-    try {
-      final ServletOutputStream out = resp.getOutputStream();
-      if (!resp.isCommitted()) {
-        resp.setStatus(500);
-        resp.resetBuffer();
-        out.write((e.getMessage() == null) ? "Exception null".getBytes(UTF8) : e.getMessage().getBytes(UTF8));
-        out.write("\n".getBytes(UTF8));
-      }
-
-      if (ctx != null) {
-        ctx.complete();
-      }
-      resp.flushBuffer();
-    }
-    catch (IOException e1) {
-      Throwables.propagate(e1);
+      super.onFailure(response, failure);
     }
   }
 }

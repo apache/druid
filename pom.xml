@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.122-SNAPSHOT</version>
+    <version>0.6.139-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.107-SNAPSHOT</tag>
+        <tag>druid-0.6.131-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
@@ -39,9 +39,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.25.6</metamx.java-util.version>
-        <apache.curator.version>2.4.0</apache.curator.version>
-        <druid.api.version>0.2.3</druid.api.version>
+        <metamx.java-util.version>0.26.6</metamx.java-util.version>
+        <apache.curator.version>2.6.0</apache.curator.version>
+        <druid.api.version>0.2.7</druid.api.version>
     </properties>
 
     <modules>
@@ -59,6 +59,7 @@
         <module>kafka-seven</module>
         <module>kafka-eight</module>
         <module>rabbitmq</module>
+        <module>histogram</module>
     </modules>
 
     <dependencyManagement>
@@ -78,7 +79,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.9.5</version>
+                <version>0.9.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -198,7 +199,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>14.0.1</version>
+                <version>16.0.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -281,6 +282,11 @@
                 <version>1</version>
             </dependency>
             <dependency>
+                <groupId>org.glassfish</groupId>
+                <artifactId>javax.el</artifactId>
+                <version>3.0.0</version>
+            </dependency>
+            <dependency>
                 <groupId>com.jamesmurty.utils</groupId>
                 <artifactId>java-xmlbuilder</artifactId>
                 <version>0.4</version>
@@ -318,17 +324,22 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.1.5.v20140505</version>
+                <version>9.2.2.v20140723</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.1.5.v20140505</version>
+                <version>9.2.2.v20140723</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.1.5.v20140505</version>
+                <version>9.2.2.v20140723</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-proxy</artifactId>
+                <version>9.2.2.v20140723</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -393,7 +404,14 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.0</version>
+                <version>0.9.1</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- exclude artifact not available in maven central -->
+                        <groupId>com.centerkey.utils</groupId>
+                        <artifactId>barebonesbrowserlaunch</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
@@ -549,15 +567,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>2.4.2</version>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.apache.maven.scm</groupId>
-                            <artifactId>maven-scm-provider-gitexe</artifactId>
-                            <!-- This version is necessary for use with git version 1.8.5 and above -->
-                            <version>1.8.1</version>
-                        </dependency>
-                    </dependencies>
+                    <version>2.5</version>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -24,8 +24,9 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
+import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.initialization.DruidModule;
+import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 
 import java.util.List;
 
@@ -37,7 +38,8 @@ public class IndexingServiceFirehoseModule implements DruidModule
     return ImmutableList.<Module>of(
         new SimpleModule("IndexingServiceFirehoseModule")
             .registerSubtypes(
-                new NamedType(EventReceiverFirehoseFactory.class, "receiver")
+                new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
+                new NamedType(IngestSegmentFirehoseFactory.class, "ingestSegment")
             )
     );
   }

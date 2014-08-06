@@ -84,7 +84,8 @@ public class TieredBrokerHostSelectorTest
             return "hotBroker";
           }
         },
-        factory
+        factory,
+        Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy())
     );
     EasyMock.expect(factory.createSelector(EasyMock.<String>anyObject())).andReturn(selector).atLeastOnce();
     EasyMock.replay(factory);
@@ -195,6 +196,30 @@ public class TieredBrokerHostSelectorTest
 
     Assert.assertEquals("coldBroker", brokerName);
   }
+
+  @Test
+    public void testPrioritySelect() throws Exception
+    {
+      String brokerName = (String) brokerSelector.select(
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("test")
+                .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+                .intervals(
+                    new MultipleIntervalSegmentSpec(
+                        Arrays.<Interval>asList(
+                            new Interval("2011-08-31/2011-09-01"),
+                            new Interval("2012-08-31/2012-09-01"),
+                            new Interval("2013-08-31/2013-09-01")
+                        )
+                    )
+                )
+                .context(ImmutableMap.<String, Object>of("priority", -1))
+                .build()
+      ).lhs;
+
+      Assert.assertEquals("hotBroker", brokerName);
+    }
+
 
   private static class TestRuleManager extends CoordinatorRuleManager
   {

@@ -32,6 +32,7 @@ import com.google.common.base.Throwables;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Yielder;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
@@ -104,7 +105,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
             jgen.writeStartArray();
             value.accumulate(
                 null,
-                new Accumulator()
+                new Accumulator<Object, Object>()
                 {
                   @Override
                   public Object accumulate(Object o, Object o1)
@@ -115,11 +116,33 @@ public class DruidDefaultSerializersModule extends SimpleModule
                     catch (IOException e) {
                       throw Throwables.propagate(e);
                     }
-                    return o;
+                    return null;
                   }
                 }
             );
             jgen.writeEndArray();
+          }
+        }
+    );
+    addSerializer(
+        Yielder.class,
+        new JsonSerializer<Yielder>()
+        {
+          @Override
+          public void serialize(Yielder yielder, final JsonGenerator jgen, SerializerProvider provider)
+              throws IOException, JsonProcessingException
+          {
+            try {
+              jgen.writeStartArray();
+              while (!yielder.isDone()) {
+                final Object o = yielder.get();
+                jgen.writeObject(o);
+                yielder = yielder.next(null);
+              }
+              jgen.writeEndArray();
+            } finally {
+              yielder.close();
+            }
           }
         }
     );

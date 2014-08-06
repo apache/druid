@@ -90,7 +90,8 @@ public class HyperLogLogCollectorTest
    * with 100 values, requiring  a floating max as described in
    * http://druid.io/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
    */
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testHighCardinalityRollingFold() throws Exception
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
@@ -130,7 +131,8 @@ public class HyperLogLogCollectorTest
     Assert.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
   }
 
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testHighCardinalityRollingFold2() throws Exception
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
@@ -876,7 +878,8 @@ public class HyperLogLogCollectorTest
   }
 
   // Provides a nice printout of error rates as a function of cardinality
-  @Ignore @Test
+  @Ignore
+  @Test
   public void showErrorRate() throws Exception
   {
     HashFunction fn = Hashing.murmur3_128();

@@ -70,6 +70,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       new TypeReference<Result<SelectResultValue>>()
       {
       };
+
   private final QueryConfig config;
   private final ObjectMapper jsonMapper;
 

@@ -51,7 +51,6 @@ import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +71,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
-  private final Function<Sequence<Row>, Sequence<Row>> orderByLimitFn;
+  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
 
   @JsonCreator
   public GroupByQuery(
@@ -85,8 +84,9 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
-      @JsonProperty("orderBy") LimitSpec orderBySpec,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      // Backwards compatible
+      @JsonProperty("orderBy") LimitSpec orderBySpec
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -110,14 +110,14 @@ public class GroupByQuery extends BaseQuery<Row>
           new Function<Sequence<Row>, Sequence<Row>>()
           {
             @Override
-            public Sequence<Row> apply(@Nullable Sequence<Row> input)
+            public Sequence<Row> apply(Sequence<Row> input)
             {
               return Sequences.filter(
                   input,
                   new Predicate<Row>()
                   {
                     @Override
-                    public boolean apply(@Nullable Row input)
+                    public boolean apply(Row input)
                     {
                       return GroupByQuery.this.havingSpec.eval(input);
                     }
@@ -129,7 +129,7 @@ public class GroupByQuery extends BaseQuery<Row>
       );
     }
 
-    orderByLimitFn = postProcFn;
+    limitFn = postProcFn;
   }
 
   /**
@@ -146,7 +146,7 @@ public class GroupByQuery extends BaseQuery<Row>
       List<PostAggregator> postAggregatorSpecs,
       HavingSpec havingSpec,
       LimitSpec orderBySpec,
-      Function<Sequence<Row>, Sequence<Row>> orderByLimitFn,
+      Function<Sequence<Row>, Sequence<Row>> limitFn,
       Map<String, Object> context
   )
   {
@@ -159,7 +159,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.postAggregatorSpecs = postAggregatorSpecs;
     this.havingSpec = havingSpec;
     this.limitSpec = orderBySpec;
-    this.orderByLimitFn = orderByLimitFn;
+    this.limitFn = limitFn;
   }
 
   @JsonProperty("filter")
@@ -199,7 +199,7 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @JsonProperty
-  public LimitSpec getOrderBy()
+  public LimitSpec getLimitSpec()
   {
     return limitSpec;
   }
@@ -218,7 +218,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
   public Sequence<Row> applyLimit(Sequence<Row> results)
   {
-    return orderByLimitFn.apply(results);
+    return limitFn.apply(results);
   }
 
   @Override
@@ -234,7 +234,7 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs,
         havingSpec,
         limitSpec,
-        orderByLimitFn,
+        limitFn,
         computeOverridenContext(contextOverride)
     );
   }
@@ -252,7 +252,7 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs,
         havingSpec,
         limitSpec,
-        orderByLimitFn,
+        limitFn,
         getContext()
     );
   }
@@ -270,7 +270,7 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs,
         havingSpec,
         limitSpec,
-        orderByLimitFn,
+        limitFn,
         getContext()
     );
   }
@@ -292,11 +292,25 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
 
-    private Builder()
+    public Builder()
     {
     }
 
-    private Builder(Builder builder)
+    public Builder(GroupByQuery query)
+    {
+      dataSource = query.getDataSource();
+      querySegmentSpec = query.getQuerySegmentSpec();
+      limitSpec = query.getLimitSpec();
+      dimFilter = query.getDimFilter();
+      granularity = query.getGranularity();
+      dimensions = query.getDimensions();
+      aggregatorSpecs = query.getAggregatorSpecs();
+      postAggregatorSpecs = query.getPostAggregatorSpecs();
+      havingSpec = query.getHavingSpec();
+      context = query.getContext();
+    }
+
+    public Builder(Builder builder)
     {
       dataSource = builder.dataSource;
       querySegmentSpec = builder.querySegmentSpec;
@@ -490,7 +504,11 @@ public class GroupByQuery extends BaseQuery<Row>
     {
       final LimitSpec theLimitSpec;
       if (limitSpec == null) {
-        theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
+        if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE) {
+          theLimitSpec = new NoopLimitSpec();
+        } else {
+          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
+        }
       } else {
         theLimitSpec = limitSpec;
       }
@@ -504,9 +522,9 @@ public class GroupByQuery extends BaseQuery<Row>
           aggregatorSpecs,
           postAggregatorSpecs,
           havingSpec,
-          null,
           theLimitSpec,
-          context
+          context,
+          null
       );
     }
   }
@@ -515,36 +533,57 @@ public class GroupByQuery extends BaseQuery<Row>
   public String toString()
   {
     return "GroupByQuery{" +
-        "limitSpec=" + limitSpec +
-        ", dimFilter=" + dimFilter +
-        ", granularity=" + granularity +
-        ", dimensions=" + dimensions +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", orderByLimitFn=" + orderByLimitFn +
-        '}';
+           "limitSpec=" + limitSpec +
+           ", dimFilter=" + dimFilter +
+           ", granularity=" + granularity +
+           ", dimensions=" + dimensions +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", limitFn=" + limitFn +
+           '}';
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     GroupByQuery that = (GroupByQuery) o;
 
-    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null)
+    if (aggregatorSpecs != null ? !aggregatorSpecs.equals(that.aggregatorSpecs) : that.aggregatorSpecs != null) {
       return false;
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) return false;
-    if (havingSpec != null ? !havingSpec.equals(that.havingSpec) : that.havingSpec != null) return false;
-    if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) return false;
-    if (orderByLimitFn != null ? !orderByLimitFn.equals(that.orderByLimitFn) : that.orderByLimitFn != null)
+    }
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
       return false;
-    if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null)
+    }
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
       return false;
+    }
+    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
+      return false;
+    }
+    if (havingSpec != null ? !havingSpec.equals(that.havingSpec) : that.havingSpec != null) {
+      return false;
+    }
+    if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) {
+      return false;
+    }
+    if (limitFn != null ? !limitFn.equals(that.limitFn) : that.limitFn != null) {
+      return false;
+    }
+    if (postAggregatorSpecs != null
+        ? !postAggregatorSpecs.equals(that.postAggregatorSpecs)
+        : that.postAggregatorSpecs != null) {
+      return false;
+    }
 
     return true;
   }
@@ -560,7 +599,7 @@ public class GroupByQuery extends BaseQuery<Row>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
-    result = 31 * result + (orderByLimitFn != null ? orderByLimitFn.hashCode() : 0);
+    result = 31 * result + (limitFn != null ? limitFn.hashCode() : 0);
     return result;
   }
 }

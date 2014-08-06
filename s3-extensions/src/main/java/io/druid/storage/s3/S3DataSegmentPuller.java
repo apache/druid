@@ -21,7 +21,6 @@ package io.druid.storage.s3;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
@@ -95,9 +94,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
               try {
                 s3Obj = s3Client.getObject(s3Coords.bucket, s3Coords.path);
 
-                InputStream in = null;
-                try {
-                  in = s3Obj.getDataInputStream();
+                try (InputStream in = s3Obj.getDataInputStream()) {
                   final String key = s3Obj.getKey();
                   if (key.endsWith(".zip")) {
                     CompressionUtils.unzip(in, outDir);
@@ -107,14 +104,16 @@ public class S3DataSegmentPuller implements DataSegmentPuller
                   } else {
                     ByteStreams.copy(in, Files.newOutputStreamSupplier(new File(outDir, toFilename(key, ""))));
                   }
-                  log.info("Pull of file[%s] completed in %,d millis", s3Obj, System.currentTimeMillis() - startTime);
+                  log.info(
+                      "Pull of file[%s/%s] completed in %,d millis",
+                      s3Obj.getBucketName(),
+                      s3Obj.getKey(),
+                      System.currentTimeMillis() - startTime
+                  );
                   return null;
                 }
                 catch (IOException e) {
                   throw new IOException(String.format("Problem decompressing object[%s]", s3Obj), e);
-                }
-                finally {
-                  Closeables.closeQuietly(in);
                 }
               }
               finally {
@@ -127,7 +126,8 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     catch (Exception e) {
       try {
         FileUtils.deleteDirectory(outDir);
-      } catch (IOException ioe) {
+      }
+      catch (IOException ioe) {
         log.warn(
             ioe,
             "Failed to remove output directory for segment[%s] after exception: %s",

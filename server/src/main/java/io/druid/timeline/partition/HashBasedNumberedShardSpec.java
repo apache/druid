@@ -34,18 +34,18 @@ import java.util.List;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
-
   private static final HashFunction hashFunction = Hashing.murmur3_32();
-  @JacksonInject
-  private ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapper;
 
   @JsonCreator
   public HashBasedNumberedShardSpec(
       @JsonProperty("partitionNum") int partitionNum,
-      @JsonProperty("partitions") int partitions
+      @JsonProperty("partitions") int partitions,
+      @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(partitionNum, partitions);
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -74,4 +74,17 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
            '}';
   }
 
+  @Override
+  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  {
+    return new ShardSpecLookup()
+    {
+      @Override
+      public ShardSpec getShardSpec(InputRow row)
+      {
+        int index = Math.abs(hash(row) % getPartitions());
+        return shardSpecs.get(index);
+      }
+    };
+  }
 }

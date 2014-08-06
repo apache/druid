@@ -44,6 +44,7 @@ import io.druid.guice.PolyBind;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
@@ -114,6 +115,7 @@ public class CliOverlord extends ServerRunnable
           public void configure(Binder binder)
           {
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
+            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
 

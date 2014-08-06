@@ -71,7 +71,7 @@ public class DruidCoordinatorBalancerProfiler
 
   public void bigProfiler()
   {
-    Stopwatch watch = new Stopwatch();
+    Stopwatch watch = Stopwatch.createUnstarted();
     int numSegments = 55000;
     int numServers = 50;
     EasyMock.expect(manager.getAllRules()).andReturn(ImmutableMap.<String, List<Rule>>of("test", rules)).anyTimes();
@@ -184,7 +184,7 @@ public class DruidCoordinatorBalancerProfiler
 
   public void profileRun()
   {
-    Stopwatch watch = new Stopwatch();
+    Stopwatch watch = Stopwatch.createUnstarted();
     LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
     LoadQueuePeonTester toPeon = new LoadQueuePeonTester();
 

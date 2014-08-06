@@ -422,11 +422,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
-    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
-        task.getId(),
-        SettableFuture.<TaskStatus>create(),
-        null
-    );
+    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(task.getId(), null);
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
     runPendingTasks();
@@ -585,7 +581,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 
     // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
     // on a worker - this avoids overflowing a worker with tasks
-    Stopwatch timeoutStopwatch = new Stopwatch();
+    Stopwatch timeoutStopwatch = Stopwatch.createUnstarted();
     timeoutStopwatch.start();
     synchronized (statusLock) {
       while (!isWorkerRunningTask(theWorker, task.getId())) {
@@ -663,17 +659,24 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
                       if ((tmp = runningTasks.get(taskId)) != null) {
                         taskRunnerWorkItem = tmp;
                       } else {
-                        log.warn(
-                            "Worker[%s] announced a status for a task I didn't know about, adding to runningTasks: %s",
-                            zkWorker.getWorker().getHost(),
-                            taskId
-                        );
-                        taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
+                        final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
                             taskId,
-                            SettableFuture.<TaskStatus>create(),
                             zkWorker.getWorker()
                         );
-                        runningTasks.put(taskId, taskRunnerWorkItem.withWorker(zkWorker.getWorker()));
+                        final RemoteTaskRunnerWorkItem existingItem = runningTasks.putIfAbsent(
+                            taskId,
+                            newTaskRunnerWorkItem
+                        );
+                        if (existingItem == null) {
+                          log.warn(
+                              "Worker[%s] announced a status for a task I didn't know about, adding to runningTasks: %s",
+                              zkWorker.getWorker().getHost(),
+                              taskId
+                          );
+                          taskRunnerWorkItem = newTaskRunnerWorkItem;
+                        } else {
+                          taskRunnerWorkItem = existingItem;
+                        }
                       }
 
                       if (taskStatus.isComplete()) {
@@ -806,8 +809,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         }
     );
     sortedWorkers.addAll(zkWorkers.values());
-    final String workerSetupDataMinVer = workerSetupData.get() == null ? null : workerSetupData.get().getMinVersion();
-    final String minWorkerVer = workerSetupDataMinVer == null ? config.getMinWorkerVersion() : workerSetupDataMinVer;
+    final String minWorkerVer = config.getMinWorkerVersion();
 
     for (ZkWorker zkWorker : sortedWorkers) {
       if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
@@ -836,7 +838,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       // Worker is done with this task
       zkWorker.setLastCompletedTaskTime(new DateTime());
     } else {
-      log.info("No worker run task[%s] with status[%s]", taskStatus.getId(), taskStatus.getStatusCode());
+      log.info("Workerless task[%s] completed with status[%s]", taskStatus.getId(), taskStatus.getStatusCode());
     }
 
     // Move from running -> complete
@@ -844,9 +846,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     runningTasks.remove(taskStatus.getId());
 
     // Notify interested parties
-    final ListenableFuture<TaskStatus> result = taskRunnerWorkItem.getResult();
-    if (result != null) {
-      ((SettableFuture<TaskStatus>) result).set(taskStatus);
-    }
+    taskRunnerWorkItem.setResult(taskStatus);
   }
 }

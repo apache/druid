@@ -19,8 +19,8 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
+import com.metamx.common.guava.CloseQuietly;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -47,7 +47,7 @@ public class CompressedLongsIndexedSupplierTest
   @Before
   public void setUp() throws Exception
   {
-    Closeables.closeQuietly(indexed);
+    CloseQuietly.close(indexed);
     indexed = null;
     supplier = null;
     vals = null;
@@ -56,7 +56,7 @@ public class CompressedLongsIndexedSupplierTest
   @After
   public void tearDown() throws Exception
   {
-    Closeables.closeQuietly(indexed);
+    CloseQuietly.close(indexed);
   }
 
   private void setupSimple()
@@ -247,7 +247,7 @@ public class CompressedLongsIndexedSupplierTest
       stopLatch.await();
     }
     finally {
-      Closeables.closeQuietly(indexed2);
+      CloseQuietly.close(indexed2);
     }
 
     if (failureHappened.get()) {

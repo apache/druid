@@ -19,14 +19,15 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.Closeables;
 import com.metamx.common.Granularity;
-import com.metamx.common.exception.FormattedException;
+import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -43,9 +44,10 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentConfig;
@@ -353,7 +355,7 @@ public class RealtimeIndexTask extends AbstractTask
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
         }
-        catch (FormattedException e) {
+        catch (ParseException e) {
           log.warn(e, "unparseable line");
           fireDepartment.getMetrics().incrementUnparseable();
         }
@@ -375,7 +377,7 @@ public class RealtimeIndexTask extends AbstractTask
           log.makeAlert(e, "Failed to finish realtime task").emit();
         }
         finally {
-          Closeables.closeQuietly(firehose);
+          CloseQuietly.close(firehose);
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }

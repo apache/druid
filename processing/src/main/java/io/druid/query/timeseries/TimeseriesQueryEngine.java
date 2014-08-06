@@ -26,7 +26,6 @@ import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
@@ -46,43 +45,43 @@ public class TimeseriesQueryEngine
     }
 
     return QueryRunnerHelper.makeCursorBasedQuery(
-                adapter,
-                query.getQuerySegmentSpec().getIntervals(),
-                Filters.convertDimensionFilters(query.getDimensionsFilter()),
-                query.getGranularity(),
-                new Function<Cursor, Result<TimeseriesResultValue>>()
-                {
-                  private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-                  private final List<PostAggregator> postAggregatorSpecs = query.getPostAggregatorSpecs();
+        adapter,
+        query.getQuerySegmentSpec().getIntervals(),
+        Filters.convertDimensionFilters(query.getDimensionsFilter()),
+        query.getGranularity(),
+        new Function<Cursor, Result<TimeseriesResultValue>>()
+        {
+          private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
 
-                  @Override
-                  public Result<TimeseriesResultValue> apply(Cursor cursor)
-                  {
-                    Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
-
-                    while (!cursor.isDone()) {
-                      for (Aggregator aggregator : aggregators) {
-                        aggregator.aggregate();
-                      }
-                      cursor.advance();
-                    }
-
-                    TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
-
-                    for (Aggregator aggregator : aggregators) {
-                      bob.addMetric(aggregator);
-                    }
-
-                    Result<TimeseriesResultValue> retVal = bob.build();
-
-                    // cleanup
-                    for (Aggregator agg : aggregators) {
-                      agg.close();
-                    }
-
-                    return retVal;
-                  }
+          @Override
+          public Result<TimeseriesResultValue> apply(Cursor cursor)
+          {
+            Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
+            try {
+              while (!cursor.isDone()) {
+                for (Aggregator aggregator : aggregators) {
+                  aggregator.aggregate();
                 }
+                cursor.advance();
+              }
+
+              TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
+
+              for (Aggregator aggregator : aggregators) {
+                bob.addMetric(aggregator);
+              }
+
+              Result<TimeseriesResultValue> retVal = bob.build();
+              return retVal;
+            }
+            finally {
+              // cleanup
+              for (Aggregator agg : aggregators) {
+                agg.close();
+              }
+            }
+          }
+        }
     );
   }
 }

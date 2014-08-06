@@ -24,6 +24,7 @@ import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.segment.Segment;
@@ -35,13 +36,16 @@ import java.util.concurrent.ExecutorService;
 public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
 {
   private final SearchQueryQueryToolChest toolChest;
+  private final QueryWatcher queryWatcher;
 
   @Inject
   public SearchQueryRunnerFactory(
-      SearchQueryQueryToolChest toolChest
+      SearchQueryQueryToolChest toolChest,
+      QueryWatcher queryWatcher
   )
   {
     this.toolChest = toolChest;
+    this.queryWatcher = queryWatcher;
   }
 
   @Override
@@ -56,7 +60,7 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   )
   {
     return new ChainedExecutionQueryRunner<Result<SearchResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryRunners
+        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
     );
   }
 

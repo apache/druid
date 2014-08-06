@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.Yielders;
@@ -70,7 +71,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       return yielder.get();
     }
     finally {
-      Closeables.closeQuietly(yielder);
+      CloseQuietly.close(yielder);
     }
   }
 

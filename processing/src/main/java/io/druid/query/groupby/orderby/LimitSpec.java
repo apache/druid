@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import io.druid.data.input.Row;
+import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -38,5 +39,13 @@ import java.util.List;
 })
 public interface LimitSpec
 {
-  public Function<Sequence<Row>, Sequence<Row>> build(List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs);
+  public Function<Sequence<Row>, Sequence<Row>> build(
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggs,
+      List<PostAggregator> postAggs
+  );
+
+  public LimitSpec merge(LimitSpec other);
+
+  public byte[] getCacheKey();
 }

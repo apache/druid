@@ -21,8 +21,8 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
 import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import io.druid.server.RequestLogLine;
@@ -83,7 +83,7 @@ public class FileRequestLogger implements RequestLogger
 
               try {
                 synchronized (lock) {
-                  Closeables.closeQuietly(fileWriter);
+                  CloseQuietly.close(fileWriter);
                   fileWriter = new FileWriter(new File(baseDir, currentDay.toString()), true);
                 }
               }
@@ -105,12 +105,12 @@ public class FileRequestLogger implements RequestLogger
   public void stop()
   {
     synchronized (lock) {
-      Closeables.closeQuietly(fileWriter);
+      CloseQuietly.close(fileWriter);
     }
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws Exception
+  public void log(RequestLogLine requestLogLine) throws IOException
   {
     synchronized (lock) {
       fileWriter.write(

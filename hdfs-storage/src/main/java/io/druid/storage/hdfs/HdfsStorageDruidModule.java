@@ -27,6 +27,8 @@ import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
+import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
+import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
@@ -55,6 +57,7 @@ public class HdfsStorageDruidModule implements DruidModule
   {
     Binders.dataSegmentPullerBinder(binder).addBinding("hdfs").to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding("hdfs").to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder).addBinding("hdfs").to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
     if (props != null) {
@@ -67,5 +70,9 @@ public class HdfsStorageDruidModule implements DruidModule
 
     binder.bind(Configuration.class).toInstance(conf);
     JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
+
+    Binders.taskLogsBinder(binder).addBinding("hdfs").to(HdfsTaskLogs.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.logs", HdfsTaskLogsConfig.class);
+    binder.bind(HdfsTaskLogs.class).in(LazySingleton.class);
   }
 }

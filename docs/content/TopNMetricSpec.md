@@ -60,3 +60,19 @@ See [http://www.davekoelle.com/alphanum.html](http://www.davekoelle.com/alphanum
 |--------|-----------|---------|
 |type|this indicates an alpha-numeric sort|yes|
 |previousStop|the starting point of the alpha-numeric sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
+
+## Inverted TopNMetricSpec
+
+Sort dimension values in inverted order, i.e inverts the order of the delegate metric spec. It can be used to sort the values in descending order.
+
+```json
+"metric": {
+    "type": "inverted",
+    "metric": <delegate_top_n_metric_spec>
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|this indicates an inverted sort|yes|
+|metric|the delegate metric spec. |yes|

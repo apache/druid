@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.122-SNAPSHOT</version>
+        <version>0.6.139-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -56,6 +56,10 @@
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.el</artifactId>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -98,6 +102,10 @@
             <artifactId>jetty-server</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-proxy</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
         </dependency>
@@ -130,12 +138,12 @@
             <artifactId>jetty-servlets</artifactId>
         </dependency>
         <dependency>
-          <groupId>com.ircclouds.irc</groupId>
-          <artifactId>irc-api</artifactId>
+            <groupId>com.ircclouds.irc</groupId>
+            <artifactId>irc-api</artifactId>
         </dependency>
         <dependency>
-          <groupId>com.maxmind.geoip2</groupId>
-          <artifactId>geoip2</artifactId>
+            <groupId>com.maxmind.geoip2</groupId>
+            <artifactId>geoip2</artifactId>
         </dependency>
 
         <!-- Tests -->

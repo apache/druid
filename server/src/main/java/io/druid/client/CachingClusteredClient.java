@@ -127,9 +127,12 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final boolean useCache = query.getContextUseCache(true)
                              && strategy != null
-                             && cacheConfig.isUseCache();
+                             && cacheConfig.isUseCache()
+                             && cacheConfig.isQueryCacheable(query);
     final boolean populateCache = query.getContextPopulateCache(true)
-                                  && strategy != null && cacheConfig.isPopulateCache();
+                                  && strategy != null
+                                  && cacheConfig.isPopulateCache()
+                                  && cacheConfig.isQueryCacheable(query);
     final boolean isBySegment = query.getContextBySegment(false);
 
 
@@ -228,7 +231,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
 
       if (queryableDruidServer == null) {
-        log.error("No servers found for %s?! How can this be?!", segment.rhs);
+        log.makeAlert("No servers found for %s?! How can this be?!", segment.rhs).emit();
       } else {
         final DruidServer server = queryableDruidServer.getServer();
         List<SegmentDescriptor> descriptors = serverSegments.get(server);

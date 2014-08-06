@@ -29,6 +29,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -37,14 +38,19 @@ import java.util.Map;
  */
 public class OrderByColumnSpec
 {
+  public static enum Direction
+  {
+    ASCENDING,
+    DESCENDING
+  }
+
   /**
    * Maintain a map of the enum values so that we can just do a lookup and get a null if it doesn't exist instead
    * of an exception thrown.
    */
   private static final Map<String, Direction> stupidEnumMap;
 
-  static
-  {
+  static {
     final ImmutableMap.Builder<String, Direction> bob = ImmutableMap.builder();
     for (Direction direction : Direction.values()) {
       bob.put(direction.toString(), direction);
@@ -62,16 +68,14 @@ public class OrderByColumnSpec
 
     if (obj instanceof String) {
       return new OrderByColumnSpec(obj.toString(), null);
-    }
-    else if (obj instanceof Map) {
+    } else if (obj instanceof Map) {
       final Map map = (Map) obj;
 
       final String dimension = map.get("dimension").toString();
       final Direction direction = determineDirection(map.get("direction"));
 
       return new OrderByColumnSpec(dimension, direction);
-    }
-    else {
+    } else {
       throw new ISE("Cannot build an OrderByColumnSpec from a %s", obj.getClass());
     }
   }
@@ -176,9 +180,14 @@ public class OrderByColumnSpec
            '}';
   }
 
-  public static enum Direction
+  public byte[] getCacheKey()
   {
-    ASCENDING,
-    DESCENDING
+    final byte[] dimensionBytes = dimension.getBytes();
+    final byte[] directionBytes = direction.name().getBytes();
+
+    return ByteBuffer.allocate(dimensionBytes.length + dimensionBytes.length)
+                     .put(dimensionBytes)
+                     .put(directionBytes)
+                     .array();
   }
 }
