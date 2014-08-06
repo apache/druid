@@ -42,6 +42,8 @@ import java.util.Map;
 */
 public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrategy<ResourceHolder<T>>
 {
+  public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
+
   public static enum CompressionStrategy {
     LZF ((byte)0x0)
         {

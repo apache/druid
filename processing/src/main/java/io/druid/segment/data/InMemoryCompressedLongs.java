@@ -38,7 +38,7 @@ import java.util.List;
  */
 public class InMemoryCompressedLongs implements IndexedLongs
 {
-  public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.CompressionStrategy.LZ4;
+  public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
   private final CompressedLongBufferObjectStrategy strategy;
   private final int sizePer;
 

@@ -37,7 +37,7 @@ import java.util.List;
  */
 public class InMemoryCompressedFloats implements IndexedFloats
 {
-  public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.CompressionStrategy.LZ4;
+  public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
   private final CompressedFloatBufferObjectStrategy strategy;
   private final int sizePer;
 

@@ -596,7 +596,7 @@ public class IndexMerger
 
     CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
         ioPeon, "little_end_time", IndexIO.BYTE_ORDER,
-        CompressedObjectStrategy.CompressionStrategy.LZ4 // TODO define this somewhere else
+        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
     );
 
     timeWriter.open();

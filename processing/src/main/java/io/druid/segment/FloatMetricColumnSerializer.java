@@ -53,7 +53,7 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   {
     writer = CompressedFloatsSupplierSerializer.create(
         ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER,
-        CompressedObjectStrategy.CompressionStrategy.LZ4 // TODO define this somewhere else
+        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
     );
 
     writer.open();

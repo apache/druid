@@ -25,6 +25,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,10 +38,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- */
-public class CompressedFloatsIndexedSupplierTest
+@RunWith(Parameterized.class)
+public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 {
+  public CompressedFloatsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  {
+    super(compressionStrategy);
+  }
+
   private IndexedFloats indexed;
   private CompressedFloatsIndexedSupplier supplier;
   private float[] vals;
@@ -69,7 +75,7 @@ public class CompressedFloatsIndexedSupplierTest
         FloatBuffer.wrap(vals),
         5,
         ByteOrder.nativeOrder(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4
+        compressionStrategy
     );
 
     indexed = supplier.get();
@@ -83,7 +89,7 @@ public class CompressedFloatsIndexedSupplierTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedFloatsIndexedSupplier theSupplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
-        FloatBuffer.wrap(vals), 5, ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
+        FloatBuffer.wrap(vals), 5, ByteOrder.nativeOrder(), compressionStrategy
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
