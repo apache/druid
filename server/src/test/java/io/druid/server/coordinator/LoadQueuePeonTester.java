@@ -29,7 +29,7 @@ public class LoadQueuePeonTester extends LoadQueuePeon
 
   public LoadQueuePeonTester()
   {
-    super(null, null, null, null, null);
+    super(null, null, null, null, null, null);
   }
 
   @Override

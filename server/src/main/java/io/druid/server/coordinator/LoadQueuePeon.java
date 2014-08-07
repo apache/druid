@@ -45,6 +45,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +74,7 @@ public class LoadQueuePeon
   private final String basePath;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService zkWritingExecutor;
+  private final ExecutorService callBackExecutor;
   private final DruidCoordinatorConfig config;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
@@ -94,12 +96,14 @@ public class LoadQueuePeon
       String basePath,
       ObjectMapper jsonMapper,
       ScheduledExecutorService zkWritingExecutor,
+      ExecutorService callbackExecutor,
       DruidCoordinatorConfig config
   )
   {
     this.curator = curator;
     this.basePath = basePath;
     this.jsonMapper = jsonMapper;
+    this.callBackExecutor = callbackExecutor;
     this.zkWritingExecutor = zkWritingExecutor;
     this.config = config;
   }
@@ -333,8 +337,18 @@ public class LoadQueuePeon
         default:
           throw new UnsupportedOperationException();
       }
-      currentlyProcessing.executeCallbacks();
-      currentlyProcessing = null;
+      
+      callBackExecutor.execute(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              currentlyProcessing.executeCallbacks();
+              currentlyProcessing = null;
+            }
+          }
+      );
     }
   }
 

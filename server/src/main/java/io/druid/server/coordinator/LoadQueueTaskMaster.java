@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -33,6 +34,7 @@ public class LoadQueueTaskMaster
   private final CuratorFramework curator;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService peonExec;
+  private final ExecutorService callbackExec;
   private final DruidCoordinatorConfig config;
 
   @Inject
@@ -40,17 +42,19 @@ public class LoadQueueTaskMaster
       CuratorFramework curator,
       ObjectMapper jsonMapper,
       ScheduledExecutorService peonExec,
+      ExecutorService callbackExec,
       DruidCoordinatorConfig config
   )
   {
     this.curator = curator;
     this.jsonMapper = jsonMapper;
     this.peonExec = peonExec;
+    this.callbackExec = callbackExec;
     this.config = config;
   }
 
   public LoadQueuePeon giveMePeon(String basePath)
   {
-    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec, config);
+    return new LoadQueuePeon(curator, basePath, jsonMapper, peonExec, callbackExec, config);
   }
 }
