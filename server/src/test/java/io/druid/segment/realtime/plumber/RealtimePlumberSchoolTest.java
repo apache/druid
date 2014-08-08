@@ -149,6 +149,7 @@ public class RealtimePlumberSchoolTest
         Granularity.HOUR,
         new IntervalStartVersioningPolicy(),
         new NoopRejectionPolicyFactory(),
+        null,
         0
     );
 

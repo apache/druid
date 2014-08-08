@@ -65,7 +65,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
@@ -81,6 +82,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         basePersistDirectory,
         segmentGranularity,
         versioningPolicy,
+        rejectionPolicy,
         rejectionPolicyFactory,
         maxPendingPersists
     );
