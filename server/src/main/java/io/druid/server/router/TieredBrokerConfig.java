@@ -60,7 +60,7 @@ public class TieredBrokerConfig
   @NotNull
   private List<TieredBrokerSelectorStrategy> strategies = Arrays.asList(
       new TimeBoundaryTieredBrokerSelectorStrategy(),
-      new PriorityTieredBrokerSelectorStrategy(1, 1)
+      new PriorityTieredBrokerSelectorStrategy(0, 1)
   );
 
   // tier, <bard, numThreads>
