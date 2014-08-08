@@ -19,8 +19,6 @@
 
 package io.druid.server.router;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Lists;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
@@ -35,16 +33,10 @@ public class TieredBrokerSelectorStrategiesProvider implements Provider<List<Tie
   private final List<TieredBrokerSelectorStrategy> strategies = Lists.newArrayList();
 
   @Inject
-  public TieredBrokerSelectorStrategiesProvider(ObjectMapper jsonMapper, TieredBrokerConfig config)
+  public TieredBrokerSelectorStrategiesProvider(TieredBrokerConfig config)
   {
     try {
-      this.strategies.addAll(
-          (List<TieredBrokerSelectorStrategy>) jsonMapper.readValue(
-              config.getStrategies(), new TypeReference<List<TieredBrokerSelectorStrategy>>()
-          {
-          }
-          )
-      );
+      this.strategies.addAll(config.getStrategies());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

@@ -22,7 +22,6 @@ package io.druid.server.router;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.Pair;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.DruidServer;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
@@ -30,11 +29,9 @@ import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.query.Druids;
-import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
-import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import junit.framework.Assert;
@@ -85,7 +82,7 @@ public class TieredBrokerHostSelectorTest
           }
         },
         factory,
-        Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy())
+        Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy(0, 1))
     );
     EasyMock.expect(factory.createSelector(EasyMock.<String>anyObject())).andReturn(selector).atLeastOnce();
     EasyMock.replay(factory);
@@ -198,28 +195,50 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-    public void testPrioritySelect() throws Exception
-    {
-      String brokerName = (String) brokerSelector.select(
-          Druids.newTimeseriesQueryBuilder()
-                .dataSource("test")
-                .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
-                .intervals(
-                    new MultipleIntervalSegmentSpec(
-                        Arrays.<Interval>asList(
-                            new Interval("2011-08-31/2011-09-01"),
-                            new Interval("2012-08-31/2012-09-01"),
-                            new Interval("2013-08-31/2013-09-01")
-                        )
-                    )
-                )
-                .context(ImmutableMap.<String, Object>of("priority", -1))
-                .build()
-      ).lhs;
+  public void testPrioritySelect() throws Exception
+  {
+    String brokerName = (String) brokerSelector.select(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .intervals(
+                  new MultipleIntervalSegmentSpec(
+                      Arrays.<Interval>asList(
+                          new Interval("2011-08-31/2011-09-01"),
+                          new Interval("2012-08-31/2012-09-01"),
+                          new Interval("2013-08-31/2013-09-01")
+                      )
+                  )
+              )
+              .context(ImmutableMap.<String, Object>of("priority", -1))
+              .build()
+    ).lhs;
 
-      Assert.assertEquals("hotBroker", brokerName);
-    }
+    Assert.assertEquals("coldBroker", brokerName);
+  }
 
+  @Test
+  public void testPrioritySelect2() throws Exception
+  {
+    String brokerName = (String) brokerSelector.select(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .intervals(
+                  new MultipleIntervalSegmentSpec(
+                      Arrays.<Interval>asList(
+                          new Interval("2011-08-31/2011-09-01"),
+                          new Interval("2012-08-31/2012-09-01"),
+                          new Interval("2013-08-31/2013-09-01")
+                      )
+                  )
+              )
+              .context(ImmutableMap.<String, Object>of("priority", 5))
+              .build()
+    ).lhs;
+
+    Assert.assertEquals("hotBroker", brokerName);
+  }
 
   private static class TestRuleManager extends CoordinatorRuleManager
   {
