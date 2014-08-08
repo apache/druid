@@ -21,6 +21,7 @@ package io.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
@@ -38,13 +39,16 @@ import java.util.TreeSet;
 public class ArbitraryGranularitySpec implements GranularitySpec
 {
   private final TreeSet<Interval> intervals;
+  private final QueryGranularity queryGranularity;
 
   @JsonCreator
   public ArbitraryGranularitySpec(
+      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
       @JsonProperty("intervals") List<Interval> inputIntervals
   )
   {
-    intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    this.queryGranularity = queryGranularity;
+    this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
 
     // Insert all intervals
     for (final Interval inputInterval : inputIntervals) {
@@ -98,14 +102,18 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
+  @JsonProperty("queryGranularity")
   public QueryGranularity getQueryGranularity()
   {
-    throw new UnsupportedOperationException();
+    return queryGranularity;
   }
 
   @Override
   public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
   {
-    throw new UnsupportedOperationException();
+    return new ArbitraryGranularitySpec(
+        queryGranularity,
+        Lists.newArrayList(intervals)
+    );
   }
 }
