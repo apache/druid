@@ -19,8 +19,6 @@
 
 package io.druid.server.router;
 
-import com.google.api.client.util.Lists;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -30,17 +28,12 @@ import java.util.List;
  */
 public class TieredBrokerSelectorStrategiesProvider implements Provider<List<TieredBrokerSelectorStrategy>>
 {
-  private final List<TieredBrokerSelectorStrategy> strategies = Lists.newArrayList();
+  private final List<TieredBrokerSelectorStrategy> strategies;
 
   @Inject
   public TieredBrokerSelectorStrategiesProvider(TieredBrokerConfig config)
   {
-    try {
-      this.strategies.addAll(config.getStrategies());
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    this.strategies = config.getStrategies();
   }
 
   @Override
