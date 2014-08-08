@@ -82,7 +82,7 @@ public class TieredBrokerHostSelectorTest
           }
         },
         factory,
-        Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy(1, 1))
+        Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy(0, 1))
     );
     EasyMock.expect(factory.createSelector(EasyMock.<String>anyObject())).andReturn(selector).atLeastOnce();
     EasyMock.replay(factory);
