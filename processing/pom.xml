@@ -82,6 +82,10 @@
             <groupId>com.davekoelle</groupId>
             <artifactId>alphanum</artifactId>
         </dependency>
+        <dependency>
+          <groupId>net.jpountz.lz4</groupId>
+          <artifactId>lz4</artifactId>
+        </dependency>
 
 
         <!-- Tests -->
