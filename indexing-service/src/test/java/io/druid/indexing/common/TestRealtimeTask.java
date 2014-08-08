@@ -54,6 +54,7 @@ public class TestRealtimeTask extends RealtimeIndexTask
         null,
         1,
         null,
+        null,
         null
     );
     this.status = status;

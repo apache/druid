@@ -61,6 +61,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 
 /**
  */
@@ -128,10 +129,16 @@ public class CliCoordinator extends ServerRunnable
           @Provides
           @LazySingleton
           public LoadQueueTaskMaster getLoadQueueTaskMaster(
-              CuratorFramework curator, ObjectMapper jsonMapper, ScheduledExecutorFactory factory, DruidCoordinatorConfig config
+              CuratorFramework curator,
+              ObjectMapper jsonMapper,
+              ScheduledExecutorFactory factory,
+              DruidCoordinatorConfig config
           )
           {
-            return new LoadQueueTaskMaster(curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"), config);
+            return new LoadQueueTaskMaster(
+                curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"),
+                Executors.newSingleThreadExecutor(), config
+            );
           }
         }
     );

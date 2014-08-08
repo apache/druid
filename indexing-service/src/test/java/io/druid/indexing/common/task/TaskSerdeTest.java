@@ -207,6 +207,7 @@ public class TaskSerdeTest
         new Period("PT10M"),
         1,
         Granularity.HOUR,
+        null,
         null
     );
 

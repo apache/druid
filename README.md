@@ -17,4 +17,6 @@ We host documentation on our [website](http://druid.io/docs/latest/). If you wan
 We have a series of tutorials to get started with Druid, starting with this [one](http://druid.io/docs/latest/Tutorial:-A-First-Look-at-Druid.html).
 
 ### Support
-Contact us through our [forum](https://groups.google.com/forum/#!forum/druid-development) or on IRC in #druid-dev on irc.freenode.net.
+Report any bugs using [GitHub issues](https://github.com/metamx/druid/issues).
+
+Contact us through our [forum](https://groups.google.com/forum/#!forum/druid-development) or on IRC in `#druid-dev` on `irc.freenode.net`.

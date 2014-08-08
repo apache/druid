@@ -185,7 +185,7 @@ public class OrderByColumnSpec
     final byte[] dimensionBytes = dimension.getBytes();
     final byte[] directionBytes = direction.name().getBytes();
 
-    return ByteBuffer.allocate(dimensionBytes.length + dimensionBytes.length)
+    return ByteBuffer.allocate(dimensionBytes.length + directionBytes.length)
                      .put(dimensionBytes)
                      .put(directionBytes)
                      .array();
