@@ -20,6 +20,7 @@
 package io.druid.server.router;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.DruidServer;
 import org.joda.time.Period;
@@ -100,6 +101,6 @@ public class TieredBrokerConfig
 
   public List<TieredBrokerSelectorStrategy> getStrategies()
   {
-    return strategies;
+    return ImmutableList.copyOf(strategies);
   }
 }
