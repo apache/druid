@@ -38,8 +38,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
-public class CompressedLongsIndexedSupplierTest
+public class CompressedLongsIndexedSupplierTest extends CompressionStrategyTest
 {
+  public CompressedLongsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  {
+    super(compressionStrategy);
+  }
+
   private IndexedLongs indexed;
   private CompressedLongsIndexedSupplier supplier;
   private long[] vals;
@@ -66,7 +71,8 @@ public class CompressedLongsIndexedSupplierTest
     supplier = CompressedLongsIndexedSupplier.fromLongBuffer(
         LongBuffer.wrap(vals),
         5,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        compressionStrategy
     );
 
     indexed = supplier.get();
@@ -78,7 +84,7 @@ public class CompressedLongsIndexedSupplierTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedLongsIndexedSupplier theSupplier = CompressedLongsIndexedSupplier.fromLongBuffer(
-        LongBuffer.wrap(vals), 5, ByteOrder.nativeOrder()
+        LongBuffer.wrap(vals), 5, ByteOrder.nativeOrder(), compressionStrategy
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
