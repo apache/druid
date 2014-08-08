@@ -174,7 +174,7 @@ public class LoadQueuePeon
     synchronized (lock) {
       if (segmentsToLoad.contains(holder)) {
         if ((callback != null)) {
-          currentlyProcessing.addCallback(callback);
+          holder.addCallback(callback);
         }
         return;
       }
@@ -206,7 +206,7 @@ public class LoadQueuePeon
     synchronized (lock) {
       if (segmentsToDrop.contains(holder)) {
         if (callback != null) {
-          currentlyProcessing.addCallback(callback);
+          holder.addCallback(callback);
         }
         return;
       }
