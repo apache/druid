@@ -295,11 +295,11 @@ public class LoadQueuePeon
     if (currentlyProcessing != null) {
       switch (currentlyProcessing.getType()) {
         case LOAD:
-          segmentsToLoad.remove(currentlyProcessing);
+          segmentsToLoad.remove(currentlyProcessing.getSegment());
           queuedSize.addAndGet(-currentlyProcessing.getSegmentSize());
           break;
         case DROP:
-          segmentsToDrop.remove(currentlyProcessing);
+          segmentsToDrop.remove(currentlyProcessing.getSegment());
           break;
         default:
           throw new UnsupportedOperationException();

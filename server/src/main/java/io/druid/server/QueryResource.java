@@ -178,7 +178,13 @@ public class QueryResource
         emitter.emit(
             new ServiceMetricEvent.Builder()
                 .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-                .setUser3(String.valueOf(query.getContextPriority(0)))
+                .setUser3(
+                    jsonMapper.writeValueAsString(
+                        query.getContext() == null
+                        ? ImmutableMap.of()
+                        : query.getContext()
+                    )
+                )
                 .setUser4(query.getType())
                 .setUser5(COMMA_JOIN.join(query.getIntervals()))
                 .setUser6(String.valueOf(query.hasFilters()))
