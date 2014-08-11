@@ -74,7 +74,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.11</version>
+                <version>0.2.12</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
