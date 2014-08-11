@@ -259,20 +259,26 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     public void onComplete(Result result)
     {
       final long requestTime = System.currentTimeMillis() - start;
-      emitter.emit(
-          new ServiceMetricEvent.Builder()
-              .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-              .setUser3(String.valueOf(query.getContextPriority(0)))
-              .setUser4(query.getType())
-              .setUser5(DataSourceUtil.COMMA_JOIN.join(query.getIntervals()))
-              .setUser6(String.valueOf(query.hasFilters()))
-              .setUser7(req.getRemoteAddr())
-              .setUser8(query.getId())
-              .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
-              .build("request/time", requestTime)
-      );
-
       try {
+        emitter.emit(
+            new ServiceMetricEvent.Builder()
+                .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
+                .setUser3(
+                    jsonMapper.writeValueAsString(
+                        query.getContext() == null
+                        ? ImmutableMap.of()
+                        : query.getContext()
+                    )
+                )
+                .setUser4(query.getType())
+                .setUser5(DataSourceUtil.COMMA_JOIN.join(query.getIntervals()))
+                .setUser6(String.valueOf(query.hasFilters()))
+                .setUser7(req.getRemoteAddr())
+                .setUser8(query.getId())
+                .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
+                .build("request/time", requestTime)
+        );
+
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -38,7 +39,9 @@ public class ArbitraryGranularityTest
   @Test
   public void testSimple()
   {
-    final GranularitySpec spec = new ArbitraryGranularitySpec(Lists.newArrayList(
+    final GranularitySpec spec = new ArbitraryGranularitySpec(
+        QueryGranularity.NONE,
+        Lists.newArrayList(
         new Interval("2012-01-08T00Z/2012-01-11T00Z"),
         new Interval("2012-02-01T00Z/2012-03-01T00Z"),
         new Interval("2012-01-07T00Z/2012-01-08T00Z"),
@@ -111,7 +114,7 @@ public class ArbitraryGranularityTest
 
     boolean thrown = false;
     try {
-      final GranularitySpec spec = new ArbitraryGranularitySpec(intervals);
+      final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularity.NONE, intervals);
     } catch(IllegalArgumentException e) {
       thrown = true;
     }
@@ -129,7 +132,7 @@ public class ArbitraryGranularityTest
 
     boolean thrown = false;
     try {
-      final GranularitySpec spec = new ArbitraryGranularitySpec(intervals);
+      final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularity.NONE, intervals);
     } catch(IllegalArgumentException e) {
       thrown = true;
     }
@@ -140,7 +143,7 @@ public class ArbitraryGranularityTest
   @Test
   public void testJson()
   {
-    final GranularitySpec spec = new ArbitraryGranularitySpec(Lists.newArrayList(
+    final GranularitySpec spec = new ArbitraryGranularitySpec(QueryGranularity.NONE, Lists.newArrayList(
         new Interval("2012-01-08T00Z/2012-01-11T00Z"),
         new Interval("2012-02-01T00Z/2012-03-01T00Z"),
         new Interval("2012-01-07T00Z/2012-01-08T00Z"),
