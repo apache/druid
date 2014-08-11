@@ -92,14 +92,14 @@ public class ColumnDescriptor
     }
   }
 
-  public Column read(ByteBuffer buffer)
+  public Column read(ByteBuffer buffer, ColumnConfig columnConfig)
   {
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)
         .setHasMultipleValues(hasMultipleValues);
 
     for (ColumnPartSerde part : parts) {
-      part.read(buffer, builder);
+      part.read(buffer, builder, columnConfig);
     }
 
     return builder.build();

@@ -101,7 +101,12 @@ public class ClientInfoResource
       @QueryParam("interval") String interval
   )
   {
-    List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
+    final List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
+    final Set<String> dims = Sets.newHashSet();
+
+    if (segments == null || segments.isEmpty()) {
+      return dims;
+    }
 
     Interval theInterval;
     if (interval == null || interval.isEmpty()) {
@@ -111,7 +116,6 @@ public class ClientInfoResource
       theInterval = new Interval(interval);
     }
 
-    Set<String> dims = Sets.newHashSet();
     for (DataSegment segment : segments) {
       if (theInterval.overlaps(segment.getInterval())) {
         dims.addAll(segment.getDimensions());
@@ -129,8 +133,13 @@ public class ClientInfoResource
       @QueryParam("interval") String interval
   )
   {
-    List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
+    final List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
+    final Set<String> metrics = Sets.newHashSet();
 
+    if (segments == null || segments.isEmpty()) {
+      return metrics;
+    }
+    
     Interval theInterval;
     if (interval == null || interval.isEmpty()) {
       DateTime now = new DateTime();
@@ -139,7 +148,6 @@ public class ClientInfoResource
       theInterval = new Interval(interval);
     }
 
-    Set<String> metrics = Sets.newHashSet();
     for (DataSegment segment : segments) {
       if (theInterval.overlaps(segment.getInterval())) {
         metrics.addAll(segment.getMetrics());

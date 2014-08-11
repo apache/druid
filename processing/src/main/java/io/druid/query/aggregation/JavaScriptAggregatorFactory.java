@@ -32,12 +32,16 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -137,8 +141,28 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Lists.transform(
+        fieldNames,
+        new com.google.common.base.Function<String, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(String input)
+          {
+            return new JavaScriptAggregatorFactory(input, fieldNames, fnAggregate, fnReset, fnCombine);
+          }
+        }
+    );
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
+    // handle "NaN" / "Infinity" values serialized as strings in JSON
+    if (object instanceof String) {
+      return Double.parseDouble((String) object);
+    }
     return object;
   }
 
@@ -259,15 +283,31 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         Context cx = Context.getCurrentContext();
         if (cx == null) {
           cx = contextFactory.enterContext();
+
+          // Disable primitive wrapping- we want Java strings and primitives to behave like JS entities.
+          cx.getWrapFactory().setJavaPrimitiveWrap(false);
         }
 
         final int size = selectorList.length;
         final Object[] args = new Object[size + 1];
 
         args[0] = current;
-        int i = 0;
-        while (i < size) {
-          args[i + 1] = selectorList[i++].get();
+        for (int i = 0 ; i < size ; i++) {
+          final ObjectColumnSelector selector = selectorList[i];
+          if (selector != null) {
+            final Object arg = selector.get();
+            if (arg != null && arg.getClass().isArray()) {
+              // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
+              // may have other issues too. Let's just copy the array and wrap that.
+              final Object[] arrayAsObjectArray = new Object[Array.getLength(arg)];
+              for (int j = 0; j < Array.getLength(arg); j++) {
+                arrayAsObjectArray[j] = Array.get(arg, j);
+              }
+              args[i + 1] = cx.newArray(scope, arrayAsObjectArray);
+            } else {
+              args[i + 1] = Context.javaToJS(arg, scope);
+            }
+          }
         }
 
         final Object res = fnAggregate.call(cx, scope, scope, args);
@@ -314,5 +354,36 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
         }
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    JavaScriptAggregatorFactory that = (JavaScriptAggregatorFactory) o;
+
+    if (compiledScript != null ? !compiledScript.equals(that.compiledScript) : that.compiledScript != null)
+      return false;
+    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) return false;
+    if (fnAggregate != null ? !fnAggregate.equals(that.fnAggregate) : that.fnAggregate != null) return false;
+    if (fnCombine != null ? !fnCombine.equals(that.fnCombine) : that.fnCombine != null) return false;
+    if (fnReset != null ? !fnReset.equals(that.fnReset) : that.fnReset != null) return false;
+    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (fieldNames != null ? fieldNames.hashCode() : 0);
+    result = 31 * result + (fnAggregate != null ? fnAggregate.hashCode() : 0);
+    result = 31 * result + (fnReset != null ? fnReset.hashCode() : 0);
+    result = 31 * result + (fnCombine != null ? fnCombine.hashCode() : 0);
+    result = 31 * result + (compiledScript != null ? compiledScript.hashCode() : 0);
+    return result;
   }
 }

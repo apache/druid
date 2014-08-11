@@ -84,6 +84,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public boolean preservesOrdering()
+  {
+    return dimExtractionFn.preservesOrdering();
+  }
+
+  @Override
   public String toString()
   {
     return "ExtractionDimensionSpec{" +
@@ -91,5 +97,30 @@ public class ExtractionDimensionSpec implements DimensionSpec
            ", dimExtractionFn=" + dimExtractionFn +
            ", outputName='" + outputName + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    ExtractionDimensionSpec that = (ExtractionDimensionSpec) o;
+
+    if (dimExtractionFn != null ? !dimExtractionFn.equals(that.dimExtractionFn) : that.dimExtractionFn != null)
+      return false;
+    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) return false;
+    if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimension != null ? dimension.hashCode() : 0;
+    result = 31 * result + (dimExtractionFn != null ? dimExtractionFn.hashCode() : 0);
+    result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
+    return result;
   }
 }

@@ -29,6 +29,7 @@ import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.Omni;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 
@@ -73,6 +74,7 @@ class WikipediaIrcDecoder implements IrcDecoder
   );
 
   final Map<String, Map<String, String>> namespaces;
+  final String geoIpDatabase;
 
   public WikipediaIrcDecoder( Map<String, Map<String, String>> namespaces) {
     this(namespaces, null);
@@ -86,7 +88,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       namespaces = Maps.newHashMap();
     }
     this.namespaces = namespaces;
-
+    this.geoIpDatabase = geoIpDatabase;
 
     File geoDb;
     if(geoIpDatabase != null) {
@@ -114,6 +116,18 @@ class WikipediaIrcDecoder implements IrcDecoder
     } catch(IOException e) {
       throw new RuntimeException("Unable to open geo ip lookup database", e);
     }
+  }
+
+  @JsonProperty
+  public Map<String, Map<String, String>> getNamespaces()
+  {
+    return namespaces;
+  }
+
+  @JsonProperty
+  public String getGeoIpDatabase()
+  {
+    return geoIpDatabase;
   }
 
   @Override
@@ -199,6 +213,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
 
       @Override
+      public DateTime getTimestamp()
+      {
+        return timestamp;
+      }
+
+      @Override
       public List<String> getDimension(String dimension)
       {
         final String value = dimensions.get(dimension);
@@ -210,9 +230,21 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
 
       @Override
+      public Object getRaw(String dimension) {
+        return dimensions.get(dimension);
+      }
+
+
+      @Override
       public float getFloatMetric(String metric)
       {
         return metrics.get(metric);
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return timestamp.compareTo(o.getTimestamp());
       }
 
       @Override

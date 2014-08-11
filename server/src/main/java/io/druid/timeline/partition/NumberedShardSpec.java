@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.InputRow;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Set;
 
 public class NumberedShardSpec implements ShardSpec
 {
@@ -54,6 +55,19 @@ public class NumberedShardSpec implements ShardSpec
     return partitionNum;
   }
 
+  @Override
+  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  {
+    return new ShardSpecLookup()
+    {
+      @Override
+      public ShardSpec getShardSpec(InputRow row)
+      {
+        return shardSpecs.get(0);
+      }
+    };
+  }
+
   @JsonProperty("partitions")
   public int getPartitions()
   {
@@ -70,5 +84,14 @@ public class NumberedShardSpec implements ShardSpec
   public boolean isInChunk(InputRow inputRow)
   {
     return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NumberedShardSpec{" +
+           "partitionNum=" + partitionNum +
+           ", partitions=" + partitions +
+           '}';
   }
 }

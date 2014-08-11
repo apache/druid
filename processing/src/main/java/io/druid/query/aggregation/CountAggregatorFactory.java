@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -74,6 +75,12 @@ public class CountAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new LongSumAggregatorFactory(name, name);
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(name));
   }
 
   @Override
@@ -131,5 +138,30 @@ public class CountAggregatorFactory implements AggregatorFactory
     return "CountAggregatorFactory{" +
            "name='" + name + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    CountAggregatorFactory that = (CountAggregatorFactory) o;
+
+    if (name != null ? !name.equals(that.name) : that.name != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return name != null ? name.hashCode() : 0;
   }
 }

@@ -33,10 +33,13 @@ import java.io.IOException;
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
+  private static final String DEFAULT_METRIC_NAME = "query/time";
+
   private final ServiceEmitter emitter;
   private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
   private final QueryRunner<T> queryRunner;
   private final long creationTime;
+  private final String metricName;
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
@@ -44,31 +47,49 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       QueryRunner<T> queryRunner
   )
   {
-    this(emitter, builderFn, queryRunner, -1);
+    this(emitter, builderFn, queryRunner, DEFAULT_METRIC_NAME);
   }
 
   public MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
       Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
       QueryRunner<T> queryRunner,
-      long creationTime
+      long creationTime,
+      String metricName
   )
   {
     this.emitter = emitter;
     this.builderFn = builderFn;
     this.queryRunner = queryRunner;
     this.creationTime = creationTime;
+    this.metricName = metricName;
   }
+
+  public MetricsEmittingQueryRunner(
+      ServiceEmitter emitter,
+      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
+      QueryRunner<T> queryRunner,
+      String metricName
+  )
+  {
+    this(emitter, builderFn, queryRunner, -1, metricName);
+  }
+
 
   public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
   {
-    return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis());
+    return new MetricsEmittingQueryRunner<T>(emitter, builderFn, queryRunner, System.currentTimeMillis(), metricName);
   }
 
   @Override
   public Sequence<T> run(final Query<T> query)
   {
     final ServiceMetricEvent.Builder builder = builderFn.apply(query);
+    String queryId = query.getId();
+    if (queryId == null) {
+      queryId = "";
+    }
+    builder.setUser8(queryId);
 
     return new Sequence<T>()
     {
@@ -92,9 +113,9 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
         finally {
           long timeTaken = System.currentTimeMillis() - startTime;
 
-          emitter.emit(builder.build("query/time", timeTaken));
+          emitter.emit(builder.build(metricName, timeTaken));
 
-          if(creationTime > 0) {
+          if (creationTime > 0) {
             emitter.emit(builder.build("query/wait", startTime - creationTime));
           }
         }
@@ -162,18 +183,21 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           @Override
           public void close() throws IOException
           {
-            if (!isDone() && builder.getUser10() == null) {
-              builder.setUser10("short");
+            try {
+              if (!isDone() && builder.getUser10() == null) {
+                builder.setUser10("short");
+              }
+
+              long timeTaken = System.currentTimeMillis() - startTime;
+              emitter.emit(builder.build(metricName, timeTaken));
+
+              if (creationTime > 0) {
+                emitter.emit(builder.build("query/wait", startTime - creationTime));
+              }
             }
-
-            long timeTaken = System.currentTimeMillis() - startTime;
-            emitter.emit(builder.build("query/time", timeTaken));
-
-            if(creationTime > 0) {
-              emitter.emit(builder.build("query/wait", startTime - creationTime));
+            finally {
+              yielder.close();
             }
-
-            yielder.close();
           }
         };
       }

@@ -19,6 +19,9 @@
 
 package io.druid.data.input;
 
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -30,7 +33,8 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class ProtoBufInputRowParserTest {
+public class ProtoBufInputRowParserTest
+{
 
   public static final String[] DIMENSIONS = new String[]{"eventType", "id", "someOtherId", "isValid"};
 
@@ -49,26 +53,33 @@ public class ProtoBufInputRowParserTest {
    */
 
   @Test
-  public void testParse() throws Exception {
+  public void testParse() throws Exception
+  {
 
     //configure parser with desc file
-    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(new TimestampSpec("timestamp", "iso"),
-            Arrays.asList(DIMENSIONS), Arrays.<String>asList(), "prototest.desc");
+    ProtoBufInputRowParser parser = new ProtoBufInputRowParser(
+        new JSONParseSpec(
+            new TimestampSpec("timestamp", "iso"),
+            new DimensionsSpec(Arrays.asList(DIMENSIONS), Arrays.<String>asList(), null)
+        ),
+        "prototest.desc",
+        null, null, null, null
+    );
 
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 07, 12, 9, 30);
     ProtoTestEventWrapper.ProtoTestEvent event = ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
-            .setDescription("description")
-            .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
-            .setId(4711L)
-            .setIsValid(true)
-            .setSomeOtherId(4712)
-            .setTimestamp(dateTime.toString())
-            .setSomeFloatColumn(47.11F)
-            .setSomeIntColumn(815)
-            .setSomeLongColumn(816L)
-            .build();
+                                                                      .setDescription("description")
+                                                                      .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
+                                                                      .setId(4711L)
+                                                                      .setIsValid(true)
+                                                                      .setSomeOtherId(4712)
+                                                                      .setTimestamp(dateTime.toString())
+                                                                      .setSomeFloatColumn(47.11F)
+                                                                      .setSomeIntColumn(815)
+                                                                      .setSomeLongColumn(816L)
+                                                                      .build();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     event.writeTo(out);
@@ -91,7 +102,8 @@ public class ProtoBufInputRowParserTest {
 
   }
 
-  private void assertDimensionEquals(InputRow row, String dimension, Object expected) {
+  private void assertDimensionEquals(InputRow row, String dimension, Object expected)
+  {
     List<String> values = row.getDimension(dimension);
     assertEquals(1, values.size());
     assertEquals(expected, values.get(0));

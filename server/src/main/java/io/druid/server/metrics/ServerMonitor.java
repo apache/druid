@@ -47,24 +47,37 @@ public class ServerMonitor extends AbstractMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     emitter.emit(new ServiceMetricEvent.Builder().build("server/segment/max", serverConfig.getMaxSize()));
+    long totalUsed = 0;
+    long totalCount = 0;
+
     for (Map.Entry<String, Long> entry : serverManager.getDataSourceSizes().entrySet()) {
       String dataSource = entry.getKey();
       long used = entry.getValue();
+      totalUsed += used;
+
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setUser1(dataSource)
                                                                                  .setUser2(serverConfig.getTier());
 
       emitter.emit(builder.build("server/segment/used", used));
-      emitter.emit(builder.build("server/segment/usedPercent", used / (double) serverConfig.getMaxSize()));
+      final double usedPercent = serverConfig.getMaxSize() == 0 ? 0 : used / (double) serverConfig.getMaxSize();
+      emitter.emit(builder.build("server/segment/usedPercent", usedPercent));
     }
 
     for (Map.Entry<String, Long> entry : serverManager.getDataSourceCounts().entrySet()) {
       String dataSource = entry.getKey();
       long count = entry.getValue();
+      totalCount += count;
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setUser1(dataSource)
                                                                                  .setUser2(serverConfig.getTier());
 
       emitter.emit(builder.build("server/segment/count", count));
     }
+
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setUser2(serverConfig.getTier());
+    emitter.emit(builder.build("server/segment/totalUsed", totalUsed));
+    final double totalUsedPercent = serverConfig.getMaxSize() == 0 ? 0 : totalUsed / (double) serverConfig.getMaxSize();
+    emitter.emit(builder.build("server/segment/totalUsedPercent", totalUsedPercent));
+    emitter.emit(builder.build("server/segment/totalCount", totalCount));
 
     return true;
   }

@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -76,7 +77,7 @@ public class PrioritizedExecutorServiceTest
     final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<Integer>();
 
     exec.submit(
-        new PrioritizedCallable<Void>(0)
+        new AbstractPrioritizedCallable<Void>(0)
         {
           @Override
           public Void call() throws Exception
@@ -88,7 +89,7 @@ public class PrioritizedExecutorServiceTest
     );
 
     exec.submit(
-        new PrioritizedCallable<Void>(-1)
+        new AbstractPrioritizedCallable<Void>(-1)
         {
           @Override
           public Void call() throws Exception
@@ -100,7 +101,7 @@ public class PrioritizedExecutorServiceTest
         }
     );
     exec.submit(
-        new PrioritizedCallable<Void>(0)
+        new AbstractPrioritizedCallable<Void>(0)
         {
           @Override
           public Void call() throws Exception
@@ -112,7 +113,7 @@ public class PrioritizedExecutorServiceTest
         }
     );
     exec.submit(
-        new PrioritizedCallable<Void>(2)
+        new AbstractPrioritizedCallable<Void>(2)
         {
           @Override
           public Void call() throws Exception

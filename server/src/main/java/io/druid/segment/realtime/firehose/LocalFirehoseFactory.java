@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
@@ -39,7 +40,7 @@ import java.util.LinkedList;
 
 /**
  */
-public class LocalFirehoseFactory implements FirehoseFactory
+public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
   private final File baseDir;
   private final String filter;
@@ -76,22 +77,27 @@ public class LocalFirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
-    final LinkedList<File> files = Lists.<File>newLinkedList(
-        Arrays.<File>asList(
-            baseDir.listFiles(
-                new FilenameFilter()
-                {
-                  @Override
-                  public boolean accept(File file, String name)
-                  {
-                    return name.contains(filter);
-                  }
-                }
-            )
-        )
+    File[] foundFiles = baseDir.listFiles(
+        new FilenameFilter()
+        {
+          @Override
+          public boolean accept(File file, String name)
+          {
+            return name.contains(filter);
+          }
+        }
     );
+
+    if (foundFiles == null || foundFiles.length == 0) {
+      throw new ISE("Found no files to ingest! Check your schema.");
+    }
+
+    final LinkedList<File> files = Lists.<File>newLinkedList(
+        Arrays.asList(foundFiles)
+    );
+
 
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
@@ -119,7 +125,7 @@ public class LocalFirehoseFactory implements FirehoseFactory
             throw new UnsupportedOperationException();
           }
         },
-        parser
+        firehoseParser
     );
   }
 }

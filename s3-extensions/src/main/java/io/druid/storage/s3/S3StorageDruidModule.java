@@ -19,17 +19,18 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
-import com.google.inject.ProvisionException;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.security.AWSCredentials;
 
 import java.util.List;
 
@@ -50,8 +51,11 @@ public class S3StorageDruidModule implements DruidModule
 
     Binders.dataSegmentPullerBinder(binder).addBinding("s3_zip").to(S3DataSegmentPuller.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding("s3_zip").to(S3DataSegmentKiller.class).in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder).addBinding("s3_zip").to(S3DataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentArchiverBinder(binder).addBinding("s3_zip").to(S3DataSegmentArchiver.class).in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding("s3").to(S3DataSegmentPusher.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentArchiverConfig.class);
 
     Binders.taskLogsBinder(binder).addBinding("s3").to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
@@ -60,20 +64,44 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public org.jets3t.service.security.AWSCredentials  getJets3tAWSCredentials(AWSCredentialsConfig config)
+  public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
-    return new org.jets3t.service.security.AWSCredentials(config.getAccessKey(), config.getSecretKey());
+    if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
+      return new AWSCredentialsProvider() {
+        @Override
+        public com.amazonaws.auth.AWSCredentials getCredentials() {
+          return new com.amazonaws.auth.AWSCredentials() {
+            @Override
+            public String getAWSAccessKeyId() {
+              return config.getAccessKey();
+            }
+
+            @Override
+            public String getAWSSecretKey() {
+              return config.getSecretKey();
+            }
+          };
+        }
+
+        @Override
+        public void refresh() {}
+      };
+    } else {
+      return new FileSessionCredentialsProvider(config.getFileSessionCredentials());
+    }
   }
 
   @Provides
   @LazySingleton
-  public RestS3Service getRestS3Service(org.jets3t.service.security.AWSCredentials credentials)
+  public RestS3Service getRestS3Service(AWSCredentialsProvider provider)
   {
-    try {
-      return new RestS3Service(credentials);
-    }
-    catch (S3ServiceException e) {
-      throw new ProvisionException("Unable to create a RestS3Service", e);
+    if(provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials) {
+      return new RestS3Service(new AWSSessionCredentialsAdapter(provider));
+    } else {
+      return new RestS3Service(new AWSCredentials(
+          provider.getCredentials().getAWSAccessKeyId(),
+          provider.getCredentials().getAWSSecretKey()
+      ));
     }
   }
 }

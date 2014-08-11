@@ -56,7 +56,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
-    this.breaksList = (breaksList == null) ? Lists.<Float>newArrayList() :breaksList;
+    this.breaksList = (breaksList == null) ? Lists.<Float>newArrayList() : breaksList;
     this.breaks = new float[this.breaksList.size()];
     for (int i = 0; i < this.breaksList.size(); ++i) {
       this.breaks[i] = this.breaksList.get(i);
@@ -98,6 +98,12 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new HistogramAggregatorFactory(name, name, breaksList);
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Arrays.<AggregatorFactory>asList(new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
   }
 
   @Override
@@ -178,5 +184,43 @@ public class HistogramAggregatorFactory implements AggregatorFactory
            ", fieldName='" + fieldName + '\'' +
            ", breaks=" + Arrays.toString(breaks) +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    HistogramAggregatorFactory that = (HistogramAggregatorFactory) o;
+
+    if (!Arrays.equals(breaks, that.breaks)) {
+      return false;
+    }
+    if (breaksList != null ? !breaksList.equals(that.breaksList) : that.breaksList != null) {
+      return false;
+    }
+    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
+      return false;
+    }
+    if (name != null ? !name.equals(that.name) : that.name != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    result = 31 * result + (breaksList != null ? breaksList.hashCode() : 0);
+    result = 31 * result + (breaks != null ? Arrays.hashCode(breaks) : 0);
+    return result;
   }
 }

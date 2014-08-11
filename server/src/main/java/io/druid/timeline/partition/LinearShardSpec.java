@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.InputRow;
 
-import java.util.Map;
+import java.util.List;
 
 public class LinearShardSpec implements ShardSpec
 {
@@ -45,6 +45,19 @@ public class LinearShardSpec implements ShardSpec
   }
 
   @Override
+  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  {
+    return new ShardSpecLookup()
+    {
+      @Override
+      public ShardSpec getShardSpec(InputRow row)
+      {
+        return shardSpecs.get(0);
+      }
+    };
+  }
+
+  @Override
   public <T> PartitionChunk<T> createChunk(T obj) {
     return new LinearPartitionChunk<T>(partitionNum, obj);
   }
@@ -52,5 +65,13 @@ public class LinearShardSpec implements ShardSpec
   @Override
   public boolean isInChunk(InputRow inputRow) {
     return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LinearShardSpec{" +
+           "partitionNum=" + partitionNum +
+           '}';
   }
 }

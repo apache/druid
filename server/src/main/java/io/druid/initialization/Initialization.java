@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -36,33 +35,29 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DataSegmentPusherPullerModule;
 import io.druid.guice.DbConnectorModule;
-import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
+import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
-import io.druid.guice.HttpClientModule;
+import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
-import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.LocalDataStorageDruidModule;
+import io.druid.guice.ParsersModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
 import io.druid.guice.StorageNodeModule;
-import io.druid.guice.TaskLogsModule;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.jackson.JacksonModule;
-import io.druid.server.initialization.ConfigModule;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.ExtensionsConfig;
 import io.druid.server.initialization.JettyServerModule;
-import io.druid.server.initialization.PropertiesModule;
 import io.druid.server.metrics.MetricsModule;
+import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
@@ -80,8 +75,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -99,11 +98,35 @@ public class Initialization
       "io.druid",
       "com.metamx.druid"
   );
+  private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
 
-  public synchronized static <T> List<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
+  /**
+   * @param clazz Module class
+   * @param <T>
+   *
+   * @return Returns the set of modules loaded.
+   */
+  public static <T> Set<T> getLoadedModules(Class<T> clazz)
+  {
+    Set<T> retVal = extensionsMap.get(clazz);
+    if (retVal == null) {
+      return Sets.newHashSet();
+    }
+    return retVal;
+  }
+
+  /**
+   * Used for testing only
+   */
+  protected static void clearLoadedModules()
+  {
+    extensionsMap.clear();
+  }
+
+  public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {
     final TeslaAether aether = getAetherClient(config);
-    List<T> retVal = Lists.newArrayList();
+    Set<T> retVal = Sets.newHashSet();
 
     if (config.searchCurrentClassloader()) {
       for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
@@ -128,6 +151,9 @@ public class Initialization
         throw Throwables.propagate(e);
       }
     }
+
+    // update the map with currently loaded modules
+    extensionsMap.put(clazz, retVal);
 
     return retVal;
   }
@@ -169,22 +195,29 @@ public class Initialization
           )
       );
 
-      final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
-      List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
-      for (Artifact artifact : artifacts) {
-        if (!exclusions.contains(artifact.getGroupId())) {
-          urls.add(artifact.getFile().toURI().toURL());
-        } else {
-          log.debug("Skipped Artifact[%s]", artifact);
+      try {
+        final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
+
+        List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
+        for (Artifact artifact : artifacts) {
+          if (!exclusions.contains(artifact.getGroupId())) {
+            urls.add(artifact.getFile().toURI().toURL());
+          } else {
+            log.debug("Skipped Artifact[%s]", artifact);
+          }
         }
-      }
 
-      for (URL url : urls) {
-        log.info("Added URL[%s]", url);
-      }
+        for (URL url : urls) {
+          log.info("Added URL[%s]", url);
+        }
 
-      loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader());
-      loadersMap.put(coordinate, loader);
+        loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader());
+        loadersMap.put(coordinate, loader);
+      }
+      catch (Exception e) {
+        log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
+        throw Throwables.propagate(e);
+      }
     }
     return loader;
   }
@@ -202,35 +235,72 @@ public class Initialization
     to nothingness.  Fortunately, the code that calls this is single-threaded and shouldn't hopefully be running
     alongside anything else that's grabbing System.out.  But who knows.
     */
+
+    List<String> remoteUriList = config.getRemoteRepositories();
+
+    List<Repository> remoteRepositories = Lists.newArrayList();
+    for (String uri : remoteUriList) {
+      try {
+        URI u = new URI(uri);
+        Repository r = new Repository(uri);
+
+        if (u.getUserInfo() != null) {
+          String[] auth = u.getUserInfo().split(":", 2);
+          if (auth.length == 2) {
+            r.setUsername(auth[0]);
+            r.setPassword(auth[1]);
+          } else {
+            log.warn(
+                "Invalid credentials in repository URI, expecting [<user>:<password>], got [%s] for [%s]",
+                u.getUserInfo(),
+                uri
+            );
+          }
+        }
+        remoteRepositories.add(r);
+      }
+      catch (URISyntaxException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
     if (log.isTraceEnabled() || log.isDebugEnabled()) {
-      return new DefaultTeslaAether(config.getLocalRepository(), config.getRemoteRepositories());
+      return new DefaultTeslaAether(
+          config.getLocalRepository(),
+          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
+      );
     }
 
     PrintStream oldOut = System.out;
     try {
-      System.setOut(new PrintStream(
-          new OutputStream()
-          {
-            @Override
-            public void write(int b) throws IOException
-            {
+      System.setOut(
+          new PrintStream(
+              new OutputStream()
+              {
+                @Override
+                public void write(int b) throws IOException
+                {
 
-            }
+                }
 
-            @Override
-            public void write(byte[] b) throws IOException
-            {
+                @Override
+                public void write(byte[] b) throws IOException
+                {
 
-            }
+                }
 
-            @Override
-            public void write(byte[] b, int off, int len) throws IOException
-            {
+                @Override
+                public void write(byte[] b, int off, int len) throws IOException
+                {
 
-            }
-          }
-      ));
-      return new DefaultTeslaAether(config.getLocalRepository(), config.getRemoteRepositories());
+                }
+              }
+          )
+      );
+      return new DefaultTeslaAether(
+          config.getLocalRepository(),
+          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
+      );
     }
     finally {
       System.setOut(oldOut);
@@ -260,9 +330,9 @@ public class Initialization
         new DbConnectorModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
-        new DataSegmentPusherPullerModule(),
-        new TaskLogsModule(),
-        new FirehoseModule()
+        new LocalDataStorageDruidModule(),
+        new FirehoseModule(),
+        new ParsersModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);
@@ -277,25 +347,6 @@ public class Initialization
     }
 
     return Guice.createInjector(Modules.override(defaultModules.getModules()).with(actualModules.getModules()));
-  }
-
-  public static Injector makeStartupInjector()
-  {
-    return Guice.createInjector(
-        new DruidGuiceExtensions(),
-        new JacksonModule(),
-        new PropertiesModule("runtime.properties"),
-        new ConfigModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bind(DruidSecondaryModule.class);
-            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-          }
-        }
-    );
   }
 
   private static class ModuleList

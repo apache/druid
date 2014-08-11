@@ -23,10 +23,13 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.BaseSequence;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.SequenceTestHelper;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.TestSequence;
+import com.metamx.common.guava.Yielder;
+import com.metamx.common.guava.YieldingAccumulator;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -230,17 +233,96 @@ public class OrderedMergeSequenceTest
         ordering,
         Sequences.simple(
             Lists.transform( // OMG WTF, the java type system really annoys me at times...
-                seqs,
-                new Function<TestSequence<T>, Sequence<T>>()
-                {
-                  @Override
-                  public Sequence<T> apply(@Nullable TestSequence<T> input)
-                  {
-                    return input;
-                  }
-                }
+                             seqs,
+                             new Function<TestSequence<T>, Sequence<T>>()
+                             {
+                               @Override
+                               public Sequence<T> apply(@Nullable TestSequence<T> input)
+                               {
+                                 return input;
+                               }
+                             }
             )
         )
     );
+  }
+
+  private <T> MergeSequence<T> makeUnorderedMergedSequence(
+      Ordering<T> ordering,
+      List<TestSequence<T>> seqs
+  )
+  {
+    return new MergeSequence<T>(
+        ordering,
+        Sequences.simple(
+            Lists.transform( // OMG WTF, the java type system really annoys me at times...
+                             seqs,
+                             new Function<TestSequence<T>, Sequence<T>>()
+                             {
+                               @Override
+                               public Sequence<T> apply(@Nullable TestSequence<T> input)
+                               {
+                                 return input;
+                               }
+                             }
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testHierarchicalMerge() throws Exception
+  {
+    final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
+        Ordering.<Integer>natural(), Lists.newArrayList(
+        TestSequence.create(1)
+    )
+    );
+
+
+    final Sequence<Integer> seq2 = makeUnorderedMergedSequence(
+        Ordering.<Integer>natural(), Lists.newArrayList(
+        TestSequence.create(1)
+    )
+    );
+    final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
+        Ordering.<Integer>natural(),
+        Sequences.simple(
+            Lists.<Sequence<Integer>>newArrayList(seq1, seq2)
+        )
+    );
+
+    SequenceTestHelper.testAll(finalMerged, Arrays.asList(1, 1));
+  }
+
+  @Test
+  public void testMergeMerge() throws Exception
+  {
+    final Sequence<Integer> seq1 = makeUnorderedMergedSequence(
+        Ordering.<Integer>natural(), Lists.newArrayList(
+            TestSequence.create(1)
+        )
+    );
+
+    final OrderedMergeSequence<Integer> finalMerged = new OrderedMergeSequence<Integer>(
+        Ordering.<Integer>natural(),
+        Sequences.simple(
+            Lists.<Sequence<Integer>>newArrayList(seq1)
+        )
+    );
+
+    SequenceTestHelper.testAll(finalMerged, Arrays.asList(1));
+  }
+
+  @Test
+  public void testOne() throws Exception
+  {
+    final MergeSequence<Integer> seq1 = makeUnorderedMergedSequence(
+        Ordering.<Integer>natural(), Lists.newArrayList(
+            TestSequence.create(1)
+        )
+    );
+
+    SequenceTestHelper.testAll(seq1, Arrays.asList(1));
   }
 }

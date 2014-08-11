@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@Deprecated
 public class ReflectionLoaderThingy<T>
 {
   private static final Logger log = new Logger(ReflectionLoaderThingy.class);

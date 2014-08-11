@@ -23,23 +23,15 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import org.joda.time.Duration;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
-import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
@@ -56,32 +48,25 @@ public class ConfigManager
   private final Object lock = new Object();
   private boolean started = false;
 
-  private final IDBI dbi;
+  private final DbConnector dbConnector;
   private final Supplier<ConfigManagerConfig> config;
 
   private final ScheduledExecutorService exec;
   private final ConcurrentMap<String, ConfigHolder> watchedConfigs;
-  private final String selectStatement;
-  private final String insertStatement;
+  private final String configTable;
 
   private volatile ConfigManager.PollingCallable poller;
 
   @Inject
-  public ConfigManager(IDBI dbi, Supplier<DbTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
+  public ConfigManager(DbConnector dbConnector, Supplier<DbTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
   {
-    this.dbi = dbi;
+    this.dbConnector = dbConnector;
     this.config = config;
 
     this.exec = ScheduledExecutors.fixed(1, "config-manager-%s");
     this.watchedConfigs = Maps.newConcurrentMap();
 
-    final String configTable = dbTables.get().getConfigTable();
-
-    this.selectStatement = String.format("SELECT payload FROM %s WHERE name = :name", configTable);
-    this.insertStatement = String.format(
-        "INSERT INTO %s (name, payload) VALUES (:name, :payload) ON DUPLICATE KEY UPDATE payload = :payload",
-        configTable
-    );
+    this.configTable = dbTables.get().getConfigTable();
   }
 
   @LifecycleStart
@@ -120,7 +105,7 @@ public class ConfigManager
   {
     for (Map.Entry<String, ConfigHolder> entry : watchedConfigs.entrySet()) {
       try {
-        if (entry.getValue().swapIfNew(lookup(entry.getKey()))) {
+        if (entry.getValue().swapIfNew(dbConnector.lookup(configTable, "name", "payload", entry.getKey()))) {
           log.info("New value for key[%s] seen.", entry.getKey());
         }
       }
@@ -152,7 +137,7 @@ public class ConfigManager
                     // Multiple of these callables can be submitted at the same time, but the callables themselves
                     // are executed serially, so double check that it hasn't already been populated.
                     if (!watchedConfigs.containsKey(key)) {
-                      byte[] value = lookup(key);
+                      byte[] value = dbConnector.lookup(configTable, "name", "payload", key);
                       ConfigHolder<T> holder = new ConfigHolder<T>(value, serde);
                       watchedConfigs.put(key, holder);
                     }
@@ -180,45 +165,10 @@ public class ConfigManager
     return holder.getReference();
   }
 
-  public byte[] lookup(final String key)
-  {
-    return dbi.withHandle(
-        new HandleCallback<byte[]>()
-        {
-          @Override
-          public byte[] withHandle(Handle handle) throws Exception
-          {
-            List<byte[]> matched = handle.createQuery(selectStatement)
-                                     .bind("name", key)
-                                     .map(
-                                         new ResultSetMapper<byte[]>()
-                                         {
-                                           @Override
-                                           public byte[] map(int index, ResultSet r, StatementContext ctx)
-                                               throws SQLException
-                                           {
-                                             return r.getBytes("payload");
-                                           }
-                                         }
-                                     ).list();
-
-            if (matched.isEmpty()) {
-              return null;
-            }
-
-            if (matched.size() > 1) {
-              throw new ISE("Error! More than one matching entry[%d] found for [%s]?!", matched.size(), key);
-            }
-
-            return matched.get(0);
-          }
-        }
-    );
-  }
 
   public <T> boolean set(final String key, final ConfigSerde<T> serde, final T obj)
   {
-    if (obj == null) {
+    if (obj == null || !started) {
       return false;
     }
 
@@ -231,20 +181,7 @@ public class ConfigManager
             @Override
             public Boolean call() throws Exception
             {
-              dbi.withHandle(
-                  new HandleCallback<Void>()
-                  {
-                    @Override
-                    public Void withHandle(Handle handle) throws Exception
-                    {
-                      handle.createStatement(insertStatement)
-                            .bind("name", key)
-                            .bind("payload", newBytes)
-                            .execute();
-                      return null;
-                    }
-                  }
-              );
+              dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
 
               final ConfigHolder configHolder = watchedConfigs.get(key);
               if (configHolder != null) {

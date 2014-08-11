@@ -28,11 +28,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.db.DbConnectorConfig;
+import io.druid.db.DbConnector;
 import io.druid.db.DbTablesConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
@@ -43,6 +44,7 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
@@ -58,28 +60,25 @@ public class IndexerDBCoordinator
   private static final Logger log = new Logger(IndexerDBCoordinator.class);
 
   private final ObjectMapper jsonMapper;
-  private final DbConnectorConfig dbConnectorConfig;
   private final DbTablesConfig dbTables;
-  private final IDBI dbi;
+  private final DbConnector dbConnector;
 
   @Inject
   public IndexerDBCoordinator(
       ObjectMapper jsonMapper,
-      DbConnectorConfig dbConnectorConfig,
       DbTablesConfig dbTables,
-      IDBI dbi
+      DbConnector dbConnector
   )
   {
     this.jsonMapper = jsonMapper;
-    this.dbConnectorConfig = dbConnectorConfig;
     this.dbTables = dbTables;
-    this.dbi = dbi;
+    this.dbConnector = dbConnector;
   }
 
   public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
       throws IOException
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = dbi.withHandle(
+    final VersionedIntervalTimeline<String, DataSegment> timeline = dbConnector.getDBI().withHandle(
         new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
         {
           @Override
@@ -92,7 +91,7 @@ public class IndexerDBCoordinator
             final ResultIterator<Map<String, Object>> dbSegments =
                 handle.createQuery(
                     String.format(
-                        "SELECT payload FROM %s WHERE used = 1 AND dataSource = :dataSource",
+                        "SELECT payload FROM %s WHERE used = true AND dataSource = :dataSource",
                         dbTables.getSegmentsTable()
                     )
                 )
@@ -144,7 +143,7 @@ public class IndexerDBCoordinator
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    return dbi.inTransaction(
+    return dbConnector.getDBI().inTransaction(
         new TransactionCallback<Set<DataSegment>>()
         {
           @Override
@@ -173,39 +172,42 @@ public class IndexerDBCoordinator
   private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
   {
     try {
-      final List<Map<String, Object>> exists = handle.createQuery(
-          String.format(
-              "SELECT id FROM %s WHERE id = :identifier",
-              dbTables.getSegmentsTable()
-          )
-      ).bind(
-          "identifier",
-          segment.getIdentifier()
-      ).list();
-
-      if (!exists.isEmpty()) {
+      if (segmentExists(handle, segment)) {
         log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
         return false;
       }
 
-      handle.createStatement(
-          String.format(
-              "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable()
-          )
-      )
-            .bind("id", segment.getIdentifier())
-            .bind("dataSource", segment.getDataSource())
-            .bind("created_date", new DateTime().toString())
-            .bind("start", segment.getInterval().getStart().toString())
-            .bind("end", segment.getInterval().getEnd().toString())
-            .bind("partitioned", segment.getShardSpec().getPartitionNum())
-            .bind("version", segment.getVersion())
-            .bind("used", true)
-            .bind("payload", jsonMapper.writeValueAsString(segment))
-            .execute();
+      // Try/catch to work around races due to SELECT -> INSERT. Avoid ON DUPLICATE KEY since it's not portable.
+      try {
+        handle.createStatement(
+            String.format(
+                dbConnector.isPostgreSQL() ?
+                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)":
+                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                dbTables.getSegmentsTable()
+            )
+        )
+              .bind("id", segment.getIdentifier())
+              .bind("dataSource", segment.getDataSource())
+              .bind("created_date", new DateTime().toString())
+              .bind("start", segment.getInterval().getStart().toString())
+              .bind("end", segment.getInterval().getEnd().toString())
+              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
+              .bind("version", segment.getVersion())
+              .bind("used", true)
+              .bind("payload", jsonMapper.writeValueAsString(segment))
+              .execute();
 
-      log.info("Published segment [%s] to DB", segment.getIdentifier());
+        log.info("Published segment [%s] to DB", segment.getIdentifier());
+      } catch(Exception e) {
+        if (e.getCause() instanceof SQLException && segmentExists(handle, segment)) {
+          log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
+        } else {
+          throw e;
+        }
+      }
     }
     catch (IOException e) {
       log.error(e, "Exception inserting into DB");
@@ -215,9 +217,41 @@ public class IndexerDBCoordinator
     return true;
   }
 
+  private boolean segmentExists(final Handle handle, final DataSegment segment) {
+    final List<Map<String, Object>> exists = handle.createQuery(
+        String.format(
+            "SELECT id FROM %s WHERE id = :identifier",
+            dbTables.getSegmentsTable()
+        )
+    ).bind(
+        "identifier",
+        segment.getIdentifier()
+    ).list();
+
+    return !exists.isEmpty();
+  }
+
+  public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
+  {
+    dbConnector.getDBI().inTransaction(
+        new TransactionCallback<Void>()
+        {
+          @Override
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          {
+            for(final DataSegment segment : segments) {
+              updatePayload(handle, segment);
+            }
+
+            return null;
+          }
+        }
+    );
+  }
+
   public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
-    dbi.inTransaction(
+    dbConnector.getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
@@ -237,21 +271,40 @@ public class IndexerDBCoordinator
   {
     handle.createStatement(
         String.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable())
-    ).bind("id", segment.getIdentifier())
+    )
+          .bind("id", segment.getIdentifier())
           .execute();
+  }
+
+  private void updatePayload(final Handle handle, final DataSegment segment) throws IOException
+  {
+    try {
+      handle.createStatement(
+          String.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
+      )
+            .bind("id", segment.getIdentifier())
+            .bind("payload", jsonMapper.writeValueAsString(segment))
+            .execute();
+    }
+    catch (IOException e) {
+      log.error(e, "Exception inserting into DB");
+      throw e;
+    }
   }
 
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = dbi.withHandle(
+    List<DataSegment> matchingSegments = dbConnector.getDBI().withHandle(
         new HandleCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> withHandle(Handle handle) throws IOException
+          public List<DataSegment> withHandle(Handle handle) throws IOException, SQLException
           {
             return handle.createQuery(
                 String.format(
-                    "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = 0",
+                    dbConnector.isPostgreSQL() ?
+                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false":
+                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = false",
                     dbTables.getSegmentsTable()
                 )
             )

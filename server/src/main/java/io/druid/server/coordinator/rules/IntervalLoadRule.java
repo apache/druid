@@ -21,10 +21,13 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+
+import java.util.Map;
 
 /**
  */
@@ -33,19 +36,24 @@ public class IntervalLoadRule extends LoadRule
   private static final Logger log = new Logger(IntervalLoadRule.class);
 
   private final Interval interval;
-  private final Integer replicants;
-  private final String tier;
+  private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
+      // Replicants and tier are deprecated
       @JsonProperty("replicants") Integer replicants,
       @JsonProperty("tier") String tier
   )
   {
     this.interval = interval;
-    this.replicants = (replicants == null) ? 2 : replicants;
-    this.tier = tier;
+
+    if (tieredReplicants != null) {
+      this.tieredReplicants = tieredReplicants;
+    } else { // Backwards compatible
+      this.tieredReplicants = ImmutableMap.of(tier, replicants);
+    }
   }
 
   @Override
@@ -55,24 +63,17 @@ public class IntervalLoadRule extends LoadRule
     return "loadByInterval";
   }
 
-  @Override
   @JsonProperty
-  public int getReplicants()
+  public Map<String, Integer> getTieredReplicants()
   {
-    return replicants;
+    return tieredReplicants;
   }
 
   @Override
-  public int getReplicants(String tier)
+  public int getNumReplicants(String tier)
   {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
-  }
-
-  @Override
-  @JsonProperty
-  public String getTier()
-  {
-    return tier;
+    final Integer retVal = tieredReplicants.get(tier);
+    return retVal == null ? 0 : retVal;
   }
 
   @JsonProperty
@@ -84,6 +85,42 @@ public class IntervalLoadRule extends LoadRule
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return interval.contains(segment.getInterval());
+    return appliesTo(segment.getInterval(), referenceTimestamp);
+  }
+
+  @Override
+  public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
+  {
+    return interval.contains(theInterval);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    IntervalLoadRule that = (IntervalLoadRule) o;
+
+    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
+      return false;
+    }
+    if (tieredReplicants != null ? !tieredReplicants.equals(that.tieredReplicants) : that.tieredReplicants != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = interval != null ? interval.hashCode() : 0;
+    result = 31 * result + (tieredReplicants != null ? tieredReplicants.hashCode() : 0);
+    return result;
   }
 }

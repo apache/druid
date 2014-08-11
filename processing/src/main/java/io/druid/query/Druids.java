@@ -29,10 +29,14 @@ import io.druid.query.filter.NoopDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.metadata.metadata.ColumnIncluderator;
+import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.select.PagingSpec;
+import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -298,17 +302,17 @@ public class Druids
    */
   public static class TimeseriesQueryBuilder
   {
-    private String dataSource;
+    private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
     private TimeseriesQueryBuilder()
     {
-      dataSource = "";
+      dataSource = null;
       querySegmentSpec = null;
       dimFilter = null;
       granularity = QueryGranularity.ALL;
@@ -354,7 +358,7 @@ public class Druids
           .context(builder.context);
     }
 
-    public String getDataSource()
+    public DataSource getDataSource()
     {
       return dataSource;
     }
@@ -384,12 +388,18 @@ public class Druids
       return postAggregatorSpecs;
     }
 
-    public Map<String, String> getContext()
+    public Map<String, Object> getContext()
     {
       return context;
     }
 
     public TimeseriesQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder dataSource(DataSource ds)
     {
       dataSource = ds;
       return this;
@@ -459,7 +469,7 @@ public class Druids
       return this;
     }
 
-    public TimeseriesQueryBuilder context(Map<String, String> c)
+    public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;
@@ -492,18 +502,18 @@ public class Druids
    */
   public static class SearchQueryBuilder
   {
-    private String dataSource;
+    private DataSource dataSource;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
     private int limit;
     private QuerySegmentSpec querySegmentSpec;
     private List<String> dimensions;
     private SearchQuerySpec querySpec;
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
     public SearchQueryBuilder()
     {
-      dataSource = "";
+      dataSource = null;
       dimFilter = null;
       granularity = QueryGranularity.ALL;
       limit = 0;
@@ -555,6 +565,12 @@ public class Druids
     }
 
     public SearchQueryBuilder dataSource(String d)
+    {
+      dataSource = new TableDataSource(d);
+      return this;
+    }
+
+    public SearchQueryBuilder dataSource(DataSource d)
     {
       dataSource = d;
       return this;
@@ -648,7 +664,7 @@ public class Druids
       return this;
     }
 
-    public SearchQueryBuilder context(Map<String, String> c)
+    public SearchQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;
@@ -676,14 +692,16 @@ public class Druids
    */
   public static class TimeBoundaryQueryBuilder
   {
-    private String dataSource;
+    private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
-    private Map<String, String> context;
+    private String bound;
+    private Map<String, Object> context;
 
     public TimeBoundaryQueryBuilder()
     {
-      dataSource = "";
+      dataSource = null;
       querySegmentSpec = null;
+      bound = null;
       context = null;
     }
 
@@ -692,6 +710,7 @@ public class Druids
       return new TimeBoundaryQuery(
           dataSource,
           querySegmentSpec,
+          bound,
           context
       );
     }
@@ -701,12 +720,19 @@ public class Druids
       return new TimeBoundaryQueryBuilder()
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
+          .bound(builder.bound)
           .context(builder.context);
     }
 
-    public TimeBoundaryQueryBuilder dataSource(String d)
+    public TimeBoundaryQueryBuilder dataSource(String ds)
     {
-      dataSource = d;
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
       return this;
     }
 
@@ -728,7 +754,13 @@ public class Druids
       return this;
     }
 
-    public TimeBoundaryQueryBuilder context(Map<String, String> c)
+    public TimeBoundaryQueryBuilder bound(String b)
+    {
+      bound = b;
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;
@@ -804,5 +836,267 @@ public class Druids
   public static ResultBuilder<TimeBoundaryResultValue> newTimeBoundaryResultBuilder()
   {
     return new ResultBuilder<TimeBoundaryResultValue>();
+  }
+
+  /**
+   * A Builder for SegmentMetadataQuery.
+   * <p/>
+   * Required: dataSource(), intervals() must be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   SegmentMetadataQuery query = new SegmentMetadataQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .interval("2010/2013")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see io.druid.query.metadata.metadata.SegmentMetadataQuery
+   */
+  public static class SegmentMetadataQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private ColumnIncluderator toInclude;
+    private Boolean merge;
+    private Map<String, Object> context;
+
+    public SegmentMetadataQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      toInclude = null;
+      merge = null;
+      context = null;
+    }
+
+    public SegmentMetadataQuery build()
+    {
+      return new SegmentMetadataQuery(
+          dataSource,
+          querySegmentSpec,
+          toInclude,
+          merge,
+          context
+      );
+    }
+
+    public SegmentMetadataQueryBuilder copy(SegmentMetadataQueryBuilder builder)
+    {
+      return new SegmentMetadataQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .toInclude(toInclude)
+          .merge(merge)
+          .context(builder.context);
+    }
+
+    public SegmentMetadataQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder toInclude(ColumnIncluderator toInclude)
+    {
+      this.toInclude = toInclude;
+      return this;
+    }
+
+
+    public SegmentMetadataQueryBuilder merge(boolean merge)
+    {
+      this.merge = merge;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+  }
+
+  public static SegmentMetadataQueryBuilder newSegmentMetadataQueryBuilder()
+  {
+    return new SegmentMetadataQueryBuilder();
+  }
+
+  /**
+   * A Builder for SelectQuery.
+   * <p/>
+   * Required: dataSource(), intervals() must be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   SelectQuery query = new SelectQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .interval("2010/2013")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see io.druid.query.select.SelectQuery
+   */
+  public static class SelectQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private Map<String, Object> context;
+    private DimFilter dimFilter;
+    private QueryGranularity granularity;
+    private List<String> dimensions;
+    private List<String> metrics;
+    private PagingSpec pagingSpec;
+
+    public SelectQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      context = null;
+      dimFilter = null;
+      granularity = QueryGranularity.ALL;
+      dimensions = Lists.newArrayList();
+      metrics = Lists.newArrayList();
+      pagingSpec = null;
+    }
+
+    public SelectQuery build()
+    {
+      return new SelectQuery(
+          dataSource,
+          querySegmentSpec,
+          dimFilter,
+          granularity,
+          dimensions,
+          metrics,
+          pagingSpec,
+          context
+      );
+    }
+
+    public SelectQueryBuilder copy(SelectQueryBuilder builder)
+    {
+      return new SelectQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .context(builder.context);
+    }
+
+    public SelectQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public SelectQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public SelectQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public SelectQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public SelectQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public SelectQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+
+    public SelectQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value);
+      return this;
+    }
+
+    public SelectQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
+      for (String val : values) {
+        fields.add(new SelectorDimFilter(dimensionName, val));
+      }
+      dimFilter = new OrDimFilter(fields);
+      return this;
+    }
+
+    public SelectQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
+      return this;
+    }
+
+    public SelectQueryBuilder granularity(String g)
+    {
+      granularity = QueryGranularity.fromString(g);
+      return this;
+    }
+
+    public SelectQueryBuilder granularity(QueryGranularity g)
+    {
+      granularity = g;
+      return this;
+    }
+
+    public SelectQueryBuilder dimensions(List<String> d)
+    {
+      dimensions = d;
+      return this;
+    }
+
+    public SelectQueryBuilder metrics(List<String> m)
+    {
+      metrics = m;
+      return this;
+    }
+
+    public SelectQueryBuilder pagingSpec(PagingSpec p)
+    {
+      pagingSpec = p;
+      return this;
+    }
+  }
+
+  public static SelectQueryBuilder newSelectQueryBuilder()
+  {
+    return new SelectQueryBuilder();
   }
 }

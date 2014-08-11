@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: A First Look at Druid
 Greetings! This tutorial will help clarify some core Druid concepts. We will use a realtime dataset and issue some basic Druid queries. If you are ready to explore Druid, and learn a thing or two, read on!
 
 About the data
@@ -47,7 +49,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.0-bin.tar.gz). Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.143-bin.tar.gz). Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
 
@@ -58,7 +60,7 @@ tar -zxvf druid-services-*-bin.tar.gz
 Not too lost so far right? That's great! If you cd into the directory:
 
 ```
-cd druid-services-0.6.0
+cd druid-services-0.6.143
 ```
 
 You should see a bunch of files:
@@ -66,6 +68,20 @@ You should see a bunch of files:
 * run_example_server.sh
 * run_example_client.sh
 * LICENSE, config, examples, lib directories
+
+Setting up Zookeeper
+--------------------
+
+Before we get started, we need to start Apache Zookeeper.
+
+```bash
+curl http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
+tar xzf zookeeper-3.4.5.tar.gz
+cd zookeeper-3.4.5
+cp conf/zoo_sample.cfg conf/zoo.cfg
+./bin/zkServer.sh start
+cd ..
+```
 
 Running Example Scripts
 -----------------------
@@ -78,7 +94,7 @@ Let's start doing stuff. You can start a Druid [Realtime](Realtime.html) node by
 
 Select "wikipedia".
 
-Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
+Note that the first time you start the example, it may take some extra time due to its fetching various dependencies. Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
 ```
 2013-09-04 19:33:11,922 INFO [main] org.eclipse.jetty.server.AbstractConnector - Started SelectChannelConnector@0.0.0.0:8083
@@ -116,7 +132,7 @@ Select "wikipedia" once again. This script issues [GroupByQueries](GroupByQuery.
 
 This is a **groupBy** query, which you may be familiar with from SQL. We are grouping, or aggregating, via the `dimensions` field: `["page"]`. We are **filtering** via the `namespace` dimension, to only look at edits on `articles`. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
 
-The result looks something like this:
+The result looks something like this (when it's prettified):
 
 ```json
 [
@@ -140,7 +156,8 @@ The result looks something like this:
 
 This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
 
-h2. Querying Druid
+Querying Druid
+--------------
 
 In your favorite editor, create the file:
 
@@ -202,7 +219,7 @@ You are probably wondering, what are these [Granularities](Granularities.html) a
 To issue the query and get some results, run the following in your command line:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  ````timeseries_query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries_query.body
 ```
 
 Once again, you should get a JSON blob of text back with your results, that looks something like this:
@@ -272,7 +289,7 @@ and put the following in there:
   "dataSource": "wikipedia", 
   "granularity": "all", 
   "dimensions": [ "page" ], 
-  "orderBy": {
+  "limitSpec": {
      "type": "default", 
      "columns": [ { "dimension": "edit_count", "direction": "DESCENDING" } ], 
      "limit": 10
@@ -285,7 +302,7 @@ and put the following in there:
 }
 ```
 
-Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [OrderBy](OrderBy.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
+Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [LimitSpec](LimitSpec.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
 
 If you issue the query:
 
@@ -320,13 +337,13 @@ Feel free to tweak other query parameters to answer other questions you may have
 Next Steps
 ----------
 
-What to know even more information about the Druid Cluster? Check out [Tutorial%3A The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html)
+Want to know even more information about the Druid Cluster? Check out [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
 
 Druid is even more fun if you load your own data into it! To learn how to load your data, see [Loading Your Data](Tutorial%3A-Loading-Your-Data-Part-1.html).
 
 Additional Information
 ----------------------
 
-This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, please read the other links in our wiki.
+This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, read more of the Druid documentation and the blogs found on druid.io.
 
 And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](https://groups.google.com/forum/#!forum/druid-development).

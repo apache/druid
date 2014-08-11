@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
@@ -35,7 +36,9 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -58,6 +61,14 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+
+  private final QueryConfig config;
+
+  @Inject
+  public SegmentMetadataQueryQueryToolChest(QueryConfig config)
+  {
+    this.config = config;
+  }
 
   @Override
   public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)
@@ -147,7 +158,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4(query.getType())
         .setUser5(Joiner.on(",").join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -155,7 +166,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
-  public Function<SegmentAnalysis, SegmentAnalysis> makeMetricManipulatorFn(
+  public Function<SegmentAnalysis, SegmentAnalysis> makePreComputeManipulatorFn(
       SegmentMetadataQuery query, MetricManipulationFn fn
   )
   {
@@ -178,9 +189,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
         return ByteBuffer.allocate(1 + includerBytes.length)
-                         .put(SEGMENT_METADATA_CACHE_PREFIX)
-                         .put(includerBytes)
-                         .array();
+            .put(SEGMENT_METADATA_CACHE_PREFIX)
+            .put(includerBytes)
+            .array();
       }
 
       @Override

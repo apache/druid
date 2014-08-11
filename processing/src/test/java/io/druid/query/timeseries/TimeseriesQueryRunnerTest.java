@@ -19,12 +19,14 @@
 
 package io.druid.query.timeseries;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -61,7 +63,11 @@ public class TimeseriesQueryRunnerTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.makeQueryRunners(
-        TimeseriesQueryRunnerFactory.create()
+        new TimeseriesQueryRunnerFactory(
+            new TimeseriesQueryQueryToolChest(new QueryConfig()),
+            new TimeseriesQueryEngine(),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
     );
   }
 
@@ -85,7 +91,8 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.indexDoubleSum
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -127,6 +134,11 @@ public class TimeseriesQueryRunnerTest
           (QueryRunnerTestHelper.skippedDay.equals(result.getTimestamp()) ? 0L : 13L) + 1L,
           value.getDoubleMetric("addRowsIndexConstant"),
           0.0
+      );
+      Assert.assertEquals(
+          value.getDoubleMetric("uniques"),
+          QueryRunnerTestHelper.skippedDay.equals(result.getTimestamp()) ? 0.0d : 9.0d,
+          0.02
       );
 
       expectedEarliest = gran.toDateTime(gran.next(expectedEarliest.getMillis()));
@@ -182,7 +194,12 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(QueryRunnerTestHelper.providerDimension, "upfront")
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
-                                  .aggregators(Arrays.<AggregatorFactory>asList(QueryRunnerTestHelper.rowsCount))
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
                                   .build();
 
     Assert.assertEquals(
@@ -215,6 +232,14 @@ public class TimeseriesQueryRunnerTest
           QueryRunnerTestHelper.skippedDay.equals(result.getTimestamp()) ? 0L : 2L,
           value.getLongMetric("rows").longValue()
       );
+      Assert.assertEquals(
+          result.toString(),
+          QueryRunnerTestHelper.skippedDay.equals(result.getTimestamp()) ? 0.0d : 2.0d,
+          value.getDoubleMetric(
+              "uniques"
+          ),
+          0.01
+      );
 
       expectedEarliest = gran.toDateTime(gran.next(expectedEarliest.getMillis()));
     }
@@ -233,7 +258,8 @@ public class TimeseriesQueryRunnerTest
                                           new LongSumAggregatorFactory(
                                               "idx",
                                               "index"
-                                          )
+                                          ),
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .build();
@@ -242,13 +268,13 @@ public class TimeseriesQueryRunnerTest
         new Result<TimeseriesResultValue>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L)
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<TimeseriesResultValue>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -327,7 +353,8 @@ public class TimeseriesQueryRunnerTest
                                            new LongSumAggregatorFactory(
                                                "idx",
                                                "index"
-                                           )
+                                           ),
+                                           QueryRunnerTestHelper.qualityUniques
                                        )
                                    )
                                    .build();
@@ -336,7 +363,7 @@ public class TimeseriesQueryRunnerTest
         new Result<TimeseriesResultValue>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -363,7 +390,8 @@ public class TimeseriesQueryRunnerTest
                                            new LongSumAggregatorFactory(
                                                "idx",
                                                "index"
-                                           )
+                                           ),
+                                           QueryRunnerTestHelper.qualityUniques
                                        )
                                    )
                                    .build();
@@ -372,7 +400,7 @@ public class TimeseriesQueryRunnerTest
         new Result<TimeseriesResultValue>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -457,7 +485,8 @@ public class TimeseriesQueryRunnerTest
                                            new LongSumAggregatorFactory(
                                                "idx",
                                                "index"
-                                           )
+                                           ),
+                                           QueryRunnerTestHelper.qualityUniques
                                        )
                                    )
                                    .build();
@@ -466,7 +495,7 @@ public class TimeseriesQueryRunnerTest
         new Result<TimeseriesResultValue>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -494,7 +523,8 @@ public class TimeseriesQueryRunnerTest
                                            new LongSumAggregatorFactory(
                                                "idx",
                                                "index"
-                                           )
+                                           ),
+                                           QueryRunnerTestHelper.qualityUniques
                                        )
                                    )
                                    .build();
@@ -503,7 +533,7 @@ public class TimeseriesQueryRunnerTest
         new Result<TimeseriesResultValue>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -561,7 +591,8 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.indexLongSum
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -574,7 +605,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
                     "index", 6619L,
-                    "addRowsIndexConstant", 6633.0
+                    "addRowsIndexConstant", 6633.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         ),
@@ -584,7 +616,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
                     "index", 5827L,
-                    "addRowsIndexConstant", 5841.0
+                    "addRowsIndexConstant", 5841.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         )
@@ -608,7 +641,8 @@ public class TimeseriesQueryRunnerTest
         .aggregators(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexLongSum
+                QueryRunnerTestHelper.indexLongSum,
+                QueryRunnerTestHelper.qualityUniques
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -621,7 +655,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 11L,
                     "index", 3783L,
-                    "addRowsIndexConstant", 3795.0
+                    "addRowsIndexConstant", 3795.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         ),
@@ -631,7 +666,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 11L,
                     "index", 3313L,
-                    "addRowsIndexConstant", 3325.0
+                    "addRowsIndexConstant", 3325.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         )
@@ -655,7 +691,8 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.indexLongSum
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -668,7 +705,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 9L,
                     "index", 1102L,
-                    "addRowsIndexConstant", 1112.0
+                    "addRowsIndexConstant", 1112.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         ),
@@ -678,7 +716,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 9L,
                     "index", 1120L,
-                    "addRowsIndexConstant", 1130.0
+                    "addRowsIndexConstant", 1130.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         )
@@ -702,7 +741,8 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.indexLongSum
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -715,7 +755,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 2681L,
-                    "addRowsIndexConstant", 2684.0
+                    "addRowsIndexConstant", 2684.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         ),
@@ -725,7 +766,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 2193L,
-                    "addRowsIndexConstant", 2196.0
+                    "addRowsIndexConstant", 2196.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         )
@@ -749,7 +791,8 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.indexLongSum
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -762,7 +805,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 2836L,
-                    "addRowsIndexConstant", 2839.0
+                    "addRowsIndexConstant", 2839.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         ),
@@ -772,7 +816,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 2514L,
-                    "addRowsIndexConstant", 2517.0
+                    "addRowsIndexConstant", 2517.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         )
@@ -818,7 +863,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 254.4554443359375D,
-                    "addRowsIndexConstant", 257.4554443359375D
+                    "addRowsIndexConstant", 257.4554443359375D,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         ),
@@ -828,7 +874,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 260.4129638671875D,
-                    "addRowsIndexConstant", 263.4129638671875D
+                    "addRowsIndexConstant", 263.4129638671875D,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         )
@@ -874,7 +921,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
                     "index", new Float(135.885094).doubleValue(),
-                    "addRowsIndexConstant", new Float(137.885094).doubleValue()
+                    "addRowsIndexConstant", new Float(137.885094).doubleValue(),
+                    "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
         ),
@@ -884,7 +932,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
                     "index", new Float(147.425935).doubleValue(),
-                    "addRowsIndexConstant", new Float(149.425935).doubleValue()
+                    "addRowsIndexConstant", new Float(149.425935).doubleValue(),
+                    "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
         )
@@ -930,7 +979,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
                     "index", new Float(118.570340).doubleValue(),
-                    "addRowsIndexConstant", new Float(120.570340).doubleValue()
+                    "addRowsIndexConstant", new Float(120.570340).doubleValue(),
+                    "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
         ),
@@ -940,7 +990,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 1L,
                     "index", new Float(112.987027).doubleValue(),
-                    "addRowsIndexConstant", new Float(114.987027).doubleValue()
+                    "addRowsIndexConstant", new Float(114.987027).doubleValue(),
+                    "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
         )
@@ -970,7 +1021,8 @@ public class TimeseriesQueryRunnerTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.indexLongSum
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -983,7 +1035,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
                     "index", 6619L,
-                    "addRowsIndexConstant", 6633.0
+                    "addRowsIndexConstant", 6633.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         ),
@@ -993,7 +1046,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 13L,
                     "index", 5827L,
-                    "addRowsIndexConstant", 5841.0
+                    "addRowsIndexConstant", 5841.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
                 )
             )
         )
@@ -1043,7 +1097,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 254.4554443359375D,
-                    "addRowsIndexConstant", 257.4554443359375D
+                    "addRowsIndexConstant", 257.4554443359375D,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         ),
@@ -1053,7 +1108,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 2L,
                     "index", 260.4129638671875D,
-                    "addRowsIndexConstant", 263.4129638671875D
+                    "addRowsIndexConstant", 263.4129638671875D,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
                 )
             )
         )
@@ -1085,7 +1141,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 0.0,
-                    "addRowsIndexConstant", 1.0
+                    "addRowsIndexConstant", 1.0,
+                    "uniques", 0.0
                 )
             )
         ),
@@ -1095,7 +1152,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 0.0,
-                    "addRowsIndexConstant", 1.0
+                    "addRowsIndexConstant", 1.0,
+                    "uniques", 0.0
                 )
             )
         )
@@ -1127,7 +1185,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 0.0,
-                    "addRowsIndexConstant", 1.0
+                    "addRowsIndexConstant", 1.0,
+                    "uniques", 0.0
                 )
             )
         ),
@@ -1137,7 +1196,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 0.0,
-                    "addRowsIndexConstant", 1.0
+                    "addRowsIndexConstant", 1.0,
+                    "uniques", 0.0
                 )
             )
         )
@@ -1183,7 +1243,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 0.0,
-                    "addRowsIndexConstant", 1.0
+                    "addRowsIndexConstant", 1.0,
+                    "uniques", 0.0
                 )
             )
         ),
@@ -1193,7 +1254,8 @@ public class TimeseriesQueryRunnerTest
                 ImmutableMap.<String, Object>of(
                     "rows", 0L,
                     "index", 0.0,
-                    "addRowsIndexConstant", 1.0
+                    "addRowsIndexConstant", 1.0,
+                    "uniques", 0.0
                 )
             )
         )
@@ -1204,6 +1266,85 @@ public class TimeseriesQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiValueFilteringJavascriptAggregator()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      ImmutableList.of(
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          QueryRunnerTestHelper.jsIndexSumIfPlacementishA,
+                                          QueryRunnerTestHelper.jsPlacementishCount
+                                      )
+                                  )
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime(
+                QueryRunnerTestHelper.firstToThird.getIntervals()
+                                                  .get(0)
+                                                  .getStart()
+            ),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "index", 12459.361190795898d,
+                    "nindex", 283.31103515625d,
+                    "pishcount", 52d
+                )
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiValueFilteringJavascriptAggregatorAndAlsoRegularFilters()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .filters(QueryRunnerTestHelper.placementishDimension, "a")
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      ImmutableList.of(
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          QueryRunnerTestHelper.jsIndexSumIfPlacementishA,
+                                          QueryRunnerTestHelper.jsPlacementishCount
+                                      )
+                                  )
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime(
+                QueryRunnerTestHelper.firstToThird.getIntervals()
+                                                  .get(0)
+                                                  .getStart()
+            ),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "index", 283.31103515625d,
+                    "nindex", 283.31103515625d,
+                    "pishcount", 4d
+                )
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
   @Test

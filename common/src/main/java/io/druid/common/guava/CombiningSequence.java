@@ -73,38 +73,57 @@ public class CombiningSequence<T> implements Sequence<T>
     final CombiningYieldingAccumulator<OutType, T> combiningAccumulator = new CombiningYieldingAccumulator<OutType, T>(
         ordering, mergeFn, accumulator
     );
+
+    combiningAccumulator.setRetVal(initValue);
     Yielder<T> baseYielder = baseSequence.toYielder(null, combiningAccumulator);
 
-    if (baseYielder.isDone()) {
-      return Yielders.done(initValue, baseYielder);
-    }
-
-    return makeYielder(baseYielder, combiningAccumulator);
+    return makeYielder(baseYielder, combiningAccumulator, false);
   }
 
   public <OutType, T> Yielder<OutType> makeYielder(
-      final Yielder<T> yielder, final CombiningYieldingAccumulator<OutType, T> combiningAccumulator
+      Yielder<T> yielder,
+      final CombiningYieldingAccumulator<OutType, T> combiningAccumulator,
+      boolean finalValue
   )
   {
+    final Yielder<T> finalYielder;
+    final OutType retVal;
+    final boolean finalFinalValue;
+
+    if(!yielder.isDone()) {
+      retVal = combiningAccumulator.getRetVal();
+      finalYielder = yielder.next(yielder.get());
+      finalFinalValue = false;
+    } else {
+      if(!finalValue && combiningAccumulator.accumulatedSomething()) {
+        combiningAccumulator.accumulateLastValue();
+        retVal = combiningAccumulator.getRetVal();
+        finalFinalValue = true;
+
+        if(!combiningAccumulator.yielded()) {
+          return Yielders.done(null, yielder);
+        } else {
+          finalYielder = Yielders.done(null, yielder);
+        }
+      }
+      else {
+        return Yielders.done(null, yielder);
+      }
+    }
+
+
     return new Yielder<OutType>()
     {
       @Override
       public OutType get()
       {
-        return combiningAccumulator.getRetVal();
+        return retVal;
       }
 
       @Override
-      public Yielder<OutType> next(OutType outType)
+      public Yielder<OutType> next(OutType initValue)
       {
-        T nextIn = yielder.get();
-        combiningAccumulator.setRetVal(outType);
-        final Yielder<T> baseYielder = yielder.next(nextIn);
-        if (baseYielder.isDone()) {
-          final OutType outValue = combiningAccumulator.getAccumulator().accumulate(outType, baseYielder.get());
-          return Yielders.done(outValue, baseYielder);
-        }
-        return makeYielder(baseYielder, combiningAccumulator);
+        return makeYielder(finalYielder, combiningAccumulator, finalFinalValue);
       }
 
       @Override
@@ -116,7 +135,7 @@ public class CombiningSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
-        yielder.close();
+        finalYielder.close();
       }
     };
   }
@@ -128,6 +147,8 @@ public class CombiningSequence<T> implements Sequence<T>
     private final YieldingAccumulator<OutType, T> accumulator;
 
     private volatile OutType retVal;
+    private volatile T lastMergedVal;
+    private volatile boolean accumulatedSomething = false;
 
     public CombiningYieldingAccumulator(
         Ordering<T> ordering,
@@ -173,16 +194,33 @@ public class CombiningSequence<T> implements Sequence<T>
     @Override
     public T accumulate(T prevValue, T t)
     {
+      if (!accumulatedSomething) {
+        accumulatedSomething = true;
+      }
+
       if (prevValue == null) {
-        return mergeFn.apply(t, null);
+        lastMergedVal = mergeFn.apply(t, null);
+        return lastMergedVal;
       }
 
       if (ordering.compare(prevValue, t) == 0) {
-        return mergeFn.apply(prevValue, t);
+        lastMergedVal = mergeFn.apply(prevValue, t);
+        return lastMergedVal;
       }
 
+      lastMergedVal = t;
       retVal = accumulator.accumulate(retVal, prevValue);
       return t;
+    }
+
+    public void accumulateLastValue()
+    {
+      retVal = accumulator.accumulate(retVal, lastMergedVal);
+    }
+
+    public boolean accumulatedSomething()
+    {
+      return accumulatedSomething;
     }
   }
 

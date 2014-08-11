@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public abstract class HdfsDataSegmentPusherConfig
+public class HdfsDataSegmentPusherConfig
 {
   @JsonProperty
   public String storageDirectory = "";

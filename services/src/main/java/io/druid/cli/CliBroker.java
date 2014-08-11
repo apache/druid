@@ -28,8 +28,12 @@ import io.druid.client.BrokerServerView;
 import io.druid.client.CachingClusteredClient;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
 import io.druid.client.cache.CacheProvider;
+import io.druid.client.selector.CustomTierSelectorStrategyConfig;
+import io.druid.client.selector.ServerSelectorStrategy;
+import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -42,6 +46,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
+import io.druid.server.QueryResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import org.eclipse.jetty.server.Server;
@@ -52,7 +57,7 @@ import java.util.List;
  */
 @Command(
     name = "broker",
-    description = "Runs a broker node, see https://github.com/metamx/druid/wiki/Broker for a description"
+    description = "Runs a broker node, see http://druid.io/docs/latest/Broker.html for a description"
 )
 public class CliBroker extends ServerRunnable
 {
@@ -79,10 +84,17 @@ public class CliBroker extends ServerRunnable
 
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
+            JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
-            binder.bind(JettyServerInitializer.class).to(BrokerJettyServerInitializer.class).in(LazySingleton.class);
+
+            binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
+            Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
+            LifecycleModule.register(binder, QueryResource.class);
 
             DiscoveryModule.register(binder, Self.class);
             MetricsModule.register(binder, CacheMonitor.class);

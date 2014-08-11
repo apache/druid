@@ -19,11 +19,14 @@
 
 package io.druid.client.cache;
 
+import com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -65,6 +68,22 @@ public class ByteCountingLRUMapTest
     assertMapValues(2, 101, 2);
     Assert.assertEquals(ByteBuffer.wrap(eightyEightVal), ByteBuffer.wrap(map.get(tenKey)));
     Assert.assertEquals(oneByte, ByteBuffer.wrap(map.get(twoByte)));
+
+    Iterator<ByteBuffer> it = map.keySet().iterator();
+    List<ByteBuffer> toRemove = Lists.newLinkedList();
+    while(it.hasNext()) {
+      ByteBuffer buf = it.next();
+      if(buf.remaining() == 10) {
+        toRemove.add(buf);
+      }
+    }
+    for(ByteBuffer buf : toRemove) {
+      map.remove(buf);
+    }
+    assertMapValues(1, 3, 2);
+
+    map.remove(twoByte);
+    assertMapValues(0, 0, 2);
   }
 
   private void assertMapValues(final int size, final int numBytes, final int evictionCount)

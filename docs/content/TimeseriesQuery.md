@@ -52,7 +52,7 @@ There are 7 main parts to a timeseries query:
 |granularity|Defines the granularity of the query. See [Granularities](Granularities.html)|yes|
 |filter|See [Filters](Filters.html)|no|
 |aggregations|See [Aggregations](Aggregations.html)|yes|
-|postAggregations|See [Post Aggregations](Post-Aggregations.html)|no|
+|postAggregations|See [Post Aggregations](Post-aggregations.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 

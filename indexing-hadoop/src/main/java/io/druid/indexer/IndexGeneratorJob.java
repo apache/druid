@@ -31,10 +31,10 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -44,6 +44,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -60,6 +61,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -84,9 +86,7 @@ import java.util.zip.ZipOutputStream;
 public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
-
   private final HadoopDruidIndexerConfig config;
-
   private IndexGeneratorStats jobStats;
 
   public IndexGeneratorJob(
@@ -95,65 +95,6 @@ public class IndexGeneratorJob implements Jobby
   {
     this.config = config;
     this.jobStats = new IndexGeneratorStats();
-  }
-
-  public IndexGeneratorStats getJobStats()
-  {
-    return jobStats;
-  }
-
-  public boolean run()
-  {
-    try {
-      Job job = new Job(
-          new Configuration(),
-          String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
-      );
-
-      job.getConfiguration().set("io.sort.record.percent", "0.23");
-
-      for (String propName : System.getProperties().stringPropertyNames()) {
-        Configuration conf = job.getConfiguration();
-        if (propName.startsWith("hadoop.")) {
-          conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-        }
-      }
-
-      job.setInputFormatClass(TextInputFormat.class);
-
-      job.setMapperClass(IndexGeneratorMapper.class);
-      job.setMapOutputValueClass(Text.class);
-
-      SortableBytes.useSortableBytesAsMapOutputKey(job);
-
-      job.setNumReduceTasks(Iterables.size(config.getAllBuckets()));
-      job.setPartitionerClass(IndexGeneratorPartitioner.class);
-
-      job.setReducerClass(IndexGeneratorReducer.class);
-      job.setOutputKeyClass(BytesWritable.class);
-      job.setOutputValueClass(Text.class);
-      job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
-      FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
-
-      config.addInputPaths(job);
-      config.intoConfiguration(job);
-
-      JobHelper.setupClasspath(config, job);
-
-      job.submit();
-      log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
-
-      boolean success = job.waitForCompletion(true);
-
-      Counter invalidRowCount = job.getCounters()
-                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-      jobStats.setInvalidRowCount(invalidRowCount.getValue());
-
-      return success;
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
@@ -189,6 +130,65 @@ public class IndexGeneratorJob implements Jobby
     return publishedSegments;
   }
 
+  public IndexGeneratorStats getJobStats()
+  {
+    return jobStats;
+  }
+
+  public boolean run()
+  {
+    try {
+      Job job = new Job(
+          new Configuration(),
+          String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
+      );
+
+      job.getConfiguration().set("io.sort.record.percent", "0.23");
+
+      JobHelper.injectSystemProperties(job);
+
+      if (config.isCombineText()) {
+        job.setInputFormatClass(CombineTextInputFormat.class);
+      } else {
+        job.setInputFormatClass(TextInputFormat.class);
+      }
+
+      job.setMapperClass(IndexGeneratorMapper.class);
+      job.setMapOutputValueClass(Text.class);
+
+      SortableBytes.useSortableBytesAsMapOutputKey(job);
+
+      job.setNumReduceTasks(Iterables.size(config.getAllBuckets().get()));
+      job.setPartitionerClass(IndexGeneratorPartitioner.class);
+
+      job.setReducerClass(IndexGeneratorReducer.class);
+      job.setOutputKeyClass(BytesWritable.class);
+      job.setOutputValueClass(Text.class);
+      job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
+      FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
+
+      config.addInputPaths(job);
+      config.addJobProperties(job);
+      config.intoConfiguration(job);
+
+      JobHelper.setupClasspath(config, job);
+
+      job.submit();
+      log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
+
+      boolean success = job.waitForCompletion(true);
+
+      Counter invalidRowCount = job.getCounters()
+                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+      jobStats.setInvalidRowCount(invalidRowCount.getValue());
+
+      return success;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
 
   {
@@ -216,8 +216,9 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static class IndexGeneratorPartitioner extends Partitioner<BytesWritable, Text>
+  public static class IndexGeneratorPartitioner extends Partitioner<BytesWritable, Text> implements Configurable
   {
+    private Configuration config;
 
     @Override
     public int getPartition(BytesWritable bytesWritable, Text text, int numPartitions)
@@ -225,12 +226,27 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
+      if (config.get("mapred.job.tracker").equals("local")) {
+        return shardNum % numPartitions;
+      } else {
+        if (shardNum >= numPartitions) {
+          throw new ISE("Not enough partitions, shard[%,d] >= numPartitions[%,d]", shardNum, numPartitions);
+        }
+        return shardNum;
 
-      if (shardNum >= numPartitions) {
-        throw new ISE("Not enough partitions, shard[%,d] >= numPartitions[%,d]", shardNum, numPartitions);
       }
+    }
 
-      return shardNum;
+    @Override
+    public Configuration getConf()
+    {
+      return config;
+    }
+
+    @Override
+    public void setConf(Configuration config)
+    {
+      this.config = config;
     }
   }
 
@@ -244,9 +260,9 @@ public class IndexGeneratorJob implements Jobby
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
-      config = HadoopDruidIndexerConfigBuilder.fromConfiguration(context.getConfiguration());
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
-      for (AggregatorFactory factory : config.getRollupSpec().getAggs()) {
+      for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
         metricNames.add(factory.getName().toLowerCase());
       }
 
@@ -262,10 +278,8 @@ public class IndexGeneratorJob implements Jobby
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
-      final DataRollupSpec rollupSpec = config.getRollupSpec();
-      final AggregatorFactory[] aggs = rollupSpec.getAggs().toArray(
-          new AggregatorFactory[rollupSpec.getAggs().size()]
-      );
+      //final DataRollupSpec rollupSpec = config.getRollupSpec();
+      final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
 
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs);
 
@@ -289,7 +303,7 @@ public class IndexGeneratorJob implements Jobby
         int numRows = index.add(inputRow);
         ++lineCount;
 
-        if (numRows >= rollupSpec.rowFlushBoundary) {
+        if (numRows >= config.getSchema().getTuningConfig().getRowFlushBoundary()) {
           log.info(
               "%,d lines to %,d rows in %,d millis",
               lineCount - runningTotalLineCount,
@@ -412,7 +426,7 @@ public class IndexGeneratorJob implements Jobby
         if (caughtException == null) {
           Closeables.close(out, false);
         } else {
-          Closeables.closeQuietly(out);
+          CloseQuietly.close(out);
           throw Throwables.propagate(caughtException);
         }
       }
@@ -443,7 +457,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getVersion(),
+          config.getSchema().getTuningConfig().getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,
@@ -592,7 +606,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       finally {
-        Closeables.closeQuietly(in);
+        CloseQuietly.close(in);
       }
       out.closeEntry();
       context.progress();
@@ -605,8 +619,8 @@ public class IndexGeneratorJob implements Jobby
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withSpatialDimensions(config.getDataSpec().getSpatialDimensions())
-              .withQueryGranularity(config.getRollupSpec().getRollupGranularity())
+              .withSpatialDimensions(config.getSchema().getDataSchema().getParser())
+              .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()
       );

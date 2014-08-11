@@ -18,7 +18,7 @@ EXAMPLE=$1
 if [ -z ${EXAMPLE} ] ; then
     echo "Please specify an example type."
     echo "Examples availables:"
-    echo `ls ${EXAMPLES_DIR}`
+    echo `ls ${EXAMPLES_DIR} | grep -v indexing`
     read -p "> " EXAMPLE
     echo " "
 fi

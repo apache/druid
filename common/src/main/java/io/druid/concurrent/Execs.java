@@ -21,10 +21,17 @@ package io.druid.concurrent;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -48,5 +55,36 @@ public class Execs
   public static ThreadFactory makeThreadFactory(String nameFormat)
   {
     return new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build();
+  }
+
+  /**
+   * @param nameFormat nameformat for threadFactory
+   * @param capacity maximum capacity after which the executorService will block on accepting new tasks
+   * @return ExecutorService which blocks accepting new tasks when the capacity reached
+   */
+  public static ExecutorService newBlockingSingleThreaded(final String nameFormat, final int capacity)
+  {
+    final BlockingQueue<Runnable> queue;
+    if (capacity > 0) {
+      queue = new ArrayBlockingQueue<>(capacity);
+    } else {
+      queue = new SynchronousQueue<>();
+    }
+    return new ThreadPoolExecutor(
+        1, 1, 0L, TimeUnit.MILLISECONDS, queue, makeThreadFactory(nameFormat),
+        new RejectedExecutionHandler()
+        {
+          @Override
+          public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
+          {
+            try {
+              executor.getQueue().put(r);
+            }
+            catch (InterruptedException e) {
+              throw new RejectedExecutionException("Got Interrupted while adding to the Queue");
+            }
+          }
+        }
+    );
   }
 }

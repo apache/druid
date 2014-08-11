@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -40,8 +41,11 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.granularity.UniformGranularitySpec;
+import io.druid.indexing.common.TestUtils;
+import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -53,16 +57,19 @@ import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
-import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
-import io.druid.indexing.overlord.exec.TaskConsumer;
+import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPuller;
@@ -84,6 +91,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TaskLifecycleTest
@@ -96,7 +104,6 @@ public class TaskLifecycleTest
   private MockIndexerDBCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
-  private TaskConsumer tc = null;
   TaskStorageQueryAdapter tsqa = null;
 
   private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
@@ -109,20 +116,28 @@ public class TaskLifecycleTest
   };
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
-    EmittingLogger.registerEmitter(EasyMock.createMock(ServiceEmitter.class));
+    final ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    EmittingLogger.registerEmitter(emitter);
 
     tmp = Files.createTempDir();
 
-    ts = new HeapMemoryTaskStorage();
+    final TaskQueueConfig tqc = new DefaultObjectMapper().readValue(
+        "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\"}",
+        TaskQueueConfig.class
+    );
+    ts = new HeapMemoryTaskStorage(
+        new TaskStorageConfig()
+        {
+        }
+    );
+    tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
-    tq = new TaskQueue(ts, tl);
     mdc = newMockMDC();
-    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tq, tl, mdc, newMockEmitter()));
-
+    tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tl, mdc, newMockEmitter()));
     tb = new TaskToolboxFactory(
-        new TaskConfig(tmp.toString(), null, null, 50000),
+        new TaskConfig(tmp.toString(), null, null, 50000, null),
         tac,
         newMockEmitter(),
         new DataSegmentPusher()
@@ -145,6 +160,29 @@ public class TaskLifecycleTest
           public void kill(DataSegment segments) throws SegmentLoadingException
           {
 
+          }
+        },
+        new DataSegmentMover()
+        {
+          @Override
+          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
+              throws SegmentLoadingException
+          {
+            return dataSegment;
+          }
+        },
+        new DataSegmentArchiver()
+        {
+          @Override
+          public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+          {
+            return segment;
+          }
+
+          @Override
+          public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+          {
+            return segment;
           }
         },
         null, // segment announcer
@@ -171,14 +209,9 @@ public class TaskLifecycleTest
         ),
         new DefaultObjectMapper()
     );
-
     tr = new ThreadPoolTaskRunner(tb);
-
-    tc = new TaskConsumer(tq, tr, tac, newMockEmitter());
-    tsqa = new TaskStorageQueryAdapter(ts);
-
+    tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
     tq.start();
-    tc.start();
   }
 
   @After
@@ -190,7 +223,6 @@ public class TaskLifecycleTest
     catch (Exception e) {
       // suppress
     }
-    tc.stop();
     tq.stop();
   }
 
@@ -199,9 +231,14 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P2D"))),
         null,
+        "foo",
+        new UniformGranularitySpec(
+            Granularity.DAY,
+            null,
+            ImmutableList.of(new Interval("2010-01-01/P2D")),
+            Granularity.DAY
+        ),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
@@ -213,16 +250,17 @@ public class TaskLifecycleTest
                 IR("2010-01-02T01", "a", "c", 1)
             )
         ),
-        -1
+        -1,
+        TestUtils.MAPPER
     );
 
-    final Optional<TaskStatus> preRunTaskStatus = tsqa.getSameGroupMergedStatus(indexTask.getId());
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
     Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = ts.getStatus(indexTask.getId()).get();
     final List<DataSegment> publishedSegments = byIntervalOrdering.sortedCopy(mdc.getPublished());
-    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getSameGroupNewSegments(indexTask.getId()));
+    final List<DataSegment> loggedSegments = byIntervalOrdering.sortedCopy(tsqa.getInsertedSegments(indexTask.getId()));
 
     Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, mergedStatus.getStatusCode());
@@ -254,21 +292,20 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        "foo",
-        new UniformGranularitySpec(Granularity.DAY, ImmutableList.of(new Interval("2010-01-01/P1D"))),
         null,
+        "foo",
+        new UniformGranularitySpec(Granularity.DAY, null, ImmutableList.of(new Interval("2010-01-01/P1D")), Granularity.DAY),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
         QueryGranularity.NONE,
         10000,
         newMockExceptionalFirehoseFactory(),
-        -1
+        -1,
+        TestUtils.MAPPER
     );
 
-    final TaskStatus mergedStatus = runTask(indexTask);
-    final TaskStatus status = ts.getStatus(indexTask.getId()).get();
+    final TaskStatus status = runTask(indexTask);
 
-    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
-    Assert.assertEquals("merged statusCode", TaskStatus.Status.FAILED, mergedStatus.getStatusCode());
+    Assert.assertEquals("statusCode", TaskStatus.Status.FAILED, status.getStatusCode());
     Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
   }
@@ -298,9 +335,43 @@ public class TaskLifecycleTest
   }
 
   @Test
+  public void testNoopTask() throws Exception
+  {
+    final Task noopTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"runTime\":\"100\"}\"",
+        Task.class
+    );
+    final TaskStatus status = runTask(noopTask);
+
+    Assert.assertEquals("statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
+    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+  }
+
+  @Test
+  public void testNeverReadyTask() throws Exception
+  {
+    final Task neverReadyTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
+        Task.class
+    );
+    final TaskStatus status = runTask(neverReadyTask);
+
+    Assert.assertEquals("statusCode", TaskStatus.Status.FAILED, status.getStatusCode());
+    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+  }
+
+  @Test
   public void testSimple() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", new TaskResource("id1", 1), "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask(
+        "id1",
+        "id1",
+        new TaskResource("id1", 1),
+        "ds",
+        new Interval("2012-01-01/P1D")
+    )
     {
       @Override
       public String getType()
@@ -337,7 +408,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -371,7 +442,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
     {
       @Override
       public String getType()
@@ -402,28 +473,41 @@ public class TaskLifecycleTest
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
-  private TaskStatus runTask(Task task)
+  private TaskStatus runTask(final Task task) throws Exception
   {
+    final Task dummyTask = new DefaultObjectMapper().readValue(
+        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
+        Task.class
+    );
     final long startTime = System.currentTimeMillis();
 
+    Preconditions.checkArgument(!task.getId().equals(dummyTask.getId()));
+
+    tq.add(dummyTask);
     tq.add(task);
 
-    TaskStatus status;
+    TaskStatus retVal = null;
 
-    try {
-      while ((status = tsqa.getSameGroupMergedStatus(task.getId()).get()).isRunnable()) {
-        if (System.currentTimeMillis() > startTime + 10 * 1000) {
-          throw new ISE("Where did the task go?!: %s", task.getId());
+    for (final String taskId : ImmutableList.of(dummyTask.getId(), task.getId())) {
+      try {
+        TaskStatus status;
+        while ((status = tsqa.getStatus(taskId).get()).isRunnable()) {
+          if (System.currentTimeMillis() > startTime + 10 * 1000) {
+            throw new ISE("Where did the task go?!: %s", task.getId());
+          }
+
+          Thread.sleep(100);
         }
-
-        Thread.sleep(100);
+        if (taskId.equals(task.getId())) {
+          retVal = status;
+        }
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
       }
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
 
-    return status;
+    return retVal;
   }
 
   private static class MockIndexerDBCoordinator extends IndexerDBCoordinator
@@ -433,7 +517,7 @@ public class TaskLifecycleTest
 
     private MockIndexerDBCoordinator()
     {
-      super(null, null, null, null);
+      super(null, null, null);
     }
 
     @Override
@@ -519,7 +603,7 @@ public class TaskLifecycleTest
     return new FirehoseFactory()
     {
       @Override
-      public Firehose connect() throws IOException
+      public Firehose connect(InputRowParser parser) throws IOException
       {
         return new Firehose()
         {
@@ -555,6 +639,12 @@ public class TaskLifecycleTest
           }
         };
       }
+
+      @Override
+      public InputRowParser getParser()
+      {
+        return null;
+      }
     };
   }
 
@@ -563,7 +653,7 @@ public class TaskLifecycleTest
     return new FirehoseFactory()
     {
       @Override
-      public Firehose connect() throws IOException
+      public Firehose connect(InputRowParser parser) throws IOException
       {
         final Iterator<InputRow> inputRowIterator = inputRows.iterator();
 
@@ -600,6 +690,12 @@ public class TaskLifecycleTest
 
           }
         };
+      }
+
+      @Override
+      public InputRowParser getParser()
+      {
+        return null;
       }
     };
   }

@@ -38,6 +38,7 @@ import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -50,6 +51,7 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
@@ -322,12 +324,6 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-/*
-    if (indexes.size() < 2) {
-      throw new ISE("Too few indexes provided for append [%d].", indexes.size());
-    }
-*/
-
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(
             indexes,
@@ -438,9 +434,9 @@ public class IndexMerger
       serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
     }
     finally {
-      Closeables.closeQuietly(channel);
+      CloseQuietly.close(channel);
       channel = null;
-      Closeables.closeQuietly(fileOutputStream);
+      CloseQuietly.close(fileOutputStream);
       fileOutputStream = null;
     }
     IndexIO.checkFileSize(indexFile);
@@ -881,7 +877,7 @@ public class IndexMerger
       );
     }
     finally {
-      Closeables.closeQuietly(channel);
+      CloseQuietly.close(channel);
       channel = null;
     }
     IndexIO.checkFileSize(indexFile);

@@ -19,12 +19,14 @@
 
 package io.druid.client.cache;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +56,6 @@ public class MapCache implements Cache
   )
   {
     this.byteCountingLRUMap = byteCountingLRUMap;
-
     this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 
     namespaceId = Maps.newHashMap();
@@ -78,7 +79,10 @@ public class MapCache implements Cache
   @Override
   public byte[] get(NamedKey key)
   {
-    final byte[] retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
+    final byte[] retVal;
+    synchronized (clearLock) {
+      retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
+    }
     if (retVal == null) {
       missCount.incrementAndGet();
     } else {
@@ -91,7 +95,7 @@ public class MapCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     synchronized (clearLock) {
-        baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
+      baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
     }
   }
 
@@ -99,7 +103,7 @@ public class MapCache implements Cache
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
     Map<NamedKey, byte[]> retVal = Maps.newHashMap();
-    for(NamedKey key : keys) {
+    for (NamedKey key : keys) {
       retVal.put(key, get(key));
     }
     return retVal;
@@ -111,12 +115,15 @@ public class MapCache implements Cache
     byte[] idBytes;
     synchronized (namespaceId) {
       idBytes = getNamespaceId(namespace);
-      if(idBytes == null) return;
+      if (idBytes == null) {
+        return;
+      }
 
       namespaceId.remove(namespace);
     }
     synchronized (clearLock) {
       Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
+      List<ByteBuffer> toRemove = Lists.newLinkedList();
       while (iter.hasNext()) {
         ByteBuffer next = iter.next();
 
@@ -124,8 +131,11 @@ public class MapCache implements Cache
             && next.get(1) == idBytes[1]
             && next.get(2) == idBytes[2]
             && next.get(3) == idBytes[3]) {
-          iter.remove();
+          toRemove.add(next);
         }
+      }
+      for(ByteBuffer key : toRemove) {
+        baseMap.remove(key);
       }
     }
   }
@@ -149,5 +159,10 @@ public class MapCache implements Cache
     final ByteBuffer retVal = ByteBuffer.allocate(key.length + 4).put(idBytes).put(key);
     retVal.rewind();
     return retVal;
+  }
+
+  public boolean isLocal()
+  {
+    return true;
   }
 }

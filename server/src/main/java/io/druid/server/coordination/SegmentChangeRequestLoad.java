@@ -39,9 +39,9 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   }
 
   @Override
-  public void go(DataSegmentChangeHandler handler)
+  public void go(DataSegmentChangeHandler handler, DataSegmentChangeCallback callback)
   {
-    handler.addSegment(segment);
+    handler.addSegment(segment, callback);
   }
 
   @JsonProperty
@@ -49,6 +49,12 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
   public DataSegment getSegment()
   {
     return segment;
+  }
+
+  @Override
+  public String asString()
+  {
+    return String.format("LOAD: %s", segment.getIdentifier());
   }
 
   @Override

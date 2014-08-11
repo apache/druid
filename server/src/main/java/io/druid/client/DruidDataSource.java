@@ -20,6 +20,8 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import io.druid.timeline.DataSegment;
 
@@ -112,9 +114,23 @@ public class DruidDataSource
   @Override
   public String toString()
   {
-    return "DruidDataSource{" +
-           "properties=" + properties +
-           ", partitions=" + segmentsHolder.toString() +
-           '}';
+    synchronized (lock) {
+      return "DruidDataSource{" +
+             "properties=" + properties +
+             ", partitions=" + segmentsHolder.toString() +
+             '}';
+    }
+  }
+
+  public ImmutableDruidDataSource toImmutableDruidDataSource()
+  {
+    synchronized (lock) {
+      return new ImmutableDruidDataSource(
+          name,
+          ImmutableMap.copyOf(properties),
+          ImmutableMap.copyOf(partitionNames),
+          ImmutableSet.copyOf(segmentsHolder)
+      );
+    }
   }
 }

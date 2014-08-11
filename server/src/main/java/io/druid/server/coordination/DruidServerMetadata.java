@@ -31,6 +31,7 @@ public class DruidServerMetadata
   private final long maxSize;
   private final String tier;
   private final String type;
+  private final int priority;
 
   @JsonCreator
   public DruidServerMetadata(
@@ -38,7 +39,8 @@ public class DruidServerMetadata
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") String type,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tier") String tier,
+      @JsonProperty("priority") int priority
   )
   {
     this.name = name;
@@ -46,6 +48,7 @@ public class DruidServerMetadata
     this.maxSize = maxSize;
     this.tier = tier;
     this.type = type;
+    this.priority = priority;
   }
 
   @JsonProperty
@@ -78,6 +81,63 @@ public class DruidServerMetadata
     return type;
   }
 
+  @JsonProperty
+  public int getPriority()
+  {
+    return priority;
+  }
+
+  public boolean isAssignable()
+  {
+    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    DruidServerMetadata metadata = (DruidServerMetadata) o;
+
+    if (maxSize != metadata.maxSize) {
+      return false;
+    }
+    if (priority != metadata.priority) {
+      return false;
+    }
+    if (host != null ? !host.equals(metadata.host) : metadata.host != null) {
+      return false;
+    }
+    if (name != null ? !name.equals(metadata.name) : metadata.name != null) {
+      return false;
+    }
+    if (tier != null ? !tier.equals(metadata.tier) : metadata.tier != null) {
+      return false;
+    }
+    if (type != null ? !type.equals(metadata.type) : metadata.type != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (host != null ? host.hashCode() : 0);
+    result = 31 * result + (int) (maxSize ^ (maxSize >>> 32));
+    result = 31 * result + (tier != null ? tier.hashCode() : 0);
+    result = 31 * result + (type != null ? type.hashCode() : 0);
+    result = 31 * result + priority;
+    return result;
+  }
+
   @Override
   public String toString()
   {
@@ -87,6 +147,7 @@ public class DruidServerMetadata
            ", maxSize=" + maxSize +
            ", tier='" + tier + '\'' +
            ", type='" + type + '\'' +
+           ", priority='" + priority + '\'' +
            '}';
   }
 }

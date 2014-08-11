@@ -3,11 +3,9 @@
 
 <link rel="stylesheet" href="css/toc.css">
 
-h1. Contents
-* "Introduction":./Home.html
-* "Download":./Download.html
-* "Support":./Support.html
-* "Contribute":./Contribute.html
+h2. Introduction
+* "About Druid":./
+* "Concepts and Terminology":./Concepts-and-Terminology.html
 
 h2. Getting Started
 * "Tutorial: A First Look at Druid":./Tutorial:-A-First-Look-at-Druid.html
@@ -16,18 +14,34 @@ h2. Getting Started
 * "Tutorial: Loading Your Data Part 2":./Tutorial:-Loading-Your-Data-Part-2.html
 * "Tutorial: All About Queries":./Tutorial:-All-About-Queries.html
 
-h2. Evaluate Druid
-* "Cluster Setup":./Cluster-setup.html
-* "Booting a Production Cluster":./Booting-a-production-cluster.html
+h2. Booting a Druid Cluster
+* "Simple Cluster Configuration":Simple-Cluster-Configuration.html
+* "Production Cluster Configuration":Production-Cluster-Configuration.html
+* "Rolling Cluster Updates":Rolling-Updates.html
 
 h2. Configuration
-* "Configuration":Configuration.html
+* "Common Configuration":Configuration.html
+* "Indexing Service":Indexing-Service-Config.html
+* "Coordinator":Coordinator-Config.html
+* "Historical":Historical-Config.html
+* "Broker":Broker-Config.html
+* "Realtime":Realtime-Config.html
+* "Configuring Logging":./Logging.html
 
 h2. Data Ingestion
-* "Realtime":./Realtime.html
+* "Ingestion FAQ":./Ingestion-FAQ.html
+* "Realtime":./Realtime-ingestion.html
+** "Kafka-0.8.x Ingestion":./Kafka-Eight.html
 * "Batch":./Batch-ingestion.html
+** "Different Hadoop Versions":./Other-Hadoop.html
 * "Indexing Service":./Indexing-Service.html
 ** "Tasks":./Tasks.html
+* "Data Formats":./Data_formats.html
+
+h2. Operations
+* "Performance FAQ":./Performance-FAQ.html
+* "Extending Druid":./Modules.html
+* "Booting a Production Cluster":./Booting-a-production-cluster.html
 
 h2. Querying
 * "Querying":./Querying.html
@@ -35,15 +49,18 @@ h2. Querying
 ** "Aggregations":./Aggregations.html
 ** "Post Aggregations":./Post-aggregations.html
 ** "Granularities":./Granularities.html
+** "DimensionSpecs":./DimensionSpecs.html
 * Query Types
-** "GroupByQuery":./GroupByQuery.html
-*** "OrderBy":./OrderBy.html
+** "GroupBy":./GroupByQuery.html
+*** "LimitSpec":./LimitSpec.html
 *** "Having":./Having.html
-** "SearchQuery":./Having.html
+** "Search":./SearchQuery.html
 *** "SearchQuerySpec":./SearchQuerySpec.html
-** "SegmentMetadataQuery":./SegmentMetadataQuery.html
-** "TimeBoundaryQuery":./TimeBoundaryQuery.html
-** "TimeseriesQuery":./TimeseriesQuery.html
+** "Segment Metadata":./SegmentMetadataQuery.html
+** "Time Boundary":./TimeBoundaryQuery.html
+** "Timeseries":./TimeseriesQuery.html
+** "TopN":./TopNQuery.html
+*** "TopNMetricSpec":./TopNMetricSpec.html
 
 h2. Architecture
 * "Design":./Design.html
@@ -54,14 +71,19 @@ h2. Architecture
 ** "Coordinator":./Coordinator.html
 *** "Rule Configuration":./Rule-Configuration.html
 ** "Realtime":./Realtime.html
-*** "Firehose":./Firehose.html
-*** "Plumber":./Plumber.html
 ** "Indexing Service":./Indexing-Service.html
+*** "Middle Manager":./Middlemanager.html
+*** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
-** "MySQL":./MySQL.html
+** "Metadata Storage":./MySQL.html
 ** "ZooKeeper":./ZooKeeper.html
-* "Concepts and Terminology":./Concepts-and-Terminology.html
+
+h2. Experimental
+* "About Experimental Features":./About-Experimental-Features.html
+* "Geographic Queries":./GeographicQueries.html
+* "Select Query":./SelectQuery.html
+* "Approximate Histograms and Quantiles":./ApproxHisto.html
 
 h2. Development
 * "Versioning":./Versioning.html

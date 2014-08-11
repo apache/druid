@@ -21,11 +21,14 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+
+import java.util.Map;
 
 /**
  */
@@ -34,19 +37,24 @@ public class PeriodLoadRule extends LoadRule
   private static final Logger log = new Logger(PeriodLoadRule.class);
 
   private final Period period;
-  private final Integer replicants;
-  private final String tier;
+  private final Map<String, Integer> tieredReplicants;
 
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") Period period,
-      @JsonProperty("replicants") Integer replicants,
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
+      // The following two vars need to be deprecated
+      @JsonProperty("replicants") int replicants,
       @JsonProperty("tier") String tier
   )
   {
     this.period = period;
-    this.replicants = (replicants == null) ? 2 : replicants;
-    this.tier = tier;
+
+    if (tieredReplicants != null) {
+      this.tieredReplicants = tieredReplicants;
+    } else {     // Backwards compatible
+      this.tieredReplicants = ImmutableMap.of(tier, replicants);
+    }
   }
 
   @Override
@@ -62,28 +70,30 @@ public class PeriodLoadRule extends LoadRule
     return period;
   }
 
+  @Override
   @JsonProperty
-  public int getReplicants()
+  public Map<String, Integer> getTieredReplicants()
   {
-    return replicants;
+    return tieredReplicants;
   }
 
   @Override
-  public int getReplicants(String tier)
+  public int getNumReplicants(String tier)
   {
-    return (this.tier.equalsIgnoreCase(tier)) ? replicants : 0;
-  }
-
-  @JsonProperty
-  public String getTier()
-  {
-    return tier;
+    final Integer retVal = tieredReplicants.get(tier);
+    return retVal == null ? 0 : retVal;
   }
 
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
+    return appliesTo(segment.getInterval(), referenceTimestamp);
+  }
+
+  @Override
+  public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
+  {
     final Interval currInterval = new Interval(period, referenceTimestamp);
-    return currInterval.overlaps(segment.getInterval());
+    return currInterval.overlaps(interval) && interval.getStartMillis() >= currInterval.getStartMillis();
   }
 }

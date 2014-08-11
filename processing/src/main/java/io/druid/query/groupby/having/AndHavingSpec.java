@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
@@ -31,6 +32,8 @@ import java.util.List;
  */
 public class AndHavingSpec implements HavingSpec
 {
+  private static final byte CACHE_KEY = 0x2;
+
   private List<HavingSpec> havingSpecs;
 
   @JsonCreator
@@ -55,6 +58,25 @@ public class AndHavingSpec implements HavingSpec
     }
 
     return true;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final byte[][] havingBytes = new byte[havingSpecs.size()][];
+    int havingBytesSize = 0;
+    int index = 0;
+    for (HavingSpec havingSpec : havingSpecs) {
+      havingBytes[index] = havingSpec.getCacheKey();
+      havingBytesSize += havingBytes[index].length;
+      ++index;
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(1 + havingBytesSize).put(CACHE_KEY);
+    for (byte[] havingByte : havingBytes) {
+      buffer.put(havingByte);
+    }
+    return buffer.array();
   }
 
   @Override

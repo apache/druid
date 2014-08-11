@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -123,6 +124,20 @@ public class IncrementalIndexSchema
           )
       );
       Collections.sort(this.dimensions);
+      return this;
+    }
+
+    public Builder withSpatialDimensions(InputRowParser parser)
+    {
+      if (parser != null
+          && parser.getParseSpec() != null
+          && parser.getParseSpec().getDimensionsSpec() != null
+          && parser.getParseSpec().getDimensionsSpec().getSpatialDimensions() != null) {
+        this.spatialDimensions = parser.getParseSpec().getDimensionsSpec().getSpatialDimensions();
+      } else {
+        this.spatialDimensions = Lists.newArrayList();
+      }
+
       return this;
     }
 

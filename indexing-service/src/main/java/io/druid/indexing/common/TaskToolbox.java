@@ -20,23 +20,33 @@
 package io.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import io.druid.client.ServerView;
+import io.druid.client.FilteredServerView;
+import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -52,8 +62,10 @@ public class TaskToolbox
   private final ServiceEmitter emitter;
   private final DataSegmentPusher segmentPusher;
   private final DataSegmentKiller dataSegmentKiller;
+  private final DataSegmentArchiver dataSegmentArchiver;
+  private final DataSegmentMover dataSegmentMover;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final ServerView newSegmentServerView;
+  private final FilteredServerView newSegmentServerView;
   private final QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private final MonitorScheduler monitorScheduler;
   private final ExecutorService queryExecutorService;
@@ -68,8 +80,10 @@ public class TaskToolbox
       ServiceEmitter emitter,
       DataSegmentPusher segmentPusher,
       DataSegmentKiller dataSegmentKiller,
+      DataSegmentMover dataSegmentMover,
+      DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      ServerView newSegmentServerView,
+      FilteredServerView newSegmentServerView,
       QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate,
       ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
@@ -84,6 +98,8 @@ public class TaskToolbox
     this.emitter = emitter;
     this.segmentPusher = segmentPusher;
     this.dataSegmentKiller = dataSegmentKiller;
+    this.dataSegmentMover = dataSegmentMover;
+    this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
     this.newSegmentServerView = newSegmentServerView;
     this.queryRunnerFactoryConglomerate = queryRunnerFactoryConglomerate;
@@ -119,12 +135,22 @@ public class TaskToolbox
     return dataSegmentKiller;
   }
 
+  public DataSegmentMover getDataSegmentMover()
+  {
+    return dataSegmentMover;
+  }
+
+  public DataSegmentArchiver getDataSegmentArchiver()
+  {
+    return dataSegmentArchiver;
+  }
+
   public DataSegmentAnnouncer getSegmentAnnouncer()
   {
     return segmentAnnouncer;
   }
 
-  public ServerView getNewSegmentServerView()
+  public FilteredServerView getNewSegmentServerView()
   {
     return newSegmentServerView;
   }
@@ -149,7 +175,7 @@ public class TaskToolbox
     return objectMapper;
   }
 
-  public Map<DataSegment, File> getSegments(List<DataSegment> segments)
+  public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
       throws SegmentLoadingException
   {
     Map<DataSegment, File> retVal = Maps.newLinkedHashMap();
@@ -158,6 +184,26 @@ public class TaskToolbox
     }
 
     return retVal;
+  }
+
+  public void pushSegments(Iterable<DataSegment> segments) throws IOException
+  {
+    // Request segment pushes for each set
+    final Multimap<Interval, DataSegment> segmentMultimap = Multimaps.index(
+        segments,
+        new Function<DataSegment, Interval>()
+        {
+          @Override
+          public Interval apply(DataSegment segment)
+          {
+            return segment.getInterval();
+          }
+        }
+    );
+    for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
+      getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
+    }
+
   }
 
   public File getTaskWorkDir()

@@ -23,10 +23,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -63,6 +63,7 @@ public class Announcer
   private final PathChildrenCacheFactory factory;
 
   private final List<Pair<String, byte[]>> toAnnounce = Lists.newArrayList();
+  private final List<Pair<String, byte[]>> toUpdate = Lists.newArrayList();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new MapMaker().makeMap();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new MapMaker().makeMap();
   private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
@@ -92,6 +93,11 @@ public class Announcer
         announce(pair.lhs, pair.rhs);
       }
       toAnnounce.clear();
+
+      for (Pair<String, byte[]> pair : toUpdate) {
+        update(pair.lhs, pair.rhs);
+      }
+      toUpdate.clear();
     }
   }
 
@@ -106,7 +112,7 @@ public class Announcer
       started = false;
 
       for (Map.Entry<String, PathChildrenCache> entry : listeners.entrySet()) {
-        Closeables.closeQuietly(entry.getValue());
+        CloseQuietly.close(entry.getValue());
       }
 
       for (Map.Entry<String, ConcurrentMap<String, byte[]>> entry : announcements.entrySet()) {
@@ -201,11 +207,9 @@ public class Announcer
 
                       Set<String> pathsToReinstate = Sets.newHashSet();
                       for (String node : finalSubPaths.keySet()) {
-                        pathsToReinstate.add(ZKPaths.makePath(parentPath, node));
-                      }
-
-                      for (ChildData data : cache.getCurrentData()) {
-                        pathsToReinstate.remove(data.getPath());
+                        String path = ZKPaths.makePath(parentPath, node);
+                        log.info("Node[%s] is added to reinstate.", path);
+                        pathsToReinstate.add(path);
                       }
 
                       if (!pathsToReinstate.isEmpty() && !pathsLost.compareAndSet(null, pathsToReinstate)) {
@@ -268,6 +272,13 @@ public class Announcer
 
   public void update(final String path, final byte[] bytes)
   {
+    synchronized (toAnnounce) {
+      if (!started) {
+        toUpdate.add(Pair.of(path, bytes));
+        return;
+      }
+    }
+
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
 
     final String parentPath = pathAndNode.getPath();
@@ -342,7 +353,7 @@ public class Announcer
       cache.start();
     }
     catch (Exception e) {
-      Closeables.closeQuietly(cache);
+      CloseQuietly.close(cache);
       throw Throwables.propagate(e);
     }
   }

@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: Loading Your Data (Part 2)
 In this tutorial we will cover more advanced/real-world ingestion topics.
 
 Druid can ingest streaming or batch data. Streaming data is ingested via the real-time node, and batch data is ingested via the Hadoop batch indexer. Druid also has a standalone ingestion service called the [indexing service](Indexing-Service.html).
@@ -40,16 +42,17 @@ Streaming Event Ingestion
 
 With real-world data, we recommend having a message bus such as [Apache Kafka](http://kafka.apache.org/) sit between the data stream and the real-time node. The message bus provides higher availability for production environments. [Firehoses](Firehose.html) are the key abstraction for real-time ingestion.
 
+<a id="set-up-kafka"></a>
 #### Setting up Kafka
 
-[KafkaFirehoseFactory](https://github.com/metamx/druid/blob/druid-0.6.0/realtime/src/main/java/com/metamx/druid/realtime/firehose/KafkaFirehoseFactory.java) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
+[KafkaFirehoseFactory](Firehose.html) is how druid communicates with Kafka. Using this [Firehose](Firehose.html) with the right configuration, we can import data into Druid in real-time without writing any code. To load data to a real-time node via Kafka, we'll first need to initialize Zookeeper and Kafka, and then configure and initialize a [Realtime](Realtime.html) node.
 
-Instructions for booting a Zookeeper and then Kafka cluster are available [here](http://kafka.apache.org/07/quickstart.html).
+The following quick-start instructions for booting a Zookeeper and then Kafka cluster were taken from the [Kafka website](http://kafka.apache.org/07/quickstart.html).
 
 1. Download Apache Kafka 0.7.2 from [http://kafka.apache.org/downloads.html](http://kafka.apache.org/downloads.html)
 
   ```bash
-  wget http://apache.spinellicreations.com/incubator/kafka/kafka-0.7.2-incubating/kafka-0.7.2-incubating-src.tgz
+  wget http://archive.apache.org/dist/kafka/old_releases/kafka-0.7.2-incubating/kafka-0.7.2-incubating-src.tgz
   tar -xvzf kafka-0.7.2-incubating-src.tgz
   cd kafka-0.7.2-incubating-src
   ```
@@ -89,39 +92,44 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
 
 1. Real-time nodes can be started with:
 
-```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
-```
+  ```bash
+  java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
+  ```
 
 2. A realtime.spec should already exist for the data source in the Druid tarball. You should be able to find it at:
 
-```bash
-examples/indexing/wikipedia.spec
-```
+  ```bash
+  examples/indexing/wikipedia.spec
+  ```
 
-The contents of the file should match:
+  The contents of the file should match:
 
   ```json
   [
     {
       "schema": {
         "dataSource": "wikipedia",
-        "aggregators" : [{
-           "type" : "count",
-           "name" : "count"
-          }, {
-           "type" : "doubleSum",
-           "name" : "added",
-           "fieldName" : "added"
-          }, {
-           "type" : "doubleSum",
-           "name" : "deleted",
-           "fieldName" : "deleted"
-          }, {
-           "type" : "doubleSum",
-           "name" : "delta",
-           "fieldName" : "delta"
-        }],
+        "aggregators" : [
+          {
+            "type" : "count",
+            "name" : "count"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "added",
+            "fieldName" : "added"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "deleted",
+            "fieldName" : "deleted"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "delta",
+            "fieldName" : "delta"
+          }
+        ],
         "indexGranularity": "none"
       },
       "config": {
@@ -157,12 +165,14 @@ The contents of the file should match:
         "segmentGranularity": "hour",
         "basePersistDirectory": "\/tmp\/realtime\/basePersist",
         "rejectionPolicy": {
-          "type": "none"
+          "type": "test"
         }
       }
     }
   ]
   ```
+
+Note: This config uses a "test" [rejection policy](Plumber.html) which will accept all events and timely hand off, however, we strongly recommend you do not use this in production. Using this rejection policy, segments for events for the same time range will be overridden.
 
 3. Let's copy and paste some data into the Kafka console producer
 
@@ -191,22 +201,24 @@ The contents of the file should match:
 Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) to the real-time node should yield valid results:
 
 ```json
-[ {
-  "timestamp" : "2013-08-31T01:02:33.000Z",
-  "result" : {
-    "minTime" : "2013-08-31T01:02:33.000Z",
-    "maxTime" : "2013-08-31T12:41:27.000Z"
+[
+  {
+    "timestamp" : "2013-08-31T01:02:33.000Z",
+    "result" : {
+      "minTime" : "2013-08-31T01:02:33.000Z",
+      "maxTime" : "2013-08-31T12:41:27.000Z"
+    }
   }
-} ]
+]
 ```
 
 Batch Ingestion
 ---------------
-Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
+Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job. 
 
-The setup for a single node, 'standalone' Hadoop cluster is available [here](http://hadoop.apache.org/docs/stable/single_node_setup.html).
+For this tutorial, we used [Hadoop 1.0.3](https://archive.apache.org/dist/hadoop/core/hadoop-1.0.3/). There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example. 
 
-For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1), but we are going to use Hadoop here for demonstration purposes.
+For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html), but we are going to use Hadoop here for demonstration purposes.
 
 Our data is located at:
 
@@ -224,9 +236,11 @@ The following events should exist in the file:
 {"timestamp": "2013-08-31T12:41:27Z", "page": "Coyote Tango", "language" : "ja", "user" : "stringer", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"Japan", "region":"Kanto", "city":"Tokyo", "added": 1, "deleted": 10, "delta": -9}
 ```
 
-#### Setup a Druid Cluster
+#### Set Up a Druid Cluster
 
 To index the data, we are going to need an indexing service, a historical node, and a coordinator node.
+
+Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
 
 To start the Indexing Service:
 
@@ -261,8 +275,10 @@ Examining the contents of the file, you should find:
     "type" : "index_hadoop",
     "config": {
       "dataSource" : "wikipedia",
-      "timestampColumn" : "timestamp",
-      "timestampFormat" : "auto",
+      "timestampSpec" : {
+        "column" : "timestamp",
+        "format" : "auto"
+      },
       "dataSpec" : {
         "format" : "json",
         "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
@@ -278,29 +294,35 @@ Examining the contents of the file, you should find:
       },
       "targetPartitionSize" : 5000000,
       "rollupSpec" : {
-        "aggs": [{
+        "aggs": [
+          {
             "type" : "count",
             "name" : "count"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "added",
             "fieldName" : "added"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "deleted",
             "fieldName" : "deleted"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "delta",
             "fieldName" : "delta"
-        }],
+          }
+        ],
         "rollupGranularity" : "none"
       }
     }
   }
   ```
 
-If you are curious about what all this configuration means, see [here](Task.html)
+If you are curious about what all this configuration means, see [here](Tasks.html).
+
 To submit the task:
 
 ```bash

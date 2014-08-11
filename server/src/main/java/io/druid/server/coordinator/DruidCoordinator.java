@@ -27,12 +27,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -42,14 +42,30 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidDataSource;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.client.ServerInventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
+import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.db.DatabaseRuleManager;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
+import io.druid.server.DruidNode;
+import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
+import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.rules.LoadRule;
+import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -60,7 +76,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -77,15 +92,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidCoordinator
 {
   public static final String COORDINATOR_OWNER_NODE = "_COORDINATOR";
-
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
-
   private final Object lock = new Object();
-
-  private volatile boolean started = false;
-  private volatile boolean leader = false;
-  private volatile AtomicReference<CoordinatorDynamicConfig> dynamicConfigs;
-
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
@@ -99,6 +107,13 @@ public class DruidCoordinator
   private final LoadQueueTaskMaster taskMaster;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final AtomicReference<LeaderLatch> leaderLatch;
+  private final ServiceAnnouncer serviceAnnouncer;
+  private final DruidNode self;
+  private volatile boolean started = false;
+  private volatile int leaderCounter = 0;
+  private volatile boolean leader = false;
+  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+
 
   @Inject
   public DruidCoordinator(
@@ -112,7 +127,9 @@ public class DruidCoordinator
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
-      LoadQueueTaskMaster taskMaster
+      LoadQueueTaskMaster taskMaster,
+      ServiceAnnouncer serviceAnnouncer,
+      @Self DruidNode self
   )
   {
     this(
@@ -127,6 +144,8 @@ public class DruidCoordinator
         scheduledExecutorFactory,
         indexingServiceClient,
         taskMaster,
+        serviceAnnouncer,
+        self,
         Maps.<String, LoadQueuePeon>newConcurrentMap()
     );
   }
@@ -143,6 +162,8 @@ public class DruidCoordinator
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
+      ServiceAnnouncer serviceAnnouncer,
+      DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
   )
   {
@@ -157,11 +178,12 @@ public class DruidCoordinator
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
+    this.serviceAnnouncer = serviceAnnouncer;
+    this.self = self;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
     this.leaderLatch = new AtomicReference<>(null);
-    this.dynamicConfigs = new AtomicReference<>(null);
     this.loadManagementPeons = loadQueuePeonMap;
   }
 
@@ -170,45 +192,79 @@ public class DruidCoordinator
     return leader;
   }
 
+  public Map<String, LoadQueuePeon> getLoadManagementPeons()
+  {
+    return loadManagementPeons;
+  }
+
+  public Map<String, CountingMap<String>> getReplicationStatus()
+  {
+    final Map<String, CountingMap<String>> retVal = Maps.newHashMap();
+
+    if (segmentReplicantLookup == null) {
+      return retVal;
+    }
+
+    final DateTime now = new DateTime();
+    for (DataSegment segment : getAvailableDataSegments()) {
+      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+      for (Rule rule : rules) {
+        if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
+          for (Map.Entry<String, Integer> entry : ((LoadRule) rule).getTieredReplicants().entrySet()) {
+            CountingMap<String> dataSourceMap = retVal.get(entry.getKey());
+            if (dataSourceMap == null) {
+              dataSourceMap = new CountingMap<>();
+              retVal.put(entry.getKey(), dataSourceMap);
+            }
+
+            int diff = Math.max(
+                entry.getValue() - segmentReplicantLookup.getTotalReplicants(segment.getIdentifier(), entry.getKey()),
+                0
+            );
+            dataSourceMap.add(segment.getDataSource(), diff);
+          }
+          break;
+        }
+      }
+    }
+
+    return retVal;
+  }
+
+  public CountingMap<String> getSegmentAvailability()
+  {
+    final CountingMap<String> retVal = new CountingMap<>();
+
+    if (segmentReplicantLookup == null) {
+      return retVal;
+    }
+
+    for (DataSegment segment : getAvailableDataSegments()) {
+      int available = (segmentReplicantLookup.getTotalReplicants(segment.getIdentifier()) == 0) ? 0 : 1;
+      retVal.add(segment.getDataSource(), 1 - available);
+    }
+
+    return retVal;
+  }
+
   public Map<String, Double> getLoadStatus()
   {
-    // find available segments
-    Map<String, Set<DataSegment>> availableSegments = Maps.newHashMap();
-    for (DataSegment dataSegment : getAvailableDataSegments()) {
-      Set<DataSegment> segments = availableSegments.get(dataSegment.getDataSource());
-      if (segments == null) {
-        segments = Sets.newHashSet();
-        availableSegments.put(dataSegment.getDataSource(), segments);
-      }
-      segments.add(dataSegment);
-    }
-
-    // find segments currently loaded
-    Map<String, Set<DataSegment>> segmentsInCluster = Maps.newHashMap();
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
-        Set<DataSegment> segments = segmentsInCluster.get(druidDataSource.getName());
-        if (segments == null) {
-          segments = Sets.newHashSet();
-          segmentsInCluster.put(druidDataSource.getName(), segments);
-        }
-        segments.addAll(druidDataSource.getSegments());
-      }
-    }
-
-    // compare available segments with currently loaded
     Map<String, Double> loadStatus = Maps.newHashMap();
-    for (Map.Entry<String, Set<DataSegment>> entry : availableSegments.entrySet()) {
-      String dataSource = entry.getKey();
-      Set<DataSegment> segmentsAvailable = entry.getValue();
-      Set<DataSegment> loadedSegments = segmentsInCluster.get(dataSource);
-      if (loadedSegments == null) {
-        loadedSegments = Sets.newHashSet();
+    for (DruidDataSource dataSource : databaseSegmentManager.getInventory()) {
+      final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
+      final int availableSegmentSize = segments.size();
+
+      // remove loaded segments
+      for (DruidServer druidServer : serverInventoryView.getInventory()) {
+        final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
+        if (loadedView != null) {
+          segments.removeAll(loadedView.getSegments());
+        }
       }
-      Set<DataSegment> unloadedSegments = Sets.difference(segmentsAvailable, loadedSegments);
+      final int unloadedSegmentSize = segments.size();
       loadStatus.put(
-          dataSource,
-          100 * ((double) (segmentsAvailable.size() - unloadedSegments.size()) / (double) segmentsAvailable.size())
+          dataSource.getName(),
+          100 * ((double) (availableSegmentSize - unloadedSegmentSize) / (double) availableSegmentSize)
       );
     }
 
@@ -217,7 +273,11 @@ public class DruidCoordinator
 
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
-    return dynamicConfigs.get();
+    return configManager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class,
+        new CoordinatorDynamicConfig.Builder().build()
+    ).get();
   }
 
   public void removeSegment(DataSegment segment)
@@ -257,52 +317,53 @@ public class DruidCoordinator
     }
   }
 
-  public void moveSegment(String from, String to, String segmentName, final LoadPeonCallback callback)
+  public void moveSegment(
+      ImmutableDruidServer fromServer,
+      ImmutableDruidServer toServer,
+      String segmentName,
+      final LoadPeonCallback callback
+  )
   {
     try {
-      final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
-      if (fromServer == null) {
-        throw new IAE("Unable to find server [%s]", from);
-      }
-
-      final DruidServer toServer = serverInventoryView.getInventoryValue(to);
-      if (toServer == null) {
-        throw new IAE("Unable to find server [%s]", to);
-      }
-
-      if (to.equalsIgnoreCase(from)) {
-        throw new IAE("Redundant command to move segment [%s] from [%s] to [%s]", segmentName, from, to);
+      if (fromServer.getMetadata().equals(toServer.getMetadata())) {
+        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
       }
 
       final DataSegment segment = fromServer.getSegment(segmentName);
       if (segment == null) {
-        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, from);
+        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, fromServer.getName());
       }
 
-      final LoadQueuePeon loadPeon = loadManagementPeons.get(to);
+      final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", to);
+        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", toServer.getName());
       }
 
-      final LoadQueuePeon dropPeon = loadManagementPeons.get(from);
+      final LoadQueuePeon dropPeon = loadManagementPeons.get(fromServer.getName());
       if (dropPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", from);
+        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", fromServer.getName());
       }
 
       final ServerHolder toHolder = new ServerHolder(toServer, loadPeon);
       if (toHolder.getAvailableSize() < segment.getSize()) {
         throw new IAE(
             "Not enough capacity on server [%s] for segment [%s]. Required: %,d, available: %,d.",
-            to,
+            toServer.getName(),
             segment,
             segment.getSize(),
             toHolder.getAvailableSize()
         );
       }
 
-      final String toLoadQueueSegPath = ZKPaths.makePath(ZKPaths.makePath(zkPaths.getLoadQueuePath(), to), segmentName);
+      final String toLoadQueueSegPath = ZKPaths.makePath(
+          ZKPaths.makePath(
+              zkPaths.getLoadQueuePath(),
+              toServer.getName()
+          ), segmentName
+      );
       final String toServedSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), to), segmentName
+          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), toServer.getName()),
+          segmentName
       );
 
       loadPeon.loadSegment(
@@ -310,7 +371,7 @@ public class DruidCoordinator
           new LoadPeonCallback()
           {
             @Override
-            protected void execute()
+            public void execute()
             {
               try {
                 if (curator.checkExists().forPath(toServedSegPath) != null &&
@@ -330,43 +391,33 @@ public class DruidCoordinator
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentName).emit();
-      callback.execute();
+      if (callback != null) {
+        callback.execute();
+      }
     }
   }
 
-  public void dropSegment(String from, String segmentName, final LoadPeonCallback callback)
-  {
-    try {
-      final DruidServer fromServer = serverInventoryView.getInventoryValue(from);
-      if (fromServer == null) {
-        throw new IAE("Unable to find server [%s]", from);
-      }
-
-      final DataSegment segment = fromServer.getSegment(segmentName);
-      if (segment == null) {
-        throw new IAE("Unable to find segment [%s] on server [%s]", segmentName, from);
-      }
-
-      final LoadQueuePeon dropPeon = loadManagementPeons.get(from);
-      if (dropPeon == null) {
-        throw new IAE("LoadQueuePeon hasn't been created yet for path [%s]", from);
-      }
-
-      if (!dropPeon.getSegmentsToDrop().contains(segment)) {
-        dropPeon.dropSegment(segment, callback);
-      }
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception dropping segment %s", segmentName).emit();
-      callback.execute();
-    }
-  }
-
-  public Set<DataSegment> getAvailableDataSegments()
+  public Set<DataSegment> getOrderedAvailableDataSegments()
   {
     Set<DataSegment> availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
 
-    Iterable<DataSegment> dataSegments = Iterables.concat(
+    Iterable<DataSegment> dataSegments = getAvailableDataSegments();
+
+    for (DataSegment dataSegment : dataSegments) {
+      if (dataSegment.getSize() < 0) {
+        log.makeAlert("No size on Segment, wtf?")
+           .addData("segment", dataSegment)
+           .emit();
+      }
+      availableSegments.add(dataSegment);
+    }
+
+    return availableSegments;
+  }
+
+  public Iterable<DataSegment> getAvailableDataSegments()
+  {
+    return Iterables.concat(
         Iterables.transform(
             databaseSegmentManager.getInventory(),
             new Function<DruidDataSource, Iterable<DataSegment>>()
@@ -379,17 +430,6 @@ public class DruidCoordinator
             }
         )
     );
-
-    for (DataSegment dataSegment : dataSegments) {
-      if (dataSegment.getSize() < 0) {
-        log.makeAlert("No size on Segment, wtf?")
-           .addData("segment", dataSegment)
-           .emit();
-      }
-      availableSegments.add(dataSegment);
-    }
-
-    return availableSegments;
   }
 
   @LifecycleStart
@@ -470,18 +510,21 @@ public class DruidCoordinator
 
       log.info("I am the leader of the coordinators, all must bow!");
       try {
+        leaderCounter++;
         leader = true;
         databaseSegmentManager.start();
         databaseRuleManager.start();
         serverInventoryView.start();
+        serviceAnnouncer.announce(self);
+        final int startingLeaderCounter = leaderCounter;
 
         final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
-        dynamicConfigs = configManager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class,
-            new CoordinatorDynamicConfig.Builder().build()
+        coordinatorRunnables.add(
+            Pair.of(
+                new CoordinatorHistoricalManagerRunnable(startingLeaderCounter),
+                config.getCoordinatorPeriod()
+            )
         );
-        coordinatorRunnables.add(Pair.of(new CoordinatorHistoricalManagerRunnable(), config.getCoordinatorPeriod()));
         if (indexingServiceClient != null) {
           coordinatorRunnables.add(
               Pair.of(
@@ -491,7 +534,8 @@ public class DruidCoordinator
                               DatasourceWhitelist.CONFIG_KEY,
                               DatasourceWhitelist.class
                           )
-                      )
+                      ),
+                      startingLeaderCounter
                   ),
                   config.getCoordinatorIndexingPeriod()
               )
@@ -510,10 +554,10 @@ public class DruidCoordinator
                 @Override
                 public ScheduledExecutors.Signal call()
                 {
-                  if (leader) {
+                  if (leader && startingLeaderCounter == leaderCounter) {
                     theRunnable.run();
                   }
-                  if (leader) { // (We might no longer be coordinator)
+                  if (leader && startingLeaderCounter == leaderCounter) { // (We might no longer be leader)
                     return ScheduledExecutors.Signal.REPEAT;
                   } else {
                     return ScheduledExecutors.Signal.STOP;
@@ -527,7 +571,7 @@ public class DruidCoordinator
         log.makeAlert(e, "Unable to become leader")
            .emit();
         final LeaderLatch oldLatch = createNewLeaderLatch();
-        Closeables.closeQuietly(oldLatch);
+        CloseQuietly.close(oldLatch);
         try {
           leaderLatch.get().start();
         }
@@ -546,6 +590,8 @@ public class DruidCoordinator
   {
     synchronized (lock) {
       try {
+        leaderCounter++;
+
         log.info("I am no longer the leader...");
 
         for (String server : loadManagementPeons.keySet()) {
@@ -554,8 +600,10 @@ public class DruidCoordinator
         }
         loadManagementPeons.clear();
 
-        databaseSegmentManager.stop();
+        serviceAnnouncer.unannounce(self);
         serverInventoryView.stop();
+        databaseRuleManager.stop();
+        databaseSegmentManager.stop();
         leader = false;
       }
       catch (Exception e) {
@@ -637,10 +685,12 @@ public class DruidCoordinator
   {
     private final long startTime = System.currentTimeMillis();
     private final List<DruidCoordinatorHelper> helpers;
+    private final int startingLeaderCounter;
 
-    protected CoordinatorRunnable(List<DruidCoordinatorHelper> helpers)
+    protected CoordinatorRunnable(List<DruidCoordinatorHelper> helpers, final int startingLeaderCounter)
     {
       this.helpers = helpers;
+      this.startingLeaderCounter = startingLeaderCounter;
     }
 
     @Override
@@ -668,18 +718,24 @@ public class DruidCoordinator
           }
         }
 
+        BalancerStrategyFactory factory =
+            new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
+
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
-                                    .withStartTime(startTime)
-                                    .withDatasources(databaseSegmentManager.getInventory())
-                                    .withDynamicConfigs(dynamicConfigs.get())
-                                    .withEmitter(emitter)
-                                    .build();
-
+                                         .withStartTime(startTime)
+                                         .withDatasources(databaseSegmentManager.getInventory())
+                                         .withDynamicConfigs(getDynamicConfigs())
+                                         .withEmitter(emitter)
+                                         .withBalancerStrategyFactory(factory)
+                                         .build();
 
         for (DruidCoordinatorHelper helper : helpers) {
-          params = helper.run(params);
+          // Don't read state and run state in the same helper otherwise racy conditions may exist
+          if (leader && startingLeaderCounter == leaderCounter) {
+            params = helper.run(params);
+          }
         }
       }
       catch (Exception e) {
@@ -690,7 +746,7 @@ public class DruidCoordinator
 
   private class CoordinatorHistoricalManagerRunnable extends CoordinatorRunnable
   {
-    private CoordinatorHistoricalManagerRunnable()
+    public CoordinatorHistoricalManagerRunnable(final int startingLeaderCounter)
     {
       super(
           ImmutableList.of(
@@ -701,27 +757,36 @@ public class DruidCoordinator
                 public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
                 {
                   // Display info about all historical servers
-                  Iterable<DruidServer> servers = FunctionalIterable
+                  Iterable<ImmutableDruidServer> servers = FunctionalIterable
                       .create(serverInventoryView.getInventory())
                       .filter(
                           new Predicate<DruidServer>()
                           {
                             @Override
                             public boolean apply(
-                                @Nullable DruidServer input
+                                DruidServer input
                             )
                             {
-                              return input.getType().equalsIgnoreCase("historical");
+                              return input.isAssignable();
+                            }
+                          }
+                      ).transform(
+                          new Function<DruidServer, ImmutableDruidServer>()
+                          {
+                            @Override
+                            public ImmutableDruidServer apply(DruidServer input)
+                            {
+                              return input.toImmutableDruidServer();
                             }
                           }
                       );
 
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");
-                    for (DruidServer druidServer : servers) {
+                    for (ImmutableDruidServer druidServer : servers) {
                       log.debug("  %s", druidServer);
                       log.debug("    -- DataSources");
-                      for (DruidDataSource druidDataSource : druidServer.getDataSources()) {
+                      for (ImmutableDruidDataSource druidDataSource : druidServer.getDataSources()) {
                         log.debug("    %s", druidDataSource);
                       }
                     }
@@ -729,7 +794,7 @@ public class DruidCoordinator
 
                   // Find all historical servers, group them by subType and sort by ascending usage
                   final DruidCluster cluster = new DruidCluster();
-                  for (DruidServer server : servers) {
+                  for (ImmutableDruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
                       String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
                       LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
@@ -741,14 +806,14 @@ public class DruidCoordinator
                     cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
                   }
 
-                  SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
+                  segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
 
                   // Stop peons for servers that aren't there anymore.
-                  final Set<String> disdappearedServers = Sets.newHashSet(loadManagementPeons.keySet());
-                  for (DruidServer server : servers) {
-                    disdappearedServers.remove(server.getName());
+                  final Set<String> disappeared = Sets.newHashSet(loadManagementPeons.keySet());
+                  for (ImmutableDruidServer server : servers) {
+                    disappeared.remove(server.getName());
                   }
-                  for (String name : disdappearedServers) {
+                  for (String name : disappeared) {
                     log.info("Removing listener for server[%s] which is no longer there.", name);
                     LoadQueuePeon peon = loadManagementPeons.remove(name);
                     peon.stop();
@@ -760,24 +825,25 @@ public class DruidCoordinator
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())
-                               .withDynamicConfigs(dynamicConfigs.get())
                                .build();
                 }
               },
               new DruidCoordinatorRuleRunner(DruidCoordinator.this),
-              new DruidCoordinatorCleanup(DruidCoordinator.this),
+              new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
+              new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
               new DruidCoordinatorLogger()
-          )
+          ),
+          startingLeaderCounter
       );
     }
   }
 
   private class CoordinatorIndexingServiceRunnable extends CoordinatorRunnable
   {
-    private CoordinatorIndexingServiceRunnable(List<DruidCoordinatorHelper> helpers)
+    public CoordinatorIndexingServiceRunnable(List<DruidCoordinatorHelper> helpers, final int startingLeaderCounter)
     {
-      super(helpers);
+      super(helpers, startingLeaderCounter);
     }
   }
 }

@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -31,6 +32,9 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
@@ -41,9 +45,13 @@ import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.guice.ConfigProvider;
+import io.druid.guice.GuiceInjectors;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
@@ -90,6 +98,9 @@ public class IndexIO
 {
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
+  public static final int CURRENT_VERSION_ID = V9_VERSION;
+
+  public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
   private static final Map<Integer, IndexLoader> indexLoaders =
       ImmutableMap.<Integer, IndexLoader>builder()
@@ -107,13 +118,33 @@ public class IndexIO
 
   private static final EmittingLogger log = new EmittingLogger(IndexIO.class);
   private static final SerializerUtils serializerUtils = new SerializerUtils();
-  public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
-  // This should really be provided by DI, should be changed once we switch around to using a DI framework
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper;
+  protected static final ColumnConfig columnConfig;
+
+  static {
+    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                ConfigProvider.bind(
+                    binder,
+                    DruidProcessingConfig.class,
+                    ImmutableMap.of("base_path", "druid.processing")
+                );
+                binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
+              }
+            }
+        )
+    );
+    mapper = injector.getInstance(ObjectMapper.class);
+    columnConfig = injector.getInstance(ColumnConfig.class);
+  }
 
   private static volatile IndexIOHandler handler = null;
-  public static final int CURRENT_VERSION_ID = V9_VERSION;
 
   @Deprecated
   public static MMappedIndex mapDir(final File inDir) throws IOException
@@ -165,14 +196,9 @@ public class IndexIO
     }
 
     final File indexFile = new File(inDir, "index.drd");
-    InputStream in = null;
     int version;
-    try {
-      in = new FileInputStream(indexFile);
+    try (InputStream in = new FileInputStream(indexFile)) {
       version = in.read();
-    }
-    finally {
-      Closeables.closeQuietly(in);
     }
     return version;
   }
@@ -194,8 +220,8 @@ public class IndexIO
       case 2:
       case 3:
         log.makeAlert("Attempt to load segment of version <= 3.")
-            .addData("version", version)
-            .emit();
+           .addData("version", version)
+           .emit();
         return false;
       case 4:
       case 5:
@@ -631,7 +657,10 @@ public class IndexIO
             .setHasMultipleValues(true)
             .setDictionaryEncodedColumn(
                 new DictionaryEncodedColumnSupplier(
-                    index.getDimValueLookup(dimension), null, (index.getDimColumn(dimension))
+                    index.getDimValueLookup(dimension),
+                    null,
+                    index.getDimColumn(dimension),
+                    columnConfig.columnCacheSizeBytes()
                 )
             )
             .setBitmapIndex(
@@ -743,7 +772,7 @@ public class IndexIO
       ColumnDescriptor serde = mapper.readValue(
           serializerUtils.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer);
+      return serde.read(byteBuffer, columnConfig);
     }
   }
 

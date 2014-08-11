@@ -1,6 +1,8 @@
 ---
 layout: doc_page
 ---
+
+# Tutorial: Loading Your Data (Part 1)
 In our last [tutorial](Tutorial%3A-The-Druid-Cluster.html), we set up a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self-contained chunks known as [segments](Segments.html). Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
 
 In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments.
@@ -40,7 +42,7 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutiroal%3A-The-Druid-Cluster.html).
+At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutorial%3A-The-Druid-Cluster.html).
 
 Let's start from our usual starting point in the tarball directory.
 
@@ -63,6 +65,8 @@ Open the file and make sure the following events exist:
 There are five data points spread across the day of 2013-08-31. Talk about big data right? Thankfully, we don't need a ton of data to introduce how batch ingestion works.
 
 In order to ingest and query this data, we are going to need to run a historical node, a coordinator node, and an indexing service to run the batch ingestion.
+
+Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
 
 #### Starting a Local Indexing Service
 
@@ -87,14 +91,17 @@ druid.service=overlord
 
 druid.zk.service.host=localhost
 
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.143"]
+
 druid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
 druid.db.connector.user=druid
 druid.db.connector.password=diurd
 
 druid.selectors.indexing.serviceName=overlord
-druid.indexer.runner.javaOpts="-server -Xmx1g"
-druid.indexer.runner.startPort=8088
-druid.indexer.fork.property.druid.computation.buffer.size=268435456
+druid.indexer.queue.startDelay=PT0M
+druid.indexer.runner.javaOpts="-server -Xmx256m"
+druid.indexer.fork.property.druid.processing.numThreads=1
+druid.indexer.fork.property.druid.computation.buffer.size=100000000
 ```
 
 If you are interested in reading more about these configurations, see [here](Indexing-Service.html).
@@ -131,7 +138,7 @@ Indexing the Data
 To index the data and build a Druid segment, we are going to need to submit a task to the indexing service. This task should already exist:
 
 ```
-examples/indexing/index_task.json
+examples/indexing/wikipedia_index_task.json
 ```
 
 Open up the file to see the following:
@@ -216,9 +223,9 @@ Congratulations! The segment has completed building. Once a segment is built, a 
 You should see the following logs on the coordinator:
 
 ```bash
-2013-10-09 21:41:54,368 INFO [Coordinator-Exec--0] io.druid.server.coordinator.DruidCoordinatorLogger - [_default_tier] : Assigned 1 segments among 1 servers
-2013-10-09 21:41:54,369 INFO [Coordinator-Exec--0] io.druid.server.coordinator.DruidCoordinatorLogger - Load Queues:
-2013-10-09 21:41:54,369 INFO [Coordinator-Exec--0] io.druid.server.coordinator.DruidCoordinatorLogger - Server[localhost:8081, historical, _default_tier] has 1 left to load, 0 left to drop, 4,477 bytes queued, 4,477 bytes served.
+2013-10-09 21:41:54,368 INFO [Coordinator-Exec--0] io.druid.server.coordinator.helper.DruidCoordinatorLogger - [_default_tier] : Assigned 1 segments among 1 servers
+2013-10-09 21:41:54,369 INFO [Coordinator-Exec--0] io.druid.server.coordinator.helper.DruidCoordinatorLogger - Load Queues:
+2013-10-09 21:41:54,369 INFO [Coordinator-Exec--0] io.druid.server.coordinator.helper.DruidCoordinatorLogger - Server[localhost:8081, historical, _default_tier] has 1 left to load, 0 left to drop, 4,477 bytes queued, 4,477 bytes served.
 ```
 
 These logs indicate that the coordinator has assigned our new segment to the historical node to download and serve. If you look at the historical node logs, you should see:
@@ -244,10 +251,29 @@ Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) should yield:
 } ]
 ```
 
+Console
+--------
+
+The indexing service overlord has a console located at:
+
+```bash
+localhost:8087/console.html
+```
+
+On this console, you can look at statuses and logs of recently submitted and completed tasks.
+
+If you decide to reuse the local firehose to ingest your own data and if you run into problems, you can use the console to read the individual task logs.
+
+Task logs can be stored locally or uploaded to [Deep Storage](Deep-Storage.html). More information about how to configure this is [here](Configuration.html).
+
+Most common data ingestion problems are around timestamp formats and other malformed data issues.
+
 Next Steps
 ----------
 
 This tutorial covered ingesting a small batch data set and loading it into Druid. In [Loading Your Data Part 2](Tutorial%3A-Loading-Your-Data-Part-2.html), we will cover how to ingest data using Hadoop for larger data sets.
+
+Note: The index task and local firehose can be used to ingest your own data if the size of that data is relatively small (< 1G). The index task is fairly slow and we highly recommend using the Hadoop Index Task for ingesting larger quantities of data.
 
 Additional Information
 ----------------------

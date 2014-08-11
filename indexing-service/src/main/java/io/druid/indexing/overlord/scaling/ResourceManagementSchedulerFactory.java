@@ -19,11 +19,12 @@
 
 package io.druid.indexing.overlord.scaling;
 
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.indexing.overlord.RemoteTaskRunner;
 
 /**
  */
 public interface ResourceManagementSchedulerFactory
 {
-  public ResourceManagementScheduler build(RemoteTaskRunner runner);
+  public ResourceManagementScheduler build(RemoteTaskRunner runner, ScheduledExecutorFactory executorFactory);
 }

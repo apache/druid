@@ -21,21 +21,17 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.guava.FunctionalIterable;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
-import io.druid.indexing.common.actions.SpawnTasksAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,132 +47,41 @@ public class TaskStorageQueryAdapter
     this.storage = storage;
   }
 
+  public List<Task> getActiveTasks()
+  {
+    return storage.getActiveTasks();
+  }
+
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  {
+    return storage.getRecentlyFinishedTaskStatuses();
+  }
+
+  public Optional<Task> getTask(final String taskid)
+  {
+    return storage.getTask(taskid);
+  }
+
   public Optional<TaskStatus> getStatus(final String taskid)
   {
     return storage.getStatus(taskid);
   }
 
   /**
-   * Returns all recursive task statuses for a particular task, staying within the same task group. Includes that
-   * task, plus any tasks it spawned, and so on. Does not include spawned tasks that ended up in a different task
-   * group. Does not include this task's parents or siblings.
-   */
-  public Map<String, Optional<TaskStatus>> getSameGroupChildStatuses(final String taskid)
-  {
-    final Optional<Task> taskOptional = storage.getTask(taskid);
-    final Optional<TaskStatus> statusOptional = storage.getStatus(taskid);
-    final ImmutableMap.Builder<String, Optional<TaskStatus>> resultBuilder = ImmutableMap.builder();
-
-    resultBuilder.put(taskid, statusOptional);
-
-    final Iterable<Task> nextTasks = FunctionalIterable
-        .create(storage.getAuditLogs(taskid)).filter(
-            new Predicate<TaskAction>()
-            {
-              @Override
-              public boolean apply(TaskAction taskAction)
-              {
-                return taskAction instanceof SpawnTasksAction;
-              }
-            }
-        ).transformCat(
-            new Function<TaskAction, Iterable<Task>>()
-            {
-              @Override
-              public Iterable<Task> apply(TaskAction taskAction)
-              {
-                return ((SpawnTasksAction) taskAction).getNewTasks();
-              }
-            }
-        );
-
-    if(taskOptional.isPresent() && statusOptional.isPresent()) {
-      for(final Task nextTask : nextTasks) {
-        if(nextTask.getGroupId().equals(taskOptional.get().getGroupId())) {
-          resultBuilder.putAll(getSameGroupChildStatuses(nextTask.getId()));
-        }
-      }
-    }
-
-    return resultBuilder.build();
-  }
-
-  /**
-   * Like {@link #getSameGroupChildStatuses}, but flattens the recursive statuses into a single, merged status.
-   */
-  public Optional<TaskStatus> getSameGroupMergedStatus(final String taskid)
-  {
-    final Map<String, Optional<TaskStatus>> statuses = getSameGroupChildStatuses(taskid);
-
-    int nSuccesses = 0;
-    int nFailures = 0;
-    int nTotal = 0;
-    int nPresent = 0;
-
-    for(final Optional<TaskStatus> statusOption : statuses.values()) {
-      nTotal ++;
-
-      if(statusOption.isPresent()) {
-        nPresent ++;
-
-        final TaskStatus status = statusOption.get();
-
-        if(status.isSuccess()) {
-          nSuccesses ++;
-        } else if(status.isFailure()) {
-          nFailures ++;
-        }
-      }
-    }
-
-    final Optional<TaskStatus> status;
-
-    if(nPresent == 0) {
-      status = Optional.absent();
-    } else if(nSuccesses == nTotal) {
-      status = Optional.of(TaskStatus.success(taskid));
-    } else if(nFailures > 0) {
-      status = Optional.of(TaskStatus.failure(taskid));
-    } else {
-      status = Optional.of(TaskStatus.running(taskid));
-    }
-
-    return status;
-  }
-
-  /**
-   * Returns all segments created by descendants for a particular task that stayed within the same task group. Includes
-   * that task, plus any tasks it spawned, and so on. Does not include spawned tasks that ended up in a different task
-   * group. Does not include this task's parents or siblings.
+   * Returns all segments created by this task.
    *
    * This method is useful when you want to figure out all of the things a single task spawned.  It does pose issues
    * with the result set perhaps growing boundlessly and we do not do anything to protect against that.  Use at your
    * own risk and know that at some point, we might adjust this to actually enforce some sort of limits.
    */
-  public Set<DataSegment> getSameGroupNewSegments(final String taskid)
+  public Set<DataSegment> getInsertedSegments(final String taskid)
   {
-    final Optional<Task> taskOptional = storage.getTask(taskid);
     final Set<DataSegment> segments = Sets.newHashSet();
-    final List<Task> nextTasks = Lists.newArrayList();
-
-    for(final TaskAction action : storage.getAuditLogs(taskid)) {
-      if(action instanceof SpawnTasksAction) {
-        nextTasks.addAll(((SpawnTasksAction) action).getNewTasks());
-      }
-
-      if(action instanceof SegmentInsertAction) {
+    for (final TaskAction action : storage.getAuditLogs(taskid)) {
+      if (action instanceof SegmentInsertAction) {
         segments.addAll(((SegmentInsertAction) action).getSegments());
       }
     }
-
-    if(taskOptional.isPresent()) {
-      for(final Task nextTask : nextTasks) {
-        if(nextTask.getGroupId().equals(taskOptional.get().getGroupId())) {
-          segments.addAll(getSameGroupNewSegments(nextTask.getId()));
-        }
-      }
-    }
-
     return segments;
   }
 }

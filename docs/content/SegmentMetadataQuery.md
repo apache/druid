@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Segment Metadata Queries
 Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment
@@ -14,7 +15,7 @@ Segment metadata queries return per segment information about:
 {
   "queryType":"segmentMetadata",
   "dataSource":"sample_datasource",
-  "intervals":["2013-01-01/2014-01-01"],
+  "intervals":["2013-01-01/2014-01-01"]
 }
 ```
 
@@ -25,6 +26,7 @@ There are several main parts to a segment metadata query:
 |queryType|This String should always be "segmentMetadata"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
+|toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
@@ -42,4 +44,32 @@ The format of the result is:
   },
   "size" : 300000
 } ]
+```
+
+### toInclude
+
+There are 3 types of toInclude objects.
+
+#### All
+
+The grammar is as follows:
+
+``` json
+"toInclude": { "type": "all"}
+```
+
+#### None
+
+The grammar is as follows:
+
+``` json
+"toInclude": { "type": "none"}
+```
+
+#### List
+
+The grammar is as follows:
+
+``` json
+"toInclude": { "type": "list", "columns": [<string list of column names>]}
 ```

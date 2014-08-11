@@ -27,14 +27,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
-import org.jets3t.service.S3Service;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
@@ -51,17 +53,17 @@ import java.util.zip.GZIPInputStream;
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory implements FirehoseFactory
+public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
-  private final S3Service s3Client;
+  private final RestS3Service s3Client;
   private final StringInputRowParser parser;
   private final List<URI> uris;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") S3Service s3Client,
+      @JacksonInject("s3Client") RestS3Service s3Client,
       @JsonProperty("parser") StringInputRowParser parser,
       @JsonProperty("uris") List<URI> uris
   )
@@ -88,7 +90,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
   }
 
   @Override
-  public Firehose connect() throws IOException
+  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
     Preconditions.checkNotNull(s3Client, "null s3Client");
 
@@ -119,8 +121,9 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
 
             try {
               final InputStream innerInputStream = s3Client.getObject(
-                  new S3Bucket(s3Bucket), s3Object.getKey())
-                      .getDataInputStream();
+                  new S3Bucket(s3Bucket), s3Object.getKey()
+              )
+                                                           .getDataInputStream();
 
               final InputStream outerInputStream = s3Object.getKey().endsWith(".gz")
                                                    ? new GZIPInputStream(innerInputStream)
@@ -150,7 +153,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory
             throw new UnsupportedOperationException();
           }
         },
-        parser
+        (StringInputRowParser) firehoseParser
     );
   }
 }

@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Configuring Rules for Coordinator Nodes
 Note: It is recommended that the coordinator console is used to configure rules. However, the coordinator node does have HTTP endpoints to programmatically configure rules.
 
 Load Rules

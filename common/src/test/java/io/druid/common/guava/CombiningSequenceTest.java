@@ -19,6 +19,8 @@
 
 package io.druid.common.guava;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.Pair;
@@ -29,16 +31,34 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.nary.BinaryFn;
 import junit.framework.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- */
+@RunWith(Parameterized.class)
 public class CombiningSequenceTest
 {
+  @Parameterized.Parameters
+  public static Collection<Object[]> valuesToTry()
+  {
+    return Arrays.asList(new Object[][] {
+        {1}, {2}, {3}, {4}, {5}, {1000}
+    });
+  }
+
+  private final int yieldEvery;
+
+  public CombiningSequenceTest(int yieldEvery)
+  {
+    this.yieldEvery = yieldEvery;
+  }
+
   @Test
   public void testMerge() throws IOException
   {
@@ -60,6 +80,75 @@ public class CombiningSequenceTest
         Pair.of(5, 11),
         Pair.of(6, 1),
         Pair.of(5, 1)
+    );
+
+    testCombining(pairs, expected);
+  }
+
+  @Test
+  public void testNoMergeOne() throws IOException
+  {
+    List<Pair<Integer, Integer>> pairs = Arrays.asList(
+        Pair.of(0, 1)
+    );
+
+    List<Pair<Integer, Integer>> expected = Arrays.asList(
+        Pair.of(0, 1)
+    );
+
+    testCombining(pairs, expected);
+  }
+
+  @Test
+  public void testMergeMany() throws IOException
+  {
+    List<Pair<Integer, Integer>> pairs = Arrays.asList(
+        Pair.of(0, 6),
+        Pair.of(1, 1),
+        Pair.of(2, 1),
+        Pair.of(5, 11),
+        Pair.of(6, 1),
+        Pair.of(5, 1)
+    );
+
+    List<Pair<Integer, Integer>> expected = Arrays.asList(
+        Pair.of(0, 6),
+        Pair.of(1, 1),
+        Pair.of(2, 1),
+        Pair.of(5, 11),
+        Pair.of(6, 1),
+        Pair.of(5, 1)
+    );
+
+    testCombining(pairs, expected);
+  }
+
+  @Test
+  public void testNoMergeTwo() throws IOException
+  {
+    List<Pair<Integer, Integer>> pairs = Arrays.asList(
+        Pair.of(0, 1),
+        Pair.of(1, 1)
+    );
+
+    List<Pair<Integer, Integer>> expected = Arrays.asList(
+        Pair.of(0, 1),
+        Pair.of(1, 1)
+    );
+
+    testCombining(pairs, expected);
+  }
+
+  @Test
+  public void testMergeTwo() throws IOException
+  {
+    List<Pair<Integer, Integer>> pairs = Arrays.asList(
+        Pair.of(0, 1),
+        Pair.of(0, 1)
+    );
+
+    List<Pair<Integer, Integer>> expected = Arrays.asList(
+        Pair.of(0, 2)
     );
 
     testCombining(pairs, expected);
@@ -136,28 +225,50 @@ public class CombiningSequenceTest
         null,
         new YieldingAccumulator<Pair<Integer, Integer>, Pair<Integer, Integer>>()
         {
+          int count = 0;
+
           @Override
           public Pair<Integer, Integer> accumulate(
               Pair<Integer, Integer> lhs, Pair<Integer, Integer> rhs
           )
           {
-            yield();
+            count++;
+            if(count % yieldEvery == 0) yield();
             return rhs;
           }
         }
     );
 
-    Iterator<Pair<Integer, Integer>> expectedVals = expected.iterator();
+    Iterator<Pair<Integer, Integer>> expectedVals = Iterators.filter(
+        expected.iterator(),
+        new Predicate<Pair<Integer, Integer>>()
+        {
+          int count = 0;
+
+          @Override
+          public boolean apply(
+              @Nullable Pair<Integer, Integer> input
+          )
+          {
+            count++;
+            if (count % yieldEvery == 0) {
+              return true;
+            }
+            return false;
+          }
+        }
+    );
 
     if (expectedVals.hasNext()) {
       while (!yielder.isDone()) {
-        final Pair<Integer, Integer> nextVal = expectedVals.next();
-        Assert.assertEquals(nextVal, yielder.get());
-        yielder = yielder.next(null);
+        final Pair<Integer, Integer> expectedVal = expectedVals.next();
+        final Pair<Integer, Integer> actual = yielder.get();
+        Assert.assertEquals(expectedVal, actual);
+        yielder = yielder.next(actual);
       }
-      Assert.assertEquals(expectedVals.next(), yielder.get());
     }
     Assert.assertTrue(yielder.isDone());
+    Assert.assertFalse(expectedVals.hasNext());
     yielder.close();
   }
 }

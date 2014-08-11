@@ -26,14 +26,17 @@ import com.google.inject.Provides;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
+import io.druid.guice.IndexingServiceTaskLogsModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
-import io.druid.indexing.common.index.ChatHandlerProvider;
+import io.druid.indexing.common.config.TaskConfig;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
@@ -73,6 +76,7 @@ public class CliMiddleManager extends ServerRunnable
           {
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
+            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
@@ -101,7 +105,9 @@ public class CliMiddleManager extends ServerRunnable
                 config.getVersion()
             );
           }
-        }
+        },
+        new IndexingServiceFirehoseModule(),
+        new IndexingServiceTaskLogsModule()
     );
   }
 }

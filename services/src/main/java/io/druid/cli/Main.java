@@ -25,10 +25,11 @@ import io.airlift.command.Help;
 import io.airlift.command.ParseException;
 import io.druid.cli.convert.ConvertProperties;
 import io.druid.cli.validate.DruidJsonValidator;
+import io.druid.guice.ExtensionsConfig;
+import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
-import io.druid.server.initialization.ExtensionsConfig;
 
-import java.util.List;
+import java.util.Collection;
 
 /**
  */
@@ -41,14 +42,15 @@ public class Main
 
     builder.withDescription("Druid command-line runner.")
            .withDefaultCommand(Help.class)
-           .withCommands(Help.class);
+           .withCommands(Help.class, Version.class);
 
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
            .withCommands(
                CliCoordinator.class, CliHistorical.class, CliBroker.class,
-               CliRealtime.class, CliOverlord.class, CliMiddleManager.class
+               CliRealtime.class, CliOverlord.class, CliMiddleManager.class,
+               CliBridge.class, CliRouter.class
            );
 
     builder.withGroup("example")
@@ -59,7 +61,7 @@ public class Main
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")
            .withDefaultCommand(Help.class)
-           .withCommands(ConvertProperties.class, DruidJsonValidator.class);
+           .withCommands(ConvertProperties.class, DruidJsonValidator.class, PullDependencies.class);
 
     builder.withGroup("index")
                .withDescription("Run indexing for druid")
@@ -71,9 +73,9 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(CliPeon.class, CliInternalHadoopIndexer.class);
 
-    final Injector injector = Initialization.makeStartupInjector();
+    final Injector injector = GuiceInjectors.makeStartupInjector();
     final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
-    final List<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
+    final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
 
     for (CliCommandCreator creator : extensionCommands) {
       creator.addCommands(builder);

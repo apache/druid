@@ -34,4 +34,16 @@ public class AllColumnIncluderator implements ColumnIncluderator
   {
     return ALL_CACHE_PREFIX;
   }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    return obj instanceof AllColumnIncluderator;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return AllColumnIncluderator.class.hashCode();
+  }
 }

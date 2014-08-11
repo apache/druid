@@ -72,8 +72,8 @@ public class DbTablesConfig
     this.rulesTable = makeTableName(rulesTable, "rules");
     this.configTable = makeTableName(configTable, "config");
     this.tasksTable = makeTableName(tasksTable, "tasks");
-    this.taskLogTable = makeTableName(taskLogTable, "task_log");
-    this.taskLockTable = makeTableName(taskLockTable, "task_lock");
+    this.taskLogTable = makeTableName(taskLogTable, "tasklogs");
+    this.taskLockTable = makeTableName(taskLockTable, "tasklocks");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)

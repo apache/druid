@@ -68,7 +68,7 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   @Override
   public boolean isAudited()
   {
-    return true;
+    return false;
   }
 
   @Override

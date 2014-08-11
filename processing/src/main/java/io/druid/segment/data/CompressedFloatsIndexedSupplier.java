@@ -25,6 +25,7 @@ import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 
@@ -123,7 +124,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
       private void loadBuffer(int bufferNum)
       {
-        Closeables.closeQuietly(holder);
+        CloseQuietly.close(holder);
         holder = baseFloatBuffers.get(bufferNum);
         buffer = holder.get();
         currIndex = bufferNum;

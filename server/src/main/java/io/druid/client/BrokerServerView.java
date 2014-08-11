@@ -20,6 +20,7 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -27,10 +28,14 @@ import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
+import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.QueryWatcher;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -53,23 +58,29 @@ public class BrokerServerView implements TimelineServerView
   private final Map<String, ServerSelector> selectors;
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
 
-  private final QueryToolChestWarehouse warehose;
+  private final QueryToolChestWarehouse warehouse;
+  private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final ServerView baseView;
+  private final ServerInventoryView baseView;
+  private final TierSelectorStrategy tierSelectorStrategy;
 
   @Inject
   public BrokerServerView(
-      QueryToolChestWarehouse warehose,
+      QueryToolChestWarehouse warehouse,
+      QueryWatcher queryWatcher,
       ObjectMapper smileMapper,
       @Client HttpClient httpClient,
-      ServerView baseView
+      ServerInventoryView baseView,
+      TierSelectorStrategy tierSelectorStrategy
   )
   {
-    this.warehose = warehose;
+    this.warehouse = warehouse;
+    this.queryWatcher = queryWatcher;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.baseView = baseView;
+    this.tierSelectorStrategy = tierSelectorStrategy;
 
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
@@ -81,14 +92,14 @@ public class BrokerServerView implements TimelineServerView
         new ServerView.SegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentAdded(DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
             serverAddedSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(final DruidServer server, DataSegment segment)
+          public ServerView.CallbackAction segmentRemoved(final DruidServerMetadata server, DataSegment segment)
           {
             serverRemovedSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
@@ -145,18 +156,18 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehose, smileMapper, httpClient, server.getHost());
+    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost());
   }
 
   private QueryableDruidServer removeServer(DruidServer server)
   {
     for (DataSegment segment : server.getSegments().values()) {
-      serverRemovedSegment(server, segment);
+      serverRemovedSegment(server.getMetadata(), segment);
     }
     return clients.remove(server.getName());
   }
 
-  private void serverAddedSegment(final DruidServer server, final DataSegment segment)
+  private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     String segmentId = segment.getIdentifier();
     synchronized (lock) {
@@ -164,11 +175,11 @@ public class BrokerServerView implements TimelineServerView
 
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {
-        selector = new ServerSelector(segment);
+        selector = new ServerSelector(segment, tierSelectorStrategy);
 
         VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
         if (timeline == null) {
-          timeline = new VersionedIntervalTimeline<String, ServerSelector>(Ordering.natural());
+          timeline = new VersionedIntervalTimeline<>(Ordering.natural());
           timelines.put(segment.getDataSource(), timeline);
         }
 
@@ -178,13 +189,13 @@ public class BrokerServerView implements TimelineServerView
 
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        queryableDruidServer = addServer(server);
+        queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
       }
       selector.addServer(queryableDruidServer);
     }
   }
 
-  private void serverRemovedSegment(DruidServer server, DataSegment segment)
+  private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
     String segmentId = segment.getIdentifier();
     final ServerSelector selector;
@@ -228,10 +239,11 @@ public class BrokerServerView implements TimelineServerView
 
 
   @Override
-  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(String dataSource)
+  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
+    String table = Iterables.getOnlyElement(dataSource.getNames());
     synchronized (lock) {
-      return timelines.get(dataSource);
+      return timelines.get(table);
     }
   }
 

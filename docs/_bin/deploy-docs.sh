@@ -1,47 +1,55 @@
 #! /bin/bash -e
 
-SCRIPT_DIR=`dirname $0`
-pushd $SCRIPT_DIR
-SCRIPT_DIR=`pwd`
-popd
-
-if [ -z ${1} ]; then 
-    pushd $SCRIPT_DIR
-    VERSION=`cat ../../pom.xml | grep version | head -4 | tail -1 | sed 's_.*<version>\([^<]*\)</version>.*_\1_'`
-    popd
+if [ -z "$1" ]; then 
+    version="latest"
 else
-    VERSION=${1}
+    version=$1
 fi
 
-WORKING_DIR=/tmp/docs-deploy
+docs=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/docs
 
-echo Using Version[${VERSION}]
-echo Script in [${SCRIPT_DIR}]
-echo Deploying to [${WORKING_DIR}]
-
-if [ -d ${WORKING_DIR} ]; then
-    echo DELETING ${WORKING_DIR}
-    rm -rf ${WORKING_DIR}
+if [ -n "$(git -C "$docs" status --porcelain --untracked-files=no content)" ]; then
+  echo "Docs directory is not clean, aborting"
+  exit 1
 fi
 
-git clone git@github.com:druid-io/druid-io.github.io.git ${WORKING_DIR}
+if [ -z "$(git tag -l "druid-$version")" ] && [ "$version" != "latest" ]; then
+  echo "Version tag does not exist: druid-$version"
+  exit 1;
+fi
 
-DOC_DIR=${WORKING_DIR}/docs/${VERSION}/
+tmp=$(mktemp -d -t druid-docs-deploy)
 
-cp ${SCRIPT_DIR}/../_layouts/doc* ${WORKING_DIR}/_layouts/
-mkdir -p ${DOC_DIR}
-cp -r ${SCRIPT_DIR}/../content/* ${DOC_DIR}
+echo "Using Version     [$version]"
+echo "Working directory [$tmp]"
 
-BRANCH=docs-${VERSION}
+git clone git@github.com:druid-io/druid-io.github.io.git "$tmp"
 
-pushd ${WORKING_DIR}
-git checkout -b ${BRANCH}
-git add .
-git commit -m "Deploy new docs version ${VERSION}"
-git push origin ${BRANCH}
-popd
+target=$tmp/docs/$version
 
-rm -rf ${WORKING_DIR}
+mkdir -p $target
+rsync -a --delete "$docs/content/" $target
 
+branch=update-docs-$version
 
+git -C $tmp checkout  -b $branch
+git -C $tmp add -A .
+git -C $tmp commit -m "Update $version docs"
+git -C $tmp push origin $branch
 
+if [ -n "$GIT_TOKEN" ]; then
+curl -u "$GIT_TOKEN:x-oauth-basic" -XPOST -d@- \
+     https://api.github.com/repos/druid-io/druid-io.github.io/pulls <<EOF
+{
+  "title" : "Update $version docs",
+  "head"  : "$branch",
+  "base"  : "master"
+}
+EOF
+
+else
+  echo "GitHub personal token not provided, not submitting pull request"
+  echo "Please go to https://github.com/druid-io/druid-io.github.io and submit a pull request from the \`$branch\` branch"
+fi
+
+rm -rf $tmp

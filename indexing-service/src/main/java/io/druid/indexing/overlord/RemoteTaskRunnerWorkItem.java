@@ -21,7 +21,6 @@ package io.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.SettableFuture;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.task.Task;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
 
@@ -33,25 +32,43 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   private final Worker worker;
 
   public RemoteTaskRunnerWorkItem(
-      Task task,
+      String taskId,
+      Worker worker
+  )
+  {
+    this(taskId, SettableFuture.<TaskStatus>create(), worker);
+  }
+
+  public RemoteTaskRunnerWorkItem(
+      String taskId,
+      DateTime createdTime,
+      DateTime queueInsertionTime,
+      Worker worker
+  )
+  {
+    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker);
+  }
+
+  private RemoteTaskRunnerWorkItem(
+      String taskId,
       SettableFuture<TaskStatus> result,
       Worker worker
   )
   {
-    super(task, result);
+    super(taskId, result);
     this.result = result;
     this.worker = worker;
   }
 
-  public RemoteTaskRunnerWorkItem(
-      Task task,
+  private RemoteTaskRunnerWorkItem(
+      String taskId,
       SettableFuture<TaskStatus> result,
       DateTime createdTime,
       DateTime queueInsertionTime,
       Worker worker
   )
   {
-    super(task, result, createdTime, queueInsertionTime);
+    super(taskId, result, createdTime, queueInsertionTime);
     this.result = result;
     this.worker = worker;
   }
@@ -69,11 +86,11 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   @Override
   public RemoteTaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), time, worker);
+    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), time, worker);
   }
 
   public RemoteTaskRunnerWorkItem withWorker(Worker theWorker)
   {
-    return new RemoteTaskRunnerWorkItem(getTask(), result, getCreatedTime(), getQueueInsertionTime(), theWorker);
+    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), getQueueInsertionTime(), theWorker);
   }
 }

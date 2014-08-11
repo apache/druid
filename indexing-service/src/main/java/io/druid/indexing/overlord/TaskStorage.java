@@ -30,10 +30,11 @@ import java.util.List;
 public interface TaskStorage
 {
   /**
-   * Adds a task to the storage facility with a particular status. If the task ID already exists, this method
-   * will throw a {@link TaskExistsException}.
+   * Adds a task to the storage facility with a particular status.
+   *
+   * @throws io.druid.indexing.overlord.TaskExistsException if the task ID already exists
    */
-  public void insert(Task task, TaskStatus status);
+  public void insert(Task task, TaskStatus status) throws TaskExistsException;
 
   /**
    * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle
@@ -77,9 +78,17 @@ public interface TaskStorage
   public List<TaskAction> getAuditLogs(String taskid);
 
   /**
-   * Returns a list of currently-running tasks as stored in the storage facility, in no particular order.
+   * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order
+   * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    */
-  public List<Task> getRunningTasks();
+  public List<Task> getActiveTasks();
+
+  /**
+   * Returns a list of recently finished task statuses as stored in the storage facility. No particular order
+   * is guaranteed, but implementations are encouraged to return tasks in descending order of creation. No particular
+   * standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
+   */
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses();
 
   /**
    * Returns a list of locks for a particular task.

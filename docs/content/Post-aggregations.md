@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+# Post-Aggregations
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
 There are several post-aggregators available.
@@ -40,7 +41,56 @@ The constant post-aggregator always returns the specified value.
 { "type"  : "constant", "name"  : <output_name>, "value" : <numerical_value> }
 ```
 
-### Example Usage
+### JavaScript post-aggregator
+
+Applies the provided JavaScript function to the given fields. Fields are passed as arguments to the JavaScript function in the given order.
+
+```json
+postAggregation : {
+  "type": "javascript",
+  "name": <output_name>,
+  "fieldNames" : [<aggregator_name>, <aggregator_name>, ...],
+  "function": <javascript function>
+}
+```
+
+Example JavaScript aggregator:
+
+```json
+{
+  "type": "javascript",
+  "name": "absPercent",
+  "fieldNames": ["delta", "total"],
+  "function": "function(delta, total) { return 100 * Math.abs(delta) / total; }"
+}
+```
+### HyperUnique Cardinality post-aggregator
+
+The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object such that it can be used in post aggregations.
+
+```json
+{ "type"  : "hyperUniqueCardinality", "fieldName"  : <the name field value of the hyperUnique aggregator>}
+```
+
+It can be used in a sample calculation as so:
+
+```json
+  "aggregations" : [{
+    {"type" : "count", "name" : "rows"},
+    {"type" : "hyperUnique", "name" : "unique_users", "fieldName" : "uniques"}
+  }],
+  "postAggregations" : {
+    "type"   : "arithmetic",
+    "name"   : "average_users_per_row",
+    "fn"     : "/",
+    "fields" : [
+      { "type" : "hyperUniqueCardinality", "fieldName" : "unique_users" },
+      { "type" : "fieldAccess", "name" : "rows", "fieldName" : "rows" }
+    ]
+  }
+```
+
+#### Example Usage
 
 In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called "total".
 
@@ -71,5 +121,4 @@ The format of the query JSON is as follows:
   }
   ...
 }
-
 ```

@@ -19,15 +19,16 @@
 
 package io.druid.indexing.common.actions;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerDBCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
-import io.druid.indexing.overlord.TaskQueue;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -35,28 +36,20 @@ import java.util.Set;
 
 public class TaskActionToolbox
 {
-  private final TaskQueue taskQueue;
   private final TaskLockbox taskLockbox;
   private final IndexerDBCoordinator indexerDBCoordinator;
   private final ServiceEmitter emitter;
 
   @Inject
   public TaskActionToolbox(
-      TaskQueue taskQueue,
       TaskLockbox taskLockbox,
       IndexerDBCoordinator indexerDBCoordinator,
       ServiceEmitter emitter
   )
   {
-    this.taskQueue = taskQueue;
     this.taskLockbox = taskLockbox;
     this.indexerDBCoordinator = indexerDBCoordinator;
     this.emitter = emitter;
-  }
-
-  public TaskQueue getTaskQueue()
-  {
-    return taskQueue;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -72,6 +65,38 @@ public class TaskActionToolbox
   public ServiceEmitter getEmitter()
   {
     return emitter;
+  }
+
+  public boolean segmentsAreFromSamePartitionSet(
+      final Set<DataSegment> segments
+  )
+  {
+    // Verify that these segments are all in the same partition set
+
+    Preconditions.checkArgument(!segments.isEmpty(), "segments nonempty");
+    final DataSegment firstSegment = segments.iterator().next();
+    for (final DataSegment segment : segments) {
+      if (!segment.getDataSource().equals(firstSegment.getDataSource())
+          || !segment.getInterval().equals(firstSegment.getInterval())
+          || !segment.getVersion().equals(firstSegment.getVersion())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public void verifyTaskLocksAndSinglePartitionSettitude(
+      final Task task,
+      final Set<DataSegment> segments,
+      final boolean allowOlderVersions
+  )
+  {
+    if (!taskLockCoversSegments(task, segments, allowOlderVersions)) {
+      throw new ISE("Segments not covered by locks for task: %s", task.getId());
+    }
+    if (!segmentsAreFromSamePartitionSet(segments)) {
+      throw new ISE("Segments are not in the same partition set: %s", segments);
+    }
   }
 
   public boolean taskLockCoversSegments(

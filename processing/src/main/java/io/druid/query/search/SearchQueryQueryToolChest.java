@@ -38,6 +38,7 @@ import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.query.CacheStrategy;
+import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -65,11 +66,14 @@ import java.util.Set;
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x2;
-
   private static final Joiner COMMA_JOIN = Joiner.on(",");
-  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>(){};
+  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
+  {
+  };
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  {
+  };
 
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>(){};
   private final SearchQueryConfig config;
 
   @Inject
@@ -99,7 +103,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       )
       {
         SearchQuery query = (SearchQuery) input;
-        return new SearchBinaryFn(query.getSort(), query.getGranularity());
+        return new SearchBinaryFn(query.getSort(), query.getGranularity(), query.getLimit());
       }
     };
   }
@@ -119,7 +123,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(query.getDataSource())
+        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4("search")
         .setUser5(COMMA_JOIN.join(query.getIntervals()))
         .setUser6(String.valueOf(query.hasFilters()))
@@ -127,7 +131,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makeMetricManipulatorFn(
+  public Function<Result<SearchResultValue>, Result<SearchResultValue>> makePreComputeManipulatorFn(
       SearchQuery query, MetricManipulationFn fn
   )
   {
@@ -170,7 +174,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1 + 4 + granularityBytes.length + filterBytes.length +
-                querySpecBytes.length + dimensionsBytesSize
+                    querySpecBytes.length + dimensionsBytesSize
             )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))
@@ -261,6 +265,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     );
   }
 
+  public Ordering<Result<SearchResultValue>> getOrdering()
+  {
+    return Ordering.natural();
+  }
+
   private static class SearchThresholdAdjustingQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     private final QueryRunner<Result<SearchResultValue>> runner;
@@ -269,7 +278,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     public SearchThresholdAdjustingQueryRunner(
         QueryRunner<Result<SearchResultValue>> runner,
         SearchQueryConfig config
-    ) {
+    )
+    {
       this.runner = runner;
       this.config = config;
     }
@@ -286,7 +296,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(query);
       }
 
-      final boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+      final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
           runner.run(query.withLimit(config.getMaxSearchLimit())),
@@ -340,10 +350,5 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           }
       );
     }
-  }
-
-  public Ordering<Result<SearchResultValue>> getOrdering()
-  {
-    return Ordering.natural();
   }
 }

@@ -42,6 +42,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
@@ -74,17 +75,20 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private static final Splitter whiteSpaceSplitter = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
 
   private final ForkingTaskRunnerConfig config;
+  private final TaskConfig taskConfig;
   private final Properties props;
   private final TaskLogPusher taskLogPusher;
   private final DruidNode node;
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
+  private final PortFinder portFinder;
 
   private final Map<String, ForkingTaskRunnerWorkItem> tasks = Maps.newHashMap();
 
   @Inject
   public ForkingTaskRunner(
       ForkingTaskRunnerConfig config,
+      TaskConfig taskConfig,
       WorkerConfig workerConfig,
       Properties props,
       TaskLogPusher taskLogPusher,
@@ -93,18 +97,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   )
   {
     this.config = config;
+    this.taskConfig = taskConfig;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
     this.jsonMapper = jsonMapper;
     this.node = node;
+    this.portFinder = new PortFinder(config.getStartPort());
 
     this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workerConfig.getCapacity()));
-  }
-
-  @Override
-  public void bootstrap(List<Task> tasks)
-  {
-    // do nothing
   }
 
   @Override
@@ -115,7 +115,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         tasks.put(
             task.getId(),
             new ForkingTaskRunnerWorkItem(
-                task,
+                task.getId(),
                 exec.submit(
                     new Callable<TaskStatus>()
                     {
@@ -123,11 +123,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                       public TaskStatus call()
                       {
                         final String attemptUUID = UUID.randomUUID().toString();
-                        final File taskDir = new File(config.getTaskDir(), task.getId());
+                        final File taskDir = new File(taskConfig.getBaseTaskDir(), task.getId());
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;
-
+                        final int childPort = portFinder.findUnusedPort();
                         try {
                           final Closer closer = Closer.create();
                           try {
@@ -160,7 +160,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
 
                               final List<String> command = Lists.newArrayList();
-                              final int childPort = findUnusedPort();
                               final String childHost = String.format("%s:%d", node.getHostNoPort(), childPort);
 
                               command.add(config.getJavaCommand());
@@ -206,7 +205,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add(statusFile.toString());
                               String nodeType = task.getNodeType();
                               if (nodeType != null) {
-                                command.add(String.format("--nodeType %s", nodeType));
+                                command.add("--nodeType");
+                                command.add(nodeType);
                               }
 
                               jsonMapper.writeValue(taskFile, task);
@@ -223,29 +223,20 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             }
 
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
-
-                            final InputStream fromProc = processHolder.process.getInputStream();
-                            final OutputStream toLogfile = closer.register(
-                                Files.newOutputStreamSupplier(logFile).getOutput()
-                            );
-
                             boolean runFailed = true;
 
-                            ByteStreams.copy(fromProc, toLogfile);
-                            final int statusCode = processHolder.process.waitFor();
-                            log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
-
-                            if (statusCode == 0) {
-                              runFailed = false;
+                            try (final OutputStream toLogfile = Files.newOutputStreamSupplier(logFile).getOutput()) {
+                              ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
+                              final int statusCode = processHolder.process.waitFor();
+                              log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
+                              if (statusCode == 0) {
+                                runFailed = false;
+                              }
                             }
-
-                            // Upload task logs
-
-                            // XXX: Consider uploading periodically for very long-lived tasks to prevent
-                            // XXX: bottlenecks at the end or the possibility of losing a lot of logs all
-                            // XXX: at once.
-
-                            taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            finally {
+                              // Upload task logs
+                              taskLogPusher.pushTaskLog(task.getId(), logFile);
+                            }
 
                             if (!runFailed) {
                               // Process exited successfully
@@ -260,9 +251,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             closer.close();
                           }
                         }
-                        catch (Exception e) {
-                          log.info(e, "Exception caught during execution");
-                          throw Throwables.propagate(e);
+                        catch (Throwable t) {
+                          log.info(t, "Exception caught during execution");
+                          throw Throwables.propagate(t);
                         }
                         finally {
                           try {
@@ -272,7 +263,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 taskWorkItem.processHolder.process.destroy();
                               }
                             }
-
+                            portFinder.markPortUnused(childPort);
                             log.info("Removing temporary directory: %s", attemptDir);
                             FileUtils.deleteDirectory(attemptDir);
                           }
@@ -358,6 +349,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
+  public Collection<TaskRunnerWorkItem> getKnownTasks()
+  {
+    synchronized (tasks) {
+      return Lists.<TaskRunnerWorkItem>newArrayList(tasks.values());
+    }
+  }
+
+  @Override
   public Collection<ZkWorker> getWorkers()
   {
     return ImmutableList.of();
@@ -388,7 +387,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
             if (offset > 0) {
               raf.seek(offset);
             } else if (offset < 0 && offset < rafLength) {
-              raf.seek(rafLength + offset);
+              raf.seek(Math.max(0, rafLength + offset));
             }
             return Channels.newInputStream(raf.getChannel());
           }
@@ -424,11 +423,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     private volatile ProcessHolder processHolder = null;
 
     private ForkingTaskRunnerWorkItem(
-        Task task,
+        String taskId,
         ListenableFuture<TaskStatus> statusFuture
     )
     {
-      super(task, statusFuture);
+      super(taskId, statusFuture);
     }
   }
 

@@ -24,7 +24,6 @@ import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,17 +36,14 @@ public class TimeseriesBinaryFn
 {
   private final QueryGranularity gran;
   private final List<AggregatorFactory> aggregations;
-  private final List<PostAggregator> postAggregations;
 
   public TimeseriesBinaryFn(
       QueryGranularity granularity,
-      List<AggregatorFactory> aggregations,
-      List<PostAggregator> postAggregations
+      List<AggregatorFactory> aggregations
   )
   {
     this.gran = granularity;
     this.aggregations = aggregations;
-    this.postAggregations = postAggregations;
   }
 
   @Override
@@ -69,11 +65,6 @@ public class TimeseriesBinaryFn
     for (AggregatorFactory factory : aggregations) {
       final String metricName = factory.getName();
       retVal.put(metricName, factory.combine(arg1Val.getMetric(metricName), arg2Val.getMetric(metricName)));
-    }
-
-    for (PostAggregator pf : postAggregations) {
-      final String metricName = pf.getName();
-      retVal.put(metricName, pf.compute(retVal));
     }
 
     return (gran instanceof AllGranularity) ?

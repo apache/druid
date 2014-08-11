@@ -49,7 +49,7 @@ public class JacksonModule implements Module
   public ObjectMapper smileMapper()
   {
     ObjectMapper retVal = new DefaultObjectMapper(new SmileFactory());
-    retVal.getJsonFactory().setCodec(retVal);
+    retVal.getFactory().setCodec(retVal);
     return retVal;
   }
 }

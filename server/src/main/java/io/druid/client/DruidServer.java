@@ -21,7 +21,9 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -36,7 +38,10 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class DruidServer implements Comparable
 {
+  public static final int DEFAULT_PRIORITY = 0;
+  public static final int DEFAULT_NUM_REPLICANTS = 2;
   public static final String DEFAULT_TIER = "_default_tier";
+
   private static final Logger log = new Logger(DruidServer.class);
 
   private final Object lock = new Object();
@@ -59,7 +64,8 @@ public class DruidServer implements Comparable
         node.getHost(),
         config.getMaxSize(),
         type,
-        config.getTier()
+        config.getTier(),
+        DEFAULT_PRIORITY
     );
   }
 
@@ -69,10 +75,11 @@ public class DruidServer implements Comparable
       @JsonProperty("host") String host,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") String type,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tier") String tier,
+      @JsonProperty("priority") int priority
   )
   {
-    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier);
+    this.metadata = new DruidServerMetadata(name, host, maxSize, type, tier, priority);
 
     this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
     this.segments = new ConcurrentHashMap<String, DataSegment>();
@@ -116,6 +123,17 @@ public class DruidServer implements Comparable
   public String getTier()
   {
     return metadata.getTier();
+  }
+
+  public boolean isAssignable()
+  {
+    return metadata.isAssignable();
+  }
+
+  @JsonProperty
+  public int getPriority()
+  {
+    return metadata.getPriority();
   }
 
   @JsonProperty
@@ -256,5 +274,27 @@ public class DruidServer implements Comparable
     }
 
     return getName().compareTo(((DruidServer) o).getName());
+  }
+
+  public ImmutableDruidServer toImmutableDruidServer()
+  {
+    return new ImmutableDruidServer(
+        metadata,
+        currSize,
+        ImmutableMap.copyOf(
+            Maps.transformValues(
+                dataSources,
+                new Function<DruidDataSource, ImmutableDruidDataSource>()
+                {
+                  @Override
+                  public ImmutableDruidDataSource apply(DruidDataSource input)
+                  {
+                    return input.toImmutableDruidDataSource();
+                  }
+                }
+            )
+        ),
+        ImmutableMap.copyOf(segments)
+    );
   }
 }

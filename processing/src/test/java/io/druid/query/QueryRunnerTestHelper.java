@@ -19,12 +19,18 @@
 
 package io.druid.query;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -39,6 +45,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,24 +55,101 @@ import java.util.List;
  */
 public class QueryRunnerTestHelper
 {
+
+  public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
+  {
+    @Override
+    public void registerQuery(Query query, ListenableFuture future)
+    {
+
+    }
+  };
+
+  public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
+  public static final UnionDataSource unionDataSource = new UnionDataSource(
+      Lists.transform(
+          Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), new Function<String, TableDataSource>()
+      {
+        @Nullable
+        @Override
+        public TableDataSource apply(@Nullable String input)
+        {
+          return new TableDataSource(input);
+        }
+      }
+      )
+  );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
   public static final String providerDimension = "proVider";
   public static final String qualityDimension = "quality";
+  public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
   public static final String indexMetric = "index";
+  public static final String uniqueMetric = "uniques";
+  public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
+  public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
-  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
+  public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
+      "nindex",
+      Arrays.asList("placementish", "index"),
+      "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
+      "function reset() { return 0; }",
+      "function combine(a, b) { return a + b; }"
+  );
+  public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
+      "pishcount",
+      Arrays.asList("placementish", "index"),
+      "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
+      "function reset() { return 0; }",
+      "function combine(a, b) { return a + b; }"
+  );
+  public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
+      "uniques",
+      "quality_uniques"
+  );
+  public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
+      "cardinality",
+      Arrays.asList("quality"),
+      false
+  );
+  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator addRowsIndexConstant =
       new ArithmeticPostAggregator(
-          "addRowsIndexConstant", "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
+          addRowsIndexConstantMetric, "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
       );
-  public static final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum);
+  // dependent on AddRowsIndexContact postAgg
+  public static final ArithmeticPostAggregator dependentPostAgg = new ArithmeticPostAggregator(
+      dependentPostAggMetric,
+      "+",
+      Lists.newArrayList(
+          constant,
+          new FieldAccessPostAggregator(addRowsIndexConstantMetric, addRowsIndexConstantMetric),
+          new FieldAccessPostAggregator("rows", "rows")
+      )
+  );
+
+  public static final String hyperUniqueFinalizingPostAggMetric = "hyperUniqueFinalizingPostAggMetric";
+  public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
+      hyperUniqueFinalizingPostAggMetric,
+      "+",
+      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1, 1))
+  );
+
+  public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
+      rowsCount,
+      indexDoubleSum,
+      qualityUniques
+  );
+
+  public static final double UNIQUES_9 = 9.019833517963864;
+  public static final double UNIQUES_2 = 2.000977198748901d;
+  public static final double UNIQUES_1 = 1.0002442201269182d;
 
   public static final String[] expectedFullOnIndexValues = new String[]{
       "4500.0", "6077.949111938477", "4922.488838195801", "5726.140853881836", "4698.468170166016",
@@ -94,8 +178,14 @@ public class QueryRunnerTestHelper
   public static final QuerySegmentSpec firstToThird = new MultipleIntervalSegmentSpec(
       Arrays.asList(new Interval("2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))
   );
+  public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
+      Arrays.asList(new Interval("2011-04-02T00:00:00.000Z/P1D"))
+  );
   public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
       Arrays.asList(new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+  );
+  public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
+      Arrays.asList(new Interval("2020-04-02T00:00:00.000Z/P1D"))
   );
 
   @SuppressWarnings("unchecked")
@@ -110,13 +200,37 @@ public class QueryRunnerTestHelper
     return Arrays.asList(
         new Object[][]{
             {
-                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex))
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
             },
             {
-                makeQueryRunner(factory, new QueryableIndexSegment(null, mMappedTestIndex))
+                makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
             },
             {
-                makeQueryRunner(factory, new QueryableIndexSegment(null, mergedRealtimeIndex))
+                makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            }
+        }
+    );
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Collection<?> makeUnionQueryRunners(
+      QueryRunnerFactory factory
+  )
+      throws IOException
+  {
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    return Arrays.asList(
+        new Object[][]{
+            {
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
+            },
+            {
+                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
+            },
+            {
+                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
             }
         }
     );
@@ -128,7 +242,31 @@ public class QueryRunnerTestHelper
   )
   {
     return new FinalizeResultsQueryRunner<T>(
-        factory.createRunner(adapter),
+        new BySegmentQueryRunner<T>(
+            segmentId, adapter.getDataInterval().getStart(),
+            factory.createRunner(adapter)
+        ),
+        factory.getToolchest()
+    );
+  }
+
+  public static <T> QueryRunner<T> makeUnionQueryRunner(
+      QueryRunnerFactory<T, Query<T>> factory,
+      Segment adapter
+  )
+  {
+    return new FinalizeResultsQueryRunner<T>(
+        factory.getToolchest().postMergeQueryDecoration(
+            factory.getToolchest().mergeResults(
+                new UnionQueryRunner<T>(
+                    new BySegmentQueryRunner<T>(
+                        segmentId, adapter.getDataInterval().getStart(),
+                        factory.createRunner(adapter)
+                    ),
+                    factory.getToolchest()
+                )
+            )
+        ),
         factory.getToolchest()
     );
   }

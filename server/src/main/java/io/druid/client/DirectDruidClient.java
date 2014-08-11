@@ -26,12 +26,17 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
+import com.metamx.common.RE;
 import com.metamx.common.guava.BaseSequence;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -39,14 +44,17 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.InputStreamResponseHandler;
+import com.metamx.http.client.response.StatusResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -57,6 +65,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -70,6 +79,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = Maps.newConcurrentMap();
 
   private final QueryToolChestWarehouse warehouse;
+  private final QueryWatcher queryWatcher;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
   private final String host;
@@ -79,17 +89,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,
+      QueryWatcher queryWatcher,
       ObjectMapper objectMapper,
       HttpClient httpClient,
       String host
   )
   {
     this.warehouse = warehouse;
+    this.queryWatcher = queryWatcher;
     this.objectMapper = objectMapper;
     this.httpClient = httpClient;
     this.host = host;
 
-    this.isSmile = this.objectMapper.getJsonFactory() instanceof SmileFactory;
+    this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
   }
 
@@ -99,10 +111,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query)
+  public Sequence<T> run(final Query<T> query)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = Boolean.parseBoolean(query.getContextValue("bySegment", "false"));
+    boolean isBySegment = query.getContextBySegment(false);
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {
@@ -118,17 +130,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType typeRef;
     if (isBySegment) {
       typeRef = types.rhs;
-    }
-    else {
+    } else {
       typeRef = types.lhs;
     }
 
-    final Future<InputStream> future;
+    final ListenableFuture<InputStream> future;
     final String url = String.format("http://%s/druid/v2/", host);
+    final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
       log.debug("Querying url[%s]", url);
-      openConnections.getAndIncrement();
       future = httpClient
           .post(new URL(url))
           .setContent(objectMapper.writeValueAsBytes(query))
@@ -169,29 +180,69 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       stopTime - startTime,
                       byteCount / (0.0001 * (stopTime - startTime))
                   );
-                  openConnections.getAndDecrement();
                   return super.done(clientResponse);
                 }
               }
           );
+
+      queryWatcher.registerQuery(query, future);
+
+      openConnections.getAndIncrement();
+      Futures.addCallback(
+          future, new FutureCallback<InputStream>()
+      {
+        @Override
+        public void onSuccess(InputStream result)
+        {
+          openConnections.getAndDecrement();
+        }
+
+        @Override
+        public void onFailure(Throwable t)
+        {
+          openConnections.getAndDecrement();
+          if (future.isCancelled()) {
+            // forward the cancellation to underlying queriable node
+            try {
+              StatusResponseHolder res = httpClient
+                  .delete(new URL(cancelUrl))
+                  .setContent(objectMapper.writeValueAsBytes(query))
+                  .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
+                  .go(new StatusResponseHandler(Charsets.UTF_8))
+                  .get();
+              if (res.getStatus().getCode() >= 500) {
+                throw new RE(
+                    "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+                    res.getStatus().getCode(),
+                    res.getStatus().getReasonPhrase()
+                );
+              }
+            }
+            catch (IOException | ExecutionException | InterruptedException e) {
+              Throwables.propagate(e);
+            }
+          }
+        }
+      }
+      );
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
 
-    Sequence<T> retVal = new BaseSequence<T, JsonParserIterator<T>>(
+    Sequence<T> retVal = new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
         {
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(typeRef, future);
+            return new JsonParserIterator<T>(typeRef, future, url);
           }
 
           @Override
           public void cleanup(JsonParserIterator<T> iterFromMake)
           {
-            Closeables.closeQuietly(iterFromMake);
+            CloseQuietly.close(iterFromMake);
           }
         }
     );
@@ -199,15 +250,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     if (!isBySegment) {
       retVal = Sequences.map(
           retVal,
-          toolChest.makeMetricManipulatorFn(
-              query, new MetricManipulationFn()
-          {
-            @Override
-            public Object manipulate(AggregatorFactory factory, Object object)
-            {
-              return factory.deserialize(object);
-            }
-          }
+          toolChest.makePreComputeManipulatorFn(
+              query,
+              MetricManipulatorFns.deserializing()
           )
       );
     }
@@ -221,11 +266,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     private ObjectCodec objectCodec;
     private final JavaType typeRef;
     private final Future<InputStream> future;
+    private final String url;
 
-    public JsonParserIterator(JavaType typeRef, Future<InputStream> future)
+    public JsonParserIterator(JavaType typeRef, Future<InputStream> future, String url)
     {
       this.typeRef = typeRef;
       this.future = future;
+      this.url = url;
       jp = null;
     }
 
@@ -238,7 +285,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         return false;
       }
       if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-        Closeables.closeQuietly(jp);
+        CloseQuietly.close(jp);
         return false;
       }
 
@@ -269,22 +316,24 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     {
       if (jp == null) {
         try {
-          jp = objectMapper.getJsonFactory().createJsonParser(future.get());
-          if (jp.nextToken() != JsonToken.START_ARRAY) {
-            throw new IAE("Next token wasn't a START_ARRAY, was[%s]", jp.getCurrentToken());
+          jp = objectMapper.getFactory().createParser(future.get());
+          final JsonToken nextToken = jp.nextToken();
+          if (nextToken == JsonToken.START_OBJECT) {
+            QueryInterruptedException e = jp.getCodec().readValue(jp, QueryInterruptedException.class);
+            throw e;
+          }
+          else if (nextToken != JsonToken.START_ARRAY) {
+            throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
             jp.nextToken();
             objectCodec = jp.getCodec();
           }
         }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
+        catch (IOException | InterruptedException | ExecutionException e) {
+          throw new RE(e, "Failure getting results from[%s]", url);
         }
-        catch (InterruptedException e) {
-          throw Throwables.propagate(e);
-        }
-        catch (ExecutionException e) {
-          throw Throwables.propagate(e);
+        catch (CancellationException e) {
+          throw new QueryInterruptedException("Query cancelled");
         }
       }
     }
@@ -292,7 +341,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     @Override
     public void close() throws IOException
     {
-      jp.close();
+      if (jp != null) {
+        jp.close();
+      }
     }
   }
 }

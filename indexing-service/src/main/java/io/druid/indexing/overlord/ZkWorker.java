@@ -71,9 +71,9 @@ public class ZkWorker implements Closeable
     };
   }
 
-  public void start(PathChildrenCache.StartMode startMode) throws Exception
+  public void start() throws Exception
   {
-    statusCache.start(startMode);
+    statusCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
   }
 
   public void addListener(PathChildrenCacheListener listener)

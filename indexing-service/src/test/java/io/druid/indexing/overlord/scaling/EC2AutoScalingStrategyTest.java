@@ -30,7 +30,7 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.google.common.collect.Lists;
 import io.druid.common.guava.DSuppliers;
 import io.druid.indexing.overlord.setup.EC2NodeData;
-import io.druid.indexing.overlord.setup.GalaxyUserData;
+import io.druid.indexing.overlord.setup.GalaxyEC2UserData;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
@@ -75,7 +75,6 @@ public class EC2AutoScalingStrategyTest
         .withPrivateIpAddress(IP);
 
     strategy = new EC2AutoScalingStrategy(
-        new DefaultObjectMapper(),
         amazonEC2Client,
         new SimpleResourceManagementConfig().setWorkerPort(8080).setWorkerVersion(""),
         DSuppliers.of(workerSetupData)
@@ -96,12 +95,11 @@ public class EC2AutoScalingStrategyTest
   {
     workerSetupData.set(
         new WorkerSetupData(
-            "0",
             0,
             1,
             "",
             new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo"),
-            new GalaxyUserData("env", "version", "type")
+            new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
         )
     );
 
@@ -126,13 +124,11 @@ public class EC2AutoScalingStrategyTest
     AutoScalingData created = strategy.provision();
 
     Assert.assertEquals(created.getNodeIds().size(), 1);
-    Assert.assertEquals(created.getNodes().size(), 1);
     Assert.assertEquals("theInstance", created.getNodeIds().get(0));
 
     AutoScalingData deleted = strategy.terminate(Arrays.asList("dummyIP"));
 
     Assert.assertEquals(deleted.getNodeIds().size(), 1);
-    Assert.assertEquals(deleted.getNodes().size(), 1);
-    Assert.assertEquals(String.format("%s:8080", IP), deleted.getNodeIds().get(0));
+    Assert.assertEquals(INSTANCE_ID, deleted.getNodeIds().get(0));
   }
 }

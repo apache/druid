@@ -31,10 +31,6 @@ public class ForkingTaskRunnerConfig
 {
   @JsonProperty
   @NotNull
-  private String taskDir = "/tmp/persistent";
-
-  @JsonProperty
-  @NotNull
   private String javaCommand = "java";
 
   /**
@@ -53,7 +49,7 @@ public class ForkingTaskRunnerConfig
   @JsonProperty
   @Min(1024)
   @Max(65535)
-  private int startPort = 8080;
+  private int startPort = 8081;
 
   @JsonProperty
   @NotNull
@@ -62,13 +58,9 @@ public class ForkingTaskRunnerConfig
       "druid",
       "io.druid",
       "user.timezone",
-      "file.encoding"
+      "file.encoding",
+      "java.io.tmpdir"
   );
-
-  public String getTaskDir()
-  {
-    return taskDir;
-  }
 
   public String getJavaCommand()
   {

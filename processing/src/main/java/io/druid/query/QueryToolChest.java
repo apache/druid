@@ -41,26 +41,42 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * This method doesn't belong here, but it's here for now just to make it work.
    *
    * @param seqOfSequences
+   *
    * @return
    */
   public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences);
+
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
-  public abstract Function<ResultType, ResultType> makeMetricManipulatorFn(QueryType query, MetricManipulationFn fn);
+
+  public abstract Function<ResultType, ResultType> makePreComputeManipulatorFn(
+      QueryType query,
+      MetricManipulationFn fn
+  );
+
+  public Function<ResultType, ResultType> makePostComputeManipulatorFn(QueryType query, MetricManipulationFn fn)
+  {
+    return makePreComputeManipulatorFn(query, fn);
+  }
+
   public abstract TypeReference<ResultType> getResultTypeReference();
 
-  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query) {
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
+  {
     return null;
   }
 
-  public QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner) {
+  public QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner)
+  {
     return runner;
   }
 
-  public QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner) {
+  public QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner)
+  {
     return runner;
   }
 
-  public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments) {
+  public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
+  {
     return segments;
   }
 }

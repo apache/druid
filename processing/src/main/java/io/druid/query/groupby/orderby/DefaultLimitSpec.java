@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
@@ -37,6 +38,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -46,6 +48,8 @@ import java.util.Map;
  */
 public class DefaultLimitSpec implements LimitSpec
 {
+  private static final byte CACHE_KEY = 0x1;
+
   private final List<OrderByColumnSpec> columns;
   private final int limit;
 
@@ -87,10 +91,15 @@ public class DefaultLimitSpec implements LimitSpec
 
     if (limit == Integer.MAX_VALUE) {
       return new SortingFn(ordering);
-    }
-    else {
+    } else {
       return new TopNFunction(ordering, limit);
     }
+  }
+
+  @Override
+  public LimitSpec merge(LimitSpec other)
+  {
+    return this;
   }
 
   private Ordering<Row> makeComparator(
@@ -148,7 +157,7 @@ public class DefaultLimitSpec implements LimitSpec
       @Override
       public int compare(Row left, Row right)
       {
-        return comparator.compare(left.getFloatMetric(column), right.getFloatMetric(column));
+        return comparator.compare(left.getRaw(column), right.getRaw(column));
       }
     };
   }
@@ -191,10 +200,35 @@ public class DefaultLimitSpec implements LimitSpec
 
     @Override
     public Sequence<Row> apply(
-        @Nullable Sequence<Row> input
+        Sequence<Row> input
     )
     {
       return Sequences.limit(input, limit);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      LimitingFn that = (LimitingFn) o;
+
+      if (limit != that.limit) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return limit;
     }
   }
 
@@ -209,6 +243,31 @@ public class DefaultLimitSpec implements LimitSpec
     {
       return Sequences.sort(input, ordering);
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      SortingFn sortingFn = (SortingFn) o;
+
+      if (ordering != null ? !ordering.equals(sortingFn.ordering) : sortingFn.ordering != null) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return ordering != null ? ordering.hashCode() : 0;
+    }
   }
 
   private static class TopNFunction implements Function<Sequence<Row>, Sequence<Row>>
@@ -220,16 +279,97 @@ public class DefaultLimitSpec implements LimitSpec
     {
       this.limit = limit;
 
-      this.sorter = new TopNSorter<Row>(ordering);
+      this.sorter = new TopNSorter<>(ordering);
     }
 
     @Override
     public Sequence<Row> apply(
-        @Nullable Sequence<Row> input
+        Sequence<Row> input
     )
     {
       final ArrayList<Row> materializedList = Sequences.toList(input, Lists.<Row>newArrayList());
       return Sequences.simple(sorter.toTopN(materializedList, limit));
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      TopNFunction that = (TopNFunction) o;
+
+      if (limit != that.limit) {
+        return false;
+      }
+      if (sorter != null ? !sorter.equals(that.sorter) : that.sorter != null) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = sorter != null ? sorter.hashCode() : 0;
+      result = 31 * result + limit;
+      return result;
+    }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    DefaultLimitSpec that = (DefaultLimitSpec) o;
+
+    if (limit != that.limit) {
+      return false;
+    }
+    if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = columns != null ? columns.hashCode() : 0;
+    result = 31 * result + limit;
+    return result;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final byte[][] columnBytes = new byte[columns.size()][];
+    int columnsBytesSize = 0;
+    int index = 0;
+    for (OrderByColumnSpec column : columns) {
+      columnBytes[index] = column.getCacheKey();
+      columnsBytesSize += columnBytes[index].length;
+      ++index;
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + 4)
+                                  .put(CACHE_KEY);
+    for (byte[] columnByte : columnBytes) {
+      buffer.put(columnByte);
+    }
+    buffer.put(Ints.toByteArray(limit));
+    return buffer.array();
   }
 }

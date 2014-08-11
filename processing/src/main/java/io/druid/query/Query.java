@@ -25,9 +25,11 @@ import com.metamx.common.guava.Sequence;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.topn.TopNQuery;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -40,7 +42,9 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.SEARCH, value = SearchQuery.class),
     @JsonSubTypes.Type(name = Query.TIME_BOUNDARY, value = TimeBoundaryQuery.class),
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
-    @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class)
+    @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
+    @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
+    @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class)
 })
 public interface Query<T>
 {
@@ -49,8 +53,10 @@ public interface Query<T>
   public static final String TIME_BOUNDARY = "timeBoundary";
   public static final String GROUP_BY = "groupBy";
   public static final String SEGMENT_METADATA = "segmentMetadata";
+  public static final String SELECT = "select";
+  public static final String TOPN = "topN";
 
-  public String getDataSource();
+  public DataSource getDataSource();
 
   public boolean hasFilters();
 
@@ -64,11 +70,26 @@ public interface Query<T>
 
   public Duration getDuration();
 
-  public String getContextValue(String key);
+  public Map<String, Object> getContext();
 
-  public String getContextValue(String key, String defaultValue);
+  public <ContextType> ContextType getContextValue(String key);
 
-  public Query<T> withOverriddenContext(Map<String, String> contextOverride);
+  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+
+  // For backwards compatibility
+  @Deprecated public int getContextPriority(int defaultValue);
+  @Deprecated public boolean getContextBySegment(boolean defaultValue);
+  @Deprecated public boolean getContextPopulateCache(boolean defaultValue);
+  @Deprecated public boolean getContextUseCache(boolean defaultValue);
+  @Deprecated public boolean getContextFinalize(boolean defaultValue);
+
+  public Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
+
+  public Query<T> withId(String id);
+
+  public String getId();
+
+  Query<T> withDataSource(DataSource dataSource);
 }

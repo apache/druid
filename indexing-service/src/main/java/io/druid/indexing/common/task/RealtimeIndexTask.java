@@ -19,14 +19,15 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Closeables;
-import com.metamx.common.exception.FormattedException;
+import com.metamx.common.Granularity;
+import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -35,16 +36,19 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
-import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.IndexGranularity;
+import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentConfig;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
@@ -53,7 +57,6 @@ import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
-import io.druid.segment.realtime.plumber.Sink;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -68,31 +71,31 @@ public class RealtimeIndexTask extends AbstractTask
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
 
-  private static String makeTaskId(String dataSource, int partitionNum, String version)
+  private static String makeTaskId(FireDepartment fireDepartment, Schema schema)
   {
-    return String.format(
-        "index_realtime_%s_%d_%s",
-        dataSource, partitionNum, version
-    );
+    // Backwards compatible
+    if (fireDepartment == null) {
+      return String.format(
+          "index_realtime_%s_%d_%s",
+          schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()
+      );
+    } else {
+      return String.format(
+          "index_realtime_%s_%d_%s",
+          fireDepartment.getDataSchema().getDataSource(),
+          fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
+          new DateTime().toString()
+      );
+    }
+  }
+
+  private static String makeDatasource(FireDepartment fireDepartment, Schema schema)
+  {
+    return (fireDepartment != null) ? fireDepartment.getDataSchema().getDataSource() : schema.getDataSource();
   }
 
   @JsonIgnore
-  private final Schema schema;
-
-  @JsonIgnore
-  private final FirehoseFactory firehoseFactory;
-
-  @JsonIgnore
-  private final FireDepartmentConfig fireDepartmentConfig;
-
-  @JsonIgnore
-  private final Period windowPeriod;
-
-  @JsonIgnore
-  private final IndexGranularity segmentGranularity;
-
-  @JsonIgnore
-  private final RejectionPolicyFactory rejectionPolicyFactory;
+  private final FireDepartment spec;
 
   @JsonIgnore
   private volatile Plumber plumber = null;
@@ -104,42 +107,49 @@ public class RealtimeIndexTask extends AbstractTask
   public RealtimeIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
-      @JsonProperty("schema") Schema schema,
+      @JsonProperty("spec") FireDepartment fireDepartment,
+      // Backwards compatible, to be deprecated
+      @JsonProperty("schema") Schema spec,
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("fireDepartmentConfig") FireDepartmentConfig fireDepartmentConfig,
       @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("segmentGranularity") IndexGranularity segmentGranularity,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
+      @JsonProperty("maxPendingPersists") int maxPendingPersists,
+      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory
   )
   {
     super(
-        id == null
-        ? makeTaskId(schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString())
-        :id,
-
-        String.format(
-            "index_realtime_%s",
-            schema.getDataSource()
-        ),
-        taskResource == null
-        ? new TaskResource(
-            makeTaskId(
-                schema.getDataSource(),
-                schema.getShardSpec().getPartitionNum(),
-                new DateTime().toString()
-            ), 1
-        )
-        : taskResource,
-        schema.getDataSource(),
-        null
+        id == null ? makeTaskId(fireDepartment, spec) : id,
+        String.format("index_realtime_%s", makeDatasource(fireDepartment, spec)),
+        taskResource == null ? new TaskResource(makeTaskId(fireDepartment, spec), 1) : taskResource,
+        makeDatasource(fireDepartment, spec)
     );
 
-    this.schema = schema;
-    this.firehoseFactory = firehoseFactory;
-    this.fireDepartmentConfig = fireDepartmentConfig;
-    this.windowPeriod = windowPeriod;
-    this.segmentGranularity = segmentGranularity;
-    this.rejectionPolicyFactory = rejectionPolicyFactory;
+    if (fireDepartment != null) {
+      this.spec = fireDepartment;
+    } else {
+      this.spec = new FireDepartment(
+          new DataSchema(
+              spec.getDataSource(),
+              firehoseFactory == null ? null : firehoseFactory.getParser(),
+              spec.getAggregators(),
+              new UniformGranularitySpec(segmentGranularity, spec.getIndexGranularity(), null, segmentGranularity)
+          ),
+          new RealtimeIOConfig(firehoseFactory, null),
+          new RealtimeTuningConfig(
+              fireDepartmentConfig == null ? null : fireDepartmentConfig.getMaxRowsInMemory(),
+              fireDepartmentConfig == null ? null : fireDepartmentConfig.getIntermediatePersistPeriod(),
+              windowPeriod,
+              null,
+              null,
+              rejectionPolicy == null ? rejectionPolicyFactory : rejectionPolicy,
+              maxPendingPersists,
+              spec.getShardSpec()
+          ),
+          null, null, null, null
+      );
+    }
   }
 
   @Override
@@ -168,6 +178,12 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  {
+    return true;
+  }
+
+  @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     if (this.plumber != null) {
@@ -183,16 +199,11 @@ public class RealtimeIndexTask extends AbstractTask
     boolean normalExit = true;
 
     // Set up firehose
-    final Period intermediatePersistPeriod = fireDepartmentConfig.getIntermediatePersistPeriod();
-    final Firehose firehose = firehoseFactory.connect();
+    final Period intermediatePersistPeriod = spec.getTuningConfig().getIntermediatePersistPeriod();
+    final Firehose firehose = spec.getIOConfig().getFirehoseFactory().connect(spec.getDataSchema().getParser());
 
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
-    final RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
-        windowPeriod,
-        new File(toolbox.getTaskWorkDir(), "persist"),
-        segmentGranularity
-    );
 
     final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
 
@@ -206,7 +217,7 @@ public class RealtimeIndexTask extends AbstractTask
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
       {
-        // NOTE: Side effect: Calling announceSegment causes a lock to be acquired
+        // Side effect: Calling announceSegment causes a lock to be acquired
         toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
@@ -225,6 +236,7 @@ public class RealtimeIndexTask extends AbstractTask
       @Override
       public void announceSegments(Iterable<DataSegment> segments) throws IOException
       {
+        // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
           toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
         }
@@ -257,7 +269,7 @@ public class RealtimeIndexTask extends AbstractTask
       public String getVersion(final Interval interval)
       {
         try {
-          // NOTE: Side effect: Calling getVersion causes a lock to be acquired
+          // Side effect: Calling getVersion causes a lock to be acquired
           final TaskLock myLock = toolbox.getTaskActionClient()
                                          .submit(new LockAcquireAction(interval));
 
@@ -269,27 +281,46 @@ public class RealtimeIndexTask extends AbstractTask
       }
     };
 
+    DataSchema dataSchema = spec.getDataSchema();
+    RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
+    RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
+                                              .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                                              .withVersioningPolicy(versioningPolicy);
+
+    final FireDepartment fireDepartment = new FireDepartment(
+        dataSchema,
+        realtimeIOConfig,
+        tuningConfig,
+        null,
+        null,
+        null,
+        null
+    );
+    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
+    this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
+
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
     // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
     // NOTE: "same" segment.
-    realtimePlumberSchool.setDataSegmentPusher(toolbox.getSegmentPusher());
-    realtimePlumberSchool.setConglomerate(toolbox.getQueryRunnerFactoryConglomerate());
-    realtimePlumberSchool.setQueryExecutorService(toolbox.getQueryExecutorService());
-    realtimePlumberSchool.setVersioningPolicy(versioningPolicy);
-    realtimePlumberSchool.setSegmentAnnouncer(lockingSegmentAnnouncer);
-    realtimePlumberSchool.setSegmentPublisher(segmentPublisher);
-    realtimePlumberSchool.setServerView(toolbox.getNewSegmentServerView());
-    realtimePlumberSchool.setEmitter(toolbox.getEmitter());
+    final RealtimePlumberSchool plumberSchool = new RealtimePlumberSchool(
+        toolbox.getEmitter(),
+        toolbox.getQueryRunnerFactoryConglomerate(),
+        toolbox.getSegmentPusher(),
+        lockingSegmentAnnouncer,
+        segmentPublisher,
+        toolbox.getNewSegmentServerView(),
+        toolbox.getQueryExecutorService(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0
+    );
 
-    if (this.rejectionPolicyFactory != null) {
-      realtimePlumberSchool.setRejectionPolicyFactory(rejectionPolicyFactory);
-    }
-
-    final FireDepartment fireDepartment = new FireDepartment(schema, fireDepartmentConfig, null, null);
-    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
-    this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
-    this.plumber = realtimePlumberSchool.findPlumber(schema, fireDepartment.getMetrics());
+    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());
 
     try {
       plumber.startJob();
@@ -307,8 +338,8 @@ public class RealtimeIndexTask extends AbstractTask
             continue;
           }
 
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink == null) {
+          int currCount = plumber.add(inputRow);
+          if (currCount == -1) {
             fireDepartment.getMetrics().incrementThrownAway();
             log.debug("Throwing away event[%s]", inputRow);
 
@@ -320,28 +351,23 @@ public class RealtimeIndexTask extends AbstractTask
             continue;
           }
 
-          if (sink.isEmpty()) {
-            log.info("Task %s: New sink: %s", getId(), sink);
-          }
-
-          int currCount = sink.add(inputRow);
           fireDepartment.getMetrics().incrementProcessed();
-          if (currCount >= fireDepartmentConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+          if (currCount >= tuningConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
         }
-        catch (FormattedException e) {
+        catch (ParseException e) {
           log.warn(e, "unparseable line");
           fireDepartment.getMetrics().incrementUnparseable();
         }
       }
     }
-    catch (Exception e) {
-      log.makeAlert(e, "Exception aborted realtime processing[%s]", schema.getDataSource())
-         .emit();
+    catch (Throwable e) {
       normalExit = false;
-      throw Throwables.propagate(e);
+      log.makeAlert(e, "Exception aborted realtime processing[%s]", dataSchema.getDataSource())
+         .emit();
+      throw e;
     }
     finally {
       if (normalExit) {
@@ -353,7 +379,7 @@ public class RealtimeIndexTask extends AbstractTask
           log.makeAlert(e, "Failed to finish realtime task").emit();
         }
         finally {
-          Closeables.closeQuietly(firehose);
+          CloseQuietly.close(firehose);
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }
@@ -362,40 +388,10 @@ public class RealtimeIndexTask extends AbstractTask
     return TaskStatus.success(getId());
   }
 
-  @JsonProperty
-  public Schema getSchema()
+  @JsonProperty("spec")
+  public FireDepartment getRealtimeIngestionSchema()
   {
-    return schema;
-  }
-
-  @JsonProperty("firehose")
-  public FirehoseFactory getFirehoseFactory()
-  {
-    return firehoseFactory;
-  }
-
-  @JsonProperty
-  public FireDepartmentConfig getFireDepartmentConfig()
-  {
-    return fireDepartmentConfig;
-  }
-
-  @JsonProperty
-  public Period getWindowPeriod()
-  {
-    return windowPeriod;
-  }
-
-  @JsonProperty
-  public IndexGranularity getSegmentGranularity()
-  {
-    return segmentGranularity;
-  }
-
-  @JsonProperty("rejectionPolicy")
-  public RejectionPolicyFactory getRejectionPolicyFactory()
-  {
-    return rejectionPolicyFactory;
+    return spec;
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher
@@ -412,7 +408,7 @@ public class RealtimeIndexTask extends AbstractTask
     @Override
     public void publishSegment(DataSegment segment) throws IOException
     {
-      taskToolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+      taskToolbox.pushSegments(ImmutableList.of(segment));
     }
   }
 }

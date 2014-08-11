@@ -20,9 +20,11 @@
 package io.druid.indexer;
 
 import com.google.api.client.util.Sets;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -34,6 +36,7 @@ import org.apache.hadoop.mapreduce.Job;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -60,7 +63,7 @@ public class JobHelper
 
     final Configuration conf = groupByJob.getConfiguration();
     final FileSystem fs = FileSystem.get(conf);
-    Path distributedClassPath = new Path(config.getWorkingPath(), "classpath");
+    Path distributedClassPath = new Path(config.getSchema().getTuningConfig().getWorkingPath(), "classpath");
 
     if (fs instanceof LocalFileSystem) {
       return;
@@ -71,7 +74,7 @@ public class JobHelper
       if (jarFile.getName().endsWith(".jar")) {
         final Path hdfsPath = new Path(distributedClassPath, jarFile.getName());
 
-        if (! existing.contains(hdfsPath)) {
+        if (!existing.contains(hdfsPath)) {
           if (jarFile.getName().endsWith("SNAPSHOT.jar") || !fs.exists(hdfsPath)) {
             log.info("Uploading jar to path[%s]", hdfsPath);
             ByteStreams.copy(
@@ -93,5 +96,65 @@ public class JobHelper
         DistributedCache.addFileToClassPath(hdfsPath, conf, fs);
       }
     }
+  }
+
+  public static void injectSystemProperties(Job job)
+  {
+    final Configuration conf = job.getConfiguration();
+    for (String propName : System.getProperties().stringPropertyNames()) {
+      if (propName.startsWith("hadoop.")) {
+        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
+      }
+    }
+  }
+
+  public static void ensurePaths(HadoopDruidIndexerConfig config)
+  {
+    // config.addInputPaths() can have side-effects ( boo! :( ), so this stuff needs to be done before anything else
+    try {
+      Job job = new Job(
+          new Configuration(),
+          String.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
+      );
+
+      job.getConfiguration().set("io.sort.record.percent", "0.19");
+      injectSystemProperties(job);
+
+      config.addInputPaths(job);
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  {
+    String failedMessage = null;
+    for (Jobby job : jobs) {
+      if (failedMessage == null) {
+        if (!job.run()) {
+          failedMessage = String.format("Job[%s] failed!", job.getClass());
+        }
+      }
+    }
+
+    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
+      if (failedMessage == null || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+        Path workingPath = config.makeIntermediatePath();
+        log.info("Deleting path[%s]", workingPath);
+        try {
+          workingPath.getFileSystem(new Configuration()).delete(workingPath, true);
+        }
+        catch (IOException e) {
+          log.error(e, "Failed to cleanup path[%s]", workingPath);
+        }
+      }
+    }
+
+    if (failedMessage != null) {
+      throw new ISE(failedMessage);
+    }
+
+    return true;
   }
 }

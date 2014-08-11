@@ -108,6 +108,8 @@ public class WorkerTaskMonitor
                   return;
                 }
 
+                log.info("Submitting runnable for task[%s]", task.getId());
+
                 exec.submit(
                     new Runnable()
                     {

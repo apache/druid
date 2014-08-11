@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryWatcher;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -31,10 +32,15 @@ import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryRunnerFactory;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNQueryRunnerFactory;
+import io.druid.server.QueryManager;
 
 import java.util.Map;
 
@@ -49,12 +55,20 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
                   .put(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+                  .put(SelectQuery.class, SelectQueryRunnerFactory.class)
+                  .put(TopNQuery.class, TopNQueryRunnerFactory.class)
                   .build();
 
   @Override
   public void configure(Binder binder)
   {
     super.configure(binder);
+
+    binder.bind(QueryWatcher.class)
+          .to(QueryManager.class)
+          .in(LazySingleton.class);
+    binder.bind(QueryManager.class)
+          .in(LazySingleton.class);
 
     final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = DruidBinders.queryRunnerFactoryBinder(
         binder

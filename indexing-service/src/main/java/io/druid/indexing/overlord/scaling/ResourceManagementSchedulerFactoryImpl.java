@@ -29,7 +29,6 @@ public class ResourceManagementSchedulerFactoryImpl implements ResourceManagemen
 {
   private final ResourceManagementSchedulerConfig config;
   private final ResourceManagementStrategy strategy;
-  private final ScheduledExecutorFactory executorFactory;
 
   @Inject
   public ResourceManagementSchedulerFactoryImpl(
@@ -40,11 +39,10 @@ public class ResourceManagementSchedulerFactoryImpl implements ResourceManagemen
   {
     this.config = config;
     this.strategy = strategy;
-    this.executorFactory = executorFactory;
   }
 
   @Override
-  public ResourceManagementScheduler build(RemoteTaskRunner runner)
+  public ResourceManagementScheduler build(RemoteTaskRunner runner, ScheduledExecutorFactory executorFactory)
   {
     if (config.isDoAutoscale()) {
       return new ResourceManagementScheduler(runner, strategy, config, executorFactory.create(1, "ScalingExec--%d"));

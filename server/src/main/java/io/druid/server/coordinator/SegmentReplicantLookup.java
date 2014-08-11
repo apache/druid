@@ -23,7 +23,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Table;
-import io.druid.client.DruidServer;
+import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -40,7 +40,7 @@ public class SegmentReplicantLookup
 
     for (MinMaxPriorityQueue<ServerHolder> serversByType : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serversByType) {
-        DruidServer server = serverHolder.getServer();
+        ImmutableDruidServer server = serverHolder.getServer();
 
         for (DataSegment segment : server.getSegments().values()) {
           Integer numReplicants = segmentsInCluster.get(segment.getIdentifier(), server.getTier());
@@ -83,12 +83,22 @@ public class SegmentReplicantLookup
   }
 
   public Map<String, Integer> getLoadingTiers(String segmentId)
-    {
-      Map<String, Integer> retVal = loadingSegments.row(segmentId);
-      return (retVal == null) ? Maps.<String, Integer>newHashMap() : retVal;
-    }
+  {
+    Map<String, Integer> retVal = loadingSegments.row(segmentId);
+    return (retVal == null) ? Maps.<String, Integer>newHashMap() : retVal;
+  }
 
-  public int getClusterReplicants(String segmentId, String tier)
+  public int getLoadedReplicants(String segmentId)
+  {
+    Map<String, Integer> allTiers = segmentsInCluster.row(segmentId);
+    int retVal = 0;
+    for (Integer replicants : allTiers.values()) {
+      retVal += replicants;
+    }
+    return retVal;
+  }
+
+  public int getLoadedReplicants(String segmentId, String tier)
   {
     Integer retVal = segmentsInCluster.get(segmentId, tier);
     return (retVal == null) ? 0 : retVal;
@@ -100,8 +110,23 @@ public class SegmentReplicantLookup
     return (retVal == null) ? 0 : retVal;
   }
 
+  public int getLoadingReplicants(String segmentId)
+  {
+    Map<String, Integer> allTiers = loadingSegments.row(segmentId);
+    int retVal = 0;
+    for (Integer replicants : allTiers.values()) {
+      retVal += replicants;
+    }
+    return retVal;
+  }
+
+  public int getTotalReplicants(String segmentId)
+  {
+    return getLoadedReplicants(segmentId) + getLoadingReplicants(segmentId);
+  }
+
   public int getTotalReplicants(String segmentId, String tier)
   {
-    return getClusterReplicants(segmentId, tier) + getLoadingReplicants(segmentId, tier);
+    return getLoadedReplicants(segmentId, tier) + getLoadingReplicants(segmentId, tier);
   }
 }

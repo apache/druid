@@ -28,6 +28,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -56,22 +57,25 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     config.setMaxIntermediateRows(10000);
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
-        new GroupByQueryEngine(
-            configSupplier,
-            new StupidPool<ByteBuffer>(
-                new Supplier<ByteBuffer>()
-                {
-                  @Override
-                  public ByteBuffer get()
-                  {
-                    return ByteBuffer.allocate(1024 * 1024);
-                  }
-                }
-            )
-        ),
+    final GroupByQueryEngine engine = new GroupByQueryEngine(
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier)
+        new StupidPool<ByteBuffer>(
+            new Supplier<ByteBuffer>()
+            {
+              @Override
+              public ByteBuffer get()
+              {
+                return ByteBuffer.allocate(1024 * 1024);
+              }
+            }
+        )
+    );
+
+    final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
+        engine,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        configSupplier,
+        new GroupByQueryQueryToolChest(configSupplier, new DefaultObjectMapper(), engine)
     );
 
     final Collection<?> objects = QueryRunnerTestHelper.makeQueryRunners(factory);

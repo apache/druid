@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -47,7 +48,6 @@ import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.List;
@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
-*/
+ */
 public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 {
   private static final EmittingLogger log = new EmittingLogger(SearchQueryRunner.class);
@@ -94,17 +94,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
       final ImmutableConciseSet baseFilter;
       if (filter == null) {
-        // Accept all, and work around https://github.com/metamx/extendedset/issues/1
-        if (index.getNumRows() == 1) {
-          ConciseSet set = new ConciseSet();
-          set.add(0);
-          baseFilter = ImmutableConciseSet.newImmutableFromMutable(set);
-        }
-        else {
-          baseFilter = ImmutableConciseSet.complement(new ImmutableConciseSet(), index.getNumRows());
-        }
-      }
-      else {
+        baseFilter = ImmutableConciseSet.complement(new ImmutableConciseSet(), index.getNumRows());
+      } else {
         baseFilter = filter.goConcise(new ColumnSelectorBitmapIndexSelector(index));
       }
 
@@ -133,49 +124,65 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     final StorageAdapter adapter = segment.asStorageAdapter();
-    if (adapter != null) {
-      Iterable<String> dimsToSearch;
-      if (dimensions == null || dimensions.isEmpty()) {
-        dimsToSearch = adapter.getAvailableDimensions();
-      } else {
-        dimsToSearch = dimensions;
-      }
 
-      final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
-
-      final Iterable<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
-      for (Cursor cursor : cursors) {
-        Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-        for (String dim : dimsToSearch) {
-          dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
-        }
-
-        while (!cursor.isDone()) {
-          for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
-            final DimensionSelector selector = entry.getValue();
-            final IndexedInts vals = selector.getRow();
-            for (int i = 0; i < vals.size(); ++i) {
-              final String dimVal = selector.lookupName(vals.get(i));
-              if (searchQuerySpec.accept(dimVal)) {
-                retVal.add(new SearchHit(entry.getKey(), dimVal));
-                if (retVal.size() >= limit) {
-                  return makeReturnResult(limit, retVal);
-                }
-              }
-            }
-          }
-
-          cursor.advance();
-        }
-      }
-
-      return makeReturnResult(limit, retVal);
+    if (adapter == null) {
+      log.makeAlert("WTF!? Unable to process search query on segment.")
+         .addData("segment", segment.getIdentifier())
+         .addData("query", query).emit();
+      throw new ISE(
+          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+      );
     }
 
-    log.makeAlert("WTF!? Unable to process search query on segment.")
-       .addData("segment", segment.getIdentifier())
-       .addData("query", query);
-    return Sequences.empty();
+    final Iterable<String> dimsToSearch;
+    if (dimensions == null || dimensions.isEmpty()) {
+      dimsToSearch = adapter.getAvailableDimensions();
+    } else {
+      dimsToSearch = dimensions;
+    }
+
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
+
+    final TreeSet<SearchHit> retVal = cursors.accumulate(
+        Sets.newTreeSet(query.getSort().getComparator()),
+        new Accumulator<TreeSet<SearchHit>, Cursor>()
+        {
+          @Override
+          public TreeSet<SearchHit> accumulate(TreeSet<SearchHit> set, Cursor cursor)
+          {
+            if (set.size() >= limit) {
+              return set;
+            }
+
+            Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+            for (String dim : dimsToSearch) {
+              dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
+            }
+
+            while (!cursor.isDone()) {
+              for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
+                final DimensionSelector selector = entry.getValue();
+                final IndexedInts vals = selector.getRow();
+                for (int i = 0; i < vals.size(); ++i) {
+                  final String dimVal = selector.lookupName(vals.get(i));
+                  if (searchQuerySpec.accept(dimVal)) {
+                    set.add(new SearchHit(entry.getKey(), dimVal));
+                    if (set.size() >= limit) {
+                      return set;
+                    }
+                  }
+                }
+              }
+
+              cursor.advance();
+            }
+
+            return set;
+          }
+        }
+    );
+
+    return makeReturnResult(limit, retVal);
   }
 
   private Sequence<Result<SearchResultValue>> makeReturnResult(int limit, TreeSet<SearchHit> retVal)

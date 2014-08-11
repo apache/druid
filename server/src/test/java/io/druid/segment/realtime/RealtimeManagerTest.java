@@ -21,20 +21,26 @@ package io.druid.segment.realtime;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
+import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.Row;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
-import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.utils.Runnables;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
@@ -54,49 +60,73 @@ import java.util.concurrent.TimeUnit;
 public class RealtimeManagerTest
 {
   private RealtimeManager realtimeManager;
-  private Schema schema;
+  private DataSchema schema;
   private TestPlumber plumber;
 
   @Before
   public void setUp() throws Exception
   {
-    schema = new Schema(
-        "test",
-        Lists.<SpatialDimensionSchema>newArrayList(),
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        QueryGranularity.NONE,
-        new NoneShardSpec()
-    );
-
     final List<InputRow> rows = Arrays.asList(
         makeRow(new DateTime("9000-01-01").getMillis()), makeRow(new DateTime().getMillis())
     );
 
-    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, new DateTime().toString()));
+    schema = new DataSchema(
+        "test",
+        null,
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
+    );
+    RealtimeIOConfig ioConfig = new RealtimeIOConfig(
+        new FirehoseFactory()
+        {
+          @Override
+          public Firehose connect(InputRowParser parser) throws IOException
+          {
+            return new TestFirehose(rows.iterator());
+          }
+
+          @Override
+          public ByteBufferInputRowParser getParser()
+          {
+            throw new UnsupportedOperationException();
+          }
+        },
+        new PlumberSchool()
+        {
+          @Override
+          public Plumber findPlumber(
+              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+          )
+          {
+            return plumber;
+          }
+
+          @Override
+          public Granularity getSegmentGranularity()
+          {
+            throw new UnsupportedOperationException();
+          }
+        }
+    );
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        1,
+        new Period("P1Y"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));
 
     realtimeManager = new RealtimeManager(
         Arrays.<FireDepartment>asList(
             new FireDepartment(
                 schema,
-                new FireDepartmentConfig(1, new Period("P1Y")),
-                new FirehoseFactory()
-                {
-                  @Override
-                  public Firehose connect() throws IOException
-                  {
-                    return new TestFirehose(rows.iterator());
-                  }
-                },
-                new PlumberSchool()
-                {
-                  @Override
-                  public Plumber findPlumber(
-                      Schema schema, FireDepartmentMetrics metrics
-                  )
-                  {
-                    return plumber;
-                  }
-                }
+                ioConfig,
+                tuningConfig,
+                null, null, null, null
             )
         ),
         null
@@ -108,7 +138,7 @@ public class RealtimeManagerTest
   {
     realtimeManager.start();
 
-    Stopwatch stopwatch = new Stopwatch().start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     while (realtimeManager.getMetrics("test").processed() != 1) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
@@ -140,6 +170,12 @@ public class RealtimeManagerTest
       }
 
       @Override
+      public DateTime getTimestamp()
+      {
+        return new DateTime(timestamp);
+      }
+
+      @Override
       public List<String> getDimension(String dimension)
       {
         return Lists.newArrayList();
@@ -147,6 +183,18 @@ public class RealtimeManagerTest
 
       @Override
       public float getFloatMetric(String metric)
+      {
+        return 0;
+      }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return null;
+      }
+
+      @Override
+      public int compareTo(Row o)
       {
         return 0;
       }
@@ -223,6 +271,21 @@ public class RealtimeManagerTest
     }
 
     @Override
+    public int add(InputRow row)
+    {
+      if (row == null) {
+        return -1;
+      }
+
+      Sink sink = getSink(row.getTimestampFromEpoch());
+
+      if (sink == null) {
+        return -1;
+      }
+
+      return sink.add(row);
+    }
+
     public Sink getSink(long timestamp)
     {
       if (sink.getInterval().contains(timestamp)) {

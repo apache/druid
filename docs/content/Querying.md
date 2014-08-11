@@ -1,12 +1,17 @@
 ---
 layout: doc_page
 ---
+
 Querying
 ========
 
-Queries are made using an HTTP REST style request to a [Broker](Broker.html), [Historical](Historical.html), or [Realtime](Realtime.html) node. The query is expressed in JSON and each of these node types expose the same REST query interface.
+Queries are made using an HTTP REST style request to a [Broker](Broker.html),
+[Historical](Historical.html), or [Realtime](Realtime.html) node. The
+query is expressed in JSON and each of these node types expose the same
+REST query interface.
 
-We start by describing an example query with additional comments that mention possible variations. Query operators are also summarized in a table below.
+We start by describing an example query with additional comments that mention
+possible variations. Query operators are also summarized in a table below.
 
 Example Query "rand"
 --------------------
@@ -108,21 +113,52 @@ Query Operators
 
 The following table summarizes query properties.
 
-|query types|property|description|required?|
-|-----------|--------|-----------|---------|
-|timeseries, groupBy, search, timeBoundary|dataSource|query is applied to this data source|yes|
-|timeseries, groupBy, search|intervals|range of time series to include in query|yes|
-|timeseries, groupBy, search, timeBoundary|context|This is a key-value map that can allow the query to alter some of the behavior of a query. It is primarily used for debugging, for example if you include `"bySegment":true` in the map, you will get results associated with the data segment they came from.|no|
-|timeseries, groupBy, search|filter|Specifies the filter (the "WHERE" clause in SQL) for the query. See [Filters](Filters.html)|no|
-|timeseries, groupBy, search|granularity|the timestamp granularity to bucket results into (i.e. "hour"). See [Granularities](Granularities.html) for more information.|no|
+Properties shared by all query types
+
+|property  |description|required?|
+|----------|-----------|---------|
+|dataSource|query is applied to this data source|yes|
+|intervals |range of time series to include in query|yes|
+|context   |This is a key-value map used to alter some of the behavior of a query. See [Query Context](#query-context) below|no|
+
+
+|query type|property  |description|required?|
+|----------|----------|-----------|---------|
+|timeseries, topN, groupBy, search|filter|Specifies the filter (the "WHERE" clause in SQL) for the query. See [Filters](Filters.html)|no|
+|timeseries, topN, groupBy, search|granularity|the timestamp granularity to bucket results into (i.e. "hour"). See [Granularities](Granularities.html) for more information.|no|
+|timeseries, topN, groupBy|aggregations|aggregations that combine values in a bucket. See [Aggregations](Aggregations.html).|yes|
+|timeseries, topN, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post Aggregations.html).|yes|
 |groupBy|dimensions|constrains the groupings; if empty, then one value per time granularity bucket|yes|
-|timeseries, groupBy|aggregations|aggregations that combine values in a bucket. See [Aggregations](Aggregations.html).|yes|
-|timeseries, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post Aggregations.html).|yes|
 |search|limit|maximum number of results (default is 1000), a system-level maximum can also be set via `com.metamx.query.search.maxSearchLimit`|no|
 |search|searchDimensions|Dimensions to apply the search query to. If not specified, it will search through all dimensions.|no|
 |search|query|The query portion of the search query. This is essentially a predicate that specifies if something matches.|yes|
 
-Additional Information about Query Types
-----------------------------------------
+Query Context
+-------------
 
-[TimeseriesQuery](TimeseriesQuery.html)
+|property      |default              | description          |
+|--------------|---------------------|----------------------|
+|timeout       | `0` (no timeout)    | Query timeout in milliseconds, beyond which unfinished queries will be cancelled |
+|priority      | `0`                 | Query Priority. Queries with higher priority get precedence for computational resources.|
+|queryId       | auto-generated      | Unique identifier given to this query. If a query ID is set or known, this can be used to cancel the query |
+|useCache      | `true`              | Flag indicating whether to leverage the query cache for this query. This may be overriden in the broker or historical node configuration |
+|populateCache | `true`              | Flag indicating whether to save the results of the query to the query cache. Primarily used for debugging. This may be overriden in the broker or historical node configuration |
+|bySegment     | `false`             | Return "by segment" results. Pimarily used for debugging, setting it to `true` returns results associated with the data segment they came from |
+|finalize      | `true`              | Flag indicating whether to "finalize" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator will return the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false` |
+
+Query Cancellation
+------------------
+
+Queries can be cancelled explicitely using their unique identifier.  If the
+query identifier is set at the time of query, or is otherwise known, the following
+endpoint can be used on the broker or router to cancel the query.
+
+```sh
+DELETE /druid/v2/{queryId}
+```
+
+For example, if the query ID is `abc123`, the query can be cancelled as follows:
+
+```sh
+curl -X DELETE "http://host:port/druid/v2/abc123"
+```

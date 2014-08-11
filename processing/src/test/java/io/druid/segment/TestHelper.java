@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.data.input.Row;
 import io.druid.query.Result;
 import org.junit.Assert;
 
@@ -41,7 +42,11 @@ public class TestHelper
     assertResults(expectedResults, results, "");
   }
 
-  public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results, String failMsg)
+  public static <T> void assertExpectedResults(
+      Iterable<Result<T>> expectedResults,
+      Iterable<Result<T>> results,
+      String failMsg
+  )
   {
     assertResults(expectedResults, results, failMsg);
   }
@@ -56,23 +61,33 @@ public class TestHelper
     assertObjects(expectedResults, Sequences.toList(results, Lists.<T>newArrayList()), failMsg);
   }
 
-  private static <T> void assertResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> actualResults, String failMsg)
+  private static <T> void assertResults(
+      Iterable<Result<T>> expectedResults,
+      Iterable<Result<T>> actualResults,
+      String failMsg
+  )
   {
     Iterator<? extends Result> resultsIter = actualResults.iterator();
     Iterator<? extends Result> resultsIter2 = actualResults.iterator();
     Iterator<? extends Result> expectedResultsIter = expectedResults.iterator();
 
     while (resultsIter.hasNext() && resultsIter2.hasNext() && expectedResultsIter.hasNext()) {
-      Result expectedNext = expectedResultsIter.next();
-      final Result next = resultsIter.next();
-      final Result next2 = resultsIter2.next();
+      Object expectedNext = expectedResultsIter.next();
+      final Object next = resultsIter.next();
+      final Object next2 = resultsIter2.next();
 
-      assertResult(failMsg, expectedNext, next);
-      assertResult(
-          String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
-          expectedNext,
-          next2
-      );
+      if (expectedNext instanceof Row) {
+        // HACK! Special casing for groupBy
+        Assert.assertEquals(failMsg, expectedNext, next);
+        Assert.assertEquals(failMsg, expectedNext, next2);
+      } else {
+        assertResult(failMsg, (Result) expectedNext, (Result) next);
+        assertResult(
+            String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            (Result) expectedNext,
+            (Result) next2
+        );
+      }
     }
 
     if (resultsIter.hasNext()) {
@@ -90,7 +105,9 @@ public class TestHelper
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
           String.format(
-              "%s: Expected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
+              "%s: Expected expectedResultsIter to be exhausted, next element was %s",
+              failMsg,
+              expectedResultsIter.next()
           )
       );
     }
@@ -130,7 +147,9 @@ public class TestHelper
     if (expectedResultsIter.hasNext()) {
       Assert.fail(
           String.format(
-              "%s: Expected expectedResultsIter to be exhausted, next element was %s", failMsg, expectedResultsIter.next()
+              "%s: Expected expectedResultsIter to be exhausted, next element was %s",
+              failMsg,
+              expectedResultsIter.next()
           )
       );
     }
