@@ -19,14 +19,11 @@
 
 package io.druid.query.select;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -34,6 +31,8 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -91,7 +90,10 @@ public class SelectQueryRunnerFactory
     }
 
     @Override
-    public Sequence<Result<SelectResultValue>> run(Query<Result<SelectResultValue>> input)
+    public Sequence<Result<SelectResultValue>> run(
+        Query<Result<SelectResultValue>> input,
+        Map<String, Object> context
+    )
     {
       if (!(input instanceof SelectQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SelectQuery.class);

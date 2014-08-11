@@ -54,6 +54,8 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
+import io.druid.query.RetryQueryRunner;
+import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -63,7 +65,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -111,7 +115,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = query.getContextBySegment(false);
@@ -156,6 +160,26 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   log.debug("Initial response from url[%s]", url);
                   startTime = System.currentTimeMillis();
                   byteCount += response.getContent().readableBytes();
+
+
+                  List missingSegments = new ArrayList();
+                  try {
+                    Map<String, Object> headerContext = objectMapper.readValue(response.getHeader("Context"), Map.class);
+                    missingSegments = (List)headerContext.get(RetryQueryRunner.missingSegments);
+                    for (int i = missingSegments.size(); i > 0; i--) {
+                      missingSegments.add(
+                          objectMapper.convertValue(
+                              missingSegments.remove(0),
+                              SegmentDescriptor.class
+                          )
+                      );
+                    }
+                  }
+                  catch (IOException e) {
+                    e.printStackTrace();
+                  }
+                  ((List) context.get(RetryQueryRunner.missingSegments)).addAll(missingSegments);
+
                   return super.handleResponse(response);
                 }
 

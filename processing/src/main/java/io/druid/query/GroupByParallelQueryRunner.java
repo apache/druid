@@ -41,6 +41,7 @@ import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -70,7 +71,7 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> queryParam)
+  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> context)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
@@ -101,10 +102,10 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                           {
                             try {
                               if (bySegment) {
-                                input.run(queryParam)
+                                input.run(queryParam, context)
                                      .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
                               } else {
-                                input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                input.run(queryParam, context).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;

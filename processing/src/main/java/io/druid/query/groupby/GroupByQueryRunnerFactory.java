@@ -49,6 +49,7 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -105,7 +106,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                   return new QueryRunner<Row>()
                   {
                     @Override
-                    public Sequence<Row> run(final Query<Row> query)
+                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
                     {
                       final GroupByQuery queryParam = (GroupByQuery) query;
                       final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper
@@ -124,13 +125,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                             public Void call() throws Exception
                             {
                               if (bySegment) {
-                                input.run(queryParam)
+                                input.run(queryParam, context)
                                      .accumulate(
                                          bySegmentAccumulatorPair.lhs,
                                          bySegmentAccumulatorPair.rhs
                                      );
                               } else {
-                                input.run(query).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                input.run(query, context).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;
@@ -197,7 +198,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input)
+    public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
     {
       if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
