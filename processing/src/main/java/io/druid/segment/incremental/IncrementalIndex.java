@@ -286,11 +286,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<>();
-    int index = 0;
-    for (String dim : incrementalIndexSchema.getDimensionsSpec().getDimensions()) {
-      dimensionOrder.put(dim, index++);
-      dimensions.add(dim);
-    }
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = incrementalIndexSchema.getDimensionsSpec().getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
