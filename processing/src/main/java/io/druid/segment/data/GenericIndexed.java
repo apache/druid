@@ -53,7 +53,7 @@ import java.util.Map;
  */
 public class GenericIndexed<T> implements Indexed<T>, Closeable
 {
-  private final Logger log = new Logger(GenericIndexed.class);
+  private static final Logger log = new Logger(GenericIndexed.class);
 
   private static final byte version = 0x1;
 
@@ -148,8 +148,9 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
 
     public void put(K key, V value, int size)
     {
-      numBytes += size;
-      super.put(key, new Pair<Integer, V>(size, value));
+      final int totalSize = size + 48; // add approximate object overhead
+      numBytes += totalSize;
+      super.put(key, new Pair<Integer, V>(totalSize, value));
     }
 
     public V getValue(Object key)
