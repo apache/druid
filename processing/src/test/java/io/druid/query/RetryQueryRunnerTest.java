@@ -131,7 +131,7 @@ public class RetryQueryRunnerTest
           @Override
           public Sequence run(Query query, Map context)
           {
-            if (context.get("count") == 0) {
+            if ((int)context.get("count") == 0) {
               ((List) context.get(RetryQueryRunner.missingSegments)).add(
                   new SegmentDescriptor(
                       new Interval(
