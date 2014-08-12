@@ -150,7 +150,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
     {
       final int totalSize = size + 48; // add approximate object overhead
       numBytes += totalSize;
-      super.put(key, new Pair<Integer, V>(totalSize, value));
+      super.put(key, new Pair<>(totalSize, value));
     }
 
     public V getValue(Object key)
