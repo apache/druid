@@ -1,3 +1,6 @@
+---
+layout: doc_page
+---
 ### ApproxHistogram aggregator
 
 This aggregator is based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf) to compute approximate histograms.

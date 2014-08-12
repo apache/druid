@@ -44,6 +44,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
@@ -85,9 +86,10 @@ public class CliBroker extends ServerRunnable
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.select.tier", TierSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
             JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 

@@ -21,12 +21,7 @@ package io.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import com.metamx.common.ISE;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +36,8 @@ public class SelectResultValue implements Iterable<EventHolder>
   @JsonCreator
   public SelectResultValue(
       @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
-      @JsonProperty("events") List<EventHolder> events)
+      @JsonProperty("events") List<EventHolder> events
+  )
   {
     this.pagingIdentifiers = pagingIdentifiers;
     this.events = events;

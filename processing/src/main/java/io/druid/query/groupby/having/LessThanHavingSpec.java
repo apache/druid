@@ -20,7 +20,12 @@
 package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.primitives.Bytes;
 import io.druid.data.input.Row;
+import io.druid.query.Result;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * The "<" operator in a "having" clause. This is similar to SQL's "having aggregation < value",
@@ -28,14 +33,15 @@ import io.druid.data.input.Row;
  */
 public class LessThanHavingSpec implements HavingSpec
 {
+  private static final byte CACHE_KEY = 0x5;
+
   private String aggregationName;
   private Number value;
 
-  public LessThanHavingSpec
-      (
-          @JsonProperty("aggregation") String aggName,
-          @JsonProperty("value") Number value
-      )
+  public LessThanHavingSpec(
+      @JsonProperty("aggregation") String aggName,
+      @JsonProperty("value") Number value
+  )
   {
     this.aggregationName = aggName;
     this.value = value;
@@ -59,6 +65,18 @@ public class LessThanHavingSpec implements HavingSpec
     float metricValue = row.getFloatMetric(aggregationName);
 
     return Float.compare(metricValue, value.floatValue()) < 0;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final byte[] aggBytes = aggregationName.getBytes();
+    final byte[] valBytes = Bytes.toArray(Arrays.asList(value));
+    return ByteBuffer.allocate(1 + aggBytes.length + valBytes.length)
+                     .put(CACHE_KEY)
+                     .put(aggBytes)
+                     .put(valBytes)
+                     .array();
   }
 
   /**

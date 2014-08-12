@@ -40,6 +40,7 @@ import io.druid.query.SegmentDescriptor;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
@@ -72,20 +73,22 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query)
+  public Sequence<T> run(Query<T> query, Map<String, Object> context)
   {
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
     final boolean populateCache = query.getContextPopulateCache(true)
                                   && strategy != null
-                                  && cacheConfig.isPopulateCache();
+                                  && cacheConfig.isPopulateCache()
+                                  && cacheConfig.isQueryCacheable(query);
 
     final boolean useCache = query.getContextUseCache(true)
-        && strategy != null
-        && cacheConfig.isUseCache();
+                             && strategy != null
+                             && cacheConfig.isUseCache()
+                             && cacheConfig.isQueryCacheable(query);
 
     final Cache.NamedKey key;
-    if(strategy != null && (useCache || populateCache)) {
+    if (strategy != null && (useCache || populateCache)) {
       key = CacheUtil.computeSegmentCacheKey(
           segmentIdentifier,
           segmentDescriptor,
@@ -95,10 +98,10 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       key = null;
     }
 
-    if(useCache) {
+    if (useCache) {
       final Function cacheFn = strategy.pullFromCache();
       final byte[] cachedResult = cache.get(key);
-      if(cachedResult != null) {
+      if (cachedResult != null) {
         final TypeReference cacheObjectClazz = strategy.getCacheObjectClazz();
 
         return Sequences.map(
@@ -140,7 +143,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
       return Sequences.withEffect(
           Sequences.map(
-              base.run(query),
+              base.run(query, context),
               new Function<T, T>()
               {
                 @Override
@@ -162,7 +165,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
           MoreExecutors.sameThreadExecutor()
       );
     } else {
-      return base.run(query);
+      return base.run(query, context);
     }
   }
 

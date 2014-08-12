@@ -37,7 +37,7 @@ import java.util.List;
 
 public class GroupByQueryHelper
 {
-  public static Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> createIndexAccumulatorPair(
+  public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
       StupidPool<ByteBuffer> bufferPool
@@ -83,13 +83,19 @@ public class GroupByQueryHelper
         false
     );
 
-    Accumulator<IncrementalIndex, Row> accumulator = new Accumulator<IncrementalIndex, Row>()
+    Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {
       @Override
-      public IncrementalIndex accumulate(IncrementalIndex accumulated, Row in)
+      public IncrementalIndex accumulate(IncrementalIndex accumulated, T in)
       {
-        if (accumulated.add(Rows.toCaseInsensitiveInputRow(in, dimensions)) > config.getMaxResults()) {
-          throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+
+        if (in instanceof Row) {
+          if (accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions))
+              > config.getMaxResults()) {
+            throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+          }
+        } else {
+          throw new ISE("Unable to accumulate something of type [%s]", in.getClass());
         }
 
         return accumulated;
@@ -98,4 +104,18 @@ public class GroupByQueryHelper
     return new Pair<>(index, accumulator);
   }
 
+  public static <T> Pair<List, Accumulator<List, T>> createBySegmentAccumulatorPair()
+  {
+    List init = Lists.newArrayList();
+    Accumulator<List, T> accumulator = new Accumulator<List, T>()
+    {
+      @Override
+      public List accumulate(List accumulated, T in)
+      {
+        accumulated.add(in);
+        return accumulated;
+      }
+    };
+    return new Pair<>(init, accumulator);
+  }
 }

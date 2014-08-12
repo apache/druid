@@ -109,22 +109,27 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
     {
       "schema": {
         "dataSource": "wikipedia",
-        "aggregators" : [{
-           "type" : "count",
-           "name" : "count"
-          }, {
-           "type" : "doubleSum",
-           "name" : "added",
-           "fieldName" : "added"
-          }, {
-           "type" : "doubleSum",
-           "name" : "deleted",
-           "fieldName" : "deleted"
-          }, {
-           "type" : "doubleSum",
-           "name" : "delta",
-           "fieldName" : "delta"
-        }],
+        "aggregators" : [
+          {
+            "type" : "count",
+            "name" : "count"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "added",
+            "fieldName" : "added"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "deleted",
+            "fieldName" : "deleted"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "delta",
+            "fieldName" : "delta"
+          }
+        ],
         "indexGranularity": "none"
       },
       "config": {
@@ -196,13 +201,15 @@ Note: This config uses a "test" [rejection policy](Plumber.html) which will acce
 Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) to the real-time node should yield valid results:
 
 ```json
-[ {
-  "timestamp" : "2013-08-31T01:02:33.000Z",
-  "result" : {
-    "minTime" : "2013-08-31T01:02:33.000Z",
-    "maxTime" : "2013-08-31T12:41:27.000Z"
+[
+  {
+    "timestamp" : "2013-08-31T01:02:33.000Z",
+    "result" : {
+      "minTime" : "2013-08-31T01:02:33.000Z",
+      "maxTime" : "2013-08-31T12:41:27.000Z"
+    }
   }
-} ]
+]
 ```
 
 Batch Ingestion
@@ -287,22 +294,27 @@ Examining the contents of the file, you should find:
       },
       "targetPartitionSize" : 5000000,
       "rollupSpec" : {
-        "aggs": [{
+        "aggs": [
+          {
             "type" : "count",
             "name" : "count"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "added",
             "fieldName" : "added"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "deleted",
             "fieldName" : "deleted"
-          }, {
+          },
+          {
             "type" : "doubleSum",
             "name" : "delta",
             "fieldName" : "delta"
-        }],
+          }
+        ],
         "rollupGranularity" : "none"
       }
     }

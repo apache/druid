@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -44,8 +43,8 @@ import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -53,38 +52,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
-public class GroupByParallelQueryRunner implements QueryRunner<Row>
+public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
 {
   private static final Logger log = new Logger(GroupByParallelQueryRunner.class);
-  private final Iterable<QueryRunner<Row>> queryables;
+  private final Iterable<QueryRunner<T>> queryables;
   private final ListeningExecutorService exec;
-  private final Ordering<Row> ordering;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
   private final StupidPool<ByteBuffer> bufferPool;
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
-      Ordering<Row> ordering,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
       StupidPool<ByteBuffer> bufferPool,
-      QueryRunner<Row>... queryables
-  )
-  {
-    this(exec, ordering, configSupplier, queryWatcher, bufferPool, Arrays.asList(queryables));
-  }
-
-  public GroupByParallelQueryRunner(
-      ExecutorService exec,
-      Ordering<Row> ordering, Supplier<GroupByQueryConfig> configSupplier,
-      QueryWatcher queryWatcher,
-      StupidPool<ByteBuffer> bufferPool,
-      Iterable<QueryRunner<Row>> queryables
+      Iterable<QueryRunner<T>> queryables
   )
   {
     this.exec = MoreExecutors.listeningDecorator(exec);
-    this.ordering = ordering;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
@@ -92,37 +77,46 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
   }
 
   @Override
-  public Sequence<Row> run(final Query<Row> queryParam)
+  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> context)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
-    final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
+    final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
         configSupplier.get(),
         bufferPool
     );
+    final Pair<List, Accumulator<List, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
+    final boolean bySegment = query.getContextBySegment(false);
     final int priority = query.getContextPriority(0);
 
     if (Iterables.isEmpty(queryables)) {
       log.warn("No queryables found.");
     }
-    ListenableFuture<List<Boolean>> futures = Futures.allAsList(
+    ListenableFuture<List<Void>> futures = Futures.allAsList(
         Lists.newArrayList(
             Iterables.transform(
                 queryables,
-                new Function<QueryRunner<Row>, ListenableFuture<Boolean>>()
+                new Function<QueryRunner<T>, ListenableFuture<Void>>()
                 {
                   @Override
-                  public ListenableFuture<Boolean> apply(final QueryRunner<Row> input)
+                  public ListenableFuture<Void> apply(final QueryRunner<T> input)
                   {
                     return exec.submit(
-                        new AbstractPrioritizedCallable<Boolean>(priority)
+                        new AbstractPrioritizedCallable<Void>(priority)
                         {
                           @Override
-                          public Boolean call() throws Exception
+                          public Void call() throws Exception
                           {
                             try {
-                              input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-                              return true;
+                              if (bySegment) {
+                                input.run(queryParam, context)
+                                     .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
+                              } else {
+                                input.run(queryParam, context)
+                                     .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                              }
+
+                              return null;
                             }
                             catch (QueryInterruptedException e) {
                               throw Throwables.propagate(e);
@@ -171,13 +165,24 @@ public class GroupByParallelQueryRunner implements QueryRunner<Row>
       throw Throwables.propagate(e.getCause());
     }
 
-    return new ResourceClosingSequence<Row>(
+    if (bySegment) {
+      return Sequences.simple(bySegmentAccumulatorPair.lhs);
+    }
+
+    return new ResourceClosingSequence<T>(
         Sequences.simple(
-            indexAccumulatorPair.lhs
-                                .iterableWithPostAggregations(null)
-        ),
-        indexAccumulatorPair.lhs
+            Iterables.transform(
+                indexAccumulatorPair.lhs.iterableWithPostAggregations(null),
+                new Function<Row, T>()
+                {
+                  @Override
+                  public T apply(Row input)
+                  {
+                    return (T) input;
+                  }
+                }
+            )
+        ), indexAccumulatorPair.lhs
     );
   }
-
 }

@@ -20,28 +20,35 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.ConcatSequence;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.collections.OrderedMergeSequence;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
+import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -49,12 +56,16 @@ import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Minutes;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -62,6 +73,11 @@ import java.util.Map;
  */
 public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery>
 {
+  private static final byte GROUPBY_QUERY = 0x14;
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
+      new TypeReference<Object>()
+      {
+      };
   private static final TypeReference<Row> TYPE_REFERENCE = new TypeReference<Row>()
   {
   };
@@ -70,19 +86,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       GROUP_BY_MERGE_KEY,
       "false"
   );
+
   private final Supplier<GroupByQueryConfig> configSupplier;
+
   private final StupidPool<ByteBuffer> bufferPool;
+  private final ObjectMapper jsonMapper;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
 
 
   @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
+      ObjectMapper jsonMapper,
       GroupByQueryEngine engine,
       @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;
+    this.jsonMapper = jsonMapper;
     this.engine = engine;
     this.bufferPool = bufferPool;
   }
@@ -93,18 +114,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input)
+      public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
       {
-        if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner);
-        } else {
-          return runner.run(input);
+        if (input.getContextBySegment(false)) {
+          return runner.run(input, context);
         }
+
+        if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner, context);
+        }
+        return runner.run(input, context);
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
+  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, Object> context)
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
 
@@ -119,7 +143,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
 
-      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
+      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
         aggs.addAll(aggregatorFactory.getRequiredColumns());
@@ -149,7 +173,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           index
       );
     } else {
-      final IncrementalIndex index = makeIncrementalIndex(query, runner.run(query));
+      final IncrementalIndex index = makeIncrementalIndex(query, runner.run(query, context));
       return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
     }
   }
@@ -189,7 +213,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    return new ConcatSequence<>(seqOfSequences);
+    return new OrderedMergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
   }
 
   @Override
@@ -211,7 +235,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   }
 
   @Override
-  public Function<Row, Row> makePreComputeManipulatorFn(final GroupByQuery query, final MetricManipulationFn fn)
+  public Function<Row, Row> makePreComputeManipulatorFn(
+      final GroupByQuery query,
+      final MetricManipulationFn fn
+  )
   {
     return new Function<Row, Row>()
     {
@@ -220,7 +247,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         if (input instanceof MapBasedRow) {
           final MapBasedRow inputRow = (MapBasedRow) input;
-          final Map<String, Object> values = Maps.newHashMap(((MapBasedRow) input).getEvent());
+          final Map<String, Object> values = Maps.newHashMap(inputRow.getEvent());
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
             values.put(agg.getName(), fn.manipulate(agg, inputRow.getEvent().get(agg.getName())));
           }
@@ -240,8 +267,119 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
   {
-    return new SubqueryQueryRunner<Row>(
-        new IntervalChunkingQueryRunner<Row>(runner, configSupplier.get().getChunkPeriod())
+    return new SubqueryQueryRunner<>(
+        new IntervalChunkingQueryRunner<>(runner, configSupplier.get().getChunkPeriod())
     );
+  }
+
+  @Override
+  public CacheStrategy<Row, Object, GroupByQuery> getCacheStrategy(final GroupByQuery query)
+  {
+    return new CacheStrategy<Row, Object, GroupByQuery>()
+    {
+      @Override
+      public byte[] computeCacheKey(GroupByQuery query)
+      {
+        final DimFilter dimFilter = query.getDimFilter();
+        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
+        final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
+        final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final byte[][] dimensionsBytes = new byte[query.getDimensions().size()][];
+        int dimensionsBytesSize = 0;
+        int index = 0;
+        for (DimensionSpec dimension : query.getDimensions()) {
+          dimensionsBytes[index] = dimension.getCacheKey();
+          dimensionsBytesSize += dimensionsBytes[index].length;
+          ++index;
+        }
+        final byte[] havingBytes = query.getHavingSpec() == null ? new byte[]{} : query.getHavingSpec().getCacheKey();
+        final byte[] limitBytes = query.getLimitSpec().getCacheKey();
+
+        ByteBuffer buffer = ByteBuffer
+            .allocate(
+                1
+                + granularityBytes.length
+                + filterBytes.length
+                + aggregatorBytes.length
+                + dimensionsBytesSize
+                + havingBytes.length
+                + limitBytes.length
+            )
+            .put(GROUPBY_QUERY)
+            .put(granularityBytes)
+            .put(filterBytes)
+            .put(aggregatorBytes);
+
+        for (byte[] dimensionsByte : dimensionsBytes) {
+          buffer.put(dimensionsByte);
+        }
+
+        return buffer
+            .put(havingBytes)
+            .put(limitBytes)
+            .array();
+      }
+
+      @Override
+      public TypeReference<Object> getCacheObjectClazz()
+      {
+        return OBJECT_TYPE_REFERENCE;
+      }
+
+      @Override
+      public Function<Row, Object> prepareForCache()
+      {
+        return new Function<Row, Object>()
+        {
+          @Override
+          public Object apply(Row input)
+          {
+            if (input instanceof MapBasedRow) {
+              final MapBasedRow row = (MapBasedRow) input;
+              final List<Object> retVal = Lists.newArrayListWithCapacity(2);
+              retVal.add(row.getTimestamp().getMillis());
+              retVal.add(row.getEvent());
+
+              return retVal;
+            }
+
+            throw new ISE("Don't know how to cache input rows of type[%s]", input.getClass());
+          }
+        };
+      }
+
+      @Override
+      public Function<Object, Row> pullFromCache()
+      {
+        return new Function<Object, Row>()
+        {
+          private final QueryGranularity granularity = query.getGranularity();
+
+          @Override
+          public Row apply(Object input)
+          {
+            Iterator<Object> results = ((List<Object>) input).iterator();
+
+            DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
+
+            return new MapBasedRow(
+                timestamp,
+                (Map<String, Object>) jsonMapper.convertValue(
+                    results.next(),
+                    new TypeReference<Map<String, Object>>()
+                    {
+                    }
+                )
+            );
+          }
+        };
+      }
+
+      @Override
+      public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
+      {
+        return new MergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+      }
+    };
   }
 }

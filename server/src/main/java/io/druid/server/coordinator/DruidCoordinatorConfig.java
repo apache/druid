@@ -59,4 +59,10 @@ public abstract class DruidCoordinatorConfig
   {
     return new Duration(15 * 60 * 1000);
   }
+
+  @Config("druid.coordinator.console.static")
+  public String getConsoleStatic()
+  {
+    return null;
+  }
 }

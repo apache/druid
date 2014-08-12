@@ -40,7 +40,7 @@ import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
-import io.druid.guice.HttpClientModule;
+import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.LifecycleModule;

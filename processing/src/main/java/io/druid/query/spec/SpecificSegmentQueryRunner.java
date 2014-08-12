@@ -22,12 +22,17 @@ package io.druid.query.spec;
 import com.google.common.base.Throwables;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.RetryQueryRunner;
+import io.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -47,7 +52,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> input)
+  public Sequence<T> run(final Query<T> input, final Map<String, Object> context)
   {
     final Query<T> query = input.withQuerySegmentSpec(specificSpec);
 
@@ -60,7 +65,14 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
       @Override
       public Sequence<T> call() throws Exception
       {
-        return base.run(query);
+        Sequence<T> returningSeq;
+        try {
+          returningSeq = base.run(query, context);
+        } catch (SegmentMissingException e) {
+          ((List)context.get(RetryQueryRunner.missingSegments)).add(((SpecificSegmentSpec) specificSpec).getDescriptor());
+          returningSeq = Sequences.empty();
+        }
+        return returningSeq;
       }
     });
 

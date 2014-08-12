@@ -62,13 +62,15 @@ public interface Query<T>
 
   public String getType();
 
-  public Sequence<T> run(QuerySegmentWalker walker);
+  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 
-  public Sequence<T> run(QueryRunner<T> runner);
+  public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
 
   public List<Interval> getIntervals();
 
   public Duration getDuration();
+
+  public Map<String, Object> getContext();
 
   public <ContextType> ContextType getContextValue(String key);
 

@@ -22,12 +22,21 @@ package io.druid.query.groupby.having;
 import io.druid.data.input.Row;
 
 /**
+ * A "having" spec that always evaluates to true
  */
 public class AlwaysHavingSpec implements HavingSpec
 {
+  private static final byte CACHE_KEY = 0x0;
+
   @Override
   public boolean eval(Row row)
   {
     return true;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[]{CACHE_KEY};
   }
 }

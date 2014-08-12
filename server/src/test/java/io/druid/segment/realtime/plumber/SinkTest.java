@@ -23,6 +23,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -82,6 +83,12 @@ public class SinkTest
           }
 
           @Override
+          public DateTime getTimestamp()
+          {
+            return new DateTime("2013-01-01");
+          }
+
+          @Override
           public List<String> getDimension(String dimension)
           {
             return Lists.newArrayList();
@@ -97,6 +104,12 @@ public class SinkTest
           public Object getRaw(String dimension)
           {
             return null;
+          }
+
+          @Override
+          public int compareTo(Row o)
+          {
+            return 0;
           }
         }
     );
@@ -123,6 +136,12 @@ public class SinkTest
           }
 
           @Override
+          public DateTime getTimestamp()
+          {
+            return new DateTime("2013-01-01");
+          }
+
+          @Override
           public List<String> getDimension(String dimension)
           {
             return Lists.newArrayList();
@@ -138,6 +157,12 @@ public class SinkTest
           public Object getRaw(String dimension)
           {
             return null;
+          }
+
+          @Override
+          public int compareTo(Row o)
+          {
+            return 0;
           }
         }
     );

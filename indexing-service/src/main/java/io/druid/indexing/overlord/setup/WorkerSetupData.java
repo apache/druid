@@ -28,7 +28,6 @@ public class WorkerSetupData
 {
   public static final String CONFIG_KEY = "worker.setup";
 
-  private final String minVersion;
   private final int minNumWorkers;
   private final int maxNumWorkers;
   private final String availabilityZone;
@@ -37,7 +36,6 @@ public class WorkerSetupData
 
   @JsonCreator
   public WorkerSetupData(
-      @JsonProperty("minVersion") String minVersion,
       @JsonProperty("minNumWorkers") int minNumWorkers,
       @JsonProperty("maxNumWorkers") int maxNumWorkers,
       @JsonProperty("availabilityZone") String availabilityZone,
@@ -45,18 +43,11 @@ public class WorkerSetupData
       @JsonProperty("userData") EC2UserData userData
   )
   {
-    this.minVersion = minVersion;
     this.minNumWorkers = minNumWorkers;
     this.maxNumWorkers = maxNumWorkers;
     this.availabilityZone = availabilityZone;
     this.nodeData = nodeData;
     this.userData = userData;
-  }
-
-  @JsonProperty
-  public String getMinVersion()
-  {
-    return minVersion;
   }
 
   @JsonProperty
@@ -93,7 +84,6 @@ public class WorkerSetupData
   public String toString()
   {
     return "WorkerSetupData{" +
-           "minVersion='" + minVersion + '\'' +
            ", minNumWorkers=" + minNumWorkers +
            ", maxNumWorkers=" + maxNumWorkers +
            ", availabilityZone=" + availabilityZone +

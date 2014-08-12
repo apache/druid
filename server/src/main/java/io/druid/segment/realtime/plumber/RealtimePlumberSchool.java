@@ -75,7 +75,8 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
@@ -90,7 +91,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.basePersistDirectory = basePersistDirectory;
     this.segmentGranularity = segmentGranularity;
     this.versioningPolicy = versioningPolicy;
-    this.rejectionPolicyFactory = rejectionPolicyFactory;
+    this.rejectionPolicyFactory = (rejectionPolicy == null) ? rejectionPolicyFactory : rejectionPolicy;
     this.maxPendingPersists = maxPendingPersists;
   }
 

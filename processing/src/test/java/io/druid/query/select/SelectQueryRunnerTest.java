@@ -22,15 +22,12 @@ package io.druid.query.select;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.Query;
 import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.filter.SelectorDimFilter;
@@ -45,6 +42,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -90,9 +88,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(null, 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -159,9 +157,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(null, 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -219,9 +217,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -279,9 +277,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 

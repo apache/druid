@@ -56,6 +56,7 @@ import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
@@ -720,7 +721,9 @@ public class IndexMaker
 
     CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromLongBuffer(
         LongBuffer.wrap(longs),
-        IndexIO.BYTE_ORDER
+        IndexIO.BYTE_ORDER,
+        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+
     );
 
     final ColumnDescriptor.Builder timeBuilder = ColumnDescriptor.builder();
@@ -1102,7 +1105,8 @@ public class IndexMaker
 
         CompressedFloatsIndexedSupplier compressedFloats = CompressedFloatsIndexedSupplier.fromFloatBuffer(
             FloatBuffer.wrap(arr),
-            IndexIO.BYTE_ORDER
+            IndexIO.BYTE_ORDER,
+            CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
         );
 
         writeColumn(

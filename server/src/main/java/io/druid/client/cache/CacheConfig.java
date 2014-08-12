@@ -20,15 +20,24 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.query.Query;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class CacheConfig
 {
   public static String USE_CACHE = "useCache";
   public static String POPULATE_CACHE = "populateCache";
+
   @JsonProperty
   private boolean useCache = true;
+
   @JsonProperty
   private boolean populateCache = true;
+
+  @JsonProperty
+  private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
 
   public boolean isPopulateCache()
   {
@@ -38,5 +47,11 @@ public class CacheConfig
   public boolean isUseCache()
   {
     return useCache;
+  }
+
+  public boolean isQueryCacheable(Query query)
+  {
+    // O(n) impl, but I don't think we'll ever have a million query types here
+    return !unCacheable.contains(query.getType());
   }
 }

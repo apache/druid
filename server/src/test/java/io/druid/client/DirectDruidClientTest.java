@@ -36,10 +36,8 @@ import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
-import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.QueryWatcher;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -57,6 +55,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
 
 public class DirectDruidClientTest
@@ -118,20 +117,20 @@ public class DirectDruidClientTest
     serverSelector.addServer(queryableDruidServer2);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-
-    Sequence s1 = client1.run(query);
+    HashMap<String,List> context = new HashMap<String, List>();
+    Sequence s1 = client1.run(query, context);
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout
-    Sequence s2 = client1.run(query);
+    Sequence s2 = client1.run(query, context);
     Assert.assertEquals(2, client1.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // subsequent connections should work
-    Sequence s3 = client1.run(query);
-    Sequence s4 = client1.run(query);
-    Sequence s5 = client1.run(query);
+    Sequence s3 = client1.run(query, context);
+    Sequence s4 = client1.run(query, context);
+    Sequence s5 = client1.run(query, context);
 
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
@@ -142,8 +141,8 @@ public class DirectDruidClientTest
     Assert.assertEquals(new DateTime("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
     Assert.assertEquals(3, client1.getNumOpenConnections());
 
-    client2.run(query);
-    client2.run(query);
+    client2.run(query, context);
+    client2.run(query, context);
 
     Assert.assertTrue(client2.getNumOpenConnections() == 2);
 
@@ -201,9 +200,9 @@ public class DirectDruidClientTest
     serverSelector.addServer(queryableDruidServer1);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-
+    HashMap<String,List> context = new HashMap<String, List>();
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
-    Sequence results = client1.run(query);
+    Sequence results = client1.run(query, context);
     Assert.assertEquals(0, client1.getNumOpenConnections());
 
 

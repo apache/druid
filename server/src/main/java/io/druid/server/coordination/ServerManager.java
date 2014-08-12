@@ -409,7 +409,19 @@ public class ServerManager implements QuerySegmentWalker
                     objectMapper,
                     cache,
                     toolChest,
-                    new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
+                    new MetricsEmittingQueryRunner<T>(
+                        emitter,
+                        new Function<Query<T>, ServiceMetricEvent.Builder>()
+                        {
+                          @Override
+                          public ServiceMetricEvent.Builder apply(@Nullable final Query<T> input)
+                          {
+                            return toolChest.makeMetricBuilder(input);
+                          }
+                        },
+                        new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
+                        "scan/time"
+                    ).withWaitMeasuredFromNow(),
                     cacheConfig
                 )
             )

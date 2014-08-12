@@ -31,10 +31,6 @@ public class ForkingTaskRunnerConfig
 {
   @JsonProperty
   @NotNull
-  private String taskDir = "/tmp/persistent";
-
-  @JsonProperty
-  @NotNull
   private String javaCommand = "java";
 
   /**
@@ -65,11 +61,6 @@ public class ForkingTaskRunnerConfig
       "file.encoding",
       "java.io.tmpdir"
   );
-
-  public String getTaskDir()
-  {
-    return taskDir;
-  }
 
   public String getJavaCommand()
   {

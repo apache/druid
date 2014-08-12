@@ -55,16 +55,19 @@ import java.util.concurrent.TimeoutException;
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
   private static final SegmentAnalyzer analyzer = new SegmentAnalyzer();
-  private static final SegmentMetadataQueryQueryToolChest toolChest = new SegmentMetadataQueryQueryToolChest();
   private static final Logger log = new Logger(SegmentMetadataQueryRunnerFactory.class);
 
+
+  private final SegmentMetadataQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
   @Inject
   public SegmentMetadataQueryRunnerFactory(
+      SegmentMetadataQueryQueryToolChest toolChest,
       QueryWatcher queryWatcher
   )
   {
+    this.toolChest = toolChest;
     this.queryWatcher = queryWatcher;
   }
 
@@ -74,7 +77,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     return new QueryRunner<SegmentAnalysis>()
     {
       @Override
-      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ)
+      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ, Map<String, Object> context)
       {
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
 
@@ -133,7 +136,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                 return new QueryRunner<SegmentAnalysis>()
                 {
                   @Override
-                  public Sequence<SegmentAnalysis> run(final Query<SegmentAnalysis> query)
+                  public Sequence<SegmentAnalysis> run(
+                      final Query<SegmentAnalysis> query,
+                      final Map<String, Object> context
+                  )
                   {
                     final int priority = query.getContextPriority(0);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
@@ -142,7 +148,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
-                            return input.run(query);
+                            return input.run(query, context);
                           }
                         }
                     );

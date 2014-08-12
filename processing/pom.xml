@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.129-SNAPSHOT</version>
+        <version>0.7.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -81,6 +81,10 @@
         <dependency>
             <groupId>com.davekoelle</groupId>
             <artifactId>alphanum</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>net.jpountz.lz4</groupId>
+          <artifactId>lz4</artifactId>
         </dependency>
 
 

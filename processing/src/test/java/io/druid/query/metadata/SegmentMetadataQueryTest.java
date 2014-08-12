@@ -26,6 +26,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
+import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -40,12 +41,16 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 public class SegmentMetadataQueryTest
 {
   @SuppressWarnings("unchecked")
   private final QueryRunner runner = makeQueryRunner(
-      new SegmentMetadataQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+      new SegmentMetadataQueryRunnerFactory(
+          new SegmentMetadataQueryQueryToolChest(new QueryConfig()),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER)
   );
   private ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -70,9 +75,9 @@ public class SegmentMetadataQueryTest
                                        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
                                        .merge(true)
                                        .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<SegmentAnalysis> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<SegmentAnalysis>newArrayList()
     );
     SegmentAnalysis val = results.iterator().next();

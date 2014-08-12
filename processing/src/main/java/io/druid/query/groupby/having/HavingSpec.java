@@ -38,6 +38,11 @@ import io.druid.data.input.Row;
 })
 public interface HavingSpec
 {
+  // Atoms for easy combination, but for now they are mostly useful
+  // for testing.
+  public static final HavingSpec NEVER = new NeverHavingSpec();
+  public static final HavingSpec ALWAYS = new AlwaysHavingSpec();
+
   /**
    * Evaluates if a given row satisfies the having spec.
    *
@@ -49,22 +54,5 @@ public interface HavingSpec
    */
   public boolean eval(Row row);
 
-  // Atoms for easy combination, but for now they are mostly useful
-  // for testing.
-  /**
-   * A "having" spec that always evaluates to false
-   */
-  public static final HavingSpec NEVER = new HavingSpec()
-  {
-    @Override
-    public boolean eval(Row row)
-    {
-      return false;
-    }
-  };
-
-  /**
-   * A "having" spec that always evaluates to true
-   */
-  public static final HavingSpec ALWAYS = new AlwaysHavingSpec();
+  public byte[] getCacheKey();
 }

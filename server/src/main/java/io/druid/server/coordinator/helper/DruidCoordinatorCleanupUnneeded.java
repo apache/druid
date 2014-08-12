@@ -23,8 +23,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DruidDataSource;
-import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -43,13 +41,11 @@ import java.util.Set;
 
 /**
  */
-public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
+public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 {
-  private static final Logger log = new Logger(DruidCoordinatorCleanup.class);
-
   private final DruidCoordinator coordinator;
 
-  public DruidCoordinatorCleanup(
+  public DruidCoordinatorCleanupUnneeded(
       DruidCoordinator coordinator
   )
   {
@@ -63,64 +59,33 @@ public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
     Set<DataSegment> availableSegments = params.getAvailableSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    // Drop segments that no longer exist in the available segments configuration
-    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
-      for (ServerHolder serverHolder : serverHolders) {
-        ImmutableDruidServer server = serverHolder.getServer();
-
-        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          for (DataSegment segment : dataSource.getSegments()) {
-            if (!availableSegments.contains(segment)) {
-              LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
-
-              if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-                queuePeon.dropSegment(
-                    segment, new LoadPeonCallback()
-                {
-                  @Override
-                  public void execute()
-                  {
-                  }
-                }
-                );
-                stats.addToTieredStat("unneededCount", server.getTier(), 1);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Delete segments that are old
-    // Unservice old partitions if we've had enough time to make sure we aren't flapping with old data
-    if (params.hasDeletionWaitTimeElapsed()) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = Maps.newHashMap();
-
+    // Drop segments that no longer exist in the available segments configuration, if it has been populated. (It might
+    // not have been loaded yet since it's filled asynchronously. But it's also filled atomically, so if there are any
+    // segments at all, we should have all of them.)
+    if (!availableSegments.isEmpty()) {
       for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
           ImmutableDruidServer server = serverHolder.getServer();
 
           for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-            VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
-            if (timeline == null) {
-              timeline = new VersionedIntervalTimeline<String, DataSegment>(Comparators.comparable());
-              timelines.put(dataSource.getName(), timeline);
-            }
-
             for (DataSegment segment : dataSource.getSegments()) {
-              timeline.add(
-                  segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)
-              );
-            }
-          }
-        }
-      }
+              if (!availableSegments.contains(segment)) {
+                LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
-      for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
-        for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {
-          for (DataSegment dataSegment : holder.getObject().payloads()) {
-            coordinator.removeSegment(dataSegment);
-            stats.addToGlobalStat("overShadowedCount", 1);
+                if (!queuePeon.getSegmentsToDrop().contains(segment)) {
+                  queuePeon.dropSegment(
+                      segment, new LoadPeonCallback()
+                      {
+                        @Override
+                        public void execute()
+                        {
+                        }
+                      }
+                  );
+                  stats.addToTieredStat("unneededCount", server.getTier(), 1);
+                }
+              }
+            }
           }
         }
       }
@@ -130,4 +95,6 @@ public class DruidCoordinatorCleanup implements DruidCoordinatorHelper
                  .withCoordinatorStats(stats)
                  .build();
   }
+
+
 }
