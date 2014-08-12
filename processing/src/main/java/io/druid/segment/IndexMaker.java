@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -79,6 +80,7 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -843,20 +845,25 @@ public class IndexMaker
     if (hasMultipleValues) {
       List<List<Integer>> vals = ((MultiValColumnDictionaryEntryStore) adder).get();
       multiValCol = VSizeIndexed.fromIterable(
-          Iterables.transform(
-              vals,
-              new Function<List<Integer>, VSizeIndexedInts>()
-              {
-                @Override
-                public VSizeIndexedInts apply(List<Integer> input)
-                {
-                  return VSizeIndexedInts.fromList(
-                      input,
-                      Collections.max(input)
-                  );
-                }
-              }
-          )
+          FunctionalIterable
+              .create(vals)
+              //.filter(Predicates.<List<Integer>>notNull())
+              .transform(
+                  new Function<List<Integer>, VSizeIndexedInts>()
+                  {
+                    @Override
+                    public VSizeIndexedInts apply(List<Integer> input)
+                    {
+                      if (input == null) {
+                        return VSizeIndexedInts.empty();
+                      }
+                      return VSizeIndexedInts.fromList(
+                          input,
+                          Collections.max(input)
+                      );
+                    }
+                  }
+              )
       );
       dictionary = GenericIndexed.fromIterable(
           dimensionValues,
@@ -1099,7 +1106,7 @@ public class IndexMaker
         float[] arr = new float[rowCount];
         int rowNum = 0;
         for (Rowboat theRow : theRows) {
-          Object obj = theRow.getMetrics()[metricIndex]; // TODO
+          Object obj = theRow.getMetrics()[metricIndex];
           arr[rowNum++] = (obj == null) ? 0 : ((Number) obj).floatValue();
         }
 
@@ -1133,7 +1140,7 @@ public class IndexMaker
                   @Override
                   public Object apply(Rowboat input)
                   {
-                    return input.getMetrics()[metricIndex]; // TODO
+                    return input.getMetrics()[metricIndex];
                   }
                 }
             ),
@@ -1557,7 +1564,11 @@ public class IndexMaker
 
     public void add(int[] vals)
     {
-      data.add(Ints.asList(vals));
+      if (vals == null || vals.length == 0) {
+        data.add(null);
+      } else {
+        data.add(Ints.asList(vals));
+      }
     }
 
     public List<List<Integer>> get()

@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
 
@@ -42,6 +43,11 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   public static VSizeIndexedInts fromArray(int[] array, int maxValue)
   {
     return fromList(Ints.asList(array), maxValue);
+  }
+
+  public static VSizeIndexedInts empty()
+  {
+    return fromList(Lists.<Integer>newArrayList(), 0);
   }
 
   public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
