@@ -407,7 +407,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(metricName);
-                        if (holder != null && holder.getCapabilities().getType() == ValueType.LONG) {
+                        if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG || holder.getCapabilities().getType() == ValueType.FLOAT)) {
                           cachedMetricVals = holder.getGenericColumn();
                           genericColumnCache.put(metricName, cachedMetricVals);
                         }
@@ -898,7 +898,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(metricName);
-                        if (holder != null && holder.getCapabilities().getType() == ValueType.LONG) {
+                        if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG || holder.getCapabilities().getType() == ValueType.FLOAT)) {
                           cachedMetricVals = holder.getGenericColumn();
                           genericColumnCache.put(metricName, cachedMetricVals);
                         }
