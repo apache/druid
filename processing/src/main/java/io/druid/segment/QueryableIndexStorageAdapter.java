@@ -256,12 +256,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public TimestampColumnSelector makeTimestampColumnSelector()
+                    public LongColumnSelector makeTimestampColumnSelector()
                     {
-                      return new TimestampColumnSelector()
+                      return new LongColumnSelector()
                       {
                         @Override
-                        public long getTimestamp()
+                        public long get()
                         {
                           return timestamps.getLongSingleValueRow(cursorOffset.getOffset());
                         }
@@ -395,6 +395,42 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         public float get()
                         {
                           return metricVals.getFloatSingleValueRow(cursorOffset.getOffset());
+                        }
+                      };
+                    }
+
+                    @Override
+                    public LongColumnSelector makeLongColumnSelector(String columnName)
+                    {
+                      final String metricName = columnName.toLowerCase();
+                      GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
+
+                      if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(metricName);
+                        if (holder != null && holder.getCapabilities().getType() == ValueType.LONG) {
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(metricName, cachedMetricVals);
+                        }
+                      }
+
+                      if (cachedMetricVals == null) {
+                        return new LongColumnSelector()
+                        {
+                          @Override
+                          public long get()
+                          {
+                            return 0L;
+                          }
+                        };
+                      }
+
+                      final GenericColumn metricVals = cachedMetricVals;
+                      return new LongColumnSelector()
+                      {
+                        @Override
+                        public long get()
+                        {
+                          return metricVals.getLongSingleValueRow(cursorOffset.getOffset());
                         }
                       };
                     }
@@ -711,12 +747,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public TimestampColumnSelector makeTimestampColumnSelector()
+                    public LongColumnSelector makeTimestampColumnSelector()
                     {
-                      return new TimestampColumnSelector()
+                      return new LongColumnSelector()
                       {
                         @Override
-                        public long getTimestamp()
+                        public long get()
                         {
                           return timestamps.getLongSingleValueRow(currRow);
                         }
@@ -850,6 +886,42 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         public float get()
                         {
                           return metricVals.getFloatSingleValueRow(currRow);
+                        }
+                      };
+                    }
+
+                    @Override
+                    public LongColumnSelector makeLongColumnSelector(String columnName)
+                    {
+                      final String metricName = columnName.toLowerCase();
+                      GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
+
+                      if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(metricName);
+                        if (holder != null && holder.getCapabilities().getType() == ValueType.LONG) {
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(metricName, cachedMetricVals);
+                        }
+                      }
+
+                      if (cachedMetricVals == null) {
+                        return new LongColumnSelector()
+                        {
+                          @Override
+                          public long get()
+                          {
+                            return 0L;
+                          }
+                        };
+                      }
+
+                      final GenericColumn metricVals = cachedMetricVals;
+                      return new LongColumnSelector()
+                      {
+                        @Override
+                        public long get()
+                        {
+                          return metricVals.getLongSingleValueRow(currRow);
                         }
                       };
                     }

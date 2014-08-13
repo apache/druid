@@ -64,6 +64,7 @@ import java.util.Map;
 
 /**
  */
+@Ignore
 public class AppendTest
 {
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{

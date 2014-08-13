@@ -46,8 +46,8 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.TimestampColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -134,14 +134,28 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
           new ColumnSelectorFactory()
           {
             @Override
-            public TimestampColumnSelector makeTimestampColumnSelector()
+            public LongColumnSelector makeTimestampColumnSelector()
             {
-              return new TimestampColumnSelector()
+              return new LongColumnSelector()
               {
                 @Override
-                public long getTimestamp()
+                public long get()
                 {
                   return in.get().getTimestampFromEpoch();
+                }
+              };
+            }
+
+            @Override
+            public LongColumnSelector makeLongColumnSelector(String columnName)
+            {
+              final String metricName = columnName.toLowerCase();
+              return new LongColumnSelector()
+              {
+                @Override
+                public long get()
+                {
+                  return in.get().getLongMetric(metricName);
                 }
               };
             }
@@ -302,6 +316,8 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       ValueType type;
       if (entry.getValue().equalsIgnoreCase("float")) {
         type = ValueType.FLOAT;
+      } else if (entry.getValue().equalsIgnoreCase("long")) {
+        type = ValueType.LONG;
       } else {
         type = ValueType.COMPLEX;
       }

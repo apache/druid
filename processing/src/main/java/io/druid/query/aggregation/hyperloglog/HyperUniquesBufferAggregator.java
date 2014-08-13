@@ -82,6 +82,13 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
     throw new UnsupportedOperationException();
   }
 
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HyperUniquesBufferAggregator does not support getLong()");
+  }
+
   @Override
   public void close()
   {

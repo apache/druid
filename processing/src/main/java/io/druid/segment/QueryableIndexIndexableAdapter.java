@@ -31,6 +31,8 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.IndexedFloatsGenericColumn;
+import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
@@ -54,10 +56,8 @@ import java.util.Set;
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
   private static final Logger log = new Logger(QueryableIndexIndexableAdapter.class);
-
   private final int numRows;
   private final QueryableIndex input;
-
   private final List<String> availableDimensions;
 
   public QueryableIndexIndexableAdapter(QueryableIndex input)
@@ -173,6 +173,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         {
           final GenericColumn timestamps = input.getTimeColumn().getGenericColumn();
           final Object[] metrics;
+
           final Map<String, DictionaryEncodedColumn> dimensions;
 
           final int numMetrics = getMetricNames().size();
@@ -193,6 +194,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               final ValueType type = column.getCapabilities().getType();
               switch (type) {
                 case FLOAT:
+                case LONG:
                   metrics[i] = column.getGenericColumn();
                   break;
                 case COMPLEX:
@@ -248,8 +250,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
             Object[] metricArray = new Object[numMetrics];
             for (int i = 0; i < metricArray.length; ++i) {
-              if (metrics[i] instanceof GenericColumn) {
+              if (metrics[i] instanceof IndexedFloatsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
+              } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
+                metricArray[i] = ((GenericColumn) metrics[i]).getLongSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
                 metricArray[i] = ((ComplexColumn) metrics[i]).getRowValue(currRow);
               }
@@ -300,6 +304,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     switch (type) {
       case FLOAT:
         return "float";
+      case LONG:
+        return "long";
       case COMPLEX:
         return column.getComplexColumn().getTypeName();
       default:

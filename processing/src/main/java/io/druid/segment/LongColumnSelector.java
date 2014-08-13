@@ -17,49 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.aggregation;
-
-import java.nio.ByteBuffer;
+package io.druid.segment;
 
 /**
  */
-public class CountBufferAggregator implements BufferAggregator
+public interface LongColumnSelector
 {
-
-  @Override
-  public void init(ByteBuffer buf, int position)
-  {
-    buf.putLong(position, 0l);
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-    buf.putLong(position, buf.getLong(position) + 1);
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position);
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position);
-  }
-
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
-  }
+  public long get();
 }

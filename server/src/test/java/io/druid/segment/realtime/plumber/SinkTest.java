@@ -101,6 +101,12 @@ public class SinkTest
           }
 
           @Override
+          public long getLongMetric(String metric)
+          {
+            return 0L;
+          }
+
+          @Override
           public Object getRaw(String dimension)
           {
             return null;
@@ -151,6 +157,12 @@ public class SinkTest
           public float getFloatMetric(String metric)
           {
             return 0;
+          }
+
+          @Override
+          public long getLongMetric(String metric)
+          {
+            return 0L;
           }
 
           @Override
