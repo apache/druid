@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,7 +103,7 @@ public class TaskSerdeTest
             DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
         ),
         ImmutableList.<AggregatorFactory>of(
-            new CountAggregatorFactory("cnt")
+            new CountAggregatorFactory("cnt", null)
         )
     );
 

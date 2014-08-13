@@ -77,7 +77,8 @@ public class TimeSeriesUnionQueryRunnerTest
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
-                                              "index"
+                                              "index",
+                                              null
                                           ),
                                           QueryRunnerTestHelper.qualityUniques
                                       )

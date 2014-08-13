@@ -49,7 +49,7 @@ public class SinkTest
     final DataSchema schema = new DataSchema(
         "test",
         null,
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new AggregatorFactory[]{new CountAggregatorFactory("rows", null)},
         new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null, Granularity.HOUR)
     );
 

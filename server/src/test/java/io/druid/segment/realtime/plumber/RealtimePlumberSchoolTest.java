@@ -41,7 +41,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -102,7 +101,7 @@ public class RealtimePlumberSchoolTest
             return null;
           }
         },
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new AggregatorFactory[]{new CountAggregatorFactory("rows", null)},
         new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
 

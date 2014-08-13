@@ -72,7 +72,7 @@ import java.util.Map;
             case SUM: return new DoubleSumAggregatorFactory("sum("+name+")", name);
             case MIN: return new MinAggregatorFactory("min("+name+")", name);
             case MAX: return new MaxAggregatorFactory("max("+name+")", name);
-            case COUNT: return new CountAggregatorFactory(name);
+            case COUNT: return new CountAggregatorFactory(name, null);
         }
         throw new IllegalArgumentException("Unknown function [" + fn + "]"); 
     }

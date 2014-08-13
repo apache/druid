@@ -191,7 +191,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -302,7 +302,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -353,7 +353,8 @@ public class GroupByQueryRunnerTest
                                              QueryRunnerTestHelper.rowsCount,
                                              new LongSumAggregatorFactory(
                                                  "idx",
-                                                 "index"
+                                                 "index",
+                                                 null
                                              )
                                          )
                                      )
@@ -403,7 +404,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
@@ -479,7 +480,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
@@ -517,7 +518,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
@@ -596,7 +597,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
@@ -636,7 +637,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .addOrderByColumn("rows")
@@ -677,7 +678,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .addOrderByColumn("rows", "desc")
@@ -763,7 +764,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
@@ -954,7 +955,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -967,8 +968,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx")
+                new LongSumAggregatorFactory("rows", "rows", null),
+                new LongSumAggregatorFactory("idx", "idx", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -1012,7 +1013,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -1050,7 +1051,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -1087,7 +1088,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index")
+                new LongSumAggregatorFactory("idx", "index", null)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -1121,7 +1122,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx_subagg", "index")
+                new LongSumAggregatorFactory("idx_subagg", "index", null)
             )
         )
         .setPostAggregatorSpecs(
@@ -1145,8 +1146,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx_subpostagg")
+                new LongSumAggregatorFactory("rows", "rows", null),
+                new LongSumAggregatorFactory("idx", "idx_subpostagg", null)
             )
         )
         .setPostAggregatorSpecs(
@@ -1202,7 +1203,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx_subagg", "index")
+                new LongSumAggregatorFactory("idx_subagg", "index", null)
             )
         )
         .setPostAggregatorSpecs(
@@ -1245,8 +1246,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx_subpostagg")
+                new LongSumAggregatorFactory("rows", "rows", null),
+                new LongSumAggregatorFactory("idx", "idx_subpostagg", null)
             )
         )
         .setPostAggregatorSpecs(
@@ -1350,8 +1351,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
-                new LongSumAggregatorFactory("rows", "rows"),
-                new LongSumAggregatorFactory("idx", "idx_subpostagg"),
+                new LongSumAggregatorFactory("rows", "rows", null),
+                new LongSumAggregatorFactory("idx", "idx_subpostagg", null),
                 new DoubleSumAggregatorFactory("js_outer_agg", "js_agg")
             )
         )

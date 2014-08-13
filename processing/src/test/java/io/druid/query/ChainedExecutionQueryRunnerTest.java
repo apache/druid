@@ -107,7 +107,7 @@ public class ChainedExecutionQueryRunnerTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .intervals("2014/2015")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
+              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count", null)))
               .build(),
         context
     );
@@ -215,7 +215,7 @@ public class ChainedExecutionQueryRunnerTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .intervals("2014/2015")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
+              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count", null)))
               .context(ImmutableMap.<String, Object>of("timeout", 100, "queryId", "test"))
               .build(),
         context

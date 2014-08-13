@@ -40,7 +40,7 @@ public class QueriesTest
   public void testVerifyAggregations() throws Exception
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
-        new CountAggregatorFactory("count"),
+        new CountAggregatorFactory("count", null),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
@@ -72,7 +72,7 @@ public class QueriesTest
   public void testVerifyAggregationsMissingVal() throws Exception
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
-        new CountAggregatorFactory("count"),
+        new CountAggregatorFactory("count", null),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
@@ -104,7 +104,7 @@ public class QueriesTest
   public void testVerifyAggregationsMultiLevel() throws Exception
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
-        new CountAggregatorFactory("count"),
+        new CountAggregatorFactory("count", null),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
@@ -158,7 +158,7 @@ public class QueriesTest
   public void testVerifyAggregationsMultiLevelMissingVal() throws Exception
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
-        new CountAggregatorFactory("count"),
+        new CountAggregatorFactory("count", null),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );

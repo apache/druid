@@ -103,7 +103,7 @@ public class SchemalessTestSimple
   final String placementDimension = "placement";
   final String placementishDimension = "placementish";
   final String indexMetric = "index";
-  final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
+  final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows", null);
   final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
   final HyperUniquesAggregatorFactory uniques = new HyperUniquesAggregatorFactory("uniques", "quality_uniques");
   final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);

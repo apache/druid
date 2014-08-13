@@ -35,14 +35,18 @@ import java.util.List;
 public class LongSumAggregatorFactory implements AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x1;
+  private static final String DEFAULT_VALUE_TYPE = "long";
+  private static final List<String> supportedTypes = Arrays.asList("float", "long");
 
   private final String fieldName;
   private final String name;
+  private final String valueType;
 
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("valueType") String valueType
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -50,6 +54,8 @@ public class LongSumAggregatorFactory implements AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.valueType = valueType == null ? DEFAULT_VALUE_TYPE : valueType;
+    Preconditions.checkArgument(supportedTypes.contains(this.valueType));
   }
 
   @Override
@@ -82,13 +88,13 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name);
+    return new LongSumAggregatorFactory(name, name, valueType);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName));
+    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName, valueType));
   }
 
   @Override

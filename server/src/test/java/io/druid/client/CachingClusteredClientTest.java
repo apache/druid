@@ -150,9 +150,9 @@ public class CachingClusteredClientTest
    */
   private static final int RANDOMNESS = 10;
   private static final List<AggregatorFactory> AGGS = Arrays.asList(
-      new CountAggregatorFactory("rows"),
-      new LongSumAggregatorFactory("imps", "imps"),
-      new LongSumAggregatorFactory("impers", "imps")
+      new CountAggregatorFactory("rows", null),
+      new LongSumAggregatorFactory("imps", "imps", null),
+      new LongSumAggregatorFactory("impers", "imps", null)
   );
   private static final List<PostAggregator> POST_AGGS = Arrays.<PostAggregator>asList(
       new ArithmeticPostAggregator(
@@ -181,9 +181,9 @@ public class CachingClusteredClientTest
       )
   );
   private static final List<AggregatorFactory> RENAMED_AGGS = Arrays.asList(
-      new CountAggregatorFactory("rows2"),
-      new LongSumAggregatorFactory("imps", "imps"),
-      new LongSumAggregatorFactory("impers2", "imps")
+      new CountAggregatorFactory("rows2", null),
+      new LongSumAggregatorFactory("imps", "imps", null),
+      new LongSumAggregatorFactory("impers2", "imps", null)
   );
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = Arrays.asList();

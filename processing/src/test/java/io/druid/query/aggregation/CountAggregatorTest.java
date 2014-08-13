@@ -56,7 +56,7 @@ public class CountAggregatorTest
     Object first = agg.get();
     agg.aggregate();
 
-    Comparator comp = new CountAggregatorFactory("null").getComparator();
+    Comparator comp = new CountAggregatorFactory("null", null).getComparator();
 
     Assert.assertEquals(-1, comp.compare(first, agg.get()));
     Assert.assertEquals(0, comp.compare(first, first));

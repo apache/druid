@@ -66,7 +66,7 @@ public class LongSumAggregatorTest
     Object first = agg.get();
     agg.aggregate();
 
-    Comparator comp = new LongSumAggregatorFactory("null", "null").getComparator();
+    Comparator comp = new LongSumAggregatorFactory("null", "null", null).getComparator();
 
     Assert.assertEquals(-1, comp.compare(first, agg.get()));
     Assert.assertEquals(0, comp.compare(first, first));

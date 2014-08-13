@@ -36,8 +36,8 @@ import java.util.List;
  */
 public class TimeseriesBinaryFnTest
 {
-  final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
-  final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
+  final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows", null);
+  final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index", null);
   final List<AggregatorFactory> aggregatorFactories = Arrays.asList(
       rowsCount,
       indexLongSum
