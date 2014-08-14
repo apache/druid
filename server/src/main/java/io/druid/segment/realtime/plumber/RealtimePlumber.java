@@ -319,6 +319,10 @@ public class RealtimePlumber implements Plumber
 
             if (!isPushedMarker.exists()) {
               removeSegment(sink, mergedTarget);
+              if (mergedTarget.exists()) {
+                log.wtf("Merged target[%s] exists?!", mergedTarget);
+                return;
+              }
             } else {
               log.info("Already pushed sink[%s]", sink);
               return;
