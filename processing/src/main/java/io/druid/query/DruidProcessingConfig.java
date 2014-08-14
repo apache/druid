@@ -42,6 +42,6 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config(value = "${base_path}.columnCache.sizeBytes")
   public int columnCacheSizeBytes()
   {
-    return 1024 * 1024;
+    return 0;
   }
 }
