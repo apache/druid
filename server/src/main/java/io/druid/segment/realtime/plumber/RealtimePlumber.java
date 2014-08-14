@@ -59,7 +59,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -321,7 +320,7 @@ public class RealtimePlumber implements Plumber
             if (!isPushedMarker.exists()) {
               removeSegment(sink, mergedTarget);
             } else {
-              log.info("Skipping already-merged sink: %s", sink);
+              log.info("Already pushed sink[%s]", sink);
               return;
             }
 
@@ -360,7 +359,9 @@ public class RealtimePlumber implements Plumber
               segmentPublisher.publishSegment(segment);
 
               if (!isPushedMarker.createNewFile()) {
-                log.makeAlert("Unable to make marker file! WTF?!")
+                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
+                   .addData("interval", sink.getInterval())
+                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
                    .addData("marker", isPushedMarker)
                    .emit();
               }
