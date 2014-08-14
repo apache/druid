@@ -313,10 +313,16 @@ public class RealtimePlumber implements Plumber
           {
             final Interval interval = sink.getInterval();
 
-            // use a marker file to indicate that merging has completed
-            final File marker = new File(computePersistDir(schema, sink.getInterval()), "marker");
-            if (marker.exists()) {
-              removeMergedSegment(sink);
+            // use a file to indicate that pushing has completed
+            final File persistDir = computePersistDir(schema, interval);
+            final File mergedTarget = new File(persistDir, "merged");
+            final File isPushedMarker = new File(persistDir, "isPushedMarker");
+
+            if (!isPushedMarker.exists()) {
+              removeSegment(sink, mergedTarget);
+            } else {
+              log.info("Skipping already-merged sink: %s", sink);
+              return;
             }
 
             for (FireHydrant hydrant : sink) {
@@ -327,12 +333,6 @@ public class RealtimePlumber implements Plumber
                   metrics.incrementRowOutputCount(rowCount);
                 }
               }
-            }
-
-            final File mergedTarget = new File(computePersistDir(schema, interval), "merged");
-            if (mergedTarget.exists()) {
-              log.info("Skipping already-merged sink: %s", sink);
-              return;
             }
 
             try {
@@ -349,9 +349,6 @@ public class RealtimePlumber implements Plumber
                   schema.getAggregators(),
                   mergedTarget
               );
-              if (!marker.createNewFile()) {
-                log.makeAlert("Unable to make marker file[%s]! WTF?!", marker).emit();
-              }
 
               QueryableIndex index = IndexIO.loadIndex(mergedFile);
 
@@ -360,11 +357,13 @@ public class RealtimePlumber implements Plumber
                   sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
               );
 
-              if (!marker.delete()) {
-                log.makeAlert("Unable to remove merged marker", marker).emit();
-              }
-
               segmentPublisher.publishSegment(segment);
+
+              if (!isPushedMarker.createNewFile()) {
+                log.makeAlert("Unable to make marker file! WTF?!")
+                   .addData("marker", isPushedMarker)
+                   .emit();
+              }
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
@@ -374,9 +373,6 @@ public class RealtimePlumber implements Plumber
                 // We're trying to shut down, and this segment failed to push. Let's just get rid of it.
                 // This call will also delete possibly-partially-written files, so we don't need to do it explicitly.
                 abandonSegment(truncatedTime, sink);
-              } else {
-                // Delete any possibly-partially-written files, so we can try again on the next push cycle.
-                removeMergedSegment(sink);
               }
             }
           }
@@ -812,12 +808,6 @@ public class RealtimePlumber implements Plumber
     );
   }
 
-  private void removeMergedSegment(final Sink sink)
-  {
-    final File mergedTarget = new File(computePersistDir(schema, sink.getInterval()), "merged");
-    removeSegment(sink, mergedTarget);
-  }
-
   private void removeSegment(final Sink sink, final File target)
   {
     if (target.exists()) {
@@ -826,7 +816,8 @@ public class RealtimePlumber implements Plumber
         FileUtils.deleteDirectory(target);
       }
       catch (Exception e) {
-        log.makeAlert(e, "Unable to remove merged segment for dataSource[%s]", schema.getDataSource())
+        log.makeAlert(e, "Unable to remove file for dataSource[%s]", schema.getDataSource())
+           .addData("file", target)
            .addData("interval", sink.getInterval())
            .emit();
       }
