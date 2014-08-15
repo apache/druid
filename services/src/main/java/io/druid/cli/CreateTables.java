@@ -109,5 +109,8 @@ public class CreateTables extends GuiceRunnable
     final Injector injector = makeInjector();
     DbConnector dbConnector = injector.getInstance(DbConnector.class);
     dbConnector.createSegmentTable();
+    dbConnector.createRulesTable();
+    dbConnector.createConfigTable();
+    dbConnector.createTaskTables();
   }
 }
