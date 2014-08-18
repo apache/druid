@@ -81,7 +81,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   private final long minTimestamp;
   private final QueryGranularity gran;
 
-  private final Set<Function<InputRow, InputRow>> rowTransformers;
+  private final List<Function<InputRow, InputRow>> rowTransformers;
 
   private final AggregatorFactory[] metrics;
   private final Map<String, Integer> metricIndexes;
@@ -120,7 +120,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
     this.metrics = incrementalIndexSchema.getMetrics();
-    this.rowTransformers = Sets.newHashSet();
+    this.rowTransformers = Lists.newCopyOnWriteArrayList();
 
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
@@ -447,13 +447,12 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       if (!facts.containsKey(key)) {
         int rowOffset = totalAggSize * numEntries.getAndIncrement();
         if (rowOffset + totalAggSize > bufferHolder.get().limit()) {
-          throw new ISE("Buffer Full cannot add more rows current rowSize : %d", numEntries.get());
+          throw new ISE("Buffer full, cannot add more rows! Current rowSize[%,d].", numEntries.get());
         }
         for (int i = 0; i < aggs.length; i++) {
           aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
         }
         facts.put(key, rowOffset);
-
       }
     }
     in.set(row);
