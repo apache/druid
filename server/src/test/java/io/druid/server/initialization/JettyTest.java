@@ -193,7 +193,7 @@ public class JettyTest
 
   }
 
-  @Test
+  //@Test
   public void testThreadNotStuckOnException() throws Exception
   {
     final CountDownLatch latch = new CountDownLatch(1);

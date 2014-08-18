@@ -22,14 +22,12 @@ package io.druid.cli.validate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.metamx.common.UOE;
-import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
-import io.druid.segment.realtime.Schema;
 
 import java.io.File;
 
@@ -58,14 +56,12 @@ public class DruidJsonValidator implements Runnable
     final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
     try {
-      if (type.equalsIgnoreCase("query")) {
+      if (type.equals("query")) {
         jsonMapper.readValue(file, Query.class);
-      } else if (type.equalsIgnoreCase("hadoopConfig")) {
+      } else if (type.equals("hadoopConfig")) {
         jsonMapper.readValue(file, HadoopDruidIndexerConfig.class);
-      } else if (type.equalsIgnoreCase("task")) {
+      } else if (type.equals("task")) {
         jsonMapper.readValue(file, Task.class);
-      } else if (type.equalsIgnoreCase("realtimeSchema")) {
-        jsonMapper.readValue(file, Schema.class);
       } else {
         throw new UOE("Unknown type[%s]", type);
       }

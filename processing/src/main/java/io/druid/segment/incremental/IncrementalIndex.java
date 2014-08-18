@@ -98,7 +98,7 @@ public class IncrementalIndex implements Iterable<Row>
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
     final ImmutableMap.Builder<String, String> metricTypesBuilder = ImmutableMap.builder();
     for (int i = 0; i < metrics.length; i++) {
-      final String metricName = metrics[i].getName().toLowerCase();
+      final String metricName = metrics[i].getName();
       metricNamesBuilder.add(metricName);
       metricIndexesBuilder.put(metricName, i);
       metricTypesBuilder.put(metricName, metrics[i].getTypeName());
@@ -172,7 +172,7 @@ public class IncrementalIndex implements Iterable<Row>
     synchronized (dimensionOrder) {
       dims = new String[dimensionOrder.size()][];
       for (String dimension : rowDimensions) {
-        dimension = dimension.toLowerCase();
+        dimension = dimension;
         List<String> dimensionValues = row.getDimension(dimension);
         Integer index = dimensionOrder.get(dimension);
         if (index == null) {
@@ -228,7 +228,7 @@ public class IncrementalIndex implements Iterable<Row>
                   @Override
                   public FloatColumnSelector makeFloatColumnSelector(String columnName)
                   {
-                    final String metricName = columnName.toLowerCase();
+                    final String metricName = columnName;
                     return new FloatColumnSelector()
                     {
                       @Override
@@ -243,7 +243,7 @@ public class IncrementalIndex implements Iterable<Row>
                   public ObjectColumnSelector makeObjectColumnSelector(String column)
                   {
                     final String typeName = agg.getTypeName();
-                    final String columnName = column.toLowerCase();
+                    final String columnName = column;
 
                       final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
                       {
@@ -293,7 +293,7 @@ public class IncrementalIndex implements Iterable<Row>
                   @Override
                   public DimensionSelector makeDimensionSelector(final String dimension)
                   {
-                    final String dimensionName = dimension.toLowerCase();
+                    final String dimensionName = dimension;
                     return new DimensionSelector()
                     {
                       @Override

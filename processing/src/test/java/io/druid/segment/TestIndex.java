@@ -61,14 +61,14 @@ public class TestIndex
   public static final String[] COLUMNS = new String[]{
       "ts",
       "provider",
-      "quALIty",
-      "plAcEmEnT",
-      "pLacementish",
-      "iNdEx",
-      "qualiTy_Uniques"
+      "quality",
+      "placement",
+      "placementish",
+      "index",
+      "quality_uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"provider", "quALIty", "plAcEmEnT", "pLacementish"};
-  public static final String[] METRICS = new String[]{"iNdEx"};
+  public static final String[] DIMENSIONS = new String[]{"provider", "quality", "placement", "placementish"};
+  public static final String[] METRICS = new String[]{"index"};
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-04-16T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),

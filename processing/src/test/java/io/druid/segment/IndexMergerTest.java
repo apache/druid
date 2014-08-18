@@ -26,7 +26,6 @@ import com.google.common.io.Files;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
 import junit.framework.Assert;
@@ -41,11 +40,11 @@ import java.util.Arrays;
 public class IndexMergerTest
 {
   @Test
-  public void testPersistCaseInsensitive() throws Exception
+  public void testPersist() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
 
-    IncrementalIndex toPersist = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(timestamp);
 
     final File tempDir = Files.createTempDir();
     try {
@@ -61,26 +60,26 @@ public class IndexMergerTest
   }
 
   @Test
-  public void testPersistMergeCaseInsensitive() throws Exception
+  public void testPersistMerge() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(timestamp);
 
     IncrementalIndex toPersist2 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
 
     toPersist2.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("DIm1", "DIM2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "DIm1", "10000", "DIM2", "100000000")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
         )
     );
 
     toPersist2.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("dIM1", "dIm2"),
-            ImmutableMap.<String, Object>of("DIm1", "1", "DIM2", "2", "dim1", "5", "dim2", "6")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "5", "dim2", "6")
         )
     );
 

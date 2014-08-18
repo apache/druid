@@ -72,7 +72,7 @@ public class SegmentAnalyzerTest
     Assert.assertEquals(TestIndex.COLUMNS.length, columns.size()); // All columns including time
 
     for (String dimension : TestIndex.DIMENSIONS) {
-      final ColumnAnalysis columnAnalysis = columns.get(dimension.toLowerCase());
+      final ColumnAnalysis columnAnalysis = columns.get(dimension);
 
       Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
       Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
@@ -80,7 +80,7 @@ public class SegmentAnalyzerTest
     }
 
     for (String metric : TestIndex.METRICS) {
-      final ColumnAnalysis columnAnalysis = columns.get(metric.toLowerCase());
+      final ColumnAnalysis columnAnalysis = columns.get(metric);
 
       Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
       Assert.assertTrue(metric, columnAnalysis.getSize() > 0);

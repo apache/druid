@@ -91,7 +91,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return 0;
     }
 
-    Column column = index.getColumn(dimension.toLowerCase());
+    Column column = index.getColumn(dimension);
     if (column == null) {
       return 0;
     }
@@ -271,7 +271,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
-                      final String dimensionName = dimension.toLowerCase();
+                      final String dimensionName = dimension;
 
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
                       final Column columnDesc = index.getColumn(dimensionName);
@@ -366,7 +366,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
-                      final String metricName = columnName.toLowerCase();
+                      final String metricName = columnName;
                       GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -402,7 +402,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
-                      final String columnName = column.toLowerCase();
+                      final String columnName = column;
 
                       Object cachedColumnVals = objectColumnCache.get(columnName);
 
@@ -726,7 +726,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
-                      final String dimensionName = dimension.toLowerCase();
+                      final String dimensionName = dimension;
 
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
                       final Column columnDesc = index.getColumn(dimensionName);
@@ -821,7 +821,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
-                      final String metricName = columnName.toLowerCase();
+                      final String metricName = columnName;
                       GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
 
                       if (cachedMetricVals == null) {
@@ -857,7 +857,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
-                      final String columnName = column.toLowerCase();
+                      final String columnName = column;
 
                       Object cachedColumnVals = objectColumnCache.get(columnName);
 

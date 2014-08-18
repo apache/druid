@@ -676,7 +676,7 @@ public class IndexIO
           );
         }
         columns.put(
-            dimension.toLowerCase(),
+            dimension,
             builder.build()
         );
       }
@@ -685,7 +685,7 @@ public class IndexIO
         final MetricHolder metricHolder = index.getMetricHolder(metric);
         if (metricHolder.getType() == MetricHolder.MetricType.FLOAT) {
           columns.put(
-              metric.toLowerCase(),
+              metric,
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
                   .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType, BYTE_ORDER))
@@ -693,7 +693,7 @@ public class IndexIO
           );
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {
           columns.put(
-              metric.toLowerCase(),
+              metric,
               new ColumnBuilder()
                   .setType(ValueType.COMPLEX)
                   .setComplexColumn(
@@ -708,10 +708,10 @@ public class IndexIO
 
       Set<String> colSet = Sets.newTreeSet();
       for (String dimension : index.getAvailableDimensions()) {
-        colSet.add(dimension.toLowerCase());
+        colSet.add(dimension);
       }
       for (String metric : index.getAvailableMetrics()) {
-        colSet.add(metric.toLowerCase());
+        colSet.add(metric);
       }
 
       String[] cols = colSet.toArray(new String[colSet.size()]);

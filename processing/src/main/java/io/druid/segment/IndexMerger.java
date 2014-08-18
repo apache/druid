@@ -29,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
@@ -50,8 +49,6 @@ import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -202,78 +199,43 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-    final AggregatorFactory[] lowerCaseMetricAggs = new AggregatorFactory[metricAggs.length];
-    for (int i = 0; i < metricAggs.length; i++) {
-      lowerCaseMetricAggs[i] = new ToLowerCaseAggregatorFactory(metricAggs[i]);
-    }
-
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(
             indexes,
             new Function<IndexableAdapter, Iterable<String>>()
             {
               @Override
-              public Iterable<String> apply(@Nullable IndexableAdapter input)
+              public Iterable<String> apply(IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getAvailableDimensions(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input.toLowerCase();
-                      }
-                    }
-                );
+                return input.getAvailableDimensions();
               }
             }
         )
     );
-    final List<String> mergedMetrics = Lists.transform(
-        mergeIndexed(
-            Lists.<Iterable<String>>newArrayList(
-                FunctionalIterable
-                    .create(indexes)
-                    .transform(
-                        new Function<IndexableAdapter, Iterable<String>>()
-                        {
-                          @Override
-                          public Iterable<String> apply(@Nullable IndexableAdapter input)
-                          {
-                            return Iterables.transform(
-                                input.getAvailableMetrics(),
-                                new Function<String, String>()
-                                {
-                                  @Override
-                                  public String apply(@Nullable String input)
-                                  {
-                                    return input.toLowerCase();
-                                  }
-                                }
-                            );
-                          }
-                        }
-                    )
-                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(lowerCaseMetricAggs)))
-            )
-        ),
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(@Nullable String input)
-          {
-            return input.toLowerCase();
-          }
-        }
+    final List<String> mergedMetrics = mergeIndexed(
+        Lists.<Iterable<String>>newArrayList(
+            FunctionalIterable
+                .create(indexes)
+                .transform(
+                    new Function<IndexableAdapter, Iterable<String>>()
+                    {
+                      @Override
+                      public Iterable<String> apply(IndexableAdapter input)
+                      {
+                        return input.getAvailableMetrics();
+                      }
+                    }
+                )
+                .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(metricAggs)))
+        )
     );
-    if (mergedMetrics.size() != lowerCaseMetricAggs.length) {
-      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), lowerCaseMetricAggs.length);
+    if (mergedMetrics.size() != metricAggs.length) {
+      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), metricAggs.length);
     }
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (int i = 0; i < lowerCaseMetricAggs.length; i++) {
-      AggregatorFactory metricAgg = lowerCaseMetricAggs[i];
+    for (int i = 0; i < metricAggs.length; i++) {
+      AggregatorFactory metricAgg = metricAggs[i];
       sortedMetricAggs[mergedMetrics.indexOf(metricAgg.getName())] = metricAgg;
     }
 
@@ -282,7 +244,7 @@ public class IndexMerger
         throw new IAE(
             "Metric mismatch, index[%d] [%s] != [%s]",
             i,
-            lowerCaseMetricAggs[i].getName(),
+            metricAggs[i].getName(),
             mergedMetrics.get(i)
         );
       }
@@ -331,19 +293,9 @@ public class IndexMerger
             new Function<IndexableAdapter, Iterable<String>>()
             {
               @Override
-              public Iterable<String> apply(@Nullable IndexableAdapter input)
+              public Iterable<String> apply(IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getAvailableDimensions(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input.toLowerCase();
-                      }
-                    }
-                );
+                return input.getAvailableDimensions();
               }
             }
         )
@@ -354,19 +306,9 @@ public class IndexMerger
             new Function<IndexableAdapter, Iterable<String>>()
             {
               @Override
-              public Iterable<String> apply(@Nullable IndexableAdapter input)
+              public Iterable<String> apply(IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getAvailableMetrics(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input.toLowerCase();
-                      }
-                    }
-                );
+                return input.getAvailableMetrics();
               }
             }
         )
@@ -543,7 +485,7 @@ public class IndexMerger
       final int[] dimLookup = new int[mergedDimensions.size()];
       int count = 0;
       for (String dim : adapter.getAvailableDimensions()) {
-        dimLookup[count] = mergedDimensions.indexOf(dim.toLowerCase());
+        dimLookup[count] = mergedDimensions.indexOf(dim);
         count++;
       }
 

@@ -104,7 +104,7 @@ public class TiersResource
     if (simple != null) {
       Table<String, Interval, Map<String, Object>> retVal = HashBasedTable.create();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
-        if (druidServer.getTier().equalsIgnoreCase(tierName)) {
+        if (druidServer.getTier().equals(tierName)) {
           for (DataSegment dataSegment : druidServer.getSegments().values()) {
             Map<String, Object> properties = retVal.get(dataSegment.getDataSource(), dataSegment.getInterval());
             if (properties == null) {
@@ -122,7 +122,7 @@ public class TiersResource
 
     Set<String> retVal = Sets.newHashSet();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      if (druidServer.getTier().equalsIgnoreCase(tierName)) {
+      if (druidServer.getTier().equals(tierName)) {
         retVal.addAll(
             Lists.newArrayList(
                 Iterables.transform(

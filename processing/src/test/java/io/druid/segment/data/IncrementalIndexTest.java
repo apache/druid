@@ -43,23 +43,23 @@ import java.util.concurrent.TimeUnit;
 public class IncrementalIndexTest
 {
 
-  public static IncrementalIndex createCaseInsensitiveIndex(long timestamp)
+  public static IncrementalIndex createIndex(long timestamp)
   {
     IncrementalIndex index = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
 
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("Dim1", "DiM2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "DIM1", "3", "dIM2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
         )
     );
 
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("diM1", "dIM2"),
-            ImmutableMap.<String, Object>of("Dim1", "1", "DiM2", "2", "dim1", "3", "dim2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
         )
     );
     return index;
@@ -75,28 +75,6 @@ public class IncrementalIndexTest
       builder.put(dimName, dimName + rowID);
     }
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
-  }
-
-  @Test
-  public void testCaseInsensitivity() throws Exception
-  {
-    final long timestamp = System.currentTimeMillis();
-
-    IncrementalIndex index = createCaseInsensitiveIndex(timestamp);
-
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensions());
-    Assert.assertEquals(2, index.size());
-
-    final Iterator<Row> rows = index.iterator();
-    Row row = rows.next();
-    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
-
-    row = rows.next();
-    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
   }
 
   @Test
