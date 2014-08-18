@@ -88,7 +88,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
                   @Override
                   public boolean apply(@Nullable DataSegment segment)
                   {
-                    return segment == null || !segment.getDataSource().equalsIgnoreCase(dataSource);
+                    return segment == null || !segment.getDataSource().equals(dataSource);
                   }
                 }
             )
@@ -271,7 +271,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     return String.format(
         "%s_%s",
         dataSource,
-        Hashing.sha1().hashString(segmentIDs, Charsets.UTF_8).toString().toLowerCase()
+        Hashing.sha1().hashString(segmentIDs, Charsets.UTF_8).toString()
     );
   }
 

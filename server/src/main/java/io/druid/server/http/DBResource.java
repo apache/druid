@@ -149,7 +149,7 @@ public class DBResource
     }
 
     for (DataSegment segment : dataSource.getSegments()) {
-      if (segment.getIdentifier().equalsIgnoreCase(segmentId)) {
+      if (segment.getIdentifier().equals(segmentId)) {
         return Response.status(Response.Status.OK).entity(segment).build();
       }
     }

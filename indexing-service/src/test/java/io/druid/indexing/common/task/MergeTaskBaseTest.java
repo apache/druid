@@ -78,7 +78,7 @@ public class MergeTaskBaseTest
         + "_2012-01-04T00:00:00.000Z_2012-01-06T00:00:00.000Z_V1_0"
         + "_2012-01-05T00:00:00.000Z_2012-01-07T00:00:00.000Z_V1_0"
         , Charsets.UTF_8
-    ).toString().toLowerCase() + "_";
+    ).toString() + "_";
     Assert.assertEquals(
         desiredPrefix,
         testMergeTaskBase.getId().substring(0, desiredPrefix.length())

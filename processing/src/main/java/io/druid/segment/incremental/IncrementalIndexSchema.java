@@ -118,7 +118,7 @@ public class IncrementalIndexSchema
             @Override
             public String apply(String input)
             {
-              return input.toLowerCase();
+              return input;
             }
           }
           )

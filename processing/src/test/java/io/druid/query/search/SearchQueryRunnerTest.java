@@ -88,7 +88,7 @@ public class SearchQueryRunnerTest
         QueryRunnerTestHelper.qualityDimension,
         Sets.newHashSet("automotive", "mezzanine", "travel", "health", "entertainment")
     );
-    expectedResults.put(QueryRunnerTestHelper.providerDimension.toLowerCase(), Sets.newHashSet("total_market"));
+    expectedResults.put(QueryRunnerTestHelper.providerDimension, Sets.newHashSet("total_market"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("a"));
 
     checkSearchQuery(searchQuery, expectedResults);

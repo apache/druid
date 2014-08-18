@@ -468,7 +468,7 @@ public class InfoResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -523,7 +523,7 @@ public class InfoResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -556,13 +556,13 @@ public class InfoResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
     for (DataSegment segment : dataSource.getSegments()) {
-      if (segment.getIdentifier().equalsIgnoreCase(segmentId)) {
+      if (segment.getIdentifier().equals(segmentId)) {
         return Response.status(Response.Status.OK).entity(segment).build();
       }
     }
@@ -770,7 +770,7 @@ public class InfoResource
     }
 
     for (DataSegment segment : dataSource.getSegments()) {
-      if (segment.getIdentifier().equalsIgnoreCase(segmentId)) {
+      if (segment.getIdentifier().equals(segmentId)) {
         return Response.status(Response.Status.OK).entity(segment).build();
       }
     }
