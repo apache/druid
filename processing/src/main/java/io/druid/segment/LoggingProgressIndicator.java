@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class LoggingProgressIndicator extends AbstractProgressIndicator
+public class LoggingProgressIndicator extends BaseProgressIndicator
 {
   private static Logger log = new Logger(LoggingProgressIndicator.class);
 

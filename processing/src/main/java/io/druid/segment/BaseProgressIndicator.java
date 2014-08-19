@@ -21,7 +21,7 @@ package io.druid.segment;
 
 /**
  */
-public abstract class AbstractProgressIndicator implements ProgressIndicator
+public class BaseProgressIndicator implements ProgressIndicator
 {
   @Override
   public void progress()
