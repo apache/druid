@@ -579,9 +579,8 @@ public class IndexMaker
                   );
                 }
               }
-          )
-          ,
-          Ordering.<String>natural().nullsFirst()
+          ),
+          Ordering.<String>natural()
       );
 
       int cardinality = 0;
@@ -1010,7 +1009,7 @@ public class IndexMaker
       if (nullSet != null) {
         log.info("Dimension[%s] has null rows.", dimension);
 
-        if (Iterables.getFirst(dimensionValues, null) != null) {
+        if (Iterables.getFirst(dimensionValues, "") != null) {
           bumpDictionary = true;
           log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
 
