@@ -956,7 +956,6 @@ public class IndexMaker
                         public VSizeIndexedInts apply(List<Integer> input)
                         {
                           if (input == null) {
-                            //return null;
                             return VSizeIndexedInts.fromList(
                                 new AbstractList<Integer>()
                                 {
