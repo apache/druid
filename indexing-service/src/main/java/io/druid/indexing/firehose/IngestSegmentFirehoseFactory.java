@@ -55,6 +55,7 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -250,7 +251,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                     @Override
                     public Sequence<InputRow> apply(@Nullable final Cursor cursor)
                     {
-                      final LongColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
+                      final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
                       final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                       for (String dim : dims) {

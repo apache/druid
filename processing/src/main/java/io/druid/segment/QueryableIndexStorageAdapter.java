@@ -106,7 +106,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     GenericColumn column = null;
     try {
-      column = index.getTimeColumn().getGenericColumn();
+      column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
       return new DateTime(column.getLongSingleValueRow(0));
     }
     finally {
@@ -119,7 +119,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     GenericColumn column = null;
     try {
-      column = index.getTimeColumn().getGenericColumn();
+      column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
       return new DateTime(column.getLongSingleValueRow(column.length() - 1));
     }
     finally {
@@ -192,7 +192,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
       final Map<String, Object> objectColumnCache = Maps.newHashMap();
 
-      final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
+      final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
 
       return Sequences.withBaggage(
           Sequences.map(
@@ -253,19 +253,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void reset()
                     {
                       cursorOffset = initOffset.clone();
-                    }
-
-                    @Override
-                    public LongColumnSelector makeTimestampColumnSelector()
-                    {
-                      return new LongColumnSelector()
-                      {
-                        @Override
-                        public long get()
-                        {
-                          return timestamps.getLongSingleValueRow(cursorOffset.getOffset());
-                        }
-                      };
                     }
 
                     @Override
@@ -690,7 +677,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
       final Map<String, Object> objectColumnCache = Maps.newHashMap();
 
-      final GenericColumn timestamps = index.getTimeColumn().getGenericColumn();
+      final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
 
       return Sequences.withBaggage(
           Sequences.map(
@@ -744,19 +731,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void reset()
                     {
                       currRow = initRow;
-                    }
-
-                    @Override
-                    public LongColumnSelector makeTimestampColumnSelector()
-                    {
-                      return new LongColumnSelector()
-                      {
-                        @Override
-                        public long get()
-                        {
-                          return timestamps.getLongSingleValueRow(currRow);
-                        }
-                      };
                     }
 
                     @Override

@@ -171,7 +171,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       {
         return new Iterator<Rowboat>()
         {
-          final GenericColumn timestamps = input.getTimeColumn().getGenericColumn();
+          final GenericColumn timestamps = input.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
           final Object[] metrics;
 
           final Map<String, DictionaryEncodedColumn> dimensions;
