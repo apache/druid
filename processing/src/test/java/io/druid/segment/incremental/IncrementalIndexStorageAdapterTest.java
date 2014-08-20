@@ -53,6 +53,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  */
@@ -62,7 +63,7 @@ public class IncrementalIndexStorageAdapterTest
   public void testSanity() throws Exception
   {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt", null)},
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
         TestQueryRunners.pool
     );
 
@@ -109,7 +110,7 @@ public class IncrementalIndexStorageAdapterTest
                     .setInterval(new Interval(0, new DateTime().getMillis()))
                     .addDimension("billy")
                     .addDimension("sally")
-                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt", null))
+                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                     .build(),
         new IncrementalIndexStorageAdapter(index)
     );
@@ -128,7 +129,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testResetSanity() {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt", null)},
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
         TestQueryRunners.pool
     );
 
@@ -181,7 +182,7 @@ public class IncrementalIndexStorageAdapterTest
   public void testSingleValueTopN()
   {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt", null)},
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
         TestQueryRunners.pool
     );
 
@@ -219,8 +220,7 @@ public class IncrementalIndexStorageAdapterTest
                                       Lists.<AggregatorFactory>newArrayList(
                                           new LongSumAggregatorFactory(
                                               "cnt",
-                                              "cnt",
-                                              null
+                                              "cnt"
                                           )
                                       )
                                   )
@@ -238,7 +238,7 @@ public class IncrementalIndexStorageAdapterTest
   public void testFilterByNull() throws Exception
   {
     IncrementalIndex index = new IncrementalIndex(
-         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt", null)},
+         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
          TestQueryRunners.pool
      );
 
@@ -285,7 +285,7 @@ public class IncrementalIndexStorageAdapterTest
                      .setInterval(new Interval(0, new DateTime().getMillis()))
                      .addDimension("billy")
                      .addDimension("sally")
-                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt", null))
+                     .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                      .build(),
          new IncrementalIndexStorageAdapter(index)

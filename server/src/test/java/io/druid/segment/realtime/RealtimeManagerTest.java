@@ -73,7 +73,7 @@ public class RealtimeManagerTest
     schema = new DataSchema(
         "test",
         null,
-        new AggregatorFactory[]{new CountAggregatorFactory("rows", null)},
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(

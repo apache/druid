@@ -90,8 +90,8 @@ public class QueryRunnerTestHelper
   public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
   public static String dependentPostAggMetric = "dependentPostAgg";
-  public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows", null);
-  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index", null);
+  public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
+  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
   public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
       "nindex",

@@ -24,10 +24,12 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import org.junit.Assert;
@@ -51,7 +53,7 @@ public class GroupByQueryTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index", null)
+                new LongSumAggregatorFactory("idx", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)

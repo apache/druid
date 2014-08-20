@@ -73,7 +73,7 @@ public class DataSourceTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
-                new LongSumAggregatorFactory("idx", "index", null)
+                new LongSumAggregatorFactory("idx", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)

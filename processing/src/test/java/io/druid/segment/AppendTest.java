@@ -69,12 +69,12 @@ public class AppendTest
 {
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory("index", "index"),
-      new CountAggregatorFactory("count", null),
+      new CountAggregatorFactory("count"),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final AggregatorFactory[] METRIC_AGGS_NO_UNIQ = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory("index", "index"),
-      new CountAggregatorFactory("count", null)
+      new CountAggregatorFactory("count")
   };
 
   final String dataSource = "testing";
@@ -86,7 +86,7 @@ public class AppendTest
   final String placementDimension = "placement";
   final String placementishDimension = "placementish";
   final String indexMetric = "index";
-  final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows", null);
+  final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
   final HyperUniquesAggregatorFactory uniques = new HyperUniquesAggregatorFactory("uniques", "quality_uniques");
   final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);

@@ -109,7 +109,7 @@ public class TimeseriesQueryRunnerBonusTest
                                   .intervals(ImmutableList.of(new Interval("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(
-                                          new CountAggregatorFactory("rows", null)
+                                          new CountAggregatorFactory("rows")
                                       )
                                   )
                                   .build();

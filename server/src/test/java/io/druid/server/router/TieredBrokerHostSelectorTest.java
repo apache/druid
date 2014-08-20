@@ -113,7 +113,7 @@ public class TieredBrokerHostSelectorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .granularity("all")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
               .intervals(Arrays.<Interval>asList(new Interval("2011-08-31/2011-09-01")))
               .build()
     ).lhs;
@@ -129,7 +129,7 @@ public class TieredBrokerHostSelectorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .granularity("all")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
               .intervals(Arrays.<Interval>asList(new Interval("2013-08-31/2013-09-01")))
               .build()
     ).lhs;
@@ -144,7 +144,7 @@ public class TieredBrokerHostSelectorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .granularity("all")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
               .intervals(Arrays.<Interval>asList(new Interval("2010-08-31/2010-09-01")))
               .build()
     ).lhs;
@@ -158,7 +158,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
@@ -179,7 +179,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
@@ -200,7 +200,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
@@ -223,7 +223,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count", null)))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(

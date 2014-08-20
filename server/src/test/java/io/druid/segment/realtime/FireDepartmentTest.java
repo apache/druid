@@ -66,7 +66,7 @@ public class FireDepartmentTest
                 null, null, null, null
             ),
             new AggregatorFactory[]{
-                new CountAggregatorFactory("count", null)
+                new CountAggregatorFactory("count")
             },
             new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null, Granularity.HOUR)
         ),

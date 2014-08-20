@@ -36,8 +36,7 @@ public class RetryQueryRunnerTest
                                         QueryRunnerTestHelper.rowsCount,
                                         new LongSumAggregatorFactory(
                                             "idx",
-                                            "index",
-                                            null
+                                            "index"
                                         ),
                                         QueryRunnerTestHelper.qualityUniques
                                     )

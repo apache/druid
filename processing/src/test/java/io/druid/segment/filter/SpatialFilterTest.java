@@ -51,6 +51,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.DateTime;
@@ -74,8 +75,8 @@ public class SpatialFilterTest
 {
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
-      new CountAggregatorFactory("rows", null),
-      new LongSumAggregatorFactory("val", "val", null)
+      new CountAggregatorFactory("rows"),
+      new LongSumAggregatorFactory("val", "val")
   };
   private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long");
   private final Segment segment;
@@ -472,8 +473,8 @@ public class SpatialFilterTest
                                   )
                                   .aggregators(
                                       Arrays.asList(
-                                          new CountAggregatorFactory("rows", null),
-                                          new LongSumAggregatorFactory("val", "val", null)
+                                          new CountAggregatorFactory("rows"),
+                                          new LongSumAggregatorFactory("val", "val")
                                       )
                                   )
                                   .build();
@@ -523,8 +524,8 @@ public class SpatialFilterTest
                                   )
                                   .aggregators(
                                       Arrays.asList(
-                                          new CountAggregatorFactory("rows", null),
-                                          new LongSumAggregatorFactory("val", "val", null)
+                                          new CountAggregatorFactory("rows"),
+                                          new LongSumAggregatorFactory("val", "val")
                                       )
                                   )
                                   .build();

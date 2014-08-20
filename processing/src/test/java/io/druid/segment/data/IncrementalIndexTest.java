@@ -109,7 +109,7 @@ public class IncrementalIndexTest
     final IncrementalIndex index = new IncrementalIndex(
         0L,
         QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count", null)},
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         TestQueryRunners.pool
     );
     final int threadCount = 10;

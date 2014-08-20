@@ -35,22 +35,16 @@ import java.util.List;
 public class CountAggregatorFactory implements AggregatorFactory
 {
   private static final byte[] CACHE_KEY = new byte[]{0x0};
-  private static final String DEFAULT_VALUE_TYPE = "long";
-  private static final List<String> supportedTypes = Arrays.asList("float", "long");
   private final String name;
-  private final String valueType;
-
 
   @JsonCreator
   public CountAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("valueType") String valueType
+      @JsonProperty("name") String name
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+
     this.name = name;
-    this.valueType = valueType == null ? DEFAULT_VALUE_TYPE : valueType;
-    Preconditions.checkArgument(supportedTypes.contains(this.valueType));
   }
 
   @Override
@@ -80,13 +74,13 @@ public class CountAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name, valueType);
+    return new LongSumAggregatorFactory(name, name);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(name, valueType));
+    return Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(name));
   }
 
   @Override
@@ -123,7 +117,7 @@ public class CountAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "long";
+    return "float";
   }
 
   @Override

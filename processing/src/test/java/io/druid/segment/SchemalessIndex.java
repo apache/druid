@@ -68,12 +68,12 @@ public class SchemalessIndex
   private static final List<String> METRICS = Arrays.asList("index");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory("index", "index"),
-      new CountAggregatorFactory("count", null),
+      new CountAggregatorFactory("count"),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final AggregatorFactory[] METRIC_AGGS_NO_UNIQ = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory("index", "index"),
-      new CountAggregatorFactory("count", null)
+      new CountAggregatorFactory("count")
   };
 
   private static final List<Map<String, Object>> events = Lists.newArrayList();
