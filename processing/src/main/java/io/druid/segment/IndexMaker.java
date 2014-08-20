@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.google.inject.Injector;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -45,9 +46,11 @@ import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidPool;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.guice.GuiceInjectors;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
@@ -81,6 +84,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -105,8 +109,12 @@ public class IndexMaker
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
-  // This should really be provided by DI, should be changed once we switch around to using a DI framework
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper;
+
+  static {
+    final Injector injector = GuiceInjectors.makeStartupInjector();
+    mapper = injector.getInstance(ObjectMapper.class);
+  }
 
 
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
@@ -461,7 +469,6 @@ public class IndexMaker
     );
 
     final Map<String, Integer> dimIndexes = Maps.newHashMap();
-    final Map<String, Integer> dimensionCardinalities = Maps.newHashMap();
     final Map<String, Iterable<String>> dimensionValuesLookup = Maps.newHashMap();
     final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
     final Set<String> skippedDimensions = Sets.newHashSet();
@@ -475,7 +482,6 @@ public class IndexMaker
         dimConversions,
         dimIndexes,
         skippedDimensions,
-        dimensionCardinalities,
         dimensionValuesLookup
     );
 
@@ -503,7 +509,6 @@ public class IndexMaker
         skippedDimensions,
         theRows,
         columnCapabilities,
-        dimensionCardinalities,
         dimensionValuesLookup,
         rowNumConversions
     );
@@ -528,7 +533,6 @@ public class IndexMaker
       final List<Map<String, IntBuffer>> dimConversions,
       final Map<String, Integer> dimIndexes,
       final Set<String> skippedDimensions,
-      final Map<String, Integer> dimensionCardinalities,
       final Map<String, Iterable<String>> dimensionValuesLookup
   )
   {
@@ -594,8 +598,6 @@ public class IndexMaker
 
         ++cardinality;
       }
-
-      dimensionCardinalities.put(dimension, cardinality);
 
       if (cardinality == 0) {
         log.info("Skipping [%s], it is empty!", dimension);
@@ -774,7 +776,6 @@ public class IndexMaker
       final Set<String> skippedDimensions,
       final Iterable<Rowboat> theRows,
       final Map<String, ColumnCapabilitiesImpl> columnCapabilities,
-      final Map<String, Integer> dimensionCardinalities,
       final Map<String, Iterable<String>> dimensionValuesLookup,
       final List<IntBuffer> rowNumConversions
   ) throws IOException
@@ -797,7 +798,6 @@ public class IndexMaker
           dimIndex,
           dimension,
           columnCapabilities,
-          dimensionCardinalities,
           dimensionValuesLookup,
           rowNumConversions
       );
@@ -815,7 +815,6 @@ public class IndexMaker
       final int dimIndex,
       final String dimension,
       final Map<String, ColumnCapabilitiesImpl> columnCapabilities,
-      final Map<String, Integer> dimensionCardinalities,
       final Map<String, Iterable<String>> dimensionValuesLookup,
       final List<IntBuffer> rowNumConversions
   ) throws IOException
@@ -1405,9 +1404,9 @@ public class IndexMaker
     )
     {
       this.dimSet = dimSet;
-      conversionBuf = ByteBuffer.allocateDirect(dimSet.size() * Ints.BYTES).asIntBuffer();
+      this.conversionBuf = ByteBuffer.allocateDirect(dimSet.size() * Ints.BYTES).asIntBuffer();
 
-      currIndex = 0;
+      this.currIndex = 0;
     }
 
     public void convert(String value, int index)
