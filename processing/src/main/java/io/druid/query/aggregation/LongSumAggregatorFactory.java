@@ -139,7 +139,7 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return valueType;
+    return "long";
   }
 
   @Override

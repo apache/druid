@@ -123,7 +123,7 @@ public class CountAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return valueType;
+    return "long";
   }
 
   @Override
