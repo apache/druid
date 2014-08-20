@@ -1404,7 +1404,9 @@ public class IndexMaker
     )
     {
       this.dimSet = dimSet;
-      this.conversionBuf = ByteBuffer.allocateDirect(dimSet.size() * Ints.BYTES).asIntBuffer();
+      final int bufferSize = dimSet.size() * Ints.BYTES;
+      log.info("Allocating new dimension conversion buffer of size[%,d]", bufferSize);
+      this.conversionBuf = ByteBuffer.allocateDirect(bufferSize).asIntBuffer();
 
       this.currIndex = 0;
     }
