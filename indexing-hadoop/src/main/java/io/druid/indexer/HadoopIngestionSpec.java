@@ -159,7 +159,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           version,
           thePartitionSpec,
           shardSpecs,
-          rollupSpec == null ? 50000 : rollupSpec.rowFlushBoundary,
+          null,
           leaveIntermediate,
           cleanupOnFailure,
           overwriteFiles,
