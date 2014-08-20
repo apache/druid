@@ -148,7 +148,7 @@ public class IndexTask extends AbstractFixedIntervalTask
               granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
           ),
           new IndexIOConfig(firehoseFactory),
-          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary, null)
+          new IndexTuningConfig(targetPartitionSize, null, null)
       );
     }
     this.jsonMapper = jsonMapper;
@@ -552,12 +552,12 @@ public class IndexTask extends AbstractFixedIntervalTask
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
-        @JsonProperty("bufferSize") int bufferSize,
+        @JsonProperty("bufferSize") @Nullable Integer bufferSize,
         @JsonProperty("numShards") @Nullable Integer numShards
         )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
-      this.bufferSize = bufferSize == 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
+      this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
       this.numShards = numShards == null ? -1 : numShards;
       Preconditions.checkArgument(
           this.targetPartitionSize == -1 || this.numShards == -1,
