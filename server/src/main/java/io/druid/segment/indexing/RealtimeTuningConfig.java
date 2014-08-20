@@ -36,7 +36,7 @@ import java.io.File;
  */
 public class RealtimeTuningConfig implements TuningConfig
 {
-  private static final int defaultBufferSize = 256 * 1024 * 1024;
+  private static final int defaultBufferSize = 512 * 1024 * 1024;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
   private static final File defaultBasePersistDirectory = Files.createTempDir();

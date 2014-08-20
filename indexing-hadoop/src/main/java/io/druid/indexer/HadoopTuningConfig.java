@@ -38,7 +38,7 @@ public class HadoopTuningConfig implements TuningConfig
 {
   private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
-  private static final int defaultBufferSize = 256 * 1024 * 1024;
+  private static final int defaultBufferSize = 512 * 1024 * 1024;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
