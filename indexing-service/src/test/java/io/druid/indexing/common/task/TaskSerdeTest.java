@@ -369,7 +369,7 @@ public class TaskSerdeTest
             true,
             null,
             false,
-            new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.NONE),
+            null,
             null,
             false,
             ImmutableMap.of("foo", "bar"),
