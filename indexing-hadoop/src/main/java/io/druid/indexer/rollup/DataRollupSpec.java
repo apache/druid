@@ -38,9 +38,6 @@ public class DataRollupSpec
   @JsonProperty
   public QueryGranularity rollupGranularity = QueryGranularity.NONE;
 
-  @JsonProperty
-  public int rowFlushBoundary = 500000;
-
   public DataRollupSpec() {}
 
   public DataRollupSpec(List<AggregatorFactory> aggs, QueryGranularity rollupGranularity)
