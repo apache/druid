@@ -65,7 +65,7 @@ import static java.lang.Thread.sleep;
  * {"type":"doubleSum","name":"outColumn","fieldName":"inColumn"} ],
  * "indexGranularity":"minute",
  * "shardSpec" : { "type": "none" } },
- * "config" : { "maxRowsInMemory" : 50000,
+ * "config" : { "bufferSize" : 50000000,
  * "intermediatePersistPeriod" : "PT2m" },
  *
  * "firehose" : { "type" : "rand",

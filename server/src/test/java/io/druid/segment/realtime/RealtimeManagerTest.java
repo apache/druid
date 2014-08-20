@@ -69,11 +69,11 @@ public class RealtimeManagerTest
     final List<InputRow> rows = Arrays.asList(
         makeRow(new DateTime("9000-01-01").getMillis()), makeRow(new DateTime().getMillis())
     );
-
+    final AggregatorFactory[] aggs = {new CountAggregatorFactory("rows")};
     schema = new DataSchema(
         "test",
         null,
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        aggs,
         new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
@@ -108,8 +108,13 @@ public class RealtimeManagerTest
           }
         }
     );
+    int rowSize = 0;
+    for (AggregatorFactory agg : aggs) {
+      rowSize += agg.getMaxIntermediateSize();
+    }
+
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        1,
+        rowSize,
         new Period("P1Y"),
         null,
         null,
@@ -201,7 +206,6 @@ public class RealtimeManagerTest
     };
   }
 
-
   private static class TestFirehose implements Firehose
   {
     private final Iterator<InputRow> rows;
@@ -238,8 +242,6 @@ public class RealtimeManagerTest
   private static class TestPlumber implements Plumber
   {
     private final Sink sink;
-
-
     private volatile boolean startedJob = false;
     private volatile boolean finishedJob = false;
     private volatile int persistCount = 0;

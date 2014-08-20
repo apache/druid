@@ -471,6 +471,15 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     return numEntries.get() == 0;
   }
 
+  /**
+   *
+   * @return true if the underlying buffer for IncrementalIndex is full and cannot accomodate more rows.
+   */
+  public boolean isFull()
+  {
+    return (numEntries.get() + 1) * totalAggSize > bufferHolder.get().limit();
+  }
+
   public int size()
   {
     return numEntries.get();

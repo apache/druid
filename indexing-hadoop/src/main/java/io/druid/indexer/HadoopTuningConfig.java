@@ -38,7 +38,7 @@ public class HadoopTuningConfig implements TuningConfig
 {
   private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
-  private static final int defaultRowFlushBoundary = 80000;
+  private static final int defaultBufferSize = 256 * 1024 * 1024;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -47,7 +47,7 @@ public class HadoopTuningConfig implements TuningConfig
         new DateTime().toString(),
         defaultPartitionsSpec,
         defaultShardSpecs,
-        defaultRowFlushBoundary,
+        defaultBufferSize,
         false,
         true,
         false,
@@ -61,7 +61,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final String version;
   private final PartitionsSpec partitionsSpec;
   private final Map<DateTime, List<HadoopyShardSpec>> shardSpecs;
-  private final int rowFlushBoundary;
+  private final int bufferSize;
   private final boolean leaveIntermediate;
   private final Boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -75,7 +75,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("version") String version,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
-      final @JsonProperty("rowFlushBoundary") Integer rowFlushBoundary,
+      final @JsonProperty("bufferSize") Integer bufferSize,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -88,7 +88,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? defaultPartitionsSpec : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? defaultShardSpecs : shardSpecs;
-    this.rowFlushBoundary = rowFlushBoundary == null ? defaultRowFlushBoundary : rowFlushBoundary;
+    this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -124,9 +124,9 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public int getRowFlushBoundary()
+  public int getBufferSize()
   {
-    return rowFlushBoundary;
+    return bufferSize;
   }
 
   @JsonProperty
@@ -172,7 +172,7 @@ public class HadoopTuningConfig implements TuningConfig
         version,
         partitionsSpec,
         shardSpecs,
-        rowFlushBoundary,
+        bufferSize,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -189,7 +189,7 @@ public class HadoopTuningConfig implements TuningConfig
         ver,
         partitionsSpec,
         shardSpecs,
-        rowFlushBoundary,
+        bufferSize,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -206,7 +206,7 @@ public class HadoopTuningConfig implements TuningConfig
         version,
         partitionsSpec,
         specs,
-        rowFlushBoundary,
+        bufferSize,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,

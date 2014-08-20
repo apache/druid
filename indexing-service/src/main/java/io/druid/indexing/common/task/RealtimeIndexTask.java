@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,7 +43,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -57,6 +55,7 @@ import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
+import io.druid.segment.realtime.plumber.Sink;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -70,36 +69,10 @@ import java.io.IOException;
 public class RealtimeIndexTask extends AbstractTask
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-
-  private static String makeTaskId(FireDepartment fireDepartment, Schema schema)
-  {
-    // Backwards compatible
-    if (fireDepartment == null) {
-      return String.format(
-          "index_realtime_%s_%d_%s",
-          schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()
-      );
-    } else {
-      return String.format(
-          "index_realtime_%s_%d_%s",
-          fireDepartment.getDataSchema().getDataSource(),
-          fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
-          new DateTime().toString()
-      );
-    }
-  }
-
-  private static String makeDatasource(FireDepartment fireDepartment, Schema schema)
-  {
-    return (fireDepartment != null) ? fireDepartment.getDataSchema().getDataSource() : schema.getDataSource();
-  }
-
   @JsonIgnore
   private final FireDepartment spec;
-
   @JsonIgnore
   private volatile Plumber plumber = null;
-
   @JsonIgnore
   private volatile QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate = null;
 
@@ -150,6 +123,29 @@ public class RealtimeIndexTask extends AbstractTask
           null, null, null, null
       );
     }
+  }
+
+  private static String makeTaskId(FireDepartment fireDepartment, Schema schema)
+  {
+    // Backwards compatible
+    if (fireDepartment == null) {
+      return String.format(
+          "index_realtime_%s_%d_%s",
+          schema.getDataSource(), schema.getShardSpec().getPartitionNum(), new DateTime().toString()
+      );
+    } else {
+      return String.format(
+          "index_realtime_%s_%d_%s",
+          fireDepartment.getDataSchema().getDataSource(),
+          fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
+          new DateTime().toString()
+      );
+    }
+  }
+
+  private static String makeDatasource(FireDepartment fireDepartment, Schema schema)
+  {
+    return (fireDepartment != null) ? fireDepartment.getDataSchema().getDataSource() : schema.getDataSource();
   }
 
   @Override
@@ -263,29 +259,30 @@ public class RealtimeIndexTask extends AbstractTask
     // Shouldn't usually happen, since we don't expect people to submit tasks that intersect with the
     // realtime window, but if they do it can be problematic. If we decide to care, we can use more threads in
     // the plumber such that waiting for the coordinator doesn't block data processing.
-    final VersioningPolicy versioningPolicy = new VersioningPolicy()
-    {
-      @Override
-      public String getVersion(final Interval interval)
-      {
-        try {
-          // Side effect: Calling getVersion causes a lock to be acquired
-          final TaskLock myLock = toolbox.getTaskActionClient()
-                                         .submit(new LockAcquireAction(interval));
+    final VersioningPolicy versioningPolicy = new
+        VersioningPolicy()
+        {
+          @Override
+          public String getVersion(final Interval interval)
+          {
+            try {
+              // Side effect: Calling getVersion causes a lock to be acquired
+              final TaskLock myLock = toolbox.getTaskActionClient()
+                                             .submit(new LockAcquireAction(interval));
 
-          return myLock.getVersion();
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
-      }
-    };
+              return myLock.getVersion();
+            }
+            catch (IOException e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        };
 
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                              .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
-                                              .withVersioningPolicy(versioningPolicy);
+                                            .withBasePersistDirectory(new File(toolbox.getTaskWorkDir(), "persist"))
+                                            .withVersioningPolicy(versioningPolicy);
 
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,
@@ -352,7 +349,8 @@ public class RealtimeIndexTask extends AbstractTask
           }
 
           fireDepartment.getMetrics().incrementProcessed();
-          if (currCount >= tuningConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+          if ((sink != null && sink.isFull()) || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }

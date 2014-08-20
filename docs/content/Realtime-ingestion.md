@@ -41,7 +41,7 @@ The property `druid.realtime.specFile` has the path of a file (absolute or relat
       }
     },
     "config": {
-      "maxRowsInMemory": 500000,
+      "bufferSize": 500000000,
       "intermediatePersistPeriod": "PT10m"
     },
     "firehose": {
@@ -104,7 +104,7 @@ This provides configuration for the data processing portion of the realtime stre
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |intermediatePersistPeriod|ISO8601 Period String|The period that determines the rate at which intermediate persists occur. These persists determine how often commits happen against the incoming realtime stream. If the realtime data loading process is interrupted at time T, it should be restarted to re-read data that arrived at T minus this period.|yes|
-|maxRowsInMemory|Number|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size.|yes|
+|bufferSize|Number|The size in bytes of buffer to be used for ingestion. When the buffer is full intermediate rows will be persisted to disk.|yes|
 
 
 ### Firehose
@@ -132,8 +132,8 @@ The following table summarizes constraints between settings in the spec file for
 | windowPeriod| when reading an InputRow, events with timestamp older than now minus this window are discarded | time jitter tolerance | use this to reject outliers |
 | segmentGranularity| time granularity (minute, hour, day, week, month) for loading data at query time | equal to indexGranularity| more than indexGranularity|
 | indexGranularity| time granularity (minute, hour, day, week, month) of indexes | less than segmentGranularity| minute, hour, day, week, month |
-| intermediatePersistPeriod| the max real time (ISO8601 Period) between flushes of InputRows from memory to disk | avoid excessive flushing | number of un-persisted rows in memory also constrained by maxRowsInMemory |
-| maxRowsInMemory| the max number of InputRows to hold in memory before a flush to disk | number of un-persisted post-aggregation rows in memory is also constrained by intermediatePersistPeriod | use this to avoid running out of heap if too many rows in an intermediatePersistPeriod |
+| intermediatePersistPeriod| the max real time (ISO8601 Period) between flushes of InputRows from memory to disk | avoid excessive flushing | size of un-persisted rows in memory also constrained by bufferSize |
+| bufferSize| size of offheap buffer to be used to hold Input Rows before a flush to disk |
 
 The normal, expected use cases have the following overall constraints: `indexGranularity < intermediatePersistPeriod =< windowPeriod  < segmentGranularity`
 
