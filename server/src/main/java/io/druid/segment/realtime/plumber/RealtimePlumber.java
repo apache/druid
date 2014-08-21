@@ -613,7 +613,7 @@ public class RealtimePlumber implements Plumber
       minTimestampAsDate = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime().minus(windowMillis));
     }
     catch (ArithmeticException e) {
-      //caused when rejectionPolicy.currMaxTime minus windowMillis exceeds the capacity of long
+      //thrown when rejectionPolicy.currMaxTime minus windowMillis exceeds the capacity of long
       minTimestampAsDate = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime());
     }
     long minTimestamp = minTimestampAsDate.getMillis();
