@@ -19,14 +19,12 @@
 
 package io.druid.query.aggregation.post;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.query.aggregation.CountAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.concurrent.Immutable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -101,93 +99,5 @@ public class ArithmeticPostAggregatorTest
     Assert.assertEquals(0, comp.compare(before, before));
     Assert.assertEquals(0, comp.compare(after, after));
     Assert.assertEquals(1, comp.compare(after, before));
-  }
-
-  @Test
-  public void testOrdering() throws Exception
-  {
-    List<PostAggregator> postAggregatorList =
-        Lists.newArrayList(
-            (PostAggregator)
-                new ConstantPostAggregator(
-                    "size", 6, null
-                ),
-            new ConstantPostAggregator(
-                "zero", 0, null
-            )
-        );
-
-    ArithmeticPostAggregator divideNumericFirst = new ArithmeticPostAggregator(
-        "divide",
-        "/",
-        postAggregatorList,
-        ArithmeticPostAggregator.Ordering.numericFirst.name(),
-        null
-    );
-
-    Assert.assertTrue(
-        divideNumericFirst.getComparator().compare(Double.POSITIVE_INFINITY, 0.0) < 0
-    );
-    Assert.assertTrue(
-        divideNumericFirst.getComparator().compare(Double.NEGATIVE_INFINITY, 0.0) < 0
-    );
-    Assert.assertTrue(
-        divideNumericFirst.getComparator().compare(Double.NaN, 0.0) < 0
-    );
-  }
-
-  @Test
-  public void testOpStrategy() throws Exception
-  {
-    List<PostAggregator> postAggregatorList =
-        Lists.newArrayList(
-            (PostAggregator)
-                new ConstantPostAggregator(
-                    "size", 6, null
-                ),
-            new ConstantPostAggregator(
-                "zero", 0, null
-            )
-        );
-
-    ArithmeticPostAggregator divByZeroNaN = new ArithmeticPostAggregator(
-        "divide",
-        "/",
-        postAggregatorList,
-        null,
-        ArithmeticPostAggregator.OpStrategy.nanDivisionByZero.name()
-    );
-
-    Assert.assertEquals(
-        divByZeroNaN.compute(ImmutableMap.of("dummy", (Object) 0.0)),
-        Double.NaN
-    );
-
-    ArithmeticPostAggregator divByZeroZero = new ArithmeticPostAggregator(
-        "divide",
-        "/",
-        postAggregatorList,
-        null,
-        ArithmeticPostAggregator.OpStrategy.zeroDivisionByZero.name()
-    );
-
-    Assert.assertEquals(
-        divByZeroZero.compute(ImmutableMap.of("dummy", (Object) 0.0)),
-        0.0
-    );
-
-    // default behavior is zeroDivByZero
-    ArithmeticPostAggregator _default = new ArithmeticPostAggregator(
-        "divide",
-        "/",
-        postAggregatorList,
-        null,
-        null
-    );
-
-    Assert.assertEquals(
-        _default.compute(ImmutableMap.of("dummy", (Object) 0.0)),
-        0.0
-    );
   }
 }

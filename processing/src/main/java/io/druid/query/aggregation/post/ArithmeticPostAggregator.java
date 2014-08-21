@@ -36,7 +36,7 @@ import java.util.Set;
  */
 public class ArithmeticPostAggregator implements PostAggregator
 {
-  private static final Comparator DEFAULT_COMPARATOR = new Comparator()
+  private static final Comparator COMPARATOR = new Comparator()
   {
     @Override
     public int compare(Object o, Object o1)
@@ -48,27 +48,13 @@ public class ArithmeticPostAggregator implements PostAggregator
   private final String name;
   private final String fnName;
   private final List<PostAggregator> fields;
-  private final Op op;
-  private final Comparator comparator;
-  private final String ordering;
-  private final String opStrategy;
-
-  public ArithmeticPostAggregator(
-      String name,
-      String fnName,
-      List<PostAggregator> fields
-  )
-  {
-    this(name, fnName, fields, null, null);
-  }
+  private final Ops op;
 
   @JsonCreator
   public ArithmeticPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("fn") String fnName,
-      @JsonProperty("fields") List<PostAggregator> fields,
-      @JsonProperty("ordering") String ordering,
-      @JsonProperty("opStrategy") String opStrategy
+      @JsonProperty("fields") List<PostAggregator> fields
   )
   {
     this.name = name;
@@ -78,20 +64,9 @@ public class ArithmeticPostAggregator implements PostAggregator
       throw new IAE("Illegal number of fields[%s], must be > 1", fields.size());
     }
 
-    Ops baseOp = Ops.lookup(fnName);
-    if (baseOp == null) {
+    this.op = Ops.lookup(fnName);
+    if (op == null) {
       throw new IAE("Unknown operation[%s], known operations[%s]", fnName, Ops.getFns());
-    }
-
-    this.ordering = ordering;
-    this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
-
-    this.opStrategy = opStrategy == null && baseOp.equals(Ops.DIV) ? OpStrategy.zeroDivisionByZero.name() : opStrategy;
-
-    if(this.opStrategy != null) {
-      this.op = Ops.withStrategy(baseOp, OpStrategy.valueOf(this.opStrategy));
-    } else {
-      this.op = baseOp;
     }
   }
 
@@ -108,7 +83,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   @Override
   public Comparator getComparator()
   {
-    return comparator;
+    return COMPARATOR;
   }
 
   @Override
@@ -138,18 +113,6 @@ public class ArithmeticPostAggregator implements PostAggregator
     return fnName;
   }
 
-  @JsonProperty("ordering")
-  public String getOrdering()
-  {
-    return ordering;
-  }
-
-  @JsonProperty("opStrategy")
-  public String getOpStrategy()
-  {
-    return opStrategy;
-  }
-
   @JsonProperty
   public List<PostAggregator> getFields()
   {
@@ -167,38 +130,34 @@ public class ArithmeticPostAggregator implements PostAggregator
            '}';
   }
 
-  static interface Op {
-    double compute(double lhs, double rhs);
-  }
-
-  private static enum Ops implements Op
+  private static enum Ops
   {
     PLUS("+")
         {
-          public double compute(double lhs, double rhs)
+          double compute(double lhs, double rhs)
           {
             return lhs + rhs;
           }
         },
     MINUS("-")
         {
-          public double compute(double lhs, double rhs)
+          double compute(double lhs, double rhs)
           {
             return lhs - rhs;
           }
         },
     MULT("*")
         {
-          public double compute(double lhs, double rhs)
+          double compute(double lhs, double rhs)
           {
             return lhs * rhs;
           }
         },
     DIV("/")
         {
-          public double compute(double lhs, double rhs)
+          double compute(double lhs, double rhs)
           {
-            return lhs / rhs;
+            return (rhs == 0.0) ? 0 : (lhs / rhs);
           }
         };
 
@@ -222,6 +181,8 @@ public class ArithmeticPostAggregator implements PostAggregator
       return fn;
     }
 
+    abstract double compute(double lhs, double rhs);
+
     static Ops lookup(String fn)
     {
       return lookupMap.get(fn);
@@ -231,60 +192,6 @@ public class ArithmeticPostAggregator implements PostAggregator
     {
       return lookupMap.keySet();
     }
-
-    public static Op withStrategy(final Op baseOp, final OpStrategy strategy) {
-      if(strategy.equals(OpStrategy.none)) {
-        return baseOp;
-      }
-      return new Op()
-      {
-        @Override
-        public double compute(double lhs, double rhs)
-        {
-          return strategy.compute(baseOp, lhs, rhs);
-        }
-      };
-    }
-  }
-
-  public static enum Ordering implements Comparator<Double> {
-    numericFirst {
-      public int compare(Double lhs, Double rhs) {
-        if(Double.isInfinite(lhs) || Double.isNaN(lhs)) {
-          return -1;
-        }
-        if(Double.isInfinite(rhs) || Double.isNaN(rhs)) {
-          return 1;
-        }
-        return Double.compare(lhs, rhs);
-      }
-    }
-  }
-
-  public static enum OpStrategy
-  {
-    none {
-      public double compute(Op op, double lhs, double rhs) {
-        return op.compute(lhs, rhs);
-      }
-    },
-
-    zeroDivisionByZero {
-      public double compute(Op op, double lhs, double rhs) {
-        if(rhs == 0) { return 0; }
-        else return op.compute(lhs, rhs);
-      }
-    },
-
-    nanDivisionByZero {
-      public double compute(Op op, double lhs, double rhs)
-      {
-        if(rhs == 0) { return Double.NaN; }
-        else return op.compute(lhs, rhs);
-      }
-    };
-
-    public abstract double compute(Op op, double lhs, double rhs);
   }
 
   @Override
