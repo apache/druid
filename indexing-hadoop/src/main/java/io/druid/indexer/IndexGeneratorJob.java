@@ -40,6 +40,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
+import io.druid.segment.LoggingProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
@@ -296,7 +297,7 @@ public class IndexGeneratorJob implements Jobby
         long startTime = System.currentTimeMillis();
 
         Set<String> allDimensionNames = Sets.newHashSet();
-        final ProgressIndicator progressIndicator = new BaseProgressIndicator()
+        final ProgressIndicator progressIndicator = new LoggingProgressIndicator("IndexGeneratorJob")
         {
           @Override
           public void progress()
