@@ -17,12 +17,16 @@
 
 package io.druid.query.aggregation.post;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.query.aggregation.CountAggregator;
+import io.druid.query.aggregation.DoubleSumAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -97,5 +101,71 @@ public class ArithmeticPostAggregatorTest
     Assert.assertEquals(0, comp.compare(before, before));
     Assert.assertEquals(0, comp.compare(after, after));
     Assert.assertEquals(1, comp.compare(after, before));
+  }
+
+  @Test
+  public void testQuotient() throws Exception
+  {
+    ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
+        null,
+        "quotient",
+        ImmutableList.<PostAggregator>of(
+            new FieldAccessPostAggregator("numerator", "value"),
+            new ConstantPostAggregator("zero", 0)
+        ),
+        "numericFirst"
+    );
+
+
+    Assert.assertEquals(Double.NaN, agg.compute(ImmutableMap.<String, Object>of("value", 0)));
+    Assert.assertEquals(Double.NaN, agg.compute(ImmutableMap.<String, Object>of("value", Double.NaN)));
+    Assert.assertEquals(Double.POSITIVE_INFINITY, agg.compute(ImmutableMap.<String, Object>of("value", 1)));
+    Assert.assertEquals(Double.NEGATIVE_INFINITY, agg.compute(ImmutableMap.<String, Object>of("value", -1)));
+  }
+
+  @Test
+  public void testDiv() throws Exception
+  {
+    ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
+        null,
+        "/",
+        ImmutableList.of(
+            new FieldAccessPostAggregator("numerator", "value"),
+            new ConstantPostAggregator("denomiator", 0)
+        )
+    );
+
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", 0)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", Double.NaN)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", 1)));
+    Assert.assertEquals(0.0, agg.compute(ImmutableMap.<String, Object>of("value", -1)));
+  }
+
+  @Test
+  public void testNumericFirstOrdering() throws Exception
+  {
+    ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
+        null,
+        "quotient",
+        ImmutableList.<PostAggregator>of(
+            new ConstantPostAggregator("zero", 0),
+            new ConstantPostAggregator("zero", 0)
+        ),
+        "numericFirst"
+    );
+    final Comparator numericFirst = agg.getComparator();
+    Assert.assertTrue(numericFirst.compare(Double.NaN, 0.0) < 0);
+    Assert.assertTrue(numericFirst.compare(Double.POSITIVE_INFINITY, 0.0) < 0);
+    Assert.assertTrue(numericFirst.compare(Double.NEGATIVE_INFINITY, 0.0) < 0);
+    Assert.assertTrue(numericFirst.compare(0.0, Double.NaN) > 0);
+    Assert.assertTrue(numericFirst.compare(0.0, Double.POSITIVE_INFINITY) > 0);
+    Assert.assertTrue(numericFirst.compare(0.0, Double.NEGATIVE_INFINITY) > 0);
+
+    Assert.assertTrue(numericFirst.compare(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY) < 0);
+    Assert.assertTrue(numericFirst.compare(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY) > 0);
+    Assert.assertTrue(numericFirst.compare(Double.NaN, Double.POSITIVE_INFINITY) > 0);
+    Assert.assertTrue(numericFirst.compare(Double.NaN, Double.NEGATIVE_INFINITY) > 0);
+    Assert.assertTrue(numericFirst.compare(Double.POSITIVE_INFINITY, Double.NaN) < 0);
+    Assert.assertTrue(numericFirst.compare(Double.NEGATIVE_INFINITY, Double.NaN) < 0);
   }
 }
