@@ -608,14 +608,7 @@ public class RealtimePlumber implements Plumber
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
-    DateTime minTimestampAsDate;
-    try {
-      minTimestampAsDate = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime().minus(windowMillis));
-    }
-    catch (ArithmeticException e) {
-      //thrown when rejectionPolicy.currMaxTime minus windowMillis exceeds the capacity of long
-      minTimestampAsDate = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime());
-    }
+    DateTime minTimestampAsDate = new DateTime(Math.max(windowMillis, rejectionPolicy.getCurrMaxTime().getMillis()) - windowMillis);
     long minTimestamp = minTimestampAsDate.getMillis();
 
     log.info("Found [%,d] sinks. minTimestamp [%s]", sinks.size(), minTimestampAsDate);
