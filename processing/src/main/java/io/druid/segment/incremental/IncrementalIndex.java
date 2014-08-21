@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -454,7 +453,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     in.set(row);
     int rowOffset = facts.get(key);
     for (int i = 0; i < aggs.length; i++) {
+      synchronized (aggs[i]) {
         aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
+      }
     }
     in.set(null);
     return numEntries.get();
@@ -466,7 +467,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   }
 
   /**
-   *
    * @return true if the underlying buffer for IncrementalIndex is full and cannot accommodate more rows.
    */
   public boolean isFull()
