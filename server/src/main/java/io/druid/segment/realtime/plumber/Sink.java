@@ -136,7 +136,7 @@ public class Sink implements Iterable<FireHydrant>
   public boolean isFull()
   {
     synchronized (currHydrant){
-      return currHydrant.getIndex().isFull();
+      return currHydrant != null && currHydrant.getIndex().isFull();
     }
   }
 
