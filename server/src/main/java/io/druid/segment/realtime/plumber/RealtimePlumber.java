@@ -72,10 +72,8 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
-
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
-
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
@@ -610,10 +608,14 @@ public class RealtimePlumber implements Plumber
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
-
-    DateTime minTimestampAsDate = segmentGranularity.truncate(
-        rejectionPolicy.getCurrMaxTime().minus(windowMillis)
-    );
+    DateTime minTimestampAsDate;
+    try {
+      minTimestampAsDate = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime().minus(windowMillis));
+    }
+    catch (ArithmeticException e) {
+      //caused when rejectionPolicy.currMaxTime minus windowMillis exceeds the capacity of long
+      minTimestampAsDate = segmentGranularity.truncate(rejectionPolicy.getCurrMaxTime());
+    }
     long minTimestamp = minTimestampAsDate.getMillis();
 
     log.info("Found [%,d] sinks. minTimestamp [%s]", sinks.size(), minTimestampAsDate);
@@ -785,13 +787,13 @@ public class RealtimePlumber implements Plumber
                 && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 && Iterables.any(
                     sinks.keySet(), new Predicate<Long>()
-                    {
-                      @Override
-                      public boolean apply(Long sinkKey)
-                      {
-                        return segment.getInterval().contains(sinkKey);
-                      }
-                    }
+                {
+                  @Override
+                  public boolean apply(Long sinkKey)
+                  {
+                    return segment.getInterval().contains(sinkKey);
+                  }
+                }
                 );
           }
         }
