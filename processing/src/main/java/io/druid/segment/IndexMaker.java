@@ -819,7 +819,6 @@ public class IndexMaker
       final List<IntBuffer> rowNumConversions
   ) throws IOException
   {
-
     final String section = String.format("make %s", dimension);
     progress.startSection(section);
 
@@ -1180,6 +1179,8 @@ public class IndexMaker
     if (hasSpatialIndexes) {
       spatialIndex = ImmutableRTree.newImmutableFromMutable(tree);
     }
+
+    log.info("Completed dimension[%s] with cardinality[%,d]. Starting write.", dimension, dictionary.size());
 
     writeColumn(
         v9Smoosher,
