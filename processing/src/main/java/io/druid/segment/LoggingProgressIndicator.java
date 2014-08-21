@@ -76,7 +76,7 @@ public class LoggingProgressIndicator extends BaseProgressIndicator
   @Override
   public void progressSection(String section, String message)
   {
-    Stopwatch sectionWatch = sections.remove(section);
+    Stopwatch sectionWatch = sections.get(section);
     if (sectionWatch == null) {
       throw new ISE("[%s]: Cannot progress tracker for [%s]. Nothing started.", progressName, section);
     }
