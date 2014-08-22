@@ -355,7 +355,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
             while (aggsIter.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
-              Object agg = event.remove(factory.getName());
+              Object agg = event.get(factory.getName());
               if (agg != null) {
                 event.put(factory.getName(), factory.deserialize(agg));
               }
