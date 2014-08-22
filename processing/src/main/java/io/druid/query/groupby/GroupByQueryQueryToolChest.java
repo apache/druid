@@ -257,6 +257,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
     return new CacheStrategy<Row, Object, GroupByQuery>()
     {
+      private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
@@ -342,14 +344,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
             DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
 
+            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
+
+            Map<String, Object> event = jsonMapper.convertValue(
+                results.next(),
+                new TypeReference<Map<String, Object>>()
+                {
+                }
+            );
+
+            while (aggsIter.hasNext()) {
+              final AggregatorFactory factory = aggsIter.next();
+              Object agg = event.remove(factory.getName());
+              if (agg != null) {
+                event.put(factory.getName(), factory.deserialize(agg));
+              }
+            }
+
             return new MapBasedRow(
                 timestamp,
-                (Map<String, Object>) jsonMapper.convertValue(
-                    results.next(),
-                    new TypeReference<Map<String, Object>>()
-                    {
-                    }
-                )
+                event
             );
           }
         };
