@@ -39,7 +39,7 @@ import java.util.List;
 )
 public class PullDependencies implements Runnable
 {
-  @Option(name = "-c",
+  @Option(name = {"-c", "--coordinate"},
           title = "coordinate",
           description = "extra dependencies to pull down (e.g. hadoop coordinates)",
           required = false)
