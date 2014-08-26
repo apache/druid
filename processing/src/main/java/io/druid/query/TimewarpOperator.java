@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
@@ -105,7 +104,9 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                   MapBasedRow row = (MapBasedRow) input;
                   return (T) new MapBasedRow(row.getTimestamp().minus(offset), row.getEvent());
                 }
-                throw new ISE("Don't know how to timewarp results of type[%s]", input.getClass());
+
+                // default to noop for unknown result types
+                return input;
               }
             }
         );
