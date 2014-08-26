@@ -301,7 +301,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
     return current;
   }
 
-  protected long truncateMillisPeriod(final long t)
+  private long truncateMillisPeriod(final long t)
   {
     // toStandardDuration assumes days are always 24h, and hours are always 60 minutes,
     // which may not always be the case, e.g if there are daylight saving changes.

@@ -443,6 +443,33 @@ public class QueryGranularityTest
   }
 
   @Test
+  public void testDurationTruncate() throws Exception
+  {
+    {
+      final DateTime origin = new DateTime("2012-01-02T05:00:00.000-08:00");
+      QueryGranularity gran = new DurationGranularity(
+          new Period("PT12H5M").toStandardDuration().getMillis(),
+          origin
+      );
+      assertSame(
+          Lists.newArrayList(
+              new DateTime("2012-01-01T04:50:00.000-08:00"),
+              new DateTime("2012-01-02T05:00:00.000-08:00"),
+              new DateTime("2012-01-02T17:05:00.000-08:00"),
+              new DateTime("2012-02-03T22:25:00.000-08:00")
+          ),
+          Lists.newArrayList(
+              gran.truncate(new DateTime("2012-01-01T05:00:04.123-08:00").getMillis()),
+              gran.truncate(new DateTime("2012-01-02T07:00:04.123-08:00").getMillis()),
+              gran.truncate(new DateTime("2012-01-03T00:20:04.123-08:00").getMillis()),
+              gran.truncate(new DateTime("2012-02-03T22:25:00.000-08:00").getMillis())
+          )
+      );
+    }
+  }
+
+
+  @Test
   public void testIterableAllSimple() throws Exception
   {
     final DateTime baseTime = new DateTime("2011-01-01T00:00:00.000Z");
