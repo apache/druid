@@ -54,11 +54,11 @@ public class CliHadoopIndexer implements Runnable
   private String argumentSpec;
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
-          description = "The maven coordinates to the version of hadoop and all dependencies to run with. Defaults to using org.apache.hadoop:hadoop-client:2.3.0")
+          description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default HadoopIndexTask dependencies",
+          description = "don't pull down the default hadoop version (currently org.apache.hadoop:hadoop-client:2.3.0)",
           required = false)
   public boolean noDefaultHadoop;
 
