@@ -35,12 +35,26 @@ import org.joda.time.Period;
 
 import java.util.Arrays;
 
+/**
+ * TimewarpOperator is an example post-processing operator that maps current time
+ * to the latest period ending withing the specified data interval and truncates
+ * the query interval to discard data that would be mapped to the future.
+ *
+ */
 public class TimewarpOperator<T> implements PostProcessingOperator<T>
 {
   private final Interval dataInterval;
-  private final Period period;
-  private final DateTime origin;
+  private final long periodMillis;
+  private final long originMillis;
 
+  /**
+   *
+   * @param dataInterval interval containing the actual data
+   * @param period time will be offset by a multiple of the given period
+   *               until there is at least a full period ending within the data interval
+   * @param origin origin to be used to align time periods
+   *               (e.g. to determine on what day of the week a weekly period starts)
+   */
   @JsonCreator
   public TimewarpOperator(
       @JsonProperty("dataInterval") Interval dataInterval,
@@ -48,35 +62,32 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
       @JsonProperty("origin") DateTime origin
   )
   {
-    this.origin = origin;
+    this.originMillis = origin.getMillis();
     this.dataInterval = dataInterval;
-    this.period = period;
+    // this will fail for periods that do not map to millis (e.g. P1M)
+    this.periodMillis = period.toStandardDuration().getMillis();
   }
 
 
   @Override
-  public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner)
+  public QueryRunner<T> postProcess(QueryRunner<T> baseQueryRunner)
+  {
+    return postProcess(baseQueryRunner, DateTime.now().getMillis());
+  }
+
+  public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long t)
   {
     return new QueryRunner<T>()
     {
       @Override
       public Sequence<T> run(Query<T> query)
       {
-        final long t = DateTime.now().getMillis();
-        final long originMillis = origin.getMillis();
-
-        // this will fail for periods that do not map to millis (e.g. P1M)
-        final long periodMillis = period.toStandardDuration().getMillis();
-
-        // map time t into the last `period` fully contained within dataInterval
-        long startMillis = dataInterval.getEnd().minus(period).getMillis();
-        startMillis -= startMillis % periodMillis - originMillis % periodMillis;
-        final long offset = startMillis + (t % periodMillis) - (originMillis % periodMillis) - t;
+        final long offset = computeOffset(t);
 
         final Interval interval = query.getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
             interval.getStartMillis() + offset,
-            Math.min(interval.getEndMillis() + offset, t)
+            Math.min(interval.getEndMillis() + offset, t + offset)
         );
         return Sequences.map(
             baseRunner.run(
@@ -112,5 +123,30 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         );
       }
     };
+  }
+
+  /**
+   * Map time t into the last `period` ending within `dataInterval`
+   *
+   * @param t
+   * @return the offset between the mapped time and time t
+   */
+  protected long computeOffset(final long t)
+  {
+    // start is the beginning of the last period ending within dataInterval
+    long start = dataInterval.getEndMillis() - periodMillis;
+    long startOffset = start % periodMillis - originMillis % periodMillis;
+    if(startOffset < 0) {
+      startOffset += periodMillis;
+    };
+    start -= startOffset;
+
+    // tOffset is the offset time t within the last period
+    long tOffset = t % periodMillis - originMillis % periodMillis;
+    if(tOffset < 0) {
+      tOffset += periodMillis;
+    }
+    tOffset += start;
+    return tOffset - t;
   }
 }
