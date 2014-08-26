@@ -58,7 +58,7 @@ public class CliHadoopIndexer implements Runnable
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default hadoop version (currently org.apache.hadoop:hadoop-client:2.3.0)",
+          description = "don't pull down the default hadoop version (currently " + DEFAULT_HADOOP_COORDINATES + ")",
           required = false)
   public boolean noDefaultHadoop;
 
