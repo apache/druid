@@ -673,6 +673,10 @@ public class IncrementalIndex implements Iterable<Row>
       falseIdsReverse = biMap.inverse();
     }
 
+    /**
+     * Returns the interned String value to allow fast comparisons using `==` instead of `.equals()`
+     * @see io.druid.segment.incremental.IncrementalIndexStorageAdapter.EntryHolderValueMatcherFactory#makeValueMatcher(String, String)
+     */
     public String get(String value)
     {
       return value == null ? null : poorMansInterning.get(value);
