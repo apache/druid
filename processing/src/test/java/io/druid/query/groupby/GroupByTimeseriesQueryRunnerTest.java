@@ -151,6 +151,13 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @Override
+  public void testTimeseriesQueryZeroFilling()
+  {
+    // Skip this test because the timeseries test expects skipped hours to be filled in, but group by doesn't
+    // fill anything in.
+  }
+
+  @Override
   public void testTimeseriesWithNonExistentFilter()
   {
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
