@@ -75,19 +75,19 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     return postProcess(baseQueryRunner, DateTime.now().getMillis());
   }
 
-  public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long t)
+  public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long now)
   {
     return new QueryRunner<T>()
     {
       @Override
       public Sequence<T> run(Query<T> query)
       {
-        final long offset = computeOffset(t);
+        final long offset = computeOffset(now);
 
         final Interval interval = query.getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
             interval.getStartMillis() + offset,
-            Math.min(interval.getEndMillis() + offset, t + offset)
+            Math.min(interval.getEndMillis() + offset, now + offset)
         );
         return Sequences.map(
             baseRunner.run(
@@ -106,7 +106,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                     value = new TimeBoundaryResultValue(
                         ImmutableMap.of(
                             TimeBoundaryQuery.MIN_TIME, boundary.getMinTime().minus(offset),
-                            TimeBoundaryQuery.MAX_TIME, new DateTime(Math.min(boundary.getMaxTime().getMillis() - offset, t))
+                            TimeBoundaryQuery.MAX_TIME, new DateTime(Math.min(boundary.getMaxTime().getMillis() - offset, now))
                         )
                     );
                   }
