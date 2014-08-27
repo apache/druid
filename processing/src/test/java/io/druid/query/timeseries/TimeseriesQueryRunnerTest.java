@@ -466,6 +466,53 @@ public class TimeseriesQueryRunnerTest
   }
 
   @Test
+  public void testTimeseriesQueryGranularityNotAlignedWithRollupGranularity()
+  {
+    TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                   .dataSource(QueryRunnerTestHelper.dataSource)
+                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .granularity(
+                                       new PeriodGranularity(
+                                           new Period("PT1H"),
+                                           new DateTime(60000),
+                                           DateTimeZone.UTC
+                                       )
+                                   )
+                                   .intervals(
+                                       Arrays.asList(
+                                           new Interval(
+                                               "2011-04-15T00:00:00.000Z/2012"
+                                           )
+                                       )
+                                   )
+                                   .aggregators(
+                                       Arrays.<AggregatorFactory>asList(
+                                           QueryRunnerTestHelper.rowsCount,
+                                           new LongSumAggregatorFactory(
+                                               "idx",
+                                               "index"
+                                           )
+                                       )
+                                   )
+                                   .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-14T23:01Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
+        runner.run(query1),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults1, results1);
+  }
+
+  @Test
   public void testTimeseriesWithVaryingGranWithFilter()
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
