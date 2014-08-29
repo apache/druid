@@ -26,6 +26,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -120,6 +121,47 @@ public class TimewarpOperatorTest
             )
         ),
         Sequences.toList(queryRunner.run(query), Lists.<Result<TimeseriesResultValue>>newArrayList())
+    );
+
+
+    TimewarpOperator<Result<TimeBoundaryResultValue>> timeBoundaryOperator = new TimewarpOperator<>(
+        new Interval(new DateTime("2014-01-01"), new DateTime("2014-01-15")),
+        new Period("P1W"),
+        new DateTime("2014-01-06") // align on Monday
+    );
+
+    QueryRunner<Result<TimeBoundaryResultValue>> timeBoundaryRunner = timeBoundaryOperator.postProcess(
+        new QueryRunner<Result<TimeBoundaryResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> query)
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        new DateTime("2014-01-12"),
+                        new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-01-12")))
+                    )
+                )
+            );
+          }
+        },
+        new DateTime("2014-08-02").getMillis()
+    );
+
+    final Query<Result<TimeBoundaryResultValue>> timeBoundaryQuery =
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource("dummy")
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                new DateTime("2014-08-02"),
+                new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-08-02")))
+            )
+        ),
+        Sequences.toList(timeBoundaryRunner.run(timeBoundaryQuery), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
     );
 
   }
