@@ -100,7 +100,6 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                 if (input instanceof Result) {
                   Result res = (Result) input;
                   Object value = res.getValue();
-                  final DateTime timestamp = res.getTimestamp().minus(offset);
                   if (value instanceof TimeBoundaryResultValue) {
                     TimeBoundaryResultValue boundary = (TimeBoundaryResultValue) value;
 
@@ -112,12 +111,12 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                     final DateTime maxTime = boundary.getMaxTime();
 
                     return (T) ((TimeBoundaryQuery) query).buildResult(
-                        timestamp,
+                        new DateTime(Math.min(res.getTimestamp().getMillis() - offset, now)),
                         minTime != null ? minTime.minus(offset) : null,
-                        maxTime != null ? maxTime.minus(offset) : null
+                        maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null
                     ).iterator().next();
                   }
-                  return (T) new Result(timestamp, value);
+                  return (T) new Result(res.getTimestamp().minus(offset), value);
                 } else if (input instanceof MapBasedRow) {
                   MapBasedRow row = (MapBasedRow) input;
                   return (T) new MapBasedRow(row.getTimestamp().minus(offset), row.getEvent());
