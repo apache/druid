@@ -171,6 +171,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 taskClasspath = config.getClasspath();
                               }
 
+                              command.add(config.getJavaCommand());
                               command.add("-cp");
                               command.add(taskClasspath);
 
