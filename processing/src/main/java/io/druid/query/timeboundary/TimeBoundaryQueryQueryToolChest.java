@@ -42,7 +42,6 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 

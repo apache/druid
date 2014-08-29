@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.concurrent.Execs;
 import io.druid.db.DatabaseSegmentManager;

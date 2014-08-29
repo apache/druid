@@ -22,7 +22,6 @@ package io.druid.cli;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
-import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.JettyServerInitializer;

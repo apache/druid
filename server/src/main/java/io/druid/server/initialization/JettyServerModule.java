@@ -44,7 +44,6 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import org.eclipse.jetty.server.Connector;

@@ -22,12 +22,12 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentPusher;
+import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
-import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.OmniSegmentLoader;
 import io.druid.segment.loading.SegmentLoader;
 

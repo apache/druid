@@ -24,10 +24,9 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.indexing.common.config.TaskConfig;
-import io.druid.indexing.common.task.HadoopIndexTask;
-import io.druid.initialization.Initialization;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.indexing.common.config.TaskConfig;
+import io.druid.initialization.Initialization;
 import io.tesla.aether.internal.DefaultTeslaAether;
 
 import java.util.List;

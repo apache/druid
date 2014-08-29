@@ -19,9 +19,7 @@
 
 package io.druid.indexing.overlord;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.druid.indexing.common.TaskStatus;
@@ -30,7 +28,6 @@ import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 

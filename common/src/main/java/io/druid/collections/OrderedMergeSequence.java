@@ -22,7 +22,6 @@ package io.druid.collections;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-import com.google.common.io.Closeables;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;

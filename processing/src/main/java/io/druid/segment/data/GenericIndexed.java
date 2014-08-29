@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;

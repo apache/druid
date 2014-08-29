@@ -1,7 +1,6 @@
 package io.druid.query;
 
 import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.collections.StupidPool;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchQueryRunnerFactory;

@@ -26,8 +26,8 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.initialization.Initialization;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.initialization.Initialization;
 import io.tesla.aether.internal.DefaultTeslaAether;
 
 import java.io.File;
