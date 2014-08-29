@@ -427,7 +427,8 @@ public class TaskSerdeTest
             null
         ),
         null,
-        null
+        null,
+        "blah"
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -442,5 +443,7 @@ public class TaskSerdeTest
         task.getSpec().getTuningConfig().getJobProperties(),
         task2.getSpec().getTuningConfig().getJobProperties()
     );
+    Assert.assertEquals("blah", task.getClasspathPrefix());
+    Assert.assertEquals("blah", task2.getClasspathPrefix());
   }
 }
