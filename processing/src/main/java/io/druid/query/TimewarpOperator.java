@@ -109,10 +109,12 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                       minTime = boundary.getMinTime();
                     } catch(IllegalArgumentException e) {}
 
+                    final DateTime maxTime = boundary.getMaxTime();
+
                     return (T) ((TimeBoundaryQuery) query).buildResult(
                         timestamp,
-                        minTime,
-                        boundary.getMaxTime()
+                        minTime != null ? minTime.minus(offset) : null,
+                        maxTime != null ? maxTime.minus(offset) : null
                     ).iterator().next();
                   }
                   return (T) new Result(timestamp, value);
