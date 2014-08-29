@@ -79,6 +79,8 @@ public class HadoopIndexTask extends AbstractTask
   private final HadoopIngestionSpec spec;
   @JsonIgnore
   private final List<String> hadoopDependencyCoordinates;
+  @JsonIgnore
+  private final String classpathPrefix;
 
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
@@ -96,7 +98,8 @@ public class HadoopIndexTask extends AbstractTask
       @JsonProperty("spec") HadoopIngestionSpec spec,
       @JsonProperty("config") HadoopIngestionSpec config, // backwards compat
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
-      @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates
+      @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
+      @JsonProperty("classpathPrefix") String classpathPrefix
   )
   {
     super(
@@ -123,6 +126,8 @@ public class HadoopIndexTask extends AbstractTask
       // Will be defaulted to something at runtime, based on taskConfig.
       this.hadoopDependencyCoordinates = null;
     }
+
+    this.classpathPrefix = classpathPrefix;
   }
 
   @Override
@@ -157,6 +162,13 @@ public class HadoopIndexTask extends AbstractTask
   public List<String> getHadoopDependencyCoordinates()
   {
     return hadoopDependencyCoordinates;
+  }
+
+  @JsonProperty
+  @Override
+  public String getClasspathPrefix()
+  {
+    return classpathPrefix;
   }
 
   @SuppressWarnings("unchecked")
