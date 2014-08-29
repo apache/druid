@@ -37,6 +37,8 @@ public class AggregatorUtil
    *                           such that all the dependencies of any given aggregator should occur before that aggregator.
    *                           See AggregatorUtilTest.testOutOfOrderPruneDependentPostAgg for example.
    * @param postAggName        name of the postAgg on which dependency is to be calculated
+   *
+   * @return the list of dependent postAggregators
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String postAggName)
   {

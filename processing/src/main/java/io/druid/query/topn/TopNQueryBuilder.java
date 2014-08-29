@@ -39,12 +39,12 @@ import java.util.Map;
 
 /**
  * A Builder for TopNQuery.
- * <p/>
+ * 
  * Required: dataSource(), intervals(), metric() and threshold() must be called before build()
  * Additional requirement for numeric metric sorts: aggregators() must be called before build()
- * <p/>
+ * 
  * Optional: filters(), granularity(), postAggregators() and context() can be called before build()
- * <p/>
+ * 
  * Usage example:
  * <pre><code>
  *   TopNQuery query = new TopNQueryBuilder()

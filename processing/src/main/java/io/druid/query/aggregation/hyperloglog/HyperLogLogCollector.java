@@ -28,18 +28,20 @@ import java.nio.ByteBuffer;
 
 /**
  * Implements the HyperLogLog cardinality estimator described in:
- * <p/>
+ * 
  * http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
- * <p/>
+ * 
  * Run this code to see a simple indication of expected errors based on different m values:
- * <p/>
- * for (int i = 1; i < 20; ++i) {
- * System.out.printf("i[%,d], val[%,d] => error[%f%%]%n", i, 2 << i, 104 / Math.sqrt(2 << i));
- * }
- * <p/>
+ * 
+ * <code>
+ *   for (int i = 1; i &lt; 20; ++i) {
+ *     System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
+ *   }
+ * </code>
+ *
  * This class is *not* multi-threaded.  It can be passed among threads, but it is written with the assumption that
  * only one thread is ever calling methods on it.
- * <p/>
+ * 
  * If you have multiple threads calling methods on this concurrently, I hope you manage to get correct behavior
  */
 public abstract class HyperLogLogCollector implements Comparable<HyperLogLogCollector>

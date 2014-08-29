@@ -40,6 +40,7 @@ public abstract class ComplexMetricSerde
    * added to the builder.
    *
    * @param buffer the buffer to deserialize
+   * @param builder ColumnBuilder to add the column to
    * @return a ColumnPartSerde that can serialize out the object that was read from the buffer to the builder
    */
   public abstract ColumnPartSerde deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);

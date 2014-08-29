@@ -140,6 +140,8 @@ public class IndexerDBCoordinator
    *
    * @param segments set of segments to add
    * @return set of segments actually added
+   *
+   * @throws java.io.IOException if a database error occurs
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {

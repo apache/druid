@@ -41,7 +41,7 @@ import java.util.concurrent.ExecutorService;
 /**
  * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
  * created that waits for new tasks. Tasks are executed as soon as they are seen.
- * <p/>
+ * 
  * The monitor implements {@link io.druid.query.QuerySegmentWalker} so tasks can offer up queryable data. This is useful for
  * realtime index tasks.
  */

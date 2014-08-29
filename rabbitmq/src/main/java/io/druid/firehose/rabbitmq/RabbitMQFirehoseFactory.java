@@ -49,14 +49,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * A FirehoseFactory for RabbitMQ.
- * <p/>
+ * 
  * It will receive it's configuration through the realtime.spec file and expects to find a
  * consumerProps element in the firehose definition with values for a number of configuration options.
  * Below is a complete example for a RabbitMQ firehose configuration with some explanation. Options
  * that have defaults can be skipped but options with no defaults must be specified with the exception
  * of the URI property. If the URI property is set, it will override any other property that was also
  * set.
- * <p/>
+ * 
  * File: <em>realtime.spec</em>
  * <pre>
  *   "firehose" : {
@@ -88,7 +88,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *     }
  *   },
  * </pre>
- * <p/>
+ * 
  * <b>Limitations:</b> This implementation will not attempt to reconnect to the MQ broker if the
  * connection to it is lost. Furthermore it does not support any automatic failover on high availability
  * RabbitMQ clusters. This is not supported by the underlying AMQP client library and while the behavior
@@ -96,7 +96,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * the RabbitMQ cluster that sets the "ha-mode" and "ha-sync-mode" properly on the queue that this
  * Firehose connects to, messages should survive an MQ broker node failure and be delivered once a
  * connection to another node is set up.
- * <p/>
+ * 
  * For more information on RabbitMQ high availability please see:
  * <a href="http://www.rabbitmq.com/ha.html">http://www.rabbitmq.com/ha.html</a>.
  */

@@ -73,6 +73,9 @@ public class TaskStorageQueryAdapter
    * This method is useful when you want to figure out all of the things a single task spawned.  It does pose issues
    * with the result set perhaps growing boundlessly and we do not do anything to protect against that.  Use at your
    * own risk and know that at some point, we might adjust this to actually enforce some sort of limits.
+   *
+   * @param taskid task ID
+   * @return set of segments created by the specified task
    */
   public Set<DataSegment> getInsertedSegments(final String taskid)
   {

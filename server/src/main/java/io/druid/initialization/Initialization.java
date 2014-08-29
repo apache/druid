@@ -102,7 +102,7 @@ public class Initialization
 
   /**
    * @param clazz Module class
-   * @param <T>
+   * @param <T> Module type
    *
    * @return Returns the set of modules loaded.
    */

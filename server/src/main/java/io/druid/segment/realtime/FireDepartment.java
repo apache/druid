@@ -39,7 +39,7 @@ import java.io.IOException;
 
 /**
  * A Fire Department has a Firehose and a Plumber.
- * <p/>
+ * 
  * This is a metaphor for a realtime stream (Firehose) and a coordinator of sinks (Plumber). The Firehose provides the
  * realtime stream of data.  The Plumber directs each drop of water from the firehose into the correct sink and makes
  * sure that the sinks don't overflow.

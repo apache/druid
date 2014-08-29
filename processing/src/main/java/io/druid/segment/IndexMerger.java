@@ -114,7 +114,8 @@ public class IndexMerger
    * @param dataInterval the Interval that the data represents
    * @param outDir       the directory to persist the data to
    *
-   * @throws java.io.IOException
+   * @return the index output directory
+   * @throws java.io.IOException if an IO error occurs persisting the index
    */
   public static File persist(final IncrementalIndex index, final Interval dataInterval, File outDir) throws IOException
   {

@@ -54,7 +54,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * The DiscoveryModule allows for the registration of Keys of DruidNode objects, which it intends to be
  * automatically announced at the end of the lifecycle start.
- * <p/>
+ * 
  * In order for this to work a ServiceAnnouncer instance *must* be injected and instantiated first.
  * This can often be achieved by registering ServiceAnnouncer.class with the LifecycleModule.
  */
@@ -64,10 +64,12 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the un-annotated DruidNode instance be injected and published as part of the lifecycle.
-   * <p/>
+   * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
+   *
+   * @param binder the Binder to register with
    */
   public static void registerDefault(Binder binder)
   {
@@ -76,7 +78,7 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the annotated DruidNode instance be injected and published as part of the lifecycle.
-   * <p/>
+   * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
@@ -90,11 +92,12 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the annotated DruidNode instance be injected and published as part of the lifecycle.
-   * <p/>
+   * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
    *
+   * @param binder the Binder to register with
    * @param annotation The annotation class to use in finding the DruidNode instance
    */
   public static void register(Binder binder, Class<? extends Annotation> annotation)
@@ -104,11 +107,12 @@ public class DiscoveryModule implements Module
 
   /**
    * Requests that the keyed DruidNode instance be injected and published as part of the lifecycle.
-   * <p/>
+   * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
    * Announcement will happen in the LAST stage of the Lifecycle
    *
+   * @param binder the Binder to register with
    * @param key The key to use in finding the DruidNode instance
    */
   public static void registerKey(Binder binder, Key<DruidNode> key)

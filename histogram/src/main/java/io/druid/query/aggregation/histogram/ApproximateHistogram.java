@@ -253,9 +253,7 @@ public class ApproximateHistogram
   }
 
   /**
-   * Returns a string representation of the actual bin counts
-   *
-   * @return
+   * @return a string representation of the actual bin counts
    */
   protected String getBinsString()
   {
@@ -385,7 +383,7 @@ public class ApproximateHistogram
   /**
    * Merges the bin in the given position with the next bin
    *
-   * @param index index of the bin to merge, index must satisfy 0 <= index < binCount - 1
+   * @param index index of the bin to merge, index must satisfy 0 &lt;= index &lt; binCount - 1
    */
   protected void merge(final int index)
   {
@@ -506,9 +504,9 @@ public class ApproximateHistogram
   /**
    * Copies histogram h into the current histogram.
    *
-   * @param h
+   * @param h ApproximateHistogram to copy
    *
-   * @return
+   * @return this histogram
    */
   public ApproximateHistogram copy(ApproximateHistogram h)
   {
@@ -815,20 +813,20 @@ public class ApproximateHistogram
 
   /**
    * mergeBins performs the given number of bin merge operations on the given histogram
-   * <p/>
+   * 
    * It repeatedly merges the two closest bins until it has performed the requested number of merge operations.
    * Merges are done in-place and unused bins have unknown state
-   * <p/>
+   * 
    * next / prev maintains a doubly-linked list of valid bin indices into the mergedBins array.
-   * <p/>
+   * 
    * Fast operation is achieved by building a min-heap of the deltas as opposed to repeatedly
    * scanning the array of deltas to find the minimum. A reverse index into the heap is maintained
    * to allow deleting and updating of specific deltas.
-   * <p/>
+   * 
    * next and prev arrays are used to maintain indices to the previous / next valid bin from a given bin index
-   * <p/>
+   * 
    * Its effect is equivalent to running the following code:
-   * <p/>
+   * 
    * <pre>
    *   ApproximateHistogram merged = new ApproximateHistogram(mergedBinCount, mergedPositions, mergedBins);
    *
@@ -1104,7 +1102,7 @@ public class ApproximateHistogram
   /**
    * Returns a byte-array representation of this ApproximateHistogram object
    *
-   * @return
+   * @return byte array representation
    */
   @JsonValue
   public byte[] toBytes()
@@ -1181,7 +1179,7 @@ public class ApproximateHistogram
   /**
    * Writes the representation of this ApproximateHistogram object to the given byte-buffer
    *
-   * @param buf
+   * @param buf ByteBuffer to write the ApproximateHistogram to
    */
   public void toBytes(ByteBuffer buf)
   {
@@ -1196,10 +1194,10 @@ public class ApproximateHistogram
 
   /**
    * Writes the dense representation of this ApproximateHistogram object to the given byte-buffer
-   * <p/>
+   * 
    * Requires 16 + 12 * size bytes of storage
    *
-   * @param buf
+   * @param buf ByteBuffer to write the ApproximateHistogram to
    */
   public void toBytesDense(ByteBuffer buf)
   {
@@ -1217,10 +1215,10 @@ public class ApproximateHistogram
 
   /**
    * Writes the sparse representation of this ApproximateHistogram object to the given byte-buffer
-   * <p/>
+   * 
    * Requires 16 + 12 * binCount bytes of storage
    *
-   * @param buf ByteBuffer to write object to
+   * @param buf ByteBuffer to write the ApproximateHistogram to
    */
   public void toBytesSparse(ByteBuffer buf)
   {
@@ -1239,10 +1237,10 @@ public class ApproximateHistogram
   /**
    * Returns a compact byte-buffer representation of this ApproximateHistogram object
    * storing actual values as opposed to histogram bins
-   * <p/>
-   * Requires 3 + 4 * count bytes of storage with count <= 127
+   * 
+   * Requires 3 + 4 * count bytes of storage with count &lt;= 127
    *
-   * @param buf
+   * @param buf ByteBuffer to write the ApproximateHistogram to
    */
   public void toBytesCompact(ByteBuffer buf)
   {
@@ -1285,9 +1283,9 @@ public class ApproximateHistogram
   /**
    * Constructs an Approximate Histogram object from the given byte-array representation
    *
-   * @param bytes
+   * @param bytes byte array to construct an ApproximateHistogram from
    *
-   * @return
+   * @return ApproximateHistogram constructed from the given byte array
    */
   public static ApproximateHistogram fromBytes(byte[] bytes)
   {
@@ -1298,9 +1296,9 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given dense byte-buffer representation
    *
-   * @param buf
+   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
-   * @return
+   * @return ApproximateHistogram constructed from the given ByteBuffer
    */
   public static ApproximateHistogram fromBytesDense(ByteBuffer buf)
   {
@@ -1324,9 +1322,9 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given dense byte-buffer representation
    *
-   * @param buf
+   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
-   * @return
+   * @return ApproximateHistogram constructed from the given ByteBuffer
    */
   public static ApproximateHistogram fromBytesSparse(ByteBuffer buf)
   {
@@ -1352,9 +1350,9 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given compact byte-buffer representation
    *
-   * @param buf
+   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
-   * @return
+   * @return ApproximateHistogram constructed from the given ByteBuffer
    */
   public static ApproximateHistogram fromBytesCompact(ByteBuffer buf)
   {
@@ -1428,9 +1426,9 @@ public class ApproximateHistogram
   /**
    * Constructs an ApproximateHistogram object from the given byte-buffer representation
    *
-   * @param buf
+   * @param buf ByteBuffer to construct an ApproximateHistogram from
    *
-   * @return
+   * @return ApproximateHistogram constructed from the given ByteBuffer
    */
   public static ApproximateHistogram fromBytes(ByteBuffer buf)
   {
@@ -1454,7 +1452,7 @@ public class ApproximateHistogram
   /**
    * Returns the approximate number of items less than or equal to b in the histogram
    *
-   * @param b
+   * @param b the cutoff
    *
    * @return the approximate number of items less than or equal to b
    */
@@ -1521,7 +1519,7 @@ public class ApproximateHistogram
    * probabilities = [.5f] returns [median]
    * probabilities = [.25f, .5f, .75f] returns the quartiles, [25%ile, median, 75%ile]
    *
-   * @param probabilities
+   * @param probabilities array of probabilities
    *
    * @return an array of length probabilities.length representing the the approximate sample quantiles
    * corresponding to the given probabilities
@@ -1584,9 +1582,9 @@ public class ApproximateHistogram
   /**
    * Computes a visual representation of the approximate histogram with bins laid out according to the given breaks
    *
-   * @param breaks
+   * @param breaks breaks defining the histogram bins
    *
-   * @return
+   * @return visual representation of the histogram
    */
   public Histogram toHistogram(final float[] breaks)
   {
@@ -1607,7 +1605,7 @@ public class ApproximateHistogram
    *
    * @param size number of equal-sized bins to divide the histogram into
    *
-   * @return
+   * @return visual representation of the histogram
    */
   public Histogram toHistogram(int size)
   {
@@ -1629,7 +1627,7 @@ public class ApproximateHistogram
    * @param bucketSize the size of each bucket
    * @param offset     the location of one breakpoint
    *
-   * @return
+   * @return visual representation of the histogram
    */
   public Histogram toHistogram(final float bucketSize, final float offset)
   {
