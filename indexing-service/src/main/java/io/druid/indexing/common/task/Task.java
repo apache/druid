@@ -99,6 +99,12 @@ public interface Task
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
+   * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
+   * extra classpath should be prepended, this should return null or the empty string.
+   */
+  public String getClasspathPrefix();
+
+  /**
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
    * coordinator. If this method throws an exception, the task should be considered a failure.

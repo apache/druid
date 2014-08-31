@@ -35,7 +35,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -69,7 +68,7 @@ public class TestIndex
   };
   public static final String[] DIMENSIONS = new String[]{"provider", "quALIty", "plAcEmEnT", "pLacementish"};
   public static final String[] METRICS = new String[]{"iNdEx"};
-  private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-04-16T00:00:00.000Z");
+  private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")

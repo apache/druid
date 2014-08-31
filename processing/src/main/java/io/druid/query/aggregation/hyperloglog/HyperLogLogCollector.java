@@ -195,6 +195,13 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return applyCorrection(e, zeroCount);
   }
 
+  /**
+   * Checks if the payload for the given ByteBuffer is sparse or not.
+   * The given buffer must be positioned at getPayloadBytePosition() prior to calling isSparse
+   *
+   * @param buffer
+   * @return
+   */
   private static boolean isSparse(ByteBuffer buffer)
   {
     return buffer.remaining() != NUM_BYTES_FOR_BUCKETS;
@@ -495,13 +502,32 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       return false;
     }
 
-    HyperLogLogCollector collector = (HyperLogLogCollector) o;
+    ByteBuffer otherBuffer = ((HyperLogLogCollector) o).storageBuffer;
 
-    if (storageBuffer != null ? !storageBuffer.equals(collector.storageBuffer) : collector.storageBuffer != null) {
+    if (storageBuffer != null ? false : otherBuffer != null) {
       return false;
     }
 
-    return true;
+    if(storageBuffer == null && otherBuffer == null) {
+      return true;
+    }
+
+    final ByteBuffer denseStorageBuffer;
+    if(storageBuffer.remaining() != getNumBytesForDenseStorage()) {
+      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer);
+      denseCollector.convertToDenseStorage();
+      denseStorageBuffer = denseCollector.storageBuffer;
+    } else {
+      denseStorageBuffer = storageBuffer;
+    }
+
+    if(otherBuffer.remaining() != getNumBytesForDenseStorage()) {
+      HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer);
+      otherCollector.convertToDenseStorage();
+      otherBuffer = otherCollector.storageBuffer;
+    }
+
+    return denseStorageBuffer.equals(otherBuffer);
   }
 
   @Override

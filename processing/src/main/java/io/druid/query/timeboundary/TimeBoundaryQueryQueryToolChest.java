@@ -146,9 +146,10 @@ public class TimeBoundaryQueryQueryToolChest
       @Override
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
-        return ByteBuffer.allocate(2)
+        final byte[] cacheKey = query.getCacheKey();
+        return ByteBuffer.allocate(1 + cacheKey.length)
                          .put(TIMEBOUNDARY_QUERY)
-                         .put(query.getCacheKey())
+                         .put(cacheKey)
                          .array();
       }
 

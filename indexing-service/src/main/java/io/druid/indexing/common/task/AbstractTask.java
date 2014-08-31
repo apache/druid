@@ -108,6 +108,12 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
+  public String getClasspathPrefix()
+  {
+    return null;
+  }
+
+  @Override
   public String toString()
   {
     return Objects.toStringHelper(this)
