@@ -127,7 +127,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
-        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
+        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(query.getContext());
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
