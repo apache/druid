@@ -193,7 +193,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    return new OrderedMergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Ordering<Row> getOrdering()
+  {
+    return Ordering.<Row>natural().nullsFirst();
   }
 
   @Override
@@ -372,7 +378,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
       {
-        return new MergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

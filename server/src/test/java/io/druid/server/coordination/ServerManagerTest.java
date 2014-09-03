@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.metamx.common.IAE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.Pair;
@@ -589,6 +590,12 @@ public class ServerManagerTest
       return new TypeReference<T>()
       {
       };
+    }
+
+    @Override
+    public Ordering<T> getOrdering()
+    {
+      return null;
     }
   }
 

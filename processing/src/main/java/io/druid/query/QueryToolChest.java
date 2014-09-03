@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.MetricManipulationFn;
@@ -79,4 +80,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     return segments;
   }
+
+  public abstract Ordering<ResultType> getOrdering();
 }
