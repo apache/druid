@@ -46,6 +46,9 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    */
   public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences);
 
+  public abstract Sequence<ResultType> mergeSequencesUnordered(Sequence<Sequence<ResultType>> seqOfSequences);
+
+
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
 
   public abstract Function<ResultType, ResultType> makePreComputeManipulatorFn(
