@@ -318,10 +318,10 @@ public class Announcer
   /**
    * Unannounces an announcement created at path.  Note that if all announcements get removed, the Announcer
    * will continue to have ZK watches on paths because clearing them out is a source of ugly race conditions.
-   * <p/>
+   * 
    * If you need to completely clear all the state of what is being watched and announced, stop() the Announcer.
    *
-   * @param path
+   * @param path the path to unannounce
    */
   public void unannounce(String path)
   {

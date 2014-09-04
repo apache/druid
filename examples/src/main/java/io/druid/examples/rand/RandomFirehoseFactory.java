@@ -45,6 +45,7 @@ import static java.lang.Thread.sleep;
  * The generated tuples can be thought of as asynchronously
  * produced triples (timestamp, outColumn, target) where the timestamp varies depending on
  * speed of processing.
+ *
  * <p>
  * InputRows are produced as fast as requested, so this can be used to determine the
  * upper rate of ingest if sleepUsec is set to 0; nTokens specifies how many associated
@@ -55,8 +56,8 @@ import static java.lang.Thread.sleep;
  * the moment an event is delivered.)
  * Values are offset by adding the modulus of the token number to the random number
  * so that token values have distinct, non-overlapping ranges.
- * <p/>
  * </p>
+ *
  * Example spec file:
  * <pre>
  * [{
@@ -82,7 +83,7 @@ import static java.lang.Thread.sleep;
  * "basePersistDirectory" : "/tmp/realtime/basePersist" }
  * }]
  * </pre>
- * <p/>
+ * 
  * Example query using POST to /druid/v2/  (where UTC date and time MUST include the current hour):
  * <pre>
  * {

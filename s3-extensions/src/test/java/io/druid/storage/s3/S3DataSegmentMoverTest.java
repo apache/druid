@@ -30,7 +30,6 @@ import io.druid.timeline.partition.NoneShardSpec;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.StorageObject;
 import org.joda.time.Interval;

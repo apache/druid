@@ -43,6 +43,8 @@ public class TaskResource
    * Returns availability group ID of this task. Tasks the same availability group cannot be assigned to the same
    * worker. If tasks do not have this restriction, a common convention is to set the availability group ID to the
    * task ID.
+   *
+   * @return task availability group
    */
   @JsonProperty
   public String getAvailabilityGroup()
@@ -52,7 +54,7 @@ public class TaskResource
 
 
   /**
-   * Returns the number of worker slots this task will take.
+   * @return the number of worker slots this task will take
    */
   @JsonProperty
   public int getRequiredCapacity()

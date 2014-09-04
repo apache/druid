@@ -28,8 +28,6 @@ import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
 
-import javax.annotation.Nullable;
-
 /**
  */
 public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>

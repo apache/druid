@@ -29,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
@@ -51,7 +50,6 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
@@ -114,7 +112,8 @@ public class IndexMerger
    * @param dataInterval the Interval that the data represents
    * @param outDir       the directory to persist the data to
    *
-   * @throws java.io.IOException
+   * @return the index output directory
+   * @throws java.io.IOException if an IO error occurs persisting the index
    */
   public static File persist(final IncrementalIndex index, final Interval dataInterval, File outDir) throws IOException
   {

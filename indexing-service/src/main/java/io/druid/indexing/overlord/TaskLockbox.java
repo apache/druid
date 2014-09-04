@@ -161,6 +161,12 @@ public class TaskLockbox
   /**
    * Acquires a lock on behalf of a task. Blocks until the lock is acquired. Throws an exception if the lock
    * cannot be acquired.
+   *
+   * @param task task to acquire lock for
+   * @param interval interval to lock
+   * @return acquired TaskLock
+   *
+   * @throws java.lang.InterruptedException if the lock cannot be acquired
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
@@ -296,6 +302,7 @@ public class TaskLockbox
    * Return the currently-active locks for some task.
    *
    * @param task task for which to locate locks
+   * @return currently-active locks for the given task
    */
   public List<TaskLock> findLocksForTask(final Task task)
   {

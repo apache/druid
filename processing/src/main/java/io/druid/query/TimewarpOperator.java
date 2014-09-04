@@ -134,7 +134,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   /**
    * Map time t into the last `period` ending within `dataInterval`
    *
-   * @param t
+   * @param t the current time to be mapped into `dataInterval`
    * @return the offset between the mapped time and time t
    */
   protected long computeOffset(final long t)

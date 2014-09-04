@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.common.Granularity;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;

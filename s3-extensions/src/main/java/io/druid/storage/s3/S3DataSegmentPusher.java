@@ -31,7 +31,6 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 import io.druid.utils.CompressionUtils;
 import org.jets3t.service.ServiceException;
-import org.jets3t.service.acl.AccessControlList;
 import org.jets3t.service.acl.gs.GSAccessControlList;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;

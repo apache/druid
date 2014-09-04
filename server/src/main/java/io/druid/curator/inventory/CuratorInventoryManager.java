@@ -44,10 +44,10 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * An InventoryManager watches updates to inventory on Zookeeper (or some other discovery-like service publishing
  * system).  It is built up on two object types: containers and inventory objects.
- * <p/>
+ * 
  * The logic of the InventoryManager just maintains a local cache of the containers and inventory it sees on ZK.  It
  * provides methods for getting at the container objects, which house the actual individual pieces of inventory.
- * <p/>
+ * 
  * A Strategy is provided to the constructor of an Inventory manager, this strategy provides all of the
  * object-specific logic to serialize, deserialize, compose and alter the container and inventory objects.
  */

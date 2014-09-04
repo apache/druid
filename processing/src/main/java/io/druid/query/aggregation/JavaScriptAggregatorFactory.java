@@ -32,8 +32,6 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
-import org.mozilla.javascript.NativeArray;
-import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 
 import javax.annotation.Nullable;
@@ -41,7 +39,6 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 

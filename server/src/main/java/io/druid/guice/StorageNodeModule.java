@@ -27,13 +27,13 @@ import com.google.inject.util.Providers;
 import io.druid.client.DruidServerConfig;
 import io.druid.guice.annotations.Self;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.loading.MMappedQueryableIndexFactory;
 import io.druid.segment.loading.QueryableIndexFactory;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.DruidNode;
-import io.druid.query.DruidProcessingConfig;
 import io.druid.server.coordination.DruidServerMetadata;
 
 import javax.annotation.Nullable;

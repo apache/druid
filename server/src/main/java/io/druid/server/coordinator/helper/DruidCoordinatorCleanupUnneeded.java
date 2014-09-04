@@ -19,10 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
-import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.common.guava.Comparators;
-import com.metamx.common.logger.Logger;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -33,10 +30,7 @@ import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.TimelineObjectHolder;
-import io.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.Map;
 import java.util.Set;
 
 /**

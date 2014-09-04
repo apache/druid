@@ -24,13 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.util.Modules;
-import io.druid.guice.ConfigModule;
-import io.druid.guice.DruidGuiceExtensions;
-import io.druid.guice.DruidSecondaryModule;
-import io.druid.guice.ExtensionsConfig;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.PropertiesModule;
 import io.druid.jackson.JacksonModule;
 
 import java.util.List;

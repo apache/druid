@@ -136,6 +136,8 @@ public class Histogram
    * Returns a visual representation of a histogram object.
    * Initially returns an array of just the min. and max. values
    * but can also support the addition of quantiles.
+   *
+   * @return a visual representation of this histogram
    */
   public HistogramVisual asVisual() {
     float[] visualCounts = new float[bins.length - 2];
