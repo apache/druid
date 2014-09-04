@@ -35,6 +35,7 @@ import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
@@ -48,7 +49,8 @@ public abstract class LoadRule implements Rule
   @Override
   public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
   {
-    CoordinatorStats stats = new CoordinatorStats();
+    final CoordinatorStats stats = new CoordinatorStats();
+    final Set<DataSegment> availableSegments = params.getAvailableSegments();
 
     final Map<String, Integer> loadStatus = Maps.newHashMap();
 
@@ -70,7 +72,7 @@ public abstract class LoadRule implements Rule
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
       final DateTime referenceTimestamp = params.getBalancerReferenceTimestamp();
       final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
-      if (params.getAvailableSegments().contains(segment)) {
+      if (availableSegments.contains(segment)) {
         CoordinatorStats assignStats = assign(
             params.getReplicationManager(),
             tier,
@@ -166,10 +168,6 @@ public abstract class LoadRule implements Rule
   )
   {
     CoordinatorStats stats = new CoordinatorStats();
-
-    if (!params.hasDeletionWaitTimeElapsed()) {
-      return stats;
-    }
 
     // Make sure we have enough loaded replicants in the correct tiers in the cluster before doing anything
     for (Integer leftToLoad : loadStatus.values()) {

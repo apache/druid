@@ -37,6 +37,11 @@ You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>/cluste
 
 You can check `<BROKER_IP>:<PORT>/druid/v2/datasources/<YOUR_DATASOURCE>?interval=0/3000` for the dimensions and metrics that have been created for your datasource. Make sure that the name of the aggregators you use in your query match one of these metrics. Also make sure that the query interval you specify match a valid time range where data exists. Note: the broker endpoint will only return valid results on historical segments.
 
+## How can I Reindex existing data in Druid with schema changes?
+
+You can use IngestSegmentFirehose with index task to ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+See [Firehose](Firehose.html) for more details on IngestSegmentFirehose.
+
 ## More information
 
 Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).

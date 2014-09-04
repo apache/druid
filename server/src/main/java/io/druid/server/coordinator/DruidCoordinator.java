@@ -57,7 +57,8 @@ import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
-import io.druid.server.coordinator.helper.DruidCoordinatorCleanup;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -77,7 +78,6 @@ import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -829,7 +829,8 @@ public class DruidCoordinator
                 }
               },
               new DruidCoordinatorRuleRunner(DruidCoordinator.this),
-              new DruidCoordinatorCleanup(DruidCoordinator.this),
+              new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
+              new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
               new DruidCoordinatorLogger()
           ),

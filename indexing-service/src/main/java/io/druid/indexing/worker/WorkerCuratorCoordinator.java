@@ -51,13 +51,13 @@ public class WorkerCuratorCoordinator
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
   private final CuratorFramework curatorFramework;
-  private final Worker worker;
   private final Announcer announcer;
 
   private final String baseAnnouncementsPath;
   private final String baseTaskPath;
   private final String baseStatusPath;
 
+  private volatile Worker worker;
   private volatile boolean started;
 
   @Inject
@@ -129,7 +129,11 @@ public class WorkerCuratorCoordinator
       try {
         byte[] rawBytes = jsonMapper.writeValueAsBytes(data);
         if (rawBytes.length > config.getMaxZnodeBytes()) {
-          throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
+          throw new ISE(
+              "Length of raw bytes for task too large[%,d > %,d]",
+              rawBytes.length,
+              config.getMaxZnodeBytes()
+          );
         }
 
         curatorFramework.create()
@@ -171,6 +175,11 @@ public class WorkerCuratorCoordinator
   public String getStatusPathForId(String statusId)
   {
     return getPath(Arrays.asList(baseStatusPath, statusId));
+  }
+
+  public Worker getWorker()
+  {
+    return worker;
   }
 
   public void unannounceTask(String taskId)
@@ -237,6 +246,18 @@ public class WorkerCuratorCoordinator
       catch (Exception e) {
         throw Throwables.propagate(e);
       }
+    }
+  }
+
+  public void updateWorkerAnnouncement(Worker newWorker) throws Exception
+  {
+    synchronized (lock) {
+      if (!started) {
+        throw new ISE("Cannot update worker! Not Started!");
+      }
+
+      this.worker = newWorker;
+      announcer.update(getAnnouncementsPathForWorker(), jsonMapper.writeValueAsBytes(newWorker));
     }
   }
 }

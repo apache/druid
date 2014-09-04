@@ -29,6 +29,7 @@ import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.Omni;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 
@@ -212,6 +213,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
 
       @Override
+      public DateTime getTimestamp()
+      {
+        return timestamp;
+      }
+
+      @Override
       public List<String> getDimension(String dimension)
       {
         final String value = dimensions.get(dimension);
@@ -232,6 +239,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       public float getFloatMetric(String metric)
       {
         return metrics.get(metric);
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return timestamp.compareTo(o.getTimestamp());
       }
 
       @Override

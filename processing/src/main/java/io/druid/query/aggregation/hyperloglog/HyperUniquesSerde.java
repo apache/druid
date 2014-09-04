@@ -82,7 +82,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
         Object rawValue = inputRow.getRaw(metricName);
 
         if (rawValue instanceof HyperLogLogCollector) {
-          return (HyperLogLogCollector) inputRow.getRaw(metricName);
+          return (HyperLogLogCollector) rawValue;
         } else {
           HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 

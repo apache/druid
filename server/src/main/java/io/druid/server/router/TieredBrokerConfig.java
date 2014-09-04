@@ -20,12 +20,15 @@
 package io.druid.server.router;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.DruidServer;
 import org.joda.time.Period;
 
 import javax.validation.constraints.NotNull;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 /**
  */
@@ -53,6 +56,13 @@ public class TieredBrokerConfig
   @JsonProperty
   @NotNull
   private Period pollPeriod = new Period("PT1M");
+
+  @JsonProperty
+  @NotNull
+  private List<TieredBrokerSelectorStrategy> strategies = Arrays.asList(
+      new TimeBoundaryTieredBrokerSelectorStrategy(),
+      new PriorityTieredBrokerSelectorStrategy(0, 1)
+  );
 
   // tier, <bard, numThreads>
   public LinkedHashMap<String, String> getTierToBrokerMap()
@@ -87,5 +97,10 @@ public class TieredBrokerConfig
   public Period getPollPeriod()
   {
     return pollPeriod;
+  }
+
+  public List<TieredBrokerSelectorStrategy> getStrategies()
+  {
+    return ImmutableList.copyOf(strategies);
   }
 }

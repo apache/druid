@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -42,6 +44,9 @@ import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.client.selector.ServerSelector;
+import io.druid.collections.StupidPool;
+import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
@@ -56,7 +61,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -64,13 +68,23 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryEngine;
+import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
-import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
+import io.druid.query.select.EventHolder;
+import io.druid.query.select.PagingSpec;
+import io.druid.query.select.SelectQuery;
+import io.druid.query.select.SelectQueryQueryToolChest;
+import io.druid.query.select.SelectResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
@@ -105,6 +119,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -657,19 +672,19 @@ public class CachingClusteredClientTest
   @Test
   public void testSearchCaching() throws Exception
   {
+    final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
+                                                    .dataSource(DATA_SOURCE)
+                                                    .filters(DIM_FILTER)
+                                                    .granularity(GRANULARITY)
+                                                    .limit(1000)
+                                                    .intervals(SEG_SPEC)
+                                                    .dimensions(Arrays.asList("a_dim"))
+                                                    .query("how")
+                                                    .context(CONTEXT);
+
     testQueryCaching(
         client,
-        new SearchQuery(
-            new TableDataSource(DATA_SOURCE),
-            DIM_FILTER,
-            GRANULARITY,
-            1000,
-            SEG_SPEC,
-            Arrays.asList("a_dim"),
-            new InsensitiveContainsSearchQuerySpec("how"),
-            null,
-            CONTEXT
-        ),
+        builder.build(),
         new Interval("2011-01-01/2011-01-02"),
         makeSearchResults(new DateTime("2011-01-01"), "how", "howdy", "howwwwww", "howwy"),
 
@@ -693,6 +708,188 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-08T01"), "how5", "howdy5", "howwwwww5", "howww5",
             new DateTime("2011-01-09T01"), "how6", "howdy6", "howwwwww6", "howww6"
         )
+    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new SearchQueryQueryToolChest(new SearchQueryConfig()));
+    TestHelper.assertExpectedResults(
+        makeSearchResults(
+            new DateTime("2011-01-01"), "how", "howdy", "howwwwww", "howwy",
+            new DateTime("2011-01-02"), "how1", "howdy1", "howwwwww1", "howwy1",
+            new DateTime("2011-01-05"), "how2", "howdy2", "howwwwww2", "howww2",
+            new DateTime("2011-01-05T01"), "how2", "howdy2", "howwwwww2", "howww2",
+            new DateTime("2011-01-06"), "how3", "howdy3", "howwwwww3", "howww3",
+            new DateTime("2011-01-06T01"), "how3", "howdy3", "howwwwww3", "howww3",
+            new DateTime("2011-01-07"), "how4", "howdy4", "howwwwww4", "howww4",
+            new DateTime("2011-01-07T01"), "how4", "howdy4", "howwwwww4", "howww4",
+            new DateTime("2011-01-08"), "how5", "howdy5", "howwwwww5", "howww5",
+            new DateTime("2011-01-08T01"), "how5", "howdy5", "howwwwww5", "howww5",
+            new DateTime("2011-01-09"), "how6", "howdy6", "howwwwww6", "howww6",
+            new DateTime("2011-01-09T01"), "how6", "howdy6", "howwwwww6", "howww6"
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                   .build()
+        )
+    );
+  }
+
+  @Test
+  public void testSelectCaching() throws Exception
+  {
+    Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
+                                              .dataSource(DATA_SOURCE)
+                                              .intervals(SEG_SPEC)
+                                              .filters(DIM_FILTER)
+                                              .granularity(GRANULARITY)
+                                              .dimensions(Arrays.asList("a"))
+                                              .metrics(Arrays.asList("rows"))
+                                              .pagingSpec(new PagingSpec(null, 3))
+                                              .context(CONTEXT);
+
+    testQueryCaching(
+        client,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeSelectResults(new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeSelectResults(new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSelectResults(
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9)
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeSelectResults(
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        )
+    );
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        client,
+        new SelectQueryQueryToolChest(
+            new QueryConfig(),
+            jsonMapper
+        )
+    );
+    TestHelper.assertExpectedResults(
+        makeSelectResults(
+            new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+            new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "h", "rows", 9),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "h", "rows", 9)
+        ),
+        runner.run(
+            builder.intervals("2011-01-01/2011-01-10")
+                   .build()
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByCaching() throws Exception
+  {
+    GroupByQuery.Builder builder = new GroupByQuery.Builder()
+        .setDataSource(DATA_SOURCE)
+        .setQuerySegmentSpec(SEG_SPEC)
+        .setDimFilter(DIM_FILTER)
+        .setGranularity(GRANULARITY)
+        .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "a")))
+        .setAggregatorSpecs(AGGS)
+        .setPostAggregatorSpecs(POST_AGGS)
+        .setContext(CONTEXT);
+
+    testQueryCaching(
+        client,
+        builder.build(),
+        new Interval("2011-01-01/2011-01-02"),
+        makeGroupByResults(new DateTime("2011-01-01"), ImmutableMap.of("a", "a", "rows", 1, "imps", 1, "impers", 1)),
+
+        new Interval("2011-01-02/2011-01-03"),
+        makeGroupByResults(new DateTime("2011-01-02"), ImmutableMap.of("a", "b", "rows", 2, "imps", 2, "impers", 2)),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeGroupByResults(
+            new DateTime("2011-01-05"), ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3),
+            new DateTime("2011-01-06"), ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4),
+            new DateTime("2011-01-07"), ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5),
+            new DateTime("2011-01-08"), ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6),
+            new DateTime("2011-01-09"), ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7)
+        ),
+
+        new Interval("2011-01-05/2011-01-10"),
+        makeGroupByResults(
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7)
+        )
+    );
+
+    Supplier<GroupByQueryConfig> configSupplier = new Supplier<GroupByQueryConfig>()
+    {
+      @Override
+      public GroupByQueryConfig get()
+      {
+        return new GroupByQueryConfig();
+      }
+    };
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        client,
+        new GroupByQueryQueryToolChest(
+            configSupplier,
+            jsonMapper,
+            new GroupByQueryEngine(
+                configSupplier,
+                new StupidPool<>(
+                    new Supplier<ByteBuffer>()
+                    {
+                      @Override
+                      public ByteBuffer get()
+                      {
+                        return ByteBuffer.allocate(1024 * 1024);
+                      }
+                    }
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedObjects(
+        makeGroupByResults(
+            new DateTime("2011-01-05T"), ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3),
+            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3),
+            new DateTime("2011-01-06T"), ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4),
+            new DateTime("2011-01-06T01"), ImmutableMap.of("a", "d", "rows", 4, "imps", 4, "impers", 4),
+            new DateTime("2011-01-07T"), ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5),
+            new DateTime("2011-01-07T01"), ImmutableMap.of("a", "e", "rows", 5, "imps", 5, "impers", 5),
+            new DateTime("2011-01-08T"), ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6),
+            new DateTime("2011-01-08T01"), ImmutableMap.of("a", "f", "rows", 6, "imps", 6, "impers", 6),
+            new DateTime("2011-01-09T"), ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7),
+            new DateTime("2011-01-09T01"), ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7)
+        ),
+        runner.run(
+            builder.setInterval("2011-01-05/2011-01-10")
+                   .build()
+        ),
+        ""
     );
   }
 
@@ -751,7 +948,8 @@ public class CachingClusteredClientTest
       final QueryRunner runner,
       final int numTimesToQuery,
       boolean expectBySegment,
-      final Query query, Object... args // does this assume query intervals must be ordered?
+      final Query query,
+      Object... args // does this assume query intervals must be ordered?
   )
   {
     if (args.length % 2 != 0) {
@@ -842,6 +1040,30 @@ public class CachingClusteredClientTest
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture)))
                   .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
+                  .once();
+        } else if (query instanceof SelectQuery) {
+          List<String> segmentIds = Lists.newArrayList();
+          List<Interval> intervals = Lists.newArrayList();
+          List<Iterable<Result<SelectResultValue>>> results = Lists.newArrayList();
+          for (ServerExpectation expectation : expectations) {
+            segmentIds.add(expectation.getSegmentId());
+            intervals.add(expectation.getInterval());
+            results.add(expectation.getResults());
+          }
+          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+                  .andReturn(toQueryableSelectResults(segmentIds, intervals, results))
+                  .once();
+        } else if (query instanceof GroupByQuery) {
+          List<String> segmentIds = Lists.newArrayList();
+          List<Interval> intervals = Lists.newArrayList();
+          List<Iterable<Row>> results = Lists.newArrayList();
+          for (ServerExpectation expectation : expectations) {
+            segmentIds.add(expectation.getSegmentId());
+            intervals.add(expectation.getInterval());
+            results.add(expectation.getResults());
+          }
+          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+                  .andReturn(toQueryableGroupByResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof TimeBoundaryQuery) {
           List<String> segmentIds = Lists.newArrayList();
@@ -1097,6 +1319,74 @@ public class CachingClusteredClientTest
     );
   }
 
+  private Sequence<Result<SelectResultValue>> toQueryableSelectResults(
+      Iterable<String> segmentIds, Iterable<Interval> intervals, Iterable<Iterable<Result<SelectResultValue>>> results
+  )
+  {
+    return Sequences.simple(
+        FunctionalIterable
+            .create(segmentIds)
+            .trinaryTransform(
+                intervals,
+                results,
+                new TrinaryFn<String, Interval, Iterable<Result<SelectResultValue>>, Result<SelectResultValue>>()
+                {
+                  @Override
+                  @SuppressWarnings("unchecked")
+                  public Result<SelectResultValue> apply(
+                      final String segmentId,
+                      final Interval interval,
+                      final Iterable<Result<SelectResultValue>> results
+                  )
+                  {
+                    return new Result(
+                        results.iterator().next().getTimestamp(),
+                        new BySegmentResultValueClass(
+                            Lists.newArrayList(results),
+                            segmentId,
+                            interval
+                        )
+                    );
+                  }
+                }
+            )
+    );
+  }
+
+  private Sequence<Result> toQueryableGroupByResults(
+      Iterable<String> segmentIds, Iterable<Interval> intervals, Iterable<Iterable<Row>> results
+  )
+  {
+    return Sequences.simple(
+        FunctionalIterable
+            .create(segmentIds)
+            .trinaryTransform(
+                intervals,
+                results,
+                new TrinaryFn<String, Interval, Iterable<Row>, Result>()
+                {
+                  @Override
+                  @SuppressWarnings("unchecked")
+                  public Result apply(
+                      final String segmentId,
+                      final Interval interval,
+                      final Iterable<Row> results
+                  )
+                  {
+                    return new Result(
+                        results.iterator().next().getTimestamp(),
+                        new BySegmentResultValueClass(
+                            Lists.newArrayList(results),
+                            segmentId,
+                            interval
+                        )
+                    );
+                  }
+                }
+            )
+    );
+  }
+
   private Sequence<Result<TimeBoundaryResultValue>> toQueryableTimeBoundaryResults(
       Iterable<String> segmentIds,
       Iterable<Interval> intervals,
@@ -1305,6 +1595,34 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
+  private Iterable<Result<SelectResultValue>> makeSelectResults(Object... objects)
+  {
+    List<Result<SelectResultValue>> retVal = Lists.newArrayList();
+    int index = 0;
+    while (index < objects.length) {
+      DateTime timestamp = (DateTime) objects[index++];
+
+      List values = Lists.newArrayList();
+      while (index < objects.length && !(objects[index] instanceof DateTime)) {
+        values.add(new EventHolder(null, 0, (Map) objects[index++]));
+      }
+
+      retVal.add(new Result<>(timestamp, new SelectResultValue(null, values)));
+    }
+    return retVal;
+  }
+
+  private Iterable<Row> makeGroupByResults(Object... objects)
+  {
+    List retVal = Lists.newArrayList();
+    int index = 0;
+    while (index < objects.length) {
+      DateTime timestamp = (DateTime) objects[index++];
+      retVal.add(new MapBasedRow(timestamp, (Map) objects[index++]));
+    }
+    return retVal;
+  }
+
   private <T> T makeMock(List<Object> mocks, Class<T> clazz)
   {
     T obj = EasyMock.createMock(clazz);
@@ -1324,6 +1642,8 @@ public class CachingClusteredClientTest
 
   protected CachingClusteredClient makeClient()
   {
+    final Supplier<GroupByQueryConfig> groupByQueryConfigSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
+
     return new CachingClusteredClient(
         new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
@@ -1333,6 +1653,30 @@ public class CachingClusteredClientTest
                         )
                         .put(TopNQuery.class, new TopNQueryQueryToolChest(new TopNQueryConfig()))
                         .put(SearchQuery.class, new SearchQueryQueryToolChest(new SearchQueryConfig()))
+                        .put(
+                            SelectQuery.class,
+                            new SelectQueryQueryToolChest(new QueryConfig(), jsonMapper)
+                        )
+                        .put(
+                            GroupByQuery.class,
+                            new GroupByQueryQueryToolChest(
+                                groupByQueryConfigSupplier,
+                                jsonMapper,
+                                new GroupByQueryEngine(
+                                    groupByQueryConfigSupplier,
+                                    new StupidPool<>(
+                                        new Supplier<ByteBuffer>()
+                                        {
+                                          @Override
+                                          public ByteBuffer get()
+                                          {
+                                            return ByteBuffer.allocate(1024 * 1024);
+                                          }
+                                        }
+                                    )
+                                )
+                            )
+                        )
                         .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
                         .build()
         ),
@@ -1364,6 +1708,13 @@ public class CachingClusteredClientTest
         cache,
         jsonMapper,
         new CacheConfig()
+        {
+          @Override
+          public boolean isQueryCacheable(Query query)
+          {
+            return true;
+          }
+        }
     );
   }
 

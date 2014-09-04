@@ -28,6 +28,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -74,7 +75,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, engine)
+        new GroupByQueryQueryToolChest(configSupplier, new DefaultObjectMapper(), engine)
     );
 
     final Collection<?> objects = QueryRunnerTestHelper.makeQueryRunners(factory);
@@ -98,13 +99,13 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
             return Sequences.map(
                 groupByRunner.run(
                     GroupByQuery.builder()
-                        .setDataSource(tsQuery.getDataSource())
-                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                        .setGranularity(tsQuery.getGranularity())
-                        .setDimFilter(tsQuery.getDimensionsFilter())
-                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                        .build()
+                                .setDataSource(tsQuery.getDataSource())
+                                .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                                .setGranularity(tsQuery.getGranularity())
+                                .setDimFilter(tsQuery.getDimensionsFilter())
+                                .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                                .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                                .build()
                 ),
                 new Function<Row, Result<TimeseriesResultValue>>()
                 {

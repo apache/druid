@@ -27,6 +27,8 @@ import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
+import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
+import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
@@ -68,5 +70,9 @@ public class HdfsStorageDruidModule implements DruidModule
 
     binder.bind(Configuration.class).toInstance(conf);
     JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
+
+    Binders.taskLogsBinder(binder).addBinding("hdfs").to(HdfsTaskLogs.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.logs", HdfsTaskLogsConfig.class);
+    binder.bind(HdfsTaskLogs.class).in(LazySingleton.class);
   }
 }

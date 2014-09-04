@@ -19,12 +19,18 @@
 
 package io.druid.indexing.worker.http;
 
+import com.google.api.client.util.Lists;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.overlord.ForkingTaskRunner;
+import io.druid.indexing.overlord.TaskRunnerWorkItem;
+import io.druid.indexing.worker.Worker;
+import io.druid.indexing.worker.WorkerCuratorCoordinator;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -42,16 +48,96 @@ import java.io.InputStream;
 public class WorkerResource
 {
   private static final Logger log = new Logger(WorkerResource.class);
+  private static String DISABLED_VERSION = "";
 
+  private final Worker enabledWorker;
+  private final Worker disabledWorker;
+  private final WorkerCuratorCoordinator curatorCoordinator;
   private final ForkingTaskRunner taskRunner;
 
   @Inject
   public WorkerResource(
+      Worker worker,
+      WorkerCuratorCoordinator curatorCoordinator,
       ForkingTaskRunner taskRunner
 
   ) throws Exception
   {
+    this.enabledWorker = worker;
+    this.disabledWorker = new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), DISABLED_VERSION);
+    this.curatorCoordinator = curatorCoordinator;
     this.taskRunner = taskRunner;
+  }
+
+
+  @POST
+  @Path("/disable")
+  @Produces("application/json")
+  public Response doDisable()
+  {
+    try {
+      curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
+      return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled")).build();
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
+  }
+
+  @POST
+  @Path("/enable")
+  @Produces("application/json")
+  public Response doEnable()
+  {
+    try {
+      curatorCoordinator.updateWorkerAnnouncement(enabledWorker);
+      return Response.ok(ImmutableMap.of(enabledWorker.getHost(), "enabled")).build();
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
+  }
+
+  @GET
+  @Path("/enabled")
+  @Produces("application/json")
+  public Response isEnabled()
+  {
+    try {
+      final Worker theWorker = curatorCoordinator.getWorker();
+      final boolean enabled = !theWorker.getVersion().equalsIgnoreCase(DISABLED_VERSION);
+      return Response.ok(ImmutableMap.of(theWorker.getHost(), enabled)).build();
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
+  }
+
+  @GET
+  @Path("/tasks")
+  @Produces("application/json")
+  public Response getTasks()
+  {
+    try {
+      return Response.ok(
+          Lists.newArrayList(
+              Collections2.transform(
+                  taskRunner.getKnownTasks(),
+                  new Function<TaskRunnerWorkItem, String>()
+                  {
+                    @Override
+                    public String apply(TaskRunnerWorkItem input)
+                    {
+                      return input.getTaskId();
+                    }
+                  }
+              )
+          )
+      ).build();
+    }
+    catch (Exception e) {
+      return Response.serverError().build();
+    }
   }
 
   @POST
@@ -82,7 +168,8 @@ public class WorkerResource
     if (stream.isPresent()) {
       try {
         return Response.ok(stream.get().getInput()).build();
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.warn(e, "Failed to read log for task: %s", taskid);
         return Response.serverError().build();
       }

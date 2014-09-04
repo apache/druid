@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -35,6 +36,7 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -99,41 +101,71 @@ public class GroupByQueryRunnerTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    GroupByQueryConfig config = new GroupByQueryConfig();
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
+        new Supplier<ByteBuffer>()
+        {
+          @Override
+          public ByteBuffer get()
+          {
+            return ByteBuffer.allocate(1024 * 1024);
+          }
+        }
+    );
+
+    final GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByQueryEngine engine = new GroupByQueryEngine(
-        configSupplier,
-        new StupidPool<ByteBuffer>(
-            new Supplier<ByteBuffer>()
-            {
-              @Override
-              public ByteBuffer get()
-              {
-                return ByteBuffer.allocate(1024 * 1024);
-              }
-            }
-        )
-    );
+    final GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, pool);
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, engine)
+        new GroupByQueryQueryToolChest(configSupplier, mapper, engine)
     );
 
+    GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public boolean isSingleThreaded()
+      {
+        return true;
+      }
+    };
+    singleThreadedConfig.setMaxIntermediateRows(10000);
+
+    final Supplier<GroupByQueryConfig> singleThreadedConfigSupplier = Suppliers.ofInstance(singleThreadedConfig);
+    final GroupByQueryEngine singleThreadEngine = new GroupByQueryEngine(singleThreadedConfigSupplier, pool);
+
+    final GroupByQueryRunnerFactory singleThreadFactory = new GroupByQueryRunnerFactory(
+        singleThreadEngine,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        singleThreadedConfigSupplier,
+        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine)
+    );
+
+
+    Function<Object, Object> function = new Function<Object, Object>()
+    {
+      @Override
+      public Object apply(@Nullable Object input)
+      {
+        return new Object[]{factory, ((Object[]) input)[0]};
+      }
+    };
+
     return Lists.newArrayList(
-        Iterables.transform(
-            QueryRunnerTestHelper.makeQueryRunners(factory), new Function<Object, Object>()
-        {
-          @Override
-          public Object apply(@Nullable Object input)
-          {
-            return new Object[]{factory, ((Object[]) input)[0]};
-          }
-        }
+        Iterables.concat(
+            Iterables.transform(
+                QueryRunnerTestHelper.makeQueryRunners(factory),
+                function
+            ),
+            Iterables.transform(
+                QueryRunnerTestHelper.makeQueryRunners(singleThreadFactory),
+                function
+            )
         )
     );
   }
@@ -795,7 +827,11 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(
+        configSupplier,
+        new DefaultObjectMapper(),
+        engine
+    ).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
@@ -844,7 +880,11 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(
+        configSupplier,
+        new DefaultObjectMapper(),
+        engine
+    ).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
@@ -893,7 +933,11 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, engine).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(
+        configSupplier,
+        new DefaultObjectMapper(),
+        engine
+    ).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query), "no-limit");
   }
 
@@ -1182,6 +1226,12 @@ public class GroupByQueryRunnerTest
               {
                 return (row.getFloatMetric("idx_subpostagg") < 3800);
               }
+
+              @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
             }
         )
         .addOrderByColumn("alias")
@@ -1281,6 +1331,12 @@ public class GroupByQueryRunnerTest
               {
                 return (row.getFloatMetric("idx_subpostagg") < 3800);
               }
+
+              @Override
+              public byte[] getCacheKey()
+              {
+                return new byte[0];
+              }
             }
         )
         .addOrderByColumn("alias")
@@ -1325,11 +1381,61 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        createExpectedRow("2011-04-01", "alias", "travel", "rows", 1L, "idx", 11119.0, "js_outer_agg", 123.92274475097656),
-        createExpectedRow("2011-04-01", "alias", "technology", "rows", 1L, "idx", 11078.0, "js_outer_agg", 82.62254333496094),
-        createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 11121.0, "js_outer_agg", 125.58358001708984),
-        createExpectedRow("2011-04-01", "alias", "health", "rows", 1L, "idx", 11120.0, "js_outer_agg", 124.13470458984375),
-        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 1L, "idx", 11158.0, "js_outer_agg", 162.74722290039062)
+        createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "travel",
+            "rows",
+            1L,
+            "idx",
+            11119.0,
+            "js_outer_agg",
+            123.92274475097656
+        ),
+        createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "technology",
+            "rows",
+            1L,
+            "idx",
+            11078.0,
+            "js_outer_agg",
+            82.62254333496094
+        ),
+        createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "news",
+            "rows",
+            1L,
+            "idx",
+            11121.0,
+            "js_outer_agg",
+            125.58358001708984
+        ),
+        createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "health",
+            "rows",
+            1L,
+            "idx",
+            11120.0,
+            "js_outer_agg",
+            124.13470458984375
+        ),
+        createExpectedRow(
+            "2011-04-01",
+            "alias",
+            "entertainment",
+            "rows",
+            1L,
+            "idx",
+            11158.0,
+            "js_outer_agg",
+            162.74722290039062
+        )
     );
 
     // Subqueries are handled by the ToolChest
@@ -1350,7 +1456,6 @@ public class GroupByQueryRunnerTest
     return Sequences.toList(queryResult, Lists.<Row>newArrayList());
   }
 
-
   private Row createExpectedRow(final String timestamp, Object... vals)
   {
     return createExpectedRow(new DateTime(timestamp), vals);
@@ -1365,6 +1470,7 @@ public class GroupByQueryRunnerTest
       theVals.put(vals[i].toString(), vals[i + 1]);
     }
 
-    return new MapBasedRow(new DateTime(timestamp), theVals);
+    DateTime ts = new DateTime(timestamp);
+    return new MapBasedRow(ts, theVals);
   }
 }

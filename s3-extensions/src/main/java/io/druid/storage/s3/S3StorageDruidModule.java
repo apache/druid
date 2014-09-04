@@ -19,16 +19,16 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
-import com.google.inject.ProvisionException;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 
@@ -64,15 +64,44 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public AWSCredentials getJets3tAWSCredentials(AWSCredentialsConfig config)
+  public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
-    return new AWSCredentials(config.getAccessKey(), config.getSecretKey());
+    if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
+      return new AWSCredentialsProvider() {
+        @Override
+        public com.amazonaws.auth.AWSCredentials getCredentials() {
+          return new com.amazonaws.auth.AWSCredentials() {
+            @Override
+            public String getAWSAccessKeyId() {
+              return config.getAccessKey();
+            }
+
+            @Override
+            public String getAWSSecretKey() {
+              return config.getSecretKey();
+            }
+          };
+        }
+
+        @Override
+        public void refresh() {}
+      };
+    } else {
+      return new FileSessionCredentialsProvider(config.getFileSessionCredentials());
+    }
   }
 
   @Provides
   @LazySingleton
-  public RestS3Service getRestS3Service(AWSCredentials credentials)
+  public RestS3Service getRestS3Service(AWSCredentialsProvider provider)
   {
-      return new RestS3Service(credentials);
+    if(provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials) {
+      return new RestS3Service(new AWSSessionCredentialsAdapter(provider));
+    } else {
+      return new RestS3Service(new AWSCredentials(
+          provider.getCredentials().getAWSAccessKeyId(),
+          provider.getCredentials().getAWSSecretKey()
+      ));
+    }
   }
 }

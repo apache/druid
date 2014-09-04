@@ -24,7 +24,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -51,6 +53,8 @@ import java.util.Map;
  */
 public class GenericIndexed<T> implements Indexed<T>, Closeable
 {
+  private static final Logger log = new Logger(GenericIndexed.class);
+
   private static final byte version = 0x1;
 
   public static final int INITIAL_CACHE_CAPACITY = 16384;
@@ -121,11 +125,10 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
     return new GenericIndexed<T>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
   }
 
-  private static class SizedLRUMap<K, V> extends LinkedHashMap<K, V>
+  private static class SizedLRUMap<K, V> extends LinkedHashMap<K, Pair<Integer, V>>
   {
-    final Map<K, Integer> sizes = Maps.newHashMap();
-    int numBytes = 0;
-    int maxBytes = 0;
+    private final int maxBytes;
+    private int numBytes = 0;
 
     public SizedLRUMap(int initialCapacity, int maxBytes)
     {
@@ -134,20 +137,26 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
     }
 
     @Override
-    protected boolean removeEldestEntry(Map.Entry<K, V> eldest)
+    protected boolean removeEldestEntry(Map.Entry<K, Pair<Integer, V>> eldest)
     {
       if (numBytes > maxBytes) {
-        numBytes -= sizes.remove(eldest.getKey());
+        numBytes -= eldest.getValue().lhs;
         return true;
       }
       return false;
     }
 
-    public V put(K key, V value, int size)
+    public void put(K key, V value, int size)
     {
-      numBytes += size;
-      sizes.put(key, size);
-      return super.put(key, value);
+      final int totalSize = size + 48; // add approximate object overhead
+      numBytes += totalSize;
+      super.put(key, new Pair<>(totalSize, value));
+    }
+
+    public V getValue(Object key)
+    {
+      final Pair<Integer, V> sizeValuePair = super.get(key);
+      return sizeValuePair == null ? null : sizeValuePair.rhs;
     }
   }
 
@@ -206,6 +215,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
       @Override
       protected SizedLRUMap<Integer, T> initialValue()
       {
+        log.debug("Allocating column cache of max size[%d]", maxBytes);
         return new SizedLRUMap<>(INITIAL_CACHE_CAPACITY, maxBytes);
       }
     };
@@ -236,7 +246,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
     }
 
     if(cacheable) {
-      final T cached = cachedValues.get().get(index);
+      final T cached = cachedValues.get().getValue(index);
       if (cached != null) {
         return cached;
       }
@@ -329,6 +339,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
   public void close() throws IOException
   {
     if(cacheable) {
+      log.debug("Closing column cache");
       cachedValues.get().clear();
       cachedValues.remove();
     }

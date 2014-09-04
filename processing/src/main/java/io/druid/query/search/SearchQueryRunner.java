@@ -19,7 +19,6 @@
 
 package io.druid.query.search;
 
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -49,10 +48,8 @@ import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -97,14 +94,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
       final ImmutableConciseSet baseFilter;
       if (filter == null) {
-        // Accept all, and work around https://github.com/metamx/extendedset/issues/1
-        if (index.getNumRows() == 1) {
-          ConciseSet set = new ConciseSet();
-          set.add(0);
-          baseFilter = ImmutableConciseSet.newImmutableFromMutable(set);
-        } else {
-          baseFilter = ImmutableConciseSet.complement(new ImmutableConciseSet(), index.getNumRows());
-        }
+        baseFilter = ImmutableConciseSet.complement(new ImmutableConciseSet(), index.getNumRows());
       } else {
         baseFilter = filter.goConcise(new ColumnSelectorBitmapIndexSelector(index));
       }

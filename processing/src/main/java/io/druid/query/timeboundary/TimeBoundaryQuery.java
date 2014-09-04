@@ -199,7 +199,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
            "dataSource='" + getDataSource() + '\'' +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", duration=" + getDuration() +
-           ", bound" + bound +
+           ", bound=" + bound +
            '}';
   }
 

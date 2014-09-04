@@ -71,6 +71,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       new TypeReference<Result<TimeseriesResultValue>>()
       {
       };
+
   private final QueryConfig config;
 
   @Inject
@@ -173,7 +174,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         return new Function<Result<TimeseriesResultValue>, Object>()
         {
           @Override
-          public Object apply(@Nullable final Result<TimeseriesResultValue> input)
+          public Object apply(final Result<TimeseriesResultValue> input)
           {
             TimeseriesResultValue results = input.getValue();
             final List<Object> retVal = Lists.newArrayListWithCapacity(1 + aggs.size());

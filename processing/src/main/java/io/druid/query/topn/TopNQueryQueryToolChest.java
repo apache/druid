@@ -72,6 +72,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
+
   private final TopNQueryConfig config;
 
   @Inject

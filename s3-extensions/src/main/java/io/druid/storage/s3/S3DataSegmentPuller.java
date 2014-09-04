@@ -104,7 +104,12 @@ public class S3DataSegmentPuller implements DataSegmentPuller
                   } else {
                     ByteStreams.copy(in, Files.newOutputStreamSupplier(new File(outDir, toFilename(key, ""))));
                   }
-                  log.info("Pull of file[%s] completed in %,d millis", s3Obj, System.currentTimeMillis() - startTime);
+                  log.info(
+                      "Pull of file[%s/%s] completed in %,d millis",
+                      s3Obj.getBucketName(),
+                      s3Obj.getKey(),
+                      System.currentTimeMillis() - startTime
+                  );
                   return null;
                 }
                 catch (IOException e) {

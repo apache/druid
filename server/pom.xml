@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.129-SNAPSHOT</version>
+        <version>0.6.146</version>
     </parent>
 
     <dependencies>
@@ -100,6 +100,10 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-proxy</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>

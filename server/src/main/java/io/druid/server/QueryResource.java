@@ -41,6 +41,7 @@ import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
 
@@ -70,6 +71,7 @@ public class QueryResource
   public static final String APPLICATION_SMILE = "application/smile";
   public static final String APPLICATION_JSON = "application/json";
 
+  private final ServerConfig config;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QuerySegmentWalker texasRanger;
@@ -79,6 +81,7 @@ public class QueryResource
 
   @Inject
   public QueryResource(
+      ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QuerySegmentWalker texasRanger,
@@ -87,6 +90,7 @@ public class QueryResource
       QueryManager queryManager
   )
   {
+    this.config = config;
     this.jsonMapper = jsonMapper.copy();
     this.jsonMapper.getFactory().configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
@@ -135,6 +139,14 @@ public class QueryResource
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
+      if (query.getContextValue("timeout") == null) {
+        query = query.withOverriddenContext(
+            ImmutableMap.of(
+                "timeout",
+                config.getMaxIdleTime().toStandardDuration().getMillis()
+            )
+        );
+      }
 
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
@@ -166,6 +178,13 @@ public class QueryResource
         emitter.emit(
             new ServiceMetricEvent.Builder()
                 .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
+                .setUser3(
+                    jsonMapper.writeValueAsString(
+                        query.getContext() == null
+                        ? ImmutableMap.of()
+                        : query.getContext()
+                    )
+                )
                 .setUser4(query.getType())
                 .setUser5(COMMA_JOIN.join(query.getIntervals()))
                 .setUser6(String.valueOf(query.hasFilters()))
