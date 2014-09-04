@@ -567,7 +567,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences)
+    public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences, boolean ordered)
     {
       return new ConcatSequence<T>(seqOfSequences);
     }
@@ -590,12 +590,6 @@ public class ServerManagerTest
       return new TypeReference<T>()
       {
       };
-    }
-
-    @Override
-    public Ordering<T> getOrdering()
-    {
-      return null;
     }
   }
 

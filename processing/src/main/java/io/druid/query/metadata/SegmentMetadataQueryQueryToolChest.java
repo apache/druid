@@ -144,9 +144,13 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
-  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
+  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences, boolean ordered)
   {
-    return new OrderedMergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
+    if (ordered) {
+      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+    } else {
+      return new MergeSequence<>(getOrdering(), seqOfSequences);
+    }
   }
 
   @Override
@@ -234,8 +238,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     };
   }
 
-  @Override
-  public Ordering<SegmentAnalysis> getOrdering()
+  private Ordering<SegmentAnalysis> getOrdering()
   {
     return new Ordering<SegmentAnalysis>()
     {

@@ -111,9 +111,16 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public Sequence<Result<SelectResultValue>> mergeSequences(Sequence<Sequence<Result<SelectResultValue>>> seqOfSequences)
+  public Sequence<Result<SelectResultValue>> mergeSequences(
+      Sequence<Sequence<Result<SelectResultValue>>> seqOfSequences,
+      boolean ordered
+  )
   {
-    return new OrderedMergeSequence<Result<SelectResultValue>>(getOrdering(), seqOfSequences);
+    if (ordered) {
+      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+    } else {
+      return new MergeSequence<>(getOrdering(), seqOfSequences);
+    }
   }
 
   @Override

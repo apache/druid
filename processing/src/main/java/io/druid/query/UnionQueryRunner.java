@@ -46,8 +46,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
-      return new MergeSequence<T>(
-          toolChest.getOrdering(),
+      return toolChest.mergeSequences(
           Sequences.simple(
               Lists.transform(
                   ((UnionDataSource) dataSource).getDataSources(),
@@ -62,7 +61,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                     }
                   }
               )
-          )
+          ),
+          false
       );
     } else {
       return baseRunner.run(query);

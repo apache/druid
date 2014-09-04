@@ -42,10 +42,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * This method doesn't belong here, but it's here for now just to make it work.
    *
    * @param seqOfSequences
+   * @param ordered whether the seqOfSequences is ordered or not.
    *
    * @return
    */
-  public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences);
+  public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences, boolean ordered);
 
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
 
@@ -80,6 +81,4 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     return segments;
   }
-
-  public abstract Ordering<ResultType> getOrdering();
 }

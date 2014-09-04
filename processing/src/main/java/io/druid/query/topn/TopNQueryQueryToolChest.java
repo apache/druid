@@ -126,9 +126,16 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public Sequence<Result<TopNResultValue>> mergeSequences(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
+  public Sequence<Result<TopNResultValue>> mergeSequences(
+      Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences,
+      boolean ordered
+  )
   {
-    return new OrderedMergeSequence<Result<TopNResultValue>>(getOrdering(), seqOfSequences);
+    if (ordered) {
+      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+    } else {
+      return new MergeSequence<>(getOrdering(), seqOfSequences);
+    }
   }
 
   @Override
