@@ -38,6 +38,7 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.TimestampColumnSelector;
@@ -284,7 +285,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 final String dimensionName = dimension.toLowerCase();
                 final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimensionName);
                 if (dimValLookup == null) {
-                  return null;
+                  return new NullDimensionSelector();
                 }
 
                 final int maxId = dimValLookup.size();
@@ -421,15 +422,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     public Object get()
                     {
                       final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
+                      if (dimVals == null || dimVals.length == 0) {
+                        return null;
+                      }
                       if (dimVals.length == 1) {
                         return dimVals[0];
                       }
-                      else if (dimVals.length == 0) {
-                        return null;
-                      }
-                      else {
-                        return dimVals;
-                      }
+                      return dimVals;
                     }
                   };
                 }
@@ -491,6 +490,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
       if (dimIndexObject == null) {
+        if (value == null || "".equals(value)) {
+          return new BooleanValueMatcher(true);
+        }
         return new BooleanValueMatcher(false);
       }
       String idObject = index.getDimension(dimension.toLowerCase()).get(value);

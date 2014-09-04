@@ -522,6 +522,9 @@ public class IncrementalIndex implements Iterable<Row>
                   if (dim != null && dim.length != 0) {
                     theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
                   }
+                  else {
+                    theVals.put(dimensions.get(i), null);
+                  }
                 }
 
                 for (int i = 0; i < aggregators.length; ++i) {

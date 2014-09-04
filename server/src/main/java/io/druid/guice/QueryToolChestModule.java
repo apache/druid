@@ -19,13 +19,22 @@
 
 package io.druid.guice;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.initialization.DruidModule;
 import io.druid.query.Query;
 import io.druid.query.QueryConfig;
 import io.druid.query.QueryToolChest;
+import io.druid.query.aggregation.cardinality.DimensionCardinalityAggregatorFactory;
+import io.druid.query.aggregation.cardinality.HllPlusComplexMetricSerde;
+import io.druid.query.aggregation.cardinality.hll.HyperLogLogPlus;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
@@ -40,15 +49,20 @@ import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import io.druid.segment.serde.ComplexMetrics;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
+import io.druid.segment.serde.ComplexMetrics;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
-public class QueryToolChestModule implements Module
+public class QueryToolChestModule implements DruidModule
 {
   public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
@@ -62,8 +76,39 @@ public class QueryToolChestModule implements Module
                   .build();
 
   @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return ImmutableList.of(
+        new SimpleModule("aggs")
+        .addSerializer(
+            HyperLogLogPlus.class,
+            new JsonSerializer<HyperLogLogPlus>()
+            {
+              @Override
+              public void serialize(
+                  HyperLogLogPlus hyperLogLogPlus,
+                  JsonGenerator jsonGenerator,
+                  SerializerProvider serializerProvider)
+                  throws IOException
+              {
+                ByteBuffer buf = hyperLogLogPlus.getBuffer();
+                byte[] bytes = new byte[buf.remaining()];
+                buf.get(bytes);
+                jsonGenerator.writeObject(bytes);
+              }
+            }
+        )
+        .registerSubtypes(new NamedType(DimensionCardinalityAggregatorFactory.class, "dimCardinality"))
+    );
+  }
+
+  @Override
   public void configure(Binder binder)
   {
+    if (ComplexMetrics.getSerdeForType("hll+") == null) {
+      ComplexMetrics.registerSerde("hll+", new HllPlusComplexMetricSerde());
+    }
+    
     MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
 
     for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : mappings.entrySet()) {
@@ -76,4 +121,5 @@ public class QueryToolChestModule implements Module
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
   }
+
 }

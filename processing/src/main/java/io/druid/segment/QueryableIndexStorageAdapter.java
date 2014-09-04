@@ -278,8 +278,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
                       final Column columnDesc = index.getColumn(dimensionName);
+                      if (columnDesc == null) {
+                        return new NullDimensionSelector();
+                      }
 
-                      if (cachedColumn == null && columnDesc != null) {
+                      if (cachedColumn == null) {
                           cachedColumn = columnDesc.getDictionaryEncoding();
                           dictionaryColumnCache.put(dimensionName, cachedColumn);
                       }
@@ -287,8 +290,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final DictionaryEncodedColumn column = cachedColumn;
 
                       if (column == null) {
-                        return null;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                        return new NullDimensionSelector();
+                      }
+                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -733,8 +737,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
                       final Column columnDesc = index.getColumn(dimensionName);
-
-                      if (cachedColumn == null && columnDesc != null) {
+                      if (columnDesc == null) {
+                        return new NullDimensionSelector();
+                      }
+                      
+                      if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
                         dictionaryColumnCache.put(dimensionName, cachedColumn);
                       }
@@ -742,8 +749,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final DictionaryEncodedColumn column = cachedColumn;
 
                       if (column == null) {
-                        return null;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                        return new NullDimensionSelector();
+                      } else if (column.hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override

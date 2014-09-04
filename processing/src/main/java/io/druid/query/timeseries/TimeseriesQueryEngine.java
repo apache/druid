@@ -51,12 +51,18 @@ public class TimeseriesQueryEngine
         query.getGranularity(),
         new Function<Cursor, Result<TimeseriesResultValue>>()
         {
+          private final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
           private final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
 
           @Override
           public Result<TimeseriesResultValue> apply(Cursor cursor)
           {
             Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
+
+            if (skipEmptyBuckets && cursor.isDone()) {
+              return null;
+            }
+
             try {
               while (!cursor.isDone()) {
                 for (Aggregator aggregator : aggregators) {
