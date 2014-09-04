@@ -567,7 +567,13 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences, boolean ordered)
+    public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences)
+    {
+      return new ConcatSequence<T>(seqOfSequences);
+    }
+
+    @Override
+    public Sequence<T> mergeSequencesUnordered(Sequence<Sequence<T>> seqOfSequences)
     {
       return new ConcatSequence<T>(seqOfSequences);
     }

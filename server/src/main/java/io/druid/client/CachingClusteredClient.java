@@ -265,7 +265,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                 Iterables.transform(listOfSequences, Pair.<DateTime, Sequence<T>>rhsFn())
             );
             if (strategy == null) {
-              return toolChest.mergeSequences(seq, true);
+              return toolChest.mergeSequences(seq);
             } else {
               return strategy.mergeSequences(seq);
             }
@@ -383,8 +383,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                             );
                           }
                         }
-                    ),
-                    true
+                    )
                 );
               }
 

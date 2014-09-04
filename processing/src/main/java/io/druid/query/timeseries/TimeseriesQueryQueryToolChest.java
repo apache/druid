@@ -110,16 +110,15 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public Sequence<Result<TimeseriesResultValue>> mergeSequences(
-      Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences,
-      boolean ordered
-  )
+  public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
   {
-    if (ordered) {
-      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-    } else {
-      return new MergeSequence<>(getOrdering(), seqOfSequences);
-    }
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Result<TimeseriesResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override

@@ -109,16 +109,15 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public Sequence<Result<SearchResultValue>> mergeSequences(
-      Sequence<Sequence<Result<SearchResultValue>>> seqOfSequences,
-      boolean ordered
-  )
+  public Sequence<Result<SearchResultValue>> mergeSequences(Sequence<Sequence<Result<SearchResultValue>>> seqOfSequences)
   {
-    if (ordered) {
-      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-    } else {
-      return new MergeSequence<>(getOrdering(), seqOfSequences);
-    }
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Result<SearchResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<SearchResultValue>>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override

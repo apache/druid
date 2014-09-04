@@ -109,16 +109,15 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(
-      Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences,
-      boolean ordered
-  )
+  public Sequence<Result<TimeBoundaryResultValue>> mergeSequences(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
   {
-    if (ordered) {
-      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-    } else {
-      return new MergeSequence<>(getOrdering(), seqOfSequences);
-    }
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Result<TimeBoundaryResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override

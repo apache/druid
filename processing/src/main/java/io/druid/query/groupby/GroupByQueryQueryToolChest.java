@@ -191,16 +191,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
 
   @Override
-  public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences, boolean ordered)
+  public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    if (ordered) {
-      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-    } else {
-      return new MergeSequence<>(getOrdering(), seqOfSequences);
-    }
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
   }
 
-  private  Ordering<Row> getOrdering()
+  @Override
+  public Sequence<Row> mergeSequencesUnordered(Sequence<Sequence<Row>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  private Ordering<Row> getOrdering()
   {
     return Ordering.<Row>natural().nullsFirst();
   }

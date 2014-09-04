@@ -144,13 +144,15 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   }
 
   @Override
-  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences, boolean ordered)
+  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
   {
-    if (ordered) {
-      return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-    } else {
-      return new MergeSequence<>(getOrdering(), seqOfSequences);
-    }
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<SegmentAnalysis> mergeSequencesUnordered(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
