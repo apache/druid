@@ -85,7 +85,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
 
         final Interval interval = query.getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
-            interval.getStartMillis() + offset,
+            Math.min(interval.getStartMillis() + offset, now + offset),
             Math.min(interval.getEndMillis() + offset, now + offset)
         );
         return Sequences.map(
