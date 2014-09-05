@@ -165,4 +165,52 @@ public class TimewarpOperatorTest
     );
 
   }
+
+  @Test
+  public void testEmptyFutureInterval() throws Exception
+  {
+    QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        query.getIntervals().get(0).getStart(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+                    ),
+                    new Result<>(
+                        query.getIntervals().get(0).getEnd(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+                    )
+                )
+            );
+          }
+        },
+        new DateTime("2014-08-02").getMillis()
+    );
+
+    final Query<Result<TimeseriesResultValue>> query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2014-08-06/2014-08-08")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                new DateTime("2014-08-02"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+            ),
+            new Result<>(
+                new DateTime("2014-08-02"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+            )
+        ),
+        Sequences.toList(queryRunner.run(query), Lists.<Result<TimeseriesResultValue>>newArrayList())
+    );
+  }
 }
