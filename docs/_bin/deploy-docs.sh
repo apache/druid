@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 opt_api=1
+opt_docs=1
 while getopts ":adn" opt; do
   case $opt in
     n)
