@@ -40,6 +40,8 @@ import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Properties;
 
@@ -116,7 +118,26 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
         if (argumentSpec.startsWith("{")) {
           config = HadoopDruidIndexerConfig.fromString(argumentSpec);
         } else {
-          config = HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
+          File localConfigFile = null;
+
+          try {
+            final URI argumentSpecUri = new URI(argumentSpec);
+            final String argumentSpecScheme = argumentSpecUri.getScheme();
+
+            if (argumentSpecScheme == null || argumentSpecScheme.equals("file")) {
+              // File URI.
+              localConfigFile = new File(argumentSpecUri.getPath());
+            }
+          } catch (URISyntaxException e) {
+            // Not a URI, assume it's a local file.
+            localConfigFile = new File(argumentSpec);
+          }
+
+          if (localConfigFile != null) {
+            config = HadoopDruidIndexerConfig.fromFile(localConfigFile);
+          } else {
+            config = HadoopDruidIndexerConfig.fromDistributedFileSystem(argumentSpec);
+          }
         }
       }
       catch (Exception e) {
