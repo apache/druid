@@ -65,9 +65,11 @@ public class CliInternalHadoopIndexer implements Runnable
   public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
   {
     try {
-      HadoopIngestionSpec spec;
       if (argumentSpec.startsWith("{")) {
         return HadoopDruidIndexerConfig.fromString(argumentSpec);
+      } else if (argumentSpec.startsWith("hdfs://")) {
+        log.info("Read hadoop-indexer configuration from distributed file system");
+        return HadoopDruidIndexerConfig.fromDistributedFileSystem(argumentSpec);
       } else {
         return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
       }
