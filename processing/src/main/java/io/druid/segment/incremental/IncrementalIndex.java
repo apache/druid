@@ -69,6 +69,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -314,7 +315,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
     db = DBMaker.newMemoryDirectDB().transactionDisable().cacheWeakRefEnable().make();
-    this.facts = db.createTreeMap("facts").make();
+    this.facts = db.createTreeMap("__facts" + UUID.randomUUID()).make();
   }
 
   public IncrementalIndex(
