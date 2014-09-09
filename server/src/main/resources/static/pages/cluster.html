@@ -1,9 +1,9 @@
 <header>
-  <h1>druid {{ env }}
+  <h1>druid {{ env ? env : 'cluster' }}
     <span
       class="rule-editor-link"
       ng-controller="ClusterConfigCtrl"
-      tooltip="edit {{ env }} cluster configuration"
+      tooltip="edit {{ env ? env : 'cluster' }} cluster configuration"
       tooltip-trigger="mouseenter"
       tooltip-placement="bottom"
     >
