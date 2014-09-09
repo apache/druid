@@ -63,7 +63,12 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +172,7 @@ public class HadoopDruidIndexerConfig
     try
     {
       Path pt = new Path(path);
-      FileSystem fs = FileSystem.get(new Configuration());
+      FileSystem fs = FileSystem.get(new URI(path), new Configuration());
       Reader reader = new InputStreamReader(fs.open(pt));
 
       return fromMap(
@@ -178,7 +183,7 @@ public class HadoopDruidIndexerConfig
             )
         );
     }
-    catch (IOException e) {
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
