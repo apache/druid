@@ -39,6 +39,7 @@ import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  */
@@ -102,11 +103,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     );
 
 
-    final PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
-        query.getContext().get("postProcessing"),
-        new TypeReference<PostProcessingOperator<T>>() {
-        }
-    );
+    final Map<String, Object> context = query.getContext();
+    PostProcessingOperator<T> postProcessing = null;
+    if(context != null) {
+      postProcessing = objectMapper.convertValue(
+          context.get("postProcessing"),
+          new TypeReference<PostProcessingOperator<T>>()
+          {
+          }
+      );
+    }
 
     return postProcessing != null ?
            postProcessing.postProcess(baseRunner) : baseRunner;
