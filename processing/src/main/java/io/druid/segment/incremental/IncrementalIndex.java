@@ -783,6 +783,8 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
     private volatile String[] sortedVals = null;
+    // size on MapDB.HTreeMap is slow so maintain a count here
+    private volatile int size=0;
 
     public DimDim(String dimName)
     {
@@ -807,7 +809,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     public int size()
     {
-      return falseIds.size();
+      return size;
     }
 
     public Set<String> keySet()
@@ -817,7 +819,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     public synchronized void add(String value)
     {
-      final int id = falseIds.size();
+      final int id = size++;
       falseIds.put(value, id);
       falseIdsReverse.put(id, value);
     }
@@ -837,7 +839,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     public void sort()
     {
       if (sortedVals == null) {
-        sortedVals = new String[falseIds.size()];
+        sortedVals = new String[size];
 
         int index = 0;
         for (String value : falseIds.keySet()) {
