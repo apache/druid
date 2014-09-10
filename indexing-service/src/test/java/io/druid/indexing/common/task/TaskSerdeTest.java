@@ -350,7 +350,7 @@ public class TaskSerdeTest
         null,
         null,
         new HadoopIngestionSpec(
-            null, null, null,
+            null, null, null, false, // TODO
             "foo",
             new TimestampSpec("timestamp", "auto"),
             new JSONDataSpec(ImmutableList.of("foo"), null),

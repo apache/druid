@@ -207,6 +207,12 @@ public class HadoopDruidIndexerConfig
     }
   }
 
+  // TODO: remove this
+  public boolean isLegacy()
+  {
+    return schema.isLegacy();
+  }
+
   @JsonProperty
   public HadoopIngestionSpec getSchema()
   {
