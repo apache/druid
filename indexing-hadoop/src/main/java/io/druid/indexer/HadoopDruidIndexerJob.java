@@ -57,7 +57,11 @@ public class HadoopDruidIndexerJob implements Jobby
     List<Jobby> jobs = Lists.newArrayList();
     JobHelper.ensurePaths(config);
 
-    indexJob = new IndexGeneratorJob(config);
+    if (config.isLegacy()) {
+      indexJob = new LegacyIndexGeneratorJob(config);
+    } else {
+      indexJob = new IndexGeneratorJob(config);
+    }
     jobs.add(indexJob);
 
     if (dbUpdaterJob != null) {
@@ -66,15 +70,17 @@ public class HadoopDruidIndexerJob implements Jobby
       log.info("No updaterJobSpec set, not uploading to database");
     }
 
-    jobs.add(new Jobby()
-    {
-      @Override
-      public boolean run()
-      {
-        publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
-        return true;
-      }
-    });
+    jobs.add(
+        new Jobby()
+        {
+          @Override
+          public boolean run()
+          {
+            publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
+            return true;
+          }
+        }
+    );
 
 
     JobHelper.runJobs(jobs, config);
