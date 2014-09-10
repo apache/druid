@@ -504,7 +504,8 @@ public class IndexGeneratorJob implements Jobby
       // the String name of it and verify that.  We do a full package-qualified test in order
       // to be as explicit as possible.
       String fsClazz = outputFS.getClass().getName();
-      if ("org.apache.hadoop.fs.s3native.NativeS3FileSystem".equals(fsClazz)) {
+      if ("org.apache.hadoop.fs.s3native.NativeS3FileSystem".equals(fsClazz) ||
+          "com.amazon.ws.emr.hadoop.fs.EmrFileSystem".equals(fsClazz)) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "s3_zip",
             "bucket", indexOutURI.getHost(),
