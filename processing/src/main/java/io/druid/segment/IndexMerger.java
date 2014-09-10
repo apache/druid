@@ -122,7 +122,7 @@ public class IndexMerger
    */
   public static File persist(final IncrementalIndex index, final Interval dataInterval, File outDir) throws IOException
   {
-    return persist(index, dataInterval, outDir, new NoopProgressIndicator());
+    return persist(index, dataInterval, outDir, new BaseProgressIndicator());
   }
 
   public static File persist(
@@ -164,7 +164,7 @@ public class IndexMerger
       List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return mergeQueryableIndex(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return mergeQueryableIndex(indexes, metricAggs, outDir, new BaseProgressIndicator());
   }
 
   public static File mergeQueryableIndex(
@@ -193,7 +193,7 @@ public class IndexMerger
       List<IndexableAdapter> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return merge(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return merge(indexes, metricAggs, outDir, new BaseProgressIndicator());
   }
 
   public static File merge(
@@ -316,7 +316,7 @@ public class IndexMerger
       List<IndexableAdapter> indexes, File outDir
   ) throws IOException
   {
-    return append(indexes, outDir, new NoopProgressIndicator());
+    return append(indexes, outDir, new BaseProgressIndicator());
   }
 
   public static File append(
@@ -1189,16 +1189,5 @@ public class IndexMerger
 
       return retVal;
     }
-  }
-
-  public static interface ProgressIndicator
-  {
-    public void progress();
-  }
-
-  private static class NoopProgressIndicator implements ProgressIndicator
-  {
-    @Override
-    public void progress() {}
   }
 }

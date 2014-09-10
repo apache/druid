@@ -37,7 +37,6 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
 import io.druid.segment.LoggingProgressIndicator;
@@ -90,16 +89,6 @@ import java.util.zip.ZipOutputStream;
 public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
-  private final HadoopDruidIndexerConfig config;
-  private IndexGeneratorStats jobStats;
-
-  public IndexGeneratorJob(
-      HadoopDruidIndexerConfig config
-  )
-  {
-    this.config = config;
-    this.jobStats = new IndexGeneratorStats();
-  }
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
@@ -133,6 +122,22 @@ public class IndexGeneratorJob implements Jobby
     return publishedSegments;
   }
 
+  private final HadoopDruidIndexerConfig config;
+  private IndexGeneratorStats jobStats;
+
+  public IndexGeneratorJob(
+      HadoopDruidIndexerConfig config
+  )
+  {
+    this.config = config;
+    this.jobStats = new IndexGeneratorStats();
+  }
+
+  protected void setReducerClass(final Job job)
+  {
+    job.setReducerClass(IndexGeneratorReducer.class);
+  }
+
   public IndexGeneratorStats getJobStats()
   {
     return jobStats;
@@ -164,7 +169,7 @@ public class IndexGeneratorJob implements Jobby
       job.setNumReduceTasks(Iterables.size(config.getAllBuckets().get()));
       job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
-      job.setReducerClass(IndexGeneratorReducer.class);
+      setReducerClass(job);
       job.setOutputKeyClass(BytesWritable.class);
       job.setOutputValueClass(Text.class);
       job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
@@ -193,7 +198,6 @@ public class IndexGeneratorJob implements Jobby
   }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
-
   {
     @Override
     protected void innerMap(
@@ -259,6 +263,42 @@ public class IndexGeneratorJob implements Jobby
     private List<String> metricNames = Lists.newArrayList();
     private StringInputRowParser parser;
 
+    protected ProgressIndicator makeProgressIndicator(final Context context)
+    {
+      return new LoggingProgressIndicator("IndexGeneratorJob")
+      {
+        @Override
+        public void progress()
+        {
+          context.progress();
+        }
+      };
+    }
+
+    protected File persist(
+        final IncrementalIndex index,
+        final Interval interval,
+        final File file,
+        final ProgressIndicator progressIndicator
+    ) throws IOException
+    {
+      return IndexMaker.persist(
+          index, interval, file, progressIndicator
+      );
+    }
+
+    protected File mergeQueryableIndex(
+        final List<QueryableIndex> indexes,
+        final AggregatorFactory[] aggs,
+        final File file,
+        ProgressIndicator progressIndicator
+    ) throws IOException
+    {
+      return IndexMaker.mergeQueryableIndex(
+          indexes, aggs, file, progressIndicator
+      );
+    }
+
     @Override
     protected void setup(Context context)
         throws IOException, InterruptedException
@@ -297,14 +337,7 @@ public class IndexGeneratorJob implements Jobby
         long startTime = System.currentTimeMillis();
 
         Set<String> allDimensionNames = Sets.newHashSet();
-        final ProgressIndicator progressIndicator = new LoggingProgressIndicator("IndexGeneratorJob")
-        {
-          @Override
-          public void progress()
-          {
-            context.progress();
-          }
-        };
+        final ProgressIndicator progressIndicator = makeProgressIndicator(context);
 
         for (final Text value : values) {
           context.progress();
@@ -327,9 +360,7 @@ public class IndexGeneratorJob implements Jobby
             toMerge.add(file);
 
             context.progress();
-            IndexMaker.persist(
-                index, interval, file, progressIndicator
-            );
+            persist(index, interval, file, progressIndicator);
             // close this index and make a new one
             index.close();
             index = makeIncrementalIndex(bucket, aggs);
@@ -350,22 +381,18 @@ public class IndexGeneratorJob implements Jobby
           }
 
           mergedBase = new File(baseFlushFile, "merged");
-          IndexMaker.persist(
-              index, interval, mergedBase, progressIndicator
-          );
+          persist(index, interval, mergedBase, progressIndicator);
         } else {
           if (!index.isEmpty()) {
             final File finalFile = new File(baseFlushFile, "final");
-            IndexMaker.persist(
-                index, interval, finalFile, progressIndicator
-            );
+            persist(index, interval, finalFile, progressIndicator);
             toMerge.add(finalFile);
           }
 
           for (File file : toMerge) {
             indexes.add(IndexIO.loadIndex(file));
           }
-          mergedBase = IndexMaker.mergeQueryableIndex(
+          mergedBase = mergeQueryableIndex(
               indexes, aggs, new File(baseFlushFile, "merged"), progressIndicator
           );
         }

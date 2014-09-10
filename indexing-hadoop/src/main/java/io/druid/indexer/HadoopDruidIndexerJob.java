@@ -57,10 +57,10 @@ public class HadoopDruidIndexerJob implements Jobby
     List<Jobby> jobs = Lists.newArrayList();
     JobHelper.ensurePaths(config);
 
-    if (config.isLegacy()) {
-      indexJob = new LegacyIndexGeneratorJob(config);
-    } else {
+    if (config.isPersistInHeap()) {
       indexJob = new IndexGeneratorJob(config);
+    } else {
+      indexJob = new LegacyIndexGeneratorJob(config);
     }
     jobs.add(indexJob);
 

@@ -403,7 +403,17 @@ public class IndexTask extends AbstractFixedIntervalTask
         tmpDir
     ).findPlumber(
         schema,
-        new RealtimeTuningConfig(ingestionSchema.getTuningConfig().getBufferSize(), null, null, null, null, null, null, shardSpec),
+        new RealtimeTuningConfig(
+            ingestionSchema.getTuningConfig().getBufferSize(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            shardSpec,
+            null
+        ),
         metrics
     );
 
@@ -554,7 +564,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("bufferSize") @Nullable Integer bufferSize,
         @JsonProperty("numShards") @Nullable Integer numShards
-        )
+    )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
       this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;

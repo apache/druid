@@ -53,6 +53,7 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         false,
         null,
+        false,
         false
     );
   }
@@ -68,6 +69,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean ignoreInvalidRows;
   private final Map<String, String> jobProperties;
   private final boolean combineText;
+  private final boolean persistInHeap;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -81,7 +83,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
-      final @JsonProperty("combineText") boolean combineText
+      final @JsonProperty("combineText") boolean combineText,
+      final @JsonProperty("persistInHeap") boolean persistInHeap
   )
   {
     this.workingPath = workingPath == null ? null : workingPath;
@@ -97,6 +100,7 @@ public class HadoopTuningConfig implements TuningConfig
                           ? ImmutableMap.<String, String>of()
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
+    this.persistInHeap = persistInHeap;
   }
 
   @JsonProperty
@@ -165,6 +169,12 @@ public class HadoopTuningConfig implements TuningConfig
     return combineText;
   }
 
+  @JsonProperty
+  public boolean isPersistInHeap()
+  {
+    return persistInHeap;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -178,7 +188,8 @@ public class HadoopTuningConfig implements TuningConfig
         overwriteFiles,
         ignoreInvalidRows,
         jobProperties,
-        combineText
+        combineText,
+        persistInHeap
     );
   }
 
@@ -195,7 +206,8 @@ public class HadoopTuningConfig implements TuningConfig
         overwriteFiles,
         ignoreInvalidRows,
         jobProperties,
-        combineText
+        combineText,
+        persistInHeap
     );
   }
 
@@ -212,7 +224,8 @@ public class HadoopTuningConfig implements TuningConfig
         overwriteFiles,
         ignoreInvalidRows,
         jobProperties,
-        combineText
+        combineText,
+        persistInHeap
     );
   }
 }

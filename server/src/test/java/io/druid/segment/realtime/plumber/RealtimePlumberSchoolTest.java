@@ -133,6 +133,7 @@ public class RealtimePlumberSchoolTest
         new IntervalStartVersioningPolicy(),
         new NoopRejectionPolicyFactory(),
         null,
+        null,
         null
     );
 
