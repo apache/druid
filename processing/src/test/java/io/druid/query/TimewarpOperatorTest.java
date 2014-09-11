@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -79,7 +80,10 @@ public class TimewarpOperatorTest
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query, Map<String, Object> context)
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query,
+              Map<String, Object> context
+          )
           {
             return Sequences.simple(
                 ImmutableList.of(
@@ -138,13 +142,21 @@ public class TimewarpOperatorTest
         new QueryRunner<Result<TimeBoundaryResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> query, Map<String, Object> context)
+          public Sequence<Result<TimeBoundaryResultValue>> run(
+              Query<Result<TimeBoundaryResultValue>> query,
+              Map<String, Object> context
+          )
           {
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
                         new DateTime("2014-01-12"),
-                        new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-01-12")))
+                        new TimeBoundaryResultValue(
+                            ImmutableMap.<String, Object>of(
+                                "maxTime",
+                                new DateTime("2014-01-12")
+                            )
+                        )
                     )
                 )
             );
@@ -165,8 +177,62 @@ public class TimewarpOperatorTest
                 new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-08-02")))
             )
         ),
-        Sequences.toList(timeBoundaryRunner.run(timeBoundaryQuery, CONTEXT), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
+        Sequences.toList(
+            timeBoundaryRunner.run(timeBoundaryQuery, CONTEXT),
+            Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+        )
     );
 
+  }
+
+  @Test
+  public void testEmptyFutureInterval() throws Exception
+  {
+    QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query,
+              Map<String, Object> context
+          )
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        query.getIntervals().get(0).getStart(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+                    ),
+                    new Result<>(
+                        query.getIntervals().get(0).getEnd(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+                    )
+                )
+            );
+          }
+        },
+        new DateTime("2014-08-02").getMillis()
+    );
+
+    final Query<Result<TimeseriesResultValue>> query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2014-08-06/2014-08-08")
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                new DateTime("2014-08-02"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+            ),
+            new Result<>(
+                new DateTime("2014-08-02"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+            )
+        ),
+        Sequences.toList(queryRunner.run(query, Maps.<String, Object>newHashMap()), Lists.<Result<TimeseriesResultValue>>newArrayList())
+    );
   }
 }

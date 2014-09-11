@@ -87,7 +87,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
 
         final Interval interval = query.getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
-            interval.getStartMillis() + offset,
+            Math.min(interval.getStartMillis() + offset, now + offset),
             Math.min(interval.getEndMillis() + offset, now + offset)
         );
         return Sequences.map(
@@ -137,7 +137,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   /**
    * Map time t into the last `period` ending within `dataInterval`
    *
-   * @param t
+   * @param t the current time to be mapped into `dataInterval`
    * @return the offset between the mapped time and time t
    */
   protected long computeOffset(final long t)

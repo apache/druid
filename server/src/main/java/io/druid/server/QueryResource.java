@@ -22,7 +22,6 @@ package io.druid.server;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -157,9 +156,8 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      Map<String, Object> context = new MapMaker().makeMap();
-      context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
-      Sequence res = query.run(texasRanger, context);
+      final Map<String, Object> context = new MapMaker().makeMap();
+      final Sequence res = query.run(texasRanger, context);
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -181,11 +179,8 @@ public class QueryResource
       );
 
       try {
-        String headerContext = "";
-        if (!((List)context.get(RetryQueryRunner.missingSegments)).isEmpty()) {
-          headerContext = jsonMapper.writeValueAsString(context);
-        }
         long requestTime = System.currentTimeMillis() - start;
+
         emitter.emit(
             new ServiceMetricEvent.Builder()
                 .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
@@ -234,7 +229,7 @@ public class QueryResource
                 isSmile ? APPLICATION_JSON : APPLICATION_SMILE
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("Context", headerContext)
+            .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(context))
             .build();
       }
       catch (Exception e) {

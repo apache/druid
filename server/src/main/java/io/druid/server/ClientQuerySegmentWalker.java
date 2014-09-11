@@ -41,6 +41,7 @@ import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  */
@@ -86,7 +87,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                new UnionQueryRunner<T>(
+                new UnionQueryRunner<>(
                     new MetricsEmittingQueryRunner<T>(
                         emitter,
                         new Function<Query<T>, ServiceMetricEvent.Builder>()
@@ -97,8 +98,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                             return toolChest.makeMetricBuilder(query);
                           }
                         },
-                        toolChest.preMergeQueryDecoration(new RetryQueryRunner<T>(baseClient, toolChest, retryConfig)
+                        toolChest.preMergeQueryDecoration(
+                            new RetryQueryRunner<T>(
+                                baseClient,
+                                retryConfig,
+                                objectMapper
                             )
+                        )
                     ).withWaitMeasuredFromNow(),
                     toolChest
                 )
@@ -108,11 +114,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     );
 
 
-    final PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
-        query.getContext().get("postProcessing"),
-        new TypeReference<PostProcessingOperator<T>>() {
-        }
-    );
+    final Map<String, Object> context = query.getContext();
+    PostProcessingOperator<T> postProcessing = null;
+    if (context != null) {
+      postProcessing = objectMapper.convertValue(
+          context.get("postProcessing"),
+          new TypeReference<PostProcessingOperator<T>>()
+          {
+          }
+      );
+    }
 
     return postProcessing != null ?
            postProcessing.postProcess(baseRunner) : baseRunner;

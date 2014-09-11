@@ -24,7 +24,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.BalancerSegmentHolder;
 import io.druid.server.coordinator.BalancerStrategy;

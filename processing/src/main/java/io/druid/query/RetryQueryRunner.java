@@ -19,6 +19,10 @@
 
 package io.druid.query;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
@@ -30,20 +34,21 @@ import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
-  public static String missingSegments = "missingSegments";
+  public static String MISSING_SEGMENTS_KEY = "missingSegments";
+
   private final QueryRunner<T> baseRunner;
-  private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;
+  private final ObjectMapper jsonMapper;
 
   public RetryQueryRunner(
       QueryRunner<T> baseRunner,
-      QueryToolChest<T, Query<T>> toolChest,
-      RetryQueryRunnerConfig config
+      RetryQueryRunnerConfig config,
+      ObjectMapper jsonMapper
   )
   {
     this.baseRunner = baseRunner;
-    this.toolChest = toolChest;
     this.config = config;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -60,29 +65,43 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       {
         Yielder<OutType> yielder = returningSeq.toYielder(initValue, accumulator);
 
-        if (((List) context.get(missingSegments)).isEmpty()) {
+        final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
+
+        if (missingSegments.isEmpty()) {
           return yielder;
         }
 
-        for (int i = config.numTries(); i > 0 && !((List) context.get(missingSegments)).isEmpty(); i--) {
-          ((List) context.get(missingSegments)).clear();
+        for (int i = 0; i < config.numTries(); i++) {
+          context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
           yielder = baseRunner.run(query, context).toYielder(initValue, accumulator);
-          if (((List) context.get(missingSegments)).isEmpty()) {
+          if (getMissingSegments(context).isEmpty()) {
             break;
           }
         }
 
-        if (!config.returnPartialResults() && !((List) context.get(missingSegments)).isEmpty()) {
-          String failedSegments = "";
-          for (SegmentDescriptor segment : (List<SegmentDescriptor>) context.get(RetryQueryRunner.missingSegments)) {
-            failedSegments = failedSegments + segment.toString() + " ";
-          }
-          throw new SegmentMissingException("The following segments are missing: " + failedSegments);
+        final List<SegmentDescriptor> finalMissingSegs= getMissingSegments(context);
+        if (!config.returnPartialResults() && !finalMissingSegs.isEmpty()) {
+          throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
         }
 
         return yielder;
       }
     };
+  }
+
+  private List<SegmentDescriptor> getMissingSegments(final Map<String, Object> context)
+  {
+    final Object maybeMissingSegments = context.get(MISSING_SEGMENTS_KEY);
+    if (maybeMissingSegments == null) {
+      return Lists.newArrayList();
+    }
+
+    return jsonMapper.convertValue(
+        maybeMissingSegments,
+        new TypeReference<List<SegmentDescriptor>>()
+        {
+        }
+    );
   }
 }
 

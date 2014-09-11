@@ -127,7 +127,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
-        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
+        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(query.getContext());
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
@@ -193,7 +193,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    return new OrderedMergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Row> mergeSequencesUnordered(Sequence<Sequence<Row>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  private Ordering<Row> getOrdering()
+  {
+    return Ordering.<Row>natural().nullsFirst();
   }
 
   @Override
@@ -372,7 +383,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
       {
-        return new MergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

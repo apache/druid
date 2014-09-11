@@ -124,7 +124,10 @@ public abstract class AbstractTask implements Task
   }
 
   /**
-   * Start helper methods *
+   * Start helper methods
+   *
+   * @param objects objects to join
+   * @return string of joined objects
    */
   public static String joinId(Object... objects)
   {

@@ -40,10 +40,19 @@ import java.util.SortedSet;
 })
 public interface GranularitySpec
 {
-  /** Set of all time groups, broken up on segment boundaries. Should be sorted by interval start and non-overlapping.*/
-  public Optional<SortedSet<Interval>> bucketIntervals();
+  /**
+   * Set of all time groups, broken up on segment boundaries. Should be sorted by interval start and non-overlapping.
+   *
+   * @return set of all time groups
+   */
+   public Optional<SortedSet<Interval>> bucketIntervals();
 
-  /** Time-grouping interval corresponding to some instant, if any. */
+  /**
+   * Time-grouping interval corresponding to some instant, if any.
+   *
+   * @param dt instant to return time interval for
+   * @return optional time interval
+   * */
   public Optional<Interval> bucketInterval(DateTime dt);
 
   public Granularity getSegmentGranularity();

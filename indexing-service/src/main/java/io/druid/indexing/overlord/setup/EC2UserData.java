@@ -35,6 +35,9 @@ public interface EC2UserData<T extends EC2UserData>
   /**
    * Return a copy of this instance with a different worker version. If no changes are needed (possibly because the
    * user data does not depend on the worker version) then it is OK to return "this".
+   *
+   * @param version worker version
+   * @return instance with the specified version
    */
   public EC2UserData<T> withVersion(String version);
 

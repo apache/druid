@@ -663,6 +663,9 @@ public class RealtimePlumber implements Plumber
    * Unannounces a given sink and removes all local references to it. It is important that this is only called
    * from the single-threaded mergeExecutor, since otherwise chaos may ensue if merged segments are deleted while
    * being created.
+   *
+   * @param truncatedTime sink key
+   * @param sink sink to unannounce
    */
   protected void abandonSegment(final long truncatedTime, final Sink sink)
   {
@@ -700,9 +703,9 @@ public class RealtimePlumber implements Plumber
   /**
    * Persists the given hydrant and returns the number of rows persisted
    *
-   * @param indexToPersist
-   * @param schema
-   * @param interval
+   * @param indexToPersist hydrant to persist
+   * @param schema datasource schema
+   * @param interval interval to persist
    *
    * @return the number of rows persisted
    */
