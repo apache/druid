@@ -321,7 +321,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
               final QueryRunner clientQueryable = serverView.getQueryRunner(server);
               if (clientQueryable == null) {
-                log.makeAlert("WTF!? server[%s] doesn't have a client Queryable?", server).emit();
+                log.error("WTF!? server[%s] doesn't have a client Queryable?", server);
                 continue;
               }
 
