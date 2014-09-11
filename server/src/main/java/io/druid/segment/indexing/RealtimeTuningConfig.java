@@ -44,6 +44,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
+  private static final boolean defaultPersistInHeap = false;
 
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig()
@@ -56,7 +57,8 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultVersioningPolicy,
         defaultRejectionPolicyFactory,
         defaultMaxPendingPersists,
-        defaultShardSpec
+        defaultShardSpec,
+        defaultPersistInHeap
     );
   }
 
@@ -68,6 +70,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private final RejectionPolicyFactory rejectionPolicyFactory;
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
+  private final boolean persistInHeap;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -78,7 +81,8 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
-      @JsonProperty("shardSpec") ShardSpec shardSpec
+      @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("persistInHeap") Boolean persistInHeap
   )
   {
     this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
@@ -93,6 +97,7 @@ public class RealtimeTuningConfig implements TuningConfig
                                   : rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
+    this.persistInHeap = persistInHeap == null ? defaultPersistInHeap : persistInHeap;
   }
 
   @JsonProperty
@@ -143,6 +148,12 @@ public class RealtimeTuningConfig implements TuningConfig
     return shardSpec;
   }
 
+  @JsonProperty
+  public boolean isPersistInHeap()
+  {
+    return persistInHeap;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -153,7 +164,8 @@ public class RealtimeTuningConfig implements TuningConfig
         policy,
         rejectionPolicyFactory,
         maxPendingPersists,
-        shardSpec
+        shardSpec,
+        persistInHeap
     );
   }
 
@@ -167,7 +179,8 @@ public class RealtimeTuningConfig implements TuningConfig
         versioningPolicy,
         rejectionPolicyFactory,
         maxPendingPersists,
-        shardSpec
+        shardSpec,
+        persistInHeap
     );
   }
 }

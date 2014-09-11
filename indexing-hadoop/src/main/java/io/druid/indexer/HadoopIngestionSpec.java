@@ -50,14 +50,11 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   private final HadoopIOConfig ioConfig;
   private final HadoopTuningConfig tuningConfig;
 
-  private final boolean legacy; // TODO: remove
-
   @JsonCreator
   public HadoopIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") HadoopIOConfig ioConfig,
       @JsonProperty("tuningConfig") HadoopTuningConfig tuningConfig,
-      @JsonProperty("legacy") boolean legacy, // TODO: remove
       // All deprecated
       final @JsonProperty("dataSource") String dataSource,
       final @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
@@ -87,7 +84,6 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
-    this.legacy = legacy;
 
     if (dataSchema != null) {
       this.dataSchema = dataSchema;
@@ -169,7 +165,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           overwriteFiles,
           ignoreInvalidRows,
           jobProperties,
-          combineText
+          combineText,
+          false
       );
     }
   }
@@ -201,7 +198,6 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         schema,
         ioConfig,
         tuningConfig,
-        legacy,
         null,
         null,
         null,
@@ -235,7 +231,6 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         dataSchema,
         config,
         tuningConfig,
-        legacy,
         null,
         null,
         null,
@@ -269,7 +264,6 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         dataSchema,
         ioConfig,
         config,
-        legacy,
         null,
         null,
         null,
@@ -295,12 +289,5 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         null,
         null
     );
-  }
-
-  // TODO: remove
-  @JsonProperty
-  public boolean isLegacy()
-  {
-    return legacy;
   }
 }
