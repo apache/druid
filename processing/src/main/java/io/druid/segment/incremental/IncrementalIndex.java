@@ -64,11 +64,11 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -314,8 +314,11 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
     this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-    db = DBMaker.newMemoryDirectDB().transactionDisable().cacheWeakRefEnable().make();
-    this.facts = db.createTreeMap("__facts" + UUID.randomUUID()).make();
+    db = DBMaker.newMemoryDirectDB().transactionDisable().asyncWriteEnable().cacheSoftRefEnable().make();
+    this.facts = db.createTreeMap("__facts" + UUID.randomUUID()).comparator(
+        new TimeAndDimsComparator(this)
+    ).make();
+
   }
 
   public IncrementalIndex(
@@ -394,10 +397,10 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     final List<String> rowDimensions = row.getDimensions();
 
-    String[][] dims;
-    List<String[]> overflow = null;
+    int[][] dims;
+    List<int[]> overflow = null;
     synchronized (dimensionOrder) {
-      dims = new String[dimensionOrder.size()][];
+      dims = new int[dimensionOrder.size()][];
       for (String dimension : rowDimensions) {
         dimension = dimension.toLowerCase();
         List<String> dimensionValues = row.getDimension(dimension);
@@ -421,9 +424,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
           if (overflow == null) {
             overflow = Lists.newArrayList();
           }
-          overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
+          overflow.add(getDimIndexes(dimValues.add(dimension), dimensionValues));
         } else {
-          dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
+          dims[index] = getDimIndexes(dimValues.get(dimension), dimensionValues);
         }
       }
     }
@@ -431,7 +434,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     if (overflow != null) {
       // Merge overflow and non-overflow
-      String[][] newDims = new String[dims.length + overflow.size()][];
+      int[][] newDims = new int[dims.length + overflow.size()][];
       System.arraycopy(dims, 0, newDims, 0, dims.length);
       for (int i = 0; i < overflow.size(); ++i) {
         newDims[dims.length + i] = overflow.get(i);
@@ -492,19 +495,20 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     return facts.lastKey().getTimestamp();
   }
 
-  private String[] getDimVals(final DimDim dimLookup, final List<String> dimValues)
+  private int[] getDimIndexes(final DimDim dimLookup, final List<String> dimValues)
   {
-    final String[] retVal = new String[dimValues.size()];
-
+    final int[] retVal = new int[dimValues.size()];
     int count = 0;
-    for (String dimValue : dimValues) {
-      if (!dimLookup.contains(dimValue)) {
-        dimLookup.add(dimValue);
+    final String[] vals = dimValues.toArray(new String[0]);
+    Arrays.sort(vals);
+    for (String dimValue : vals) {
+      int id = dimLookup.getId(dimValue);
+      if (id == -1) {
+        id = dimLookup.add(dimValue);
       }
-      retVal[count] = dimValue;
+      retVal[count] = id;
       count++;
     }
-    Arrays.sort(retVal);
 
     return retVal;
   }
@@ -622,11 +626,12 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                 final TimeAndDims timeAndDims = input.getKey();
                 final int rowOffset = input.getValue();
 
-                String[][] theDims = timeAndDims.getDims();
+                int[][] theDims = timeAndDims.getDims();
 
                 Map<String, Object> theVals = Maps.newLinkedHashMap();
                 for (int i = 0; i < theDims.length; ++i) {
-                  String[] dim = theDims[i];
+                  String[] dim = getDimValues(dimValues.get(dimensions.get(i)), theDims[i]);
+
                   if (dim != null && dim.length != 0) {
                     theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
                   }
@@ -650,6 +655,23 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     };
   }
 
+  public String[] getDimValues(DimDim dims, int[] dimIndexes)
+  {
+    if (dimIndexes == null) {
+      return null;
+    }
+    String[] vals = new String[dimIndexes.length];
+    for (int i = 0; i < dimIndexes.length; i++) {
+      vals[i] = dims.getValue(dimIndexes[i]);
+    }
+    return vals;
+  }
+
+  public String getDimValue(DimDim dims, int dimIndex)
+  {
+    return dims.getValue(dimIndex);
+  }
+
   @Override
   public void close()
   {
@@ -662,14 +684,14 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
   }
 
-  static class TimeAndDims implements Comparable<TimeAndDims>, Serializable
+  static class TimeAndDims implements Serializable
   {
     private final long timestamp;
-    private final String[][] dims;
+    private final int[][] dims;
 
     TimeAndDims(
         long timestamp,
-        String[][] dims
+        int[][] dims
     )
     {
       this.timestamp = timestamp;
@@ -681,48 +703,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       return timestamp;
     }
 
-    String[][] getDims()
+    int[][] getDims()
     {
       return dims;
-    }
-
-    @Override
-    public int compareTo(TimeAndDims rhs)
-    {
-      int retVal = Longs.compare(timestamp, rhs.timestamp);
-
-      if (retVal == 0) {
-        retVal = Ints.compare(dims.length, rhs.dims.length);
-      }
-
-      int index = 0;
-      while (retVal == 0 && index < dims.length) {
-        String[] lhsVals = dims[index];
-        String[] rhsVals = rhs.dims[index];
-
-        if (lhsVals == null) {
-          if (rhsVals == null) {
-            ++index;
-            continue;
-          }
-          return -1;
-        }
-
-        if (rhsVals == null) {
-          return 1;
-        }
-
-        retVal = Ints.compare(lhsVals.length, rhsVals.length);
-
-        int valsIndex = 0;
-        while (retVal == 0 && valsIndex < lhsVals.length) {
-          retVal = lhsVals[valsIndex].compareTo(rhsVals[valsIndex]);
-          ++valsIndex;
-        }
-        ++index;
-      }
-
-      return retVal;
     }
 
     @Override
@@ -731,10 +714,10 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       return "TimeAndDims{" +
              "timestamp=" + new DateTime(timestamp) +
              ", dims=" + Lists.transform(
-          Arrays.asList(dims), new Function<String[], Object>()
+          Arrays.asList(dims), new Function<int[], Object>()
       {
         @Override
-        public Object apply(@Nullable String[] input)
+        public Object apply(@Nullable int[] input)
         {
           if (input == null || input.length == 0) {
             return Arrays.asList("null");
@@ -744,6 +727,67 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       }
       ) +
              '}';
+    }
+  }
+
+  public static class TimeAndDimsComparator implements Comparator, Serializable
+  {
+    // mapdb asserts the comparator to be serializable, ugly workaround to satisfy the assert.
+    private transient final IncrementalIndex incrementalIndex;
+
+    public TimeAndDimsComparator(IncrementalIndex incrementalIndex)
+    {
+      this.incrementalIndex = incrementalIndex;
+    }
+
+    @Override
+    public int compare(Object o1, Object o2)
+    {
+      TimeAndDims lhs = (TimeAndDims) o1;
+      TimeAndDims rhs = (TimeAndDims) o2;
+
+      int retVal = Longs.compare(lhs.timestamp, rhs.timestamp);
+
+      if (retVal == 0) {
+        retVal = Ints.compare(lhs.dims.length, rhs.dims.length);
+      }
+
+      int index = 0;
+      while (retVal == 0 && index < lhs.dims.length) {
+        int[] lhsIndexes = lhs.dims[index];
+        int[] rhsIndexes = rhs.dims[index];
+
+        if (lhsIndexes == null) {
+          if (rhsIndexes == null) {
+            ++index;
+            continue;
+          }
+          return -1;
+        }
+
+        if (rhsIndexes == null) {
+          return 1;
+        }
+
+        retVal = Ints.compare(lhsIndexes.length, rhsIndexes.length);
+
+        int valsIndex = 0;
+
+        DimDim dimDim = incrementalIndex.getDimension(incrementalIndex.dimensions.get(index));
+
+        while (retVal == 0 && valsIndex < lhsIndexes.length) {
+          retVal = incrementalIndex.getDimValue(dimDim, lhsIndexes[valsIndex]).compareTo(
+              incrementalIndex.getDimValue(
+                  dimDim,
+                  rhsIndexes[valsIndex]
+              )
+          );
+          ++valsIndex;
+        }
+        ++index;
+      }
+
+      return retVal;
     }
   }
 
@@ -783,19 +827,24 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   {
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
-    private volatile String[] sortedVals = null;
+    private final String dimName;
+    private volatile Map<String, Integer> sortedIds = null;
+    private volatile Map<Integer, String> sortedIdsReverse = null;
     // size on MapDB.HTreeMap is slow so maintain a count here
-    private volatile int size=0;
+    private volatile int size = 0;
 
     public DimDim(String dimName)
     {
-      falseIds = db.createHashMap(dimName).make();
+      this.dimName = dimName;
+
+      falseIds = db.createTreeMap(dimName).make();
       falseIdsReverse = db.createHashMap(dimName + "_inverse").make();
     }
 
     public int getId(String value)
     {
-      return falseIds.get(value);
+      Integer id = falseIds.get(value);
+      return id == null ? -1 : id;
     }
 
     public String getValue(int id)
@@ -813,46 +862,51 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       return size;
     }
 
-    public Set<String> keySet()
+    public synchronized int add(String value)
     {
-      return falseIds.keySet();
-    }
-
-    public synchronized void add(String value)
-    {
+      assertNotSorted();
       final int id = size++;
       falseIds.put(value, id);
       falseIdsReverse.put(id, value);
+      return id;
     }
 
     public int getSortedId(String value)
     {
       assertSorted();
-      return Arrays.binarySearch(sortedVals, value);
+      return sortedIds.get(value);
     }
 
     public String getSortedValue(int index)
     {
       assertSorted();
-      return sortedVals[index];
+      return sortedIdsReverse.get(index);
     }
 
     public void sort()
     {
-      if (sortedVals == null) {
-        sortedVals = new String[size];
-
-        int index = 0;
+      if (sortedIds == null) {
+        sortedIds = db.createHashMap(dimName + "sorted").make();
+        sortedIdsReverse = db.createHashMap(dimName + "sortedInverse").make();
+        int i = 0;
         for (String value : falseIds.keySet()) {
-          sortedVals[index++] = value;
+          int sortedIndex = i++;
+          sortedIds.put(value, sortedIndex);
+          sortedIdsReverse.put(sortedIndex, value);
         }
-        Arrays.sort(sortedVals);
       }
     }
 
     private void assertSorted()
     {
-      if (sortedVals == null) {
+      if (sortedIds == null) {
+        throw new ISE("Call sort() before calling the getSorted* methods.");
+      }
+    }
+
+    private void assertNotSorted()
+    {
+      if (sortedIds != null) {
         throw new ISE("Call sort() before calling the getSorted* methods.");
       }
     }

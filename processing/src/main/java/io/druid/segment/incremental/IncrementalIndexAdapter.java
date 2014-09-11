@@ -23,11 +23,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -65,7 +63,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
     int rowNum = 0;
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
-      final String[][] dims = timeAndDims.getDims();
+      final int[][] dims = timeAndDims.getDims();
 
       for (String dimension : index.getDimensions()) {
         int dimIndex = index.getDimensionIndex(dimension);
@@ -78,8 +76,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           continue;
         }
-
-        for (String dimValue : dims[dimIndex]) {
+        final String[] dimValues = index.getDimValues(index.getDimension(dimension), dims[dimIndex]);
+        for (String dimValue : dimValues) {
           ConciseSet conciseSet = conciseSets.get(dimValue);
 
           if (conciseSet == null) {
@@ -180,27 +178,27 @@ public class IncrementalIndexAdapter implements IndexableAdapter
               )
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
-                final String[][] dimValues = timeAndDims.getDims();
+                final int[][] dimValueIndexes = timeAndDims.getDims();
                 final int rowOffset = input.getValue();
 
-                int[][] dims = new int[dimValues.length][];
+                int[][] dims = new int[dimValueIndexes.length][];
                 for (String dimension : index.getDimensions()) {
                   int dimIndex = index.getDimensionIndex(dimension);
                   final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
                   dimDim.sort();
 
-                  if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {
+                  if (dimIndex >= dimValueIndexes.length || dimValueIndexes[dimIndex] == null) {
                     continue;
                   }
 
-                  dims[dimIndex] = new int[dimValues[dimIndex].length];
+                  dims[dimIndex] = new int[dimValueIndexes[dimIndex].length];
 
                   if (dimIndex >= dims.length || dims[dimIndex] == null) {
                     continue;
                   }
-
-                  for (int i = 0; i < dimValues[dimIndex].length; ++i) {
-                    dims[dimIndex][i] = dimDim.getSortedId(dimValues[dimIndex][i]);
+                  String[] dimValues = index.getDimValues(dimDim, dimValueIndexes[dimIndex]);
+                  for (int i = 0; i < dimValues.length; ++i) {
+                    dims[dimIndex][i] = dimDim.getSortedId(dimValues[i]);
                   }
                 }
 
