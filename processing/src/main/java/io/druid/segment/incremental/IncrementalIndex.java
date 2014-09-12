@@ -70,6 +70,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -431,7 +432,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       }
     }
 
-
     if (overflow != null) {
       // Merge overflow and non-overflow
       int[][] newDims = new int[dims.length + overflow.size()][];
@@ -443,21 +443,24 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
 
     final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
-
+    Integer rowOffset;
     synchronized (this) {
-      if (!facts.containsKey(key)) {
-        int rowOffset = totalAggSize * numEntries.getAndIncrement();
+      rowOffset = totalAggSize * numEntries.get();
+      final Integer prev = facts.putIfAbsent(key, rowOffset);
+      if (prev != null) {
+        rowOffset = prev;
+      } else {
         if (rowOffset + totalAggSize > bufferHolder.get().limit()) {
+          facts.remove(key);
           throw new ISE("Buffer full, cannot add more rows! Current rowSize[%,d].", numEntries.get());
         }
+        numEntries.incrementAndGet();
         for (int i = 0; i < aggs.length; i++) {
           aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
         }
-        facts.put(key, rowOffset);
       }
     }
     in.set(row);
-    int rowOffset = facts.get(key);
     for (int i = 0; i < aggs.length; i++) {
       synchronized (aggs[i]) {
         aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
