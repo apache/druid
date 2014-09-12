@@ -343,7 +343,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
         catch (IOException | InterruptedException | ExecutionException e) {
-          log.error(e, "Failure getting results from[%s]. Likely a timeout occurred.", url);
+          throw new RE(e, "Failure getting results from[%s]. Likely a timeout occurred.", url);
         }
         catch (CancellationException e) {
           throw new QueryInterruptedException("Query cancelled");
