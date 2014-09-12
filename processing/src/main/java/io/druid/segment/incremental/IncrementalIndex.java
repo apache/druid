@@ -830,17 +830,13 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   {
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
-    private final String dimName;
-    private volatile Map<String, Integer> sortedIds = null;
-    private volatile Map<Integer, String> sortedIdsReverse = null;
-    // size on MapDB.HTreeMap is slow so maintain a count here
+    private volatile String[] sortedVals = null;
+    // size on MapDB is slow so maintain a count here
     private volatile int size = 0;
 
     public DimDim(String dimName)
     {
-      this.dimName = dimName;
-
-      falseIds = db.createTreeMap(dimName).make();
+      falseIds = db.createHashMap(dimName).make();
       falseIdsReverse = db.createHashMap(dimName + "_inverse").make();
     }
 
@@ -867,7 +863,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     public synchronized int add(String value)
     {
-      assertNotSorted();
       final int id = size++;
       falseIds.put(value, id);
       falseIdsReverse.put(id, value);
@@ -877,39 +872,31 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     public int getSortedId(String value)
     {
       assertSorted();
-      return sortedIds.get(value);
+      return Arrays.binarySearch(sortedVals, value);
     }
 
     public String getSortedValue(int index)
     {
       assertSorted();
-      return sortedIdsReverse.get(index);
+      return sortedVals[index];
     }
 
     public void sort()
     {
-      if (sortedIds == null) {
-        sortedIds = db.createHashMap(dimName + "sorted").make();
-        sortedIdsReverse = db.createHashMap(dimName + "sortedInverse").make();
-        int i = 0;
+      if (sortedVals == null) {
+        sortedVals = new String[falseIds.size()];
+
+        int index = 0;
         for (String value : falseIds.keySet()) {
-          int sortedIndex = i++;
-          sortedIds.put(value, sortedIndex);
-          sortedIdsReverse.put(sortedIndex, value);
+          sortedVals[index++] = value;
         }
+        Arrays.sort(sortedVals);
       }
     }
 
     private void assertSorted()
     {
-      if (sortedIds == null) {
-        throw new ISE("Call sort() before calling the getSorted* methods.");
-      }
-    }
-
-    private void assertNotSorted()
-    {
-      if (sortedIds != null) {
+      if (sortedVals == null) {
         throw new ISE("Call sort() before calling the getSorted* methods.");
       }
     }
