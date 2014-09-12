@@ -27,6 +27,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
+import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.SegmentMissingException;
 
 import java.util.List;
@@ -73,13 +74,18 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
         for (int i = 0; i < config.numTries(); i++) {
           context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
-          yielder = baseRunner.run(query, context).toYielder(initValue, accumulator);
+          final Query<T> retryQuery = query.withQuerySegmentSpec(
+              new MultipleSpecificSegmentSpec(
+                  missingSegments
+              )
+          );
+          yielder = baseRunner.run(retryQuery, context).toYielder(initValue, accumulator);
           if (getMissingSegments(context).isEmpty()) {
             break;
           }
         }
 
-        final List<SegmentDescriptor> finalMissingSegs= getMissingSegments(context);
+        final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
         if (!config.returnPartialResults() && !finalMissingSegs.isEmpty()) {
           throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
         }
