@@ -21,6 +21,7 @@ package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 import io.druid.data.input.Row;
 
@@ -71,7 +72,7 @@ public class EqualToHavingSpec implements HavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] aggBytes = aggregationName.getBytes();
+    final byte[] aggBytes = aggregationName.getBytes(Charsets.UTF_8);
     final byte[] valBytes = Bytes.toArray(Arrays.asList(value));
     return ByteBuffer.allocate(1 + aggBytes.length + valBytes.length)
                      .put(CACHE_KEY)

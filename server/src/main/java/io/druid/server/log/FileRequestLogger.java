@@ -20,6 +20,7 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.CloseQuietly;
@@ -31,8 +32,9 @@ import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -47,7 +49,7 @@ public class FileRequestLogger implements RequestLogger
   private final Object lock = new Object();
 
   private volatile DateTime currentDay;
-  private volatile FileWriter fileWriter;
+  private volatile OutputStreamWriter fileWriter;
 
   public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
   {
@@ -66,7 +68,10 @@ public class FileRequestLogger implements RequestLogger
       mutableDateTime.setMillisOfDay(0);
       currentDay = mutableDateTime.toDateTime();
 
-      fileWriter = new FileWriter(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true);
+      fileWriter = new OutputStreamWriter(
+          new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+          Charsets.UTF_8
+      );
       long nextDay = currentDay.plusDays(1).getMillis();
       Duration delay = new Duration(nextDay - new DateTime().getMillis());
 
@@ -84,7 +89,10 @@ public class FileRequestLogger implements RequestLogger
               try {
                 synchronized (lock) {
                   CloseQuietly.close(fileWriter);
-                  fileWriter = new FileWriter(new File(baseDir, currentDay.toString()), true);
+                  fileWriter = new OutputStreamWriter(
+                      new FileOutputStream(new File(baseDir, currentDay.toString()), true),
+                      Charsets.UTF_8
+                  );
                 }
               }
               catch (Exception e) {
