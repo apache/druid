@@ -115,7 +115,7 @@ public class AppendTask extends MergeTaskBase
     return "append";
   }
 
-  private class SegmentToMergeHolder
+  private static class SegmentToMergeHolder
   {
     private final DataSegment segment;
     private final Interval interval;
