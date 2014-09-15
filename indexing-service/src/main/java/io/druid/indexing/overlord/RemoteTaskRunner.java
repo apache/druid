@@ -799,7 +799,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
               ZkWorker zkWorker, ZkWorker zkWorker2
           )
           {
-            int retVal = -Ints.compare(zkWorker.getCurrCapacityUsed(), zkWorker2.getCurrCapacityUsed());
+            int retVal = Ints.compare(zkWorker2.getCurrCapacityUsed(), zkWorker.getCurrCapacityUsed());
             if (retVal == 0) {
               retVal = zkWorker.getWorker().getHost().compareTo(zkWorker2.getWorker().getHost());
             }
