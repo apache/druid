@@ -71,7 +71,7 @@ public class CliBridge extends ServerRunnable
           public void configure(Binder binder)
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/bridge");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8089);
 
             ConfigProvider.bind(binder, BridgeCuratorConfig.class);
 
