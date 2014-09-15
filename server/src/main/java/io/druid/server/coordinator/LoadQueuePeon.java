@@ -384,7 +384,7 @@ public class LoadQueuePeon
     }
   }
 
-  private class SegmentHolder
+  private static class SegmentHolder
   {
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;

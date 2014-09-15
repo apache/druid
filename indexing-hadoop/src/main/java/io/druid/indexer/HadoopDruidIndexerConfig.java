@@ -170,7 +170,6 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
-  private volatile ColumnConfig columnConfig;
   private volatile Map<DateTime,ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private volatile Map<ShardSpec, HadoopyShardSpec> hadoopShardSpecLookup = Maps.newHashMap();
 
@@ -179,7 +178,6 @@ public class HadoopDruidIndexerConfig
       final @JsonProperty("schema") HadoopIngestionSpec schema
   )
   {
-    this.columnConfig = columnConfig;
     this.schema = schema;
     this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
     for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : schema.getTuningConfig().getShardSpecs().entrySet()) {
@@ -211,11 +209,6 @@ public class HadoopDruidIndexerConfig
   public HadoopIngestionSpec getSchema()
   {
     return schema;
-  }
-
-  public ColumnConfig getColumnConfig()
-  {
-    return columnConfig;
   }
 
   public String getDataSource()

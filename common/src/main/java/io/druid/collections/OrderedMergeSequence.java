@@ -83,7 +83,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
             new Function<Yielder<T>, T>()
             {
               @Override
-              public T apply(@Nullable Yielder<T> input)
+              public T apply(Yielder<T> input)
               {
                 return input.get();
               }

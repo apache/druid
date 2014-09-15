@@ -36,7 +36,7 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T> implements Query<T>
 {
-  public static String QUERYID = "queryId";
+  public static final String QUERYID = "queryId";
   private final DataSource dataSource;
   private final Map<String, Object> context;
   private final QuerySegmentSpec querySegmentSpec;
