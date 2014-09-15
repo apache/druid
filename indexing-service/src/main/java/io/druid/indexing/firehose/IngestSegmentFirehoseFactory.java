@@ -236,7 +236,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           {
             @Nullable
             @Override
-            public Sequence<InputRow> apply(@Nullable StorageAdapter adapter)
+            public Sequence<InputRow> apply(StorageAdapter adapter)
             {
               return Sequences.concat(
                   Sequences.map(
@@ -248,7 +248,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                   {
                     @Nullable
                     @Override
-                    public Sequence<InputRow> apply(@Nullable final Cursor cursor)
+                    public Sequence<InputRow> apply(final Cursor cursor)
                     {
                       final TimestampColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
 

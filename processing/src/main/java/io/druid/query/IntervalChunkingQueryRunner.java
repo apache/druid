@@ -61,7 +61,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
                 new Function<Interval, Iterable<Interval>>()
                 {
                   @Override
-                  public Iterable<Interval> apply(@Nullable Interval input)
+                  public Iterable<Interval> apply(Interval input)
                   {
                     return splitInterval(input);
                   }
