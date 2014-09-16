@@ -138,6 +138,12 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
               return action;
             }
           }
+
+          @Override
+          public CallbackAction segmentViewInitialized()
+          {
+            return callback.segmentViewInitialized();
+          }
         }
     );
   }
