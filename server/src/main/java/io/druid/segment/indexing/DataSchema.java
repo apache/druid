@@ -49,22 +49,23 @@ public class DataSchema
     this.dataSource = dataSource;
 
     final Set<String> dimensionExclusions = Sets.newHashSet();
+    for (AggregatorFactory aggregator : aggregators) {
+      dimensionExclusions.add(aggregator.getName());
+    }
     if (parser != null && parser.getParseSpec() != null && parser.getParseSpec().getTimestampSpec() != null) {
       dimensionExclusions.add(parser.getParseSpec().getTimestampSpec().getTimestampColumn());
-      for (AggregatorFactory aggregator : aggregators) {
-        dimensionExclusions.add(aggregator.getName());
+      if (parser.getParseSpec().getDimensionsSpec() != null) {
+        this.parser = parser.withParseSpec(
+            parser.getParseSpec()
+                  .withDimensionsSpec(
+                      parser.getParseSpec()
+                            .getDimensionsSpec()
+                            .withDimensionExclusions(dimensionExclusions)
+                  )
+        );
+      } else {
+        this.parser = parser;
       }
-    }
-
-    if (parser != null && parser.getParseSpec() != null && parser.getParseSpec().getDimensionsSpec() != null) {
-      this.parser = parser.withParseSpec(
-          parser.getParseSpec()
-                .withDimensionsSpec(
-                    parser.getParseSpec()
-                          .getDimensionsSpec()
-                          .withDimensionExclusions(dimensionExclusions)
-                )
-      );
     } else {
       this.parser = parser;
     }
