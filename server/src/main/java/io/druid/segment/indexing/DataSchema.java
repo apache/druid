@@ -52,8 +52,10 @@ public class DataSchema
     for (AggregatorFactory aggregator : aggregators) {
       dimensionExclusions.add(aggregator.getName());
     }
-    if (parser != null && parser.getParseSpec() != null && parser.getParseSpec().getTimestampSpec() != null) {
-      dimensionExclusions.add(parser.getParseSpec().getTimestampSpec().getTimestampColumn());
+    if (parser != null && parser.getParseSpec() != null) {
+      if (parser.getParseSpec().getTimestampSpec() != null) {
+        dimensionExclusions.add(parser.getParseSpec().getTimestampSpec().getTimestampColumn());
+      }
       if (parser.getParseSpec().getDimensionsSpec() != null) {
         this.parser = parser.withParseSpec(
             parser.getParseSpec()
