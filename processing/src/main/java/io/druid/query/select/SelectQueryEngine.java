@@ -115,24 +115,34 @@ public class SelectQueryEngine
               for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                 final String dim = dimSelector.getKey();
                 final DimensionSelector selector = dimSelector.getValue();
-                final IndexedInts vals = selector.getRow();
 
-                if (vals.size() == 1) {
-                  final String dimVal = selector.lookupName(vals.get(0));
-                  theEvent.put(dim, dimVal);
+                if (selector == null) {
+                  theEvent.put(dim, null);
                 } else {
-                  List<String> dimVals = Lists.newArrayList();
-                  for (int i = 0; i < vals.size(); ++i) {
-                    dimVals.add(selector.lookupName(vals.get(i)));
+                  final IndexedInts vals = selector.getRow();
+
+                  if (vals.size() == 1) {
+                    final String dimVal = selector.lookupName(vals.get(0));
+                    theEvent.put(dim, dimVal);
+                  } else {
+                    List<String> dimVals = Lists.newArrayList();
+                    for (int i = 0; i < vals.size(); ++i) {
+                      dimVals.add(selector.lookupName(vals.get(i)));
+                    }
+                    theEvent.put(dim, dimVals);
                   }
-                  theEvent.put(dim, dimVals);
                 }
               }
 
               for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
                 final String metric = metSelector.getKey();
                 final ObjectColumnSelector selector = metSelector.getValue();
-                theEvent.put(metric, selector.get());
+
+                if (selector == null) {
+                  theEvent.put(metric, null);
+                } else {
+                  theEvent.put(metric, selector.get());
+                }
               }
 
               builder.addEntry(
