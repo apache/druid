@@ -174,6 +174,12 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
             }
             return action;
           }
+
+          @Override
+          public CallbackAction segmentViewInitialized()
+          {
+            return callback.segmentViewInitialized();
+          }
         }
     );
   }
