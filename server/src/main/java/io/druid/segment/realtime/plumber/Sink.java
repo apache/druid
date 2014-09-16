@@ -50,7 +50,7 @@ public class Sink implements Iterable<FireHydrant>
   private static final Logger log = new Logger(Sink.class);
 
   private volatile FireHydrant currHydrant;
-  private final transient Object hydrantLock = new Object();
+  private final Object hydrantLock = new Object();
 
   private final Interval interval;
   private final DataSchema schema;
