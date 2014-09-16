@@ -177,7 +177,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       } else {
         Set<String> metricsSet = new HashSet<>();
         for (TimelineObjectHolder<String, DataSegment> timelineObjectHolder : timeLineSegments) {
-          metricsSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getDimensions());
+          metricsSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getMetrics());
         }
         metricsList = Lists.newArrayList(metricsSet);
       }
