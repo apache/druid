@@ -452,7 +452,8 @@ public class SelectQueryRunnerTest
                     )
                 )
             )
-        );
+        )
+    );
 
     verify(expectedResults, results);
   }
