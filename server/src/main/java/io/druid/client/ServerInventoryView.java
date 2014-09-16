@@ -168,6 +168,22 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           {
             return removeInnerInventory(container, inventoryKey);
           }
+
+          @Override
+          public void inventoryInitialized()
+          {
+            log.info("Inventory Initialized");
+            runSegmentCallbacks(
+                new Function<SegmentCallback, CallbackAction>()
+                {
+                  @Override
+                  public CallbackAction apply(SegmentCallback input)
+                  {
+                    return input.segmentViewInitialized();
+                  }
+                }
+            );
+          }
         }
     );
   }
