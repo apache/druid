@@ -417,6 +417,11 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
+    Map<String, Object> res = Maps.newHashMap();
+    res.put("timestamp", new DateTime("2011-01-12T00:00:00.000Z"));
+    res.put("foo", null);
+    res.put("foo2", null);
+
     List<Result<SelectResultValue>> expectedResults = Arrays.asList(
         new Result<SelectResultValue>(
             new DateTime("2011-01-12T00:00:00.000Z"),
@@ -426,29 +431,17 @@ public class SelectQueryRunnerTest
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
                         0,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put("foo", null)
-                            .put("foo2", null)
-                            .build()
+                        res
                     ),
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
                         1,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
+                        res
                     ),
                     new EventHolder(
                         QueryRunnerTestHelper.segmentId,
                         2,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
+                        res
                     )
                 )
             )
