@@ -255,13 +255,18 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                       final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                       for (String dim : dims) {
                         final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
-                        dimSelectors.put(dim, dimSelector);
+                        // dimSelector is null if the dimension is not present
+                        if (dimSelector != null) {
+                          dimSelectors.put(dim, dimSelector);
+                        }
                       }
 
                       final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
                       for (String metric : metrics) {
                         final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
-                        metSelectors.put(metric, metricSelector);
+                        if (metricSelector != null) {
+                          metSelectors.put(metric, metricSelector);
+                        }
                       }
 
                       return Sequences.simple(
