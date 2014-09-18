@@ -40,6 +40,9 @@ public class SegmentLoaderConfig
   @JsonProperty("dropSegmentDelayMillis")
   private int dropSegmentDelayMillis = 30 * 1000; // 30 seconds
 
+  @JsonProperty("announceIntervalMillis")
+  private int announceIntervalMillis = 5 * 1000; // 5 seconds
+
   @JsonProperty
   private File infoDir = null;
 
@@ -56,6 +59,11 @@ public class SegmentLoaderConfig
   public int getDropSegmentDelayMillis()
   {
     return dropSegmentDelayMillis;
+  }
+
+  public int getAnnounceIntervalMillis()
+  {
+    return announceIntervalMillis;
   }
 
   public File getInfoDir()
