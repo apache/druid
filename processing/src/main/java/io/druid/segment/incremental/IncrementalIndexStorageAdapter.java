@@ -174,10 +174,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               {
                 cursorMap = index.getSubMap(
                     new IncrementalIndex.TimeAndDims(
-                        timeStart, new int[][]{}
+                        timeStart, new String[][]{}
                     ),
                     new IncrementalIndex.TimeAndDims(
-                        Math.min(actualInterval.getEndMillis(), gran.next(input)), new int[][]{}
+                        Math.min(actualInterval.getEndMillis(), gran.next(input)), new String[][]{}
                     )
                 );
                 time = gran.toDateTime(input);
@@ -293,11 +293,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   {
                     final ArrayList<Integer> vals = Lists.newArrayList();
                     if (dimIndex < currEntry.getKey().getDims().length) {
-                      final int[] dimVals = currEntry.getKey().getDims()[dimIndex];
+                      final String[] dimVals = currEntry.getKey().getDims()[dimIndex];
                       if (dimVals != null) {
-                        for (int dimVal : dimVals) {
-                          if (dimVal < maxId) {
-                            vals.add(dimVal);
+                        for (String dimVal : dimVals) {
+                          int id = dimValLookup.getId(dimVal);
+                          if (id < maxId) {
+                            vals.add(id);
                           }
                         }
                       }
@@ -408,8 +409,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 final Integer dimensionIndexInt = index.getDimensionIndex(columnName);
+
                 if (dimensionIndexInt != null) {
-                  final IncrementalIndex.DimDim dimDim = index.getDimension(columnName);
                   final int dimensionIndex = dimensionIndexInt;
                   return new ObjectColumnSelector<Object>()
                   {
@@ -422,8 +423,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Object get()
                     {
-                      final String[] dimVals = index.getDimValues(dimDim, currEntry.getKey().getDims()[dimensionIndex]);
-
+                      final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
                       if (dimVals.length == 1) {
                         return dimVals[0];
                       } else if (dimVals.length == 0) {
@@ -488,16 +488,15 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(final String dimension,String valueParam)
+    public ValueMatcher makeValueMatcher(final String dimension, final String value)
     {
-      final String value = valueParam == null ? "" : valueParam;
       Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
 
       if (!index.getDimension(dimension.toLowerCase()).contains(value)) {
-        if ("".equals(value)) {
+        if (value == null || "".equals(value)) {
           final int dimIndex = dimIndexObject;
 
           return new ValueMatcher()
@@ -505,7 +504,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             @Override
             public boolean matches()
             {
-              int[][] dims = holder.getKey().getDims();
+              String[][] dims = holder.getKey().getDims();
               if (dimIndex >= dims.length || dims[dimIndex] == null) {
                 return true;
               }
@@ -517,19 +516,18 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       }
 
       final int dimIndex = dimIndexObject;
-      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
 
       return new ValueMatcher()
       {
         @Override
         public boolean matches()
         {
-          int[][] dims = holder.getKey().getDims();
+          String[][] dims = holder.getKey().getDims();
           if (dimIndex >= dims.length || dims[dimIndex] == null) {
             return false;
           }
 
-          for (String dimVal : index.getDimValues(dimDim, dims[dimIndex])) {
+          for (String dimVal : dims[dimIndex]) {
             if (value.equals(dimVal)) {
               return true;
             }
@@ -547,18 +545,18 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         return new BooleanValueMatcher(false);
       }
       final int dimIndex = dimIndexObject;
-      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
+
       return new ValueMatcher()
       {
         @Override
         public boolean matches()
         {
-          int[][] dims = holder.getKey().getDims();
+          String[][] dims = holder.getKey().getDims();
           if (dimIndex >= dims.length || dims[dimIndex] == null) {
             return false;
           }
 
-          for (String dimVal : index.getDimValues(dimDim, dims[dimIndex])) {
+          for (String dimVal : dims[dimIndex]) {
             if (predicate.apply(dimVal)) {
               return true;
             }
@@ -582,13 +580,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         @Override
         public boolean matches()
         {
-          int[][] dims = holder.getKey().getDims();
+          String[][] dims = holder.getKey().getDims();
           if (dimIndex >= dims.length || dims[dimIndex] == null) {
             return false;
           }
-          final IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
 
-          for (String dimVal : index.getDimValues(dimDim, dims[dimIndex])) {
+          for (String dimVal : dims[dimIndex]) {
             List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
             float[] coords = new float[stringCoords.size()];
             for (int j = 0; j < coords.length; j++) {

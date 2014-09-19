@@ -63,7 +63,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
     int rowNum = 0;
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
-      final int[][] dims = timeAndDims.getDims();
+      final String[][] dims = timeAndDims.getDims();
 
       for (String dimension : index.getDimensions()) {
         int dimIndex = index.getDimensionIndex(dimension);
@@ -76,8 +76,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           continue;
         }
-        final String[] dimValues = index.getDimValues(index.getDimension(dimension), dims[dimIndex]);
-        for (String dimValue : dimValues) {
+
+        for (String dimValue : dims[dimIndex]) {
           ConciseSet conciseSet = conciseSets.get(dimValue);
 
           if (conciseSet == null) {
@@ -178,27 +178,27 @@ public class IncrementalIndexAdapter implements IndexableAdapter
               )
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
-                final int[][] dimValueIndexes = timeAndDims.getDims();
+                final String[][] dimValues = timeAndDims.getDims();
                 final int rowOffset = input.getValue();
 
-                int[][] dims = new int[dimValueIndexes.length][];
+                int[][] dims = new int[dimValues.length][];
                 for (String dimension : index.getDimensions()) {
                   int dimIndex = index.getDimensionIndex(dimension);
                   final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
                   dimDim.sort();
 
-                  if (dimIndex >= dimValueIndexes.length || dimValueIndexes[dimIndex] == null) {
+                  if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {
                     continue;
                   }
 
-                  dims[dimIndex] = new int[dimValueIndexes[dimIndex].length];
+                  dims[dimIndex] = new int[dimValues[dimIndex].length];
 
                   if (dimIndex >= dims.length || dims[dimIndex] == null) {
                     continue;
                   }
-                  String[] dimValues = index.getDimValues(dimDim, dimValueIndexes[dimIndex]);
-                  for (int i = 0; i < dimValues.length; ++i) {
-                    dims[dimIndex][i] = dimDim.getSortedId(dimValues[i]);
+
+                  for (int i = 0; i < dimValues[dimIndex].length; ++i) {
+                    dims[dimIndex][i] = dimDim.getSortedId(dimValues[dimIndex][i]);
                   }
                 }
 
