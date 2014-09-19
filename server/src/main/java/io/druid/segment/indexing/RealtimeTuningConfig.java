@@ -36,7 +36,7 @@ import java.io.File;
  */
 public class RealtimeTuningConfig implements TuningConfig
 {
-  private static final int defaultBufferSize = 256 * 1024 * 1024;
+  private static final int defaultMaxRowsInMemory = 500000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
   private static final File defaultBasePersistDirectory = Files.createTempDir();
@@ -50,7 +50,7 @@ public class RealtimeTuningConfig implements TuningConfig
   public static RealtimeTuningConfig makeDefaultTuningConfig()
   {
     return new RealtimeTuningConfig(
-        defaultBufferSize,
+        defaultMaxRowsInMemory,
         defaultIntermediatePersistPeriod,
         defaultWindowPeriod,
         defaultBasePersistDirectory,
@@ -62,7 +62,7 @@ public class RealtimeTuningConfig implements TuningConfig
     );
   }
 
-  private final int bufferSize;
+  private final int maxRowsInMemory;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -74,7 +74,7 @@ public class RealtimeTuningConfig implements TuningConfig
 
   @JsonCreator
   public RealtimeTuningConfig(
-      @JsonProperty("bufferSize") Integer bufferSize,
+      @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -85,7 +85,7 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("persistInHeap") Boolean persistInHeap
   )
   {
-    this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
+    this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -101,9 +101,9 @@ public class RealtimeTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public int getBufferSize()
+  public int getMaxRowsInMemory()
   {
-    return bufferSize;
+    return maxRowsInMemory;
   }
 
   @JsonProperty
@@ -157,7 +157,7 @@ public class RealtimeTuningConfig implements TuningConfig
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
-        bufferSize,
+        maxRowsInMemory,
         intermediatePersistPeriod,
         windowPeriod,
         basePersistDirectory,
@@ -172,7 +172,7 @@ public class RealtimeTuningConfig implements TuningConfig
   public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeTuningConfig(
-        bufferSize,
+        maxRowsInMemory,
         intermediatePersistPeriod,
         windowPeriod,
         dir,

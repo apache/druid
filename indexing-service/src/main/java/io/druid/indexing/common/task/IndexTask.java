@@ -55,7 +55,6 @@ import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -148,7 +147,7 @@ public class IndexTask extends AbstractFixedIntervalTask
               granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
           ),
           new IndexIOConfig(firehoseFactory),
-          new IndexTuningConfig(targetPartitionSize, null, null)
+          new IndexTuningConfig(targetPartitionSize, 0, null)
       );
     }
     this.jsonMapper = jsonMapper;
@@ -373,6 +372,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     );
 
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final int rowFlushBoundary = ingestionSchema.getTuningConfig().getRowFlushBoundary();
 
     // We need to track published segments.
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
@@ -403,19 +403,14 @@ public class IndexTask extends AbstractFixedIntervalTask
         tmpDir
     ).findPlumber(
         schema,
-        new RealtimeTuningConfig(
-            ingestionSchema.getTuningConfig().getBufferSize(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            shardSpec,
-            null
-        ),
+        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec, null),
         metrics
     );
+
+    // rowFlushBoundary for this job
+    final int myRowFlushBoundary = rowFlushBoundary > 0
+                                   ? rowFlushBoundary
+                                   : toolbox.getConfig().getDefaultRowFlushBoundary();
 
     try {
       plumber.startJob();
@@ -434,8 +429,8 @@ public class IndexTask extends AbstractFixedIntervalTask
             );
           }
           metrics.incrementProcessed();
-          Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if (sink != null && sink.isFull()) {
+
+          if (numRows >= myRowFlushBoundary) {
             plumber.persist(firehose.commit());
           }
         } else {
@@ -553,21 +548,21 @@ public class IndexTask extends AbstractFixedIntervalTask
   public static class IndexTuningConfig implements TuningConfig
   {
     private static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
-    private static final int DEFAULT_BUFFER_SIZE = 512 * 1024 * 1024;
+    private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 500000;
 
     private final int targetPartitionSize;
-    private final int bufferSize;
+    private final int rowFlushBoundary;
     private final int numShards;
 
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
-        @JsonProperty("bufferSize") @Nullable Integer bufferSize,
+        @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
         @JsonProperty("numShards") @Nullable Integer numShards
     )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
-      this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
+      this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
       this.numShards = numShards == null ? -1 : numShards;
       Preconditions.checkArgument(
           this.targetPartitionSize == -1 || this.numShards == -1,
@@ -582,9 +577,9 @@ public class IndexTask extends AbstractFixedIntervalTask
     }
 
     @JsonProperty
-    public int getBufferSize()
+    public int getRowFlushBoundary()
     {
-      return bufferSize;
+      return rowFlushBoundary;
     }
 
     @JsonProperty

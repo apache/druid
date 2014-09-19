@@ -57,7 +57,7 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |indexGranularity|The rollup granularity for timestamps. See [Realtime Ingestion](Realtime-ingestion.html) for more information. |no|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|no|
 |firehose|The input source of data. For more info, see [Firehose](Firehose.html).|yes|
-|bufferSize|Used in determining the size of offheap buffer to be used to store intermediate rows. When the buffer gets full, rows are persisted to disk.|no|
+|rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|no|
 
 ### Index Hadoop Task
 
