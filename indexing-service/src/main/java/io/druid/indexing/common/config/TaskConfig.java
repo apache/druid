@@ -42,6 +42,9 @@ public class TaskConfig
   private final String hadoopWorkingPath;
 
   @JsonProperty
+  private final int defaultRowFlushBoundary;
+
+  @JsonProperty
   private final List<String> defaultHadoopCoordinates;
 
   @JsonCreator
@@ -56,6 +59,7 @@ public class TaskConfig
     this.baseDir = baseDir == null ? "/tmp" : baseDir;
     this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
     this.hadoopWorkingPath = defaultDir(hadoopWorkingPath, "druid-indexing");
+    this.defaultRowFlushBoundary = defaultRowFlushBoundary == null ? 500000 : defaultRowFlushBoundary;
     this.defaultHadoopCoordinates = defaultHadoopCoordinates == null
                                     ? DEFAULT_DEFAULT_HADOOP_COORDINATES
                                     : defaultHadoopCoordinates;
@@ -77,6 +81,12 @@ public class TaskConfig
   public String getHadoopWorkingPath()
   {
     return hadoopWorkingPath;
+  }
+
+  @JsonProperty
+  public int getDefaultRowFlushBoundary()
+  {
+    return defaultRowFlushBoundary;
   }
 
   @JsonProperty
