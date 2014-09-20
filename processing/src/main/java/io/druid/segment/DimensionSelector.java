@@ -42,7 +42,7 @@ public interface DimensionSelector
    *
    * Value cardinality would be 2.
    *
-   * @return the value cardinality
+   * @return
    */
   public int getValueCardinality();
 
@@ -57,26 +57,26 @@ public interface DimensionSelector
    *
    * getRow() would return
    *
-   * getRow(0) =&gt; [0 1]
-   * getRow(1) =&gt; [0]
-   * getRow(2) =&gt; [0 1]
-   * getRow(3) =&gt; [1]
+   * getRow(0) => [0 1]
+   * getRow(1) => [0]
+   * getRow(2) => [0 1]
+   * getRow(3) => [1]
    *
    * and then lookupName would return:
    *
-   * lookupName(0) =&gt; A
-   * lookupName(1) =&gt; B
+   * lookupName(0) => A
+   * lookupName(1) => B
    *
-   * @param id id to lookup the field name for
-   * @return the field name for the given id
+   * @param id
+   * @return
    */
   public String lookupName(int id);
 
   /**
    * The ID is the int id value of the field.
    *
-   * @param name field name to look up the id for
-   * @return the id for the given field name
+   * @param name
+   * @return
    */
   public int lookupId(String name);
 }

@@ -20,7 +20,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.metamx.emitter.EmittingLogger;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.db.MetadataRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -81,9 +81,9 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
-    DatabaseRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
+    MetadataRuleManager metadataRuleManager = paramsWithReplicationManager.getMetadataRuleManager();
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
-      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+      List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {

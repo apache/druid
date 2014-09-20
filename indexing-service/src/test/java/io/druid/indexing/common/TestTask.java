@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common;
 
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 
 /**

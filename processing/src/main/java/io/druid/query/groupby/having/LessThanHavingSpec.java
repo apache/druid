@@ -22,12 +22,13 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import io.druid.data.input.Row;
+import io.druid.query.Result;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
- * The "&lt;" operator in a "having" clause. This is similar to SQL's "having aggregation &lt; value",
+ * The "<" operator in a "having" clause. This is similar to SQL's "having aggregation < value",
  * except that an aggregation in SQL is an expression instead of an aggregation name as in Druid.
  */
 public class LessThanHavingSpec implements HavingSpec

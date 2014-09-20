@@ -20,7 +20,7 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.db.MetadataRuleManager;
 import io.druid.server.coordinator.rules.Rule;
 
 import javax.ws.rs.Consumes;
@@ -38,21 +38,21 @@ import java.util.List;
 @Path("/druid/coordinator/v1/rules")
 public class RulesResource
 {
-  private final DatabaseRuleManager databaseRuleManager;
+  private final MetadataRuleManager metadataRuleManager;
 
   @Inject
   public RulesResource(
-      DatabaseRuleManager databaseRuleManager
+      MetadataRuleManager metadataRuleManager
   )
   {
-    this.databaseRuleManager = databaseRuleManager;
+    this.metadataRuleManager = metadataRuleManager;
   }
 
   @GET
   @Produces("application/json")
   public Response getRules()
   {
-    return Response.ok(databaseRuleManager.getAllRules()).build();
+    return Response.ok(metadataRuleManager.getAllRules()).build();
   }
 
   @GET
@@ -65,10 +65,10 @@ public class RulesResource
   )
   {
     if (full != null) {
-      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+      return Response.ok(metadataRuleManager.getRulesWithDefault(dataSourceName))
                      .build();
     }
-    return Response.ok(databaseRuleManager.getRules(dataSourceName))
+    return Response.ok(metadataRuleManager.getRules(dataSourceName))
                    .build();
   }
 
@@ -80,7 +80,7 @@ public class RulesResource
       final List<Rule> rules
   )
   {
-    if (databaseRuleManager.overrideRule(dataSourceName, rules)) {
+    if (metadataRuleManager.overrideRule(dataSourceName, rules)) {
       return Response.ok().build();
     }
     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

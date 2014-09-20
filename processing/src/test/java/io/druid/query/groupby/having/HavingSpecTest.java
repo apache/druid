@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.Result;
 import org.junit.Test;
 
 import java.util.ArrayList;

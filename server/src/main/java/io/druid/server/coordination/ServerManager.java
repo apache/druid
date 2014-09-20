@@ -390,42 +390,30 @@ public class ServerManager implements QuerySegmentWalker
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     return new SpecificSegmentQueryRunner<T>(
-        new MetricsEmittingQueryRunner<T>(
-            emitter,
-            new Function<Query<T>, ServiceMetricEvent.Builder>()
-            {
-              @Override
-              public ServiceMetricEvent.Builder apply(@Nullable final Query<T> input)
-              {
-                return toolChest.makeMetricBuilder(input);
-              }
-            },
-            new BySegmentQueryRunner<T>(
+        new BySegmentQueryRunner<T>(
+            adapter.getIdentifier(),
+            adapter.getDataInterval().getStart(),
+            new CachingQueryRunner<T>(
                 adapter.getIdentifier(),
-                adapter.getDataInterval().getStart(),
-                new CachingQueryRunner<T>(
-                    adapter.getIdentifier(),
-                    segmentDescriptor,
-                    objectMapper,
-                    cache,
-                    toolChest,
-                    new MetricsEmittingQueryRunner<T>(
-                        emitter,
-                        new Function<Query<T>, ServiceMetricEvent.Builder>()
-                        {
-                          @Override
-                          public ServiceMetricEvent.Builder apply(@Nullable final Query<T> input)
-                          {
-                            return toolChest.makeMetricBuilder(input);
-                          }
-                        },
-                        new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
-                        "scan/time"
-                    ).withWaitMeasuredFromNow(),
-                    cacheConfig
-                )
+                segmentDescriptor,
+                objectMapper,
+                cache,
+                toolChest,
+                new MetricsEmittingQueryRunner<T>(
+                    emitter,
+                    new Function<Query<T>, ServiceMetricEvent.Builder>()
+                    {
+                      @Override
+                      public ServiceMetricEvent.Builder apply(@Nullable final Query<T> input)
+                      {
+                        return toolChest.makeMetricBuilder(input);
+                      }
+                    },
+                    new ReferenceCountingSegmentQueryRunner<T>(factory, adapter)
+                ).withWaitMeasuredFromNow(),
+                cacheConfig
             )
-        ).withWaitMeasuredFromNow(),
+        ),
         segmentSpec
     );
   }

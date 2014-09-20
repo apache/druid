@@ -26,6 +26,8 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
+import java.util.ArrayList;
+
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
@@ -45,7 +47,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
-      return toolChest.mergeSequencesUnordered(
+      return toolChest.mergeSequences(
           Sequences.simple(
               Lists.transform(
                   ((UnionDataSource) dataSource).getDataSources(),

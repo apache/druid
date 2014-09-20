@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.db.MetadataRuleManager;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -39,7 +39,7 @@ public class DruidCoordinatorRuntimeParams
 {
   private final long startTime;
   private final DruidCluster druidCluster;
-  private final DatabaseRuleManager databaseRuleManager;
+  private final MetadataRuleManager metadataRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
@@ -54,7 +54,7 @@ public class DruidCoordinatorRuntimeParams
   public DruidCoordinatorRuntimeParams(
       long startTime,
       DruidCluster druidCluster,
-      DatabaseRuleManager databaseRuleManager,
+      MetadataRuleManager metadataRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
@@ -69,7 +69,7 @@ public class DruidCoordinatorRuntimeParams
   {
     this.startTime = startTime;
     this.druidCluster = druidCluster;
-    this.databaseRuleManager = databaseRuleManager;
+    this.metadataRuleManager = metadataRuleManager;
     this.segmentReplicantLookup = segmentReplicantLookup;
     this.dataSources = dataSources;
     this.availableSegments = availableSegments;
@@ -92,9 +92,9 @@ public class DruidCoordinatorRuntimeParams
     return druidCluster;
   }
 
-  public DatabaseRuleManager getDatabaseRuleManager()
+  public MetadataRuleManager getMetadataRuleManager()
   {
-    return databaseRuleManager;
+    return metadataRuleManager;
   }
 
   public SegmentReplicantLookup getSegmentReplicantLookup()
@@ -162,7 +162,7 @@ public class DruidCoordinatorRuntimeParams
     return new Builder(
         startTime,
         druidCluster,
-        databaseRuleManager,
+        metadataRuleManager,
         segmentReplicantLookup,
         dataSources,
         availableSegments,
@@ -180,7 +180,7 @@ public class DruidCoordinatorRuntimeParams
   {
     private long startTime;
     private DruidCluster druidCluster;
-    private DatabaseRuleManager databaseRuleManager;
+    private MetadataRuleManager metadataRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
@@ -196,7 +196,7 @@ public class DruidCoordinatorRuntimeParams
     {
       this.startTime = 0;
       this.druidCluster = null;
-      this.databaseRuleManager = null;
+      this.metadataRuleManager = null;
       this.segmentReplicantLookup = null;
       this.dataSources = Sets.newHashSet();
       this.availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
@@ -212,7 +212,7 @@ public class DruidCoordinatorRuntimeParams
     Builder(
         long startTime,
         DruidCluster cluster,
-        DatabaseRuleManager databaseRuleManager,
+        MetadataRuleManager metadataRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
@@ -227,7 +227,7 @@ public class DruidCoordinatorRuntimeParams
     {
       this.startTime = startTime;
       this.druidCluster = cluster;
-      this.databaseRuleManager = databaseRuleManager;
+      this.metadataRuleManager = metadataRuleManager;
       this.segmentReplicantLookup = segmentReplicantLookup;
       this.dataSources = dataSources;
       this.availableSegments = availableSegments;
@@ -245,7 +245,7 @@ public class DruidCoordinatorRuntimeParams
       return new DruidCoordinatorRuntimeParams(
           startTime,
           druidCluster,
-          databaseRuleManager,
+          metadataRuleManager,
           segmentReplicantLookup,
           dataSources,
           availableSegments,
@@ -271,9 +271,9 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withDatabaseRuleManager(DatabaseRuleManager databaseRuleManager)
+    public Builder withDatabaseRuleManager(MetadataRuleManager metadataRuleManager)
     {
-      this.databaseRuleManager = databaseRuleManager;
+      this.metadataRuleManager = metadataRuleManager;
       return this;
     }
 

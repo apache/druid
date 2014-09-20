@@ -42,13 +42,15 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.db.IndexerSQLMetadataCoordinator;
 import io.druid.granularity.QueryGranularity;
+import io.druid.indexing.common.TestUtils;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
-import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
@@ -65,7 +67,6 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -100,7 +101,7 @@ public class TaskLifecycleTest
   private TaskLockbox tl = null;
   private TaskQueue tq = null;
   private TaskRunner tr = null;
-  private MockIndexerDBCoordinator mdc = null;
+  private MockIndexerMetadataCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   TaskStorageQueryAdapter tsqa = null;
@@ -509,12 +510,12 @@ public class TaskLifecycleTest
     return retVal;
   }
 
-  private static class MockIndexerDBCoordinator extends IndexerDBCoordinator
+  private static class MockIndexerMetadataCoordinator extends IndexerSQLMetadataCoordinator
   {
     final private Set<DataSegment> published = Sets.newHashSet();
     final private Set<DataSegment> nuked = Sets.newHashSet();
 
-    private MockIndexerDBCoordinator()
+    private MockIndexerMetadataCoordinator()
     {
       super(null, null, null);
     }
@@ -561,9 +562,9 @@ public class TaskLifecycleTest
     }
   }
 
-  private static MockIndexerDBCoordinator newMockMDC()
+  private static MockIndexerMetadataCoordinator newMockMDC()
   {
-    return new MockIndexerDBCoordinator();
+    return new MockIndexerMetadataCoordinator();
   }
 
   private static ServiceEmitter newMockEmitter()

@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
@@ -34,6 +35,7 @@ import io.druid.query.Result;
 import io.druid.segment.Segment;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
 /**

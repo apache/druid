@@ -28,20 +28,18 @@ import java.nio.ByteBuffer;
 
 /**
  * Implements the HyperLogLog cardinality estimator described in:
- * 
+ * <p/>
  * http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
- * 
+ * <p/>
  * Run this code to see a simple indication of expected errors based on different m values:
- * 
- * <code>
- *   for (int i = 1; i &lt; 20; ++i) {
- *     System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
- *   }
- * </code>
- *
+ * <p/>
+ * for (int i = 1; i < 20; ++i) {
+ * System.out.printf("i[%,d], val[%,d] => error[%f%%]%n", i, 2 << i, 104 / Math.sqrt(2 << i));
+ * }
+ * <p/>
  * This class is *not* multi-threaded.  It can be passed among threads, but it is written with the assumption that
  * only one thread is ever calling methods on it.
- * 
+ * <p/>
  * If you have multiple threads calling methods on this concurrently, I hope you manage to get correct behavior
  */
 public abstract class HyperLogLogCollector implements Comparable<HyperLogLogCollector>
@@ -197,13 +195,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return applyCorrection(e, zeroCount);
   }
 
-  /**
-   * Checks if the payload for the given ByteBuffer is sparse or not.
-   * The given buffer must be positioned at getPayloadBytePosition() prior to calling isSparse
-   *
-   * @param buffer
-   * @return
-   */
   private static boolean isSparse(ByteBuffer buffer)
   {
     return buffer.remaining() != NUM_BYTES_FOR_BUCKETS;
@@ -504,32 +495,13 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       return false;
     }
 
-    ByteBuffer otherBuffer = ((HyperLogLogCollector) o).storageBuffer;
+    HyperLogLogCollector collector = (HyperLogLogCollector) o;
 
-    if (storageBuffer != null ? false : otherBuffer != null) {
+    if (storageBuffer != null ? !storageBuffer.equals(collector.storageBuffer) : collector.storageBuffer != null) {
       return false;
     }
 
-    if(storageBuffer == null && otherBuffer == null) {
-      return true;
-    }
-
-    final ByteBuffer denseStorageBuffer;
-    if(storageBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer);
-      denseCollector.convertToDenseStorage();
-      denseStorageBuffer = denseCollector.storageBuffer;
-    } else {
-      denseStorageBuffer = storageBuffer;
-    }
-
-    if(otherBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer);
-      otherCollector.convertToDenseStorage();
-      otherBuffer = otherCollector.storageBuffer;
-    }
-
-    return denseStorageBuffer.equals(otherBuffer);
+    return true;
   }
 
   @Override

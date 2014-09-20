@@ -70,8 +70,6 @@ public interface Query<T>
 
   public Duration getDuration();
 
-  public Map<String, Object> getContext();
-
   public <ContextType> ContextType getContextValue(String key);
 
   public <ContextType> ContextType getContextValue(String key, ContextType defaultValue);

@@ -81,7 +81,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   {
     toolbox.verifyTaskLocksAndSinglePartitionSettitude(task, segments, true);
 
-    final Set<DataSegment> retVal = toolbox.getIndexerDBCoordinator().announceHistoricalSegments(segments);
+    final Set<DataSegment> retVal = toolbox.getIndexerMetadataCoordinator().announceHistoricalSegments(segments);
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

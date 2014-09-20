@@ -102,7 +102,6 @@ public abstract class BaseQuery<T> implements Query<T>
     return duration;
   }
 
-  @Override
   @JsonProperty
   public Map<String, Object> getContext()
   {

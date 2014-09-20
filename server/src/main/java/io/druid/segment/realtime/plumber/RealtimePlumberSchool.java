@@ -26,8 +26,10 @@ import com.google.common.base.Preconditions;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
+import io.druid.client.ServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -73,8 +75,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
-      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
@@ -89,7 +90,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.basePersistDirectory = basePersistDirectory;
     this.segmentGranularity = segmentGranularity;
     this.versioningPolicy = versioningPolicy;
-    this.rejectionPolicyFactory = (rejectionPolicy == null) ? rejectionPolicyFactory : rejectionPolicy;
+    this.rejectionPolicyFactory = rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists;
   }
 

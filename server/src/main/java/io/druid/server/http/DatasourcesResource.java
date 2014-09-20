@@ -33,7 +33,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,18 +60,18 @@ import java.util.TreeSet;
 public class DatasourcesResource
 {
   private final InventoryView serverInventoryView;
-  private final DatabaseSegmentManager databaseSegmentManager;
+  private final MetadataSegmentManager metadataSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DatasourcesResource(
       InventoryView serverInventoryView,
-      DatabaseSegmentManager databaseSegmentManager,
+      MetadataSegmentManager metadataSegmentManager,
       @Nullable IndexingServiceClient indexingServiceClient
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.databaseSegmentManager = databaseSegmentManager;
+    this.metadataSegmentManager = metadataSegmentManager;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -147,7 +147,7 @@ public class DatasourcesResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
+    if (!metadataSegmentManager.enableDatasource(dataSourceName)) {
       return Response.noContent().build();
     }
 
@@ -180,7 +180,7 @@ public class DatasourcesResource
                        .build();
       }
     } else {
-      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
+      if (!metadataSegmentManager.removeDatasource(dataSourceName)) {
         return Response.noContent().build();
       }
     }
@@ -379,7 +379,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
+    if (!metadataSegmentManager.removeSegment(dataSourceName, segmentId)) {
       return Response.noContent().build();
     }
 
@@ -394,7 +394,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!databaseSegmentManager.enableSegment(segmentId)) {
+    if (!metadataSegmentManager.enableSegment(segmentId)) {
       return Response.noContent().build();
     }
 

@@ -244,6 +244,8 @@ public class IndexTask extends AbstractFixedIntervalTask
     final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
 
     // Load data
+    System.out.println("PARSER IS");
+    System.out.println(ingestionSchema.getDataSchema().getParser());
     try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();

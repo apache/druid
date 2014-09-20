@@ -24,7 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -42,14 +42,14 @@ import java.util.List;
 @Path("/druid/coordinator/v1/db")
 public class DBResource
 {
-  private final DatabaseSegmentManager databaseSegmentManager;
+  private final MetadataSegmentManager metadataSegmentManager;
 
   @Inject
   public DBResource(
-      DatabaseSegmentManager databaseSegmentManager
+      MetadataSegmentManager metadataSegmentManager
   )
   {
-    this.databaseSegmentManager = databaseSegmentManager;
+    this.metadataSegmentManager = metadataSegmentManager;
   }
 
   @GET
@@ -62,15 +62,15 @@ public class DBResource
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (includeDisabled != null) {
-      return builder.entity(databaseSegmentManager.getAllDatasourceNames()).build();
+      return builder.entity(metadataSegmentManager.getAllDatasourceNames()).build();
     }
     if (full != null) {
-      return builder.entity(databaseSegmentManager.getInventory()).build();
+      return builder.entity(metadataSegmentManager.getInventory()).build();
     }
 
     List<String> dataSourceNames = Lists.newArrayList(
         Iterables.transform(
-            databaseSegmentManager.getInventory(),
+            metadataSegmentManager.getInventory(),
             new Function<DruidDataSource, String>()
             {
               @Override
@@ -94,7 +94,7 @@ public class DBResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
+    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -110,7 +110,7 @@ public class DBResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
+    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -143,7 +143,7 @@ public class DBResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
+    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

@@ -42,6 +42,7 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -114,12 +115,6 @@ public class TimeBoundaryQueryQueryToolChest
   }
 
   @Override
-  public Sequence<Result<TimeBoundaryResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TimeBoundaryResultValue>>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
   {
     return new ServiceMetricEvent.Builder()
@@ -150,10 +145,9 @@ public class TimeBoundaryQueryQueryToolChest
       @Override
       public byte[] computeCacheKey(TimeBoundaryQuery query)
       {
-        final byte[] cacheKey = query.getCacheKey();
-        return ByteBuffer.allocate(1 + cacheKey.length)
+        return ByteBuffer.allocate(2)
                          .put(TIMEBOUNDARY_QUERY)
-                         .put(cacheKey)
+                         .put(query.getCacheKey())
                          .array();
       }
 

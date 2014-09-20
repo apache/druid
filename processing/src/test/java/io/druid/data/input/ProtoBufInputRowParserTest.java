@@ -21,6 +21,7 @@ package io.druid.data.input;
 
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import org.joda.time.DateTime;
 import org.junit.Test;

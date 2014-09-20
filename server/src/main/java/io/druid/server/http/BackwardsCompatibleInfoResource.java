@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseRuleManager;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataRuleManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.server.coordinator.DruidCoordinator;
 
 import javax.annotation.Nullable;
@@ -40,8 +40,8 @@ public class BackwardsCompatibleInfoResource extends InfoResource
   public BackwardsCompatibleInfoResource(
       DruidCoordinator coordinator,
       InventoryView serverInventoryView,
-      DatabaseSegmentManager databaseSegmentManager,
-      DatabaseRuleManager databaseRuleManager,
+      MetadataSegmentManager metadataSegmentManager,
+      MetadataRuleManager metadataRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       ObjectMapper jsonMapper
   )
@@ -49,8 +49,8 @@ public class BackwardsCompatibleInfoResource extends InfoResource
     super(
         coordinator,
         serverInventoryView,
-        databaseSegmentManager,
-        databaseRuleManager,
+        metadataSegmentManager,
+        metadataRuleManager,
         indexingServiceClient,
         jsonMapper
     );

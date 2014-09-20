@@ -27,8 +27,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.common.config.ConfigManager;
 import io.druid.common.config.ConfigManagerConfig;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.db.DbConnector;
-import io.druid.db.DbTablesConfig;
+import io.druid.db.MetadataDbConnector;
+import io.druid.db.MetadataTablesConfig;
 
 /**
  */
@@ -43,8 +43,8 @@ public class JacksonConfigManagerModule implements Module
 
   @Provides @ManageLifecycle
   public ConfigManager getConfigManager(
-      final DbConnector dbConnector,
-      final Supplier<DbTablesConfig> dbTables,
+      final MetadataDbConnector metadataDbConnector,
+      final Supplier<MetadataTablesConfig> dbTables,
       final Supplier<ConfigManagerConfig> config,
       final Lifecycle lifecycle
   )
@@ -55,7 +55,7 @@ public class JacksonConfigManagerModule implements Module
           @Override
           public void start() throws Exception
           {
-            dbConnector.createConfigTable();
+            metadataDbConnector.createConfigTable();
           }
 
           @Override
@@ -66,6 +66,6 @@ public class JacksonConfigManagerModule implements Module
         }
     );
 
-    return new ConfigManager(dbConnector, dbTables, config);
+    return new ConfigManager(metadataDbConnector, dbTables, config);
   }
 }

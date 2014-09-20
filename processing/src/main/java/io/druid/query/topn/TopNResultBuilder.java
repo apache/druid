@@ -20,8 +20,11 @@
 package io.druid.query.topn;
 
 import io.druid.query.Result;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 
 import java.util.Iterator;
+import java.util.List;
 
 /**
  */

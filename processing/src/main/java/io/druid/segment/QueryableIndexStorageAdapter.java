@@ -138,10 +138,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     Interval actualInterval = interval;
 
-    final Interval dataInterval = new Interval(
-        getMinTime().getMillis(),
-        gran.next(gran.truncate(getMaxTime().getMillis()))
-    );
+    final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
 
     if (!actualInterval.overlaps(dataInterval)) {
       return Sequences.empty();

@@ -21,11 +21,11 @@ package io.druid.indexer.updater;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
-import io.druid.db.DbConnectorConfig;
+import io.druid.db.MetadataDbConnectorConfig;
 
 /**
  */
-public class DbUpdaterJobSpec implements Supplier<DbConnectorConfig>
+public class DbUpdaterJobSpec implements Supplier<MetadataDbConnectorConfig>
 {
   @JsonProperty("connectURI")
   public String connectURI;
@@ -45,9 +45,9 @@ public class DbUpdaterJobSpec implements Supplier<DbConnectorConfig>
   }
 
   @Override
-  public DbConnectorConfig get()
+  public MetadataDbConnectorConfig get()
   {
-    return new DbConnectorConfig()
+    return new MetadataDbConnectorConfig()
     {
       @Override
       public String getConnectURI()

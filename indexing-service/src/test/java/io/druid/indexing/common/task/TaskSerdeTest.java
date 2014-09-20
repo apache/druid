@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -206,7 +207,6 @@ public class TaskSerdeTest
         new Period("PT10M"),
         1,
         Granularity.HOUR,
-        null,
         null
     );
 
@@ -426,8 +426,7 @@ public class TaskSerdeTest
             null
         ),
         null,
-        null,
-        "blah"
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -442,7 +441,5 @@ public class TaskSerdeTest
         task.getSpec().getTuningConfig().getJobProperties(),
         task2.getSpec().getTuningConfig().getJobProperties()
     );
-    Assert.assertEquals("blah", task.getClasspathPrefix());
-    Assert.assertEquals("blah", task2.getClasspathPrefix());
   }
 }

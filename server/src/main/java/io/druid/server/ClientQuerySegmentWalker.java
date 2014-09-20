@@ -19,8 +19,6 @@
 
 package io.druid.server;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -28,7 +26,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachingClusteredClient;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
-import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
@@ -47,20 +44,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final CachingClusteredClient baseClient;
   private final QueryToolChestWarehouse warehouse;
-  private final ObjectMapper objectMapper;
 
   @Inject
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
       CachingClusteredClient baseClient,
-      QueryToolChestWarehouse warehouse,
-      ObjectMapper objectMapper
+      QueryToolChestWarehouse warehouse
   )
   {
     this.emitter = emitter;
     this.baseClient = baseClient;
     this.warehouse = warehouse;
-    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -75,10 +69,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return makeRunner(query);
   }
 
-  private <T> QueryRunner<T> makeRunner(final Query<T> query)
+  private <T> FinalizeResultsQueryRunner<T> makeRunner(final Query<T> query)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
+    return new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
                 new UnionQueryRunner<T>(
@@ -100,15 +94,5 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         ),
         toolChest
     );
-
-
-    final PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
-        query.getContext().get("postProcessing"),
-        new TypeReference<PostProcessingOperator<T>>() {
-        }
-    );
-
-    return postProcessing != null ?
-           postProcessing.postProcess(baseRunner) : baseRunner;
   }
 }

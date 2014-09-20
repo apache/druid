@@ -19,6 +19,9 @@
 
 package io.druid.segment.data;
 
+/**
+ * @param <T>
+ */
 public interface Indexed<T> extends Iterable<T>
 {
   Class<? extends T> getClazz();

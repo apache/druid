@@ -22,6 +22,7 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.Row;
+import io.druid.query.Result;
 
 import java.nio.ByteBuffer;
 

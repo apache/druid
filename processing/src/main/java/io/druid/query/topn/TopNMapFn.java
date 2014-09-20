@@ -24,6 +24,8 @@ import io.druid.query.Result;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 
+import java.util.Comparator;
+
 public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
 {
   private final TopNQuery query;

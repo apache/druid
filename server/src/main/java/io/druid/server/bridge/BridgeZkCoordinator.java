@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.client.ServerView;
 import io.druid.concurrent.Execs;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.server.coordination.BaseZkCoordinator;
 import io.druid.server.coordination.DataSegmentChangeCallback;
@@ -44,7 +44,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
   private static final Logger log = new Logger(BaseZkCoordinator.class);
 
   private final DbSegmentPublisher dbSegmentPublisher;
-  private final DatabaseSegmentManager databaseSegmentManager;
+  private final MetadataSegmentManager metadataSegmentManager;
   private final ServerView serverView;
 
   private final ExecutorService exec = Execs.singleThreaded("BridgeZkCoordinatorServerView-%s");
@@ -56,14 +56,14 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
       DruidServerMetadata me,
       @Bridge CuratorFramework curator,
       DbSegmentPublisher dbSegmentPublisher,
-      DatabaseSegmentManager databaseSegmentManager,
+      MetadataSegmentManager metadataSegmentManager,
       ServerView serverView
   )
   {
     super(jsonMapper, zkPaths, me, curator);
 
     this.dbSegmentPublisher = dbSegmentPublisher;
-    this.databaseSegmentManager = databaseSegmentManager;
+    this.metadataSegmentManager = metadataSegmentManager;
     this.serverView = serverView;
   }
 
@@ -110,7 +110,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
   @Override
   public void removeSegment(final DataSegment segment, final DataSegmentChangeCallback callback)
   {
-    databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
     serverView.registerSegmentCallback(
         exec,
         new ServerView.BaseSegmentCallback()

@@ -17,7 +17,7 @@
     },
     "pathSpec" : {
       "type" : "static",
-      "paths" : "examples/indexing/wikipedia_data.json"
+      "paths" : "examples/bin/examples/indexing/wikipedia_data.json"
     },
     "targetPartitionSize" : 5000000,
     "rollupSpec" : {
