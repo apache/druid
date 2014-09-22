@@ -40,7 +40,6 @@ import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
-import io.druid.guice.http.HttpClientModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.LifecycleModule;
@@ -54,6 +53,7 @@ import io.druid.guice.StorageNodeModule;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.guice.http.HttpClientModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
@@ -79,7 +79,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -102,7 +101,7 @@ public class Initialization
 
   /**
    * @param clazz Module class
-   * @param <T>
+   * @param <T> Module type
    *
    * @return Returns the set of modules loaded.
    */

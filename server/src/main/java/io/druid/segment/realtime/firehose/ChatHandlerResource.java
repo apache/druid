@@ -21,8 +21,6 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import io.druid.segment.realtime.firehose.ChatHandler;
-import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;

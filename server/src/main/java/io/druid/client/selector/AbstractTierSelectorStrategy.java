@@ -22,7 +22,6 @@ package io.druid.client.selector;
 import com.metamx.common.ISE;
 import io.druid.timeline.DataSegment;
 
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;

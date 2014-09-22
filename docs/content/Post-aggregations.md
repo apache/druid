@@ -23,6 +23,9 @@ postAggregation : {
 }
 ```
 
+In the case of a division (`/`), if the denominator is `0` then `0` is returned regardless of the numerator.
+
+
 ### Field accessor post-aggregator
 
 This returns the value produced by the specified [aggregator](Aggregations.html).

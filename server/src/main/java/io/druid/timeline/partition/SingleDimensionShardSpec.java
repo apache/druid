@@ -24,7 +24,6 @@ import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Class uses getters/setters to work around http://jira.codehaus.org/browse/MSHADE-92

@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
@@ -41,13 +40,13 @@ import java.util.Map;
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
  * is sorted, supports binary search index lookups.  If input is not sorted, only supports array-like index lookups.
- * <p/>
+ * 
  * V1 Storage Format:
- * <p/>
+ * 
  * byte 1: version (0x1)
- * byte 2 == 0x1 => allowReverseLookup
- * bytes 3-6 => numBytesUsed
- * bytes 7-10 => numElements
+ * byte 2 == 0x1 =&gt; allowReverseLookup
+ * bytes 3-6 =&gt; numBytesUsed
+ * bytes 7-10 =&gt; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
  */
@@ -327,8 +326,9 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
 
   /**
    * The returned GenericIndexed must be closed to release the underlying memory
-   * @param maxBytes
-   * @return
+   *
+   * @param maxBytes maximum size in bytes of the lookup cache
+   * @return a copy of this GenericIndexed with a lookup cache.
    */
   public GenericIndexed<T> withCache(int maxBytes)
   {

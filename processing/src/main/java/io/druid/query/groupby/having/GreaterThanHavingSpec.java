@@ -23,13 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import io.druid.data.input.Row;
-import io.druid.query.Result;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
- * The ">" operator in a "having" clause. This is similar to SQL's "having aggregation > value",
+ * The "&gt;" operator in a "having" clause. This is similar to SQL's "having aggregation &gt; value",
  * except that an aggregation in SQL is an expression instead of an aggregation name as in Druid.
  */
 public class GreaterThanHavingSpec implements HavingSpec

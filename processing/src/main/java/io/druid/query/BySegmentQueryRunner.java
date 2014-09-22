@@ -20,12 +20,8 @@
 package io.druid.query;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.Yielders;
-import com.metamx.common.guava.YieldingAccumulator;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
