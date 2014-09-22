@@ -43,6 +43,9 @@ public class SegmentLoaderConfig
   @JsonProperty("announceIntervalMillis")
   private int announceIntervalMillis = 5 * 1000; // 5 seconds
 
+  @JsonProperty("numLoadingThreads")
+  private int numLoadingThreads = 1;
+
   @JsonProperty
   private File infoDir = null;
 
@@ -64,6 +67,11 @@ public class SegmentLoaderConfig
   public int getAnnounceIntervalMillis()
   {
     return announceIntervalMillis;
+  }
+
+  public int getNumLoadingThreads()
+  {
+    return numLoadingThreads;
   }
 
   public File getInfoDir()

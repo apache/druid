@@ -22,6 +22,7 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
@@ -36,6 +37,7 @@ import org.apache.curator.framework.CuratorFramework;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -66,7 +68,7 @@ public class ZkCoordinator extends BaseZkCoordinator
       ScheduledExecutorFactory factory
   )
   {
-    super(jsonMapper, zkPaths, me, curator);
+    super(jsonMapper, zkPaths, config, me, curator);
 
     this.jsonMapper = jsonMapper;
     this.config = config;
@@ -127,42 +129,47 @@ public class ZkCoordinator extends BaseZkCoordinator
     return ZkCoordinator.this;
   }
 
+  private boolean loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
+  {
+    final boolean loaded;
+    try {
+      loaded = serverManager.loadSegment(segment);
+    }
+    catch (Exception e) {
+      removeSegment(segment, callback);
+      throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
+    }
+
+    if (loaded) {
+      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+      if (!segmentInfoCacheFile.exists()) {
+        try {
+          jsonMapper.writeValue(segmentInfoCacheFile, segment);
+        }
+        catch (IOException e) {
+          removeSegment(segment, callback);
+          throw new SegmentLoadingException(
+              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+          );
+        }
+      }
+    }
+    return loaded;
+  }
+
   @Override
   public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
   {
     try {
       log.info("Loading segment %s", segment.getIdentifier());
-
-      final boolean loaded;
-      try {
-        loaded = serverManager.loadSegment(segment);
-      }
-      catch (Exception e) {
-        removeSegment(segment, callback);
-        throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
-      }
-
-      if (loaded) {
-        File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-        if (!segmentInfoCacheFile.exists()) {
-          try {
-            jsonMapper.writeValue(segmentInfoCacheFile, segment);
-          }
-          catch (IOException e) {
-            removeSegment(segment, callback);
-            throw new SegmentLoadingException(
-                e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
-            );
-          }
-        }
-
+      if(loadSegment(segment, callback)) {
         try {
           announcer.announceSegment(segment);
         }
         catch (IOException e) {
           throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
         }
-      }
+      };
     }
     catch (SegmentLoadingException e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
@@ -174,54 +181,58 @@ public class ZkCoordinator extends BaseZkCoordinator
     }
   }
 
-  public void addSegments(Iterable<DataSegment> segments, DataSegmentChangeCallback callback)
+  public void addSegments(Iterable<DataSegment> segments, final DataSegmentChangeCallback callback)
   {
     try(final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
             new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
       backgroundSegmentAnnouncer.startAnnouncing();
 
-      final List<String> segmentFailures = Lists.newArrayList();
-      for (DataSegment segment : segments) {
-        log.info("Loading segment %s", segment.getIdentifier());
+      final List<ListenableFuture<Boolean>> segmentLoading = Lists.newArrayList();
 
-        final boolean loaded;
-        try {
-          loaded = serverManager.loadSegment(segment);
-        }
-        catch (Exception e) {
-          log.error(e, "Exception loading segment[%s]", segment.getIdentifier());
-          removeSegment(segment, callback);
-          segmentFailures.add(segment.getIdentifier());
-          continue;
-        }
-
-        if (loaded) {
-          File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-          if (!segmentInfoCacheFile.exists()) {
-            try {
-              jsonMapper.writeValue(segmentInfoCacheFile, segment);
-            }
-            catch (IOException e) {
-              log.error(e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile);
-              removeSegment(segment, callback);
-              segmentFailures.add(segment.getIdentifier());
-              continue;
-            }
-          }
-
-          try {
-            backgroundSegmentAnnouncer.announceSegment(segment);
-          } catch(InterruptedException e) {
-            throw new SegmentLoadingException(e, "Loading Interrupted");
-          }
-        }
+      for (final DataSegment segment : segments) {
+        segmentLoading.add(
+            getLoadingExecutor().submit(
+                new Callable<Boolean>()
+                {
+                  @Override
+                  public Boolean call() throws SegmentLoadingException
+                  {
+                    try {
+                      log.info("Loading segment %s", segment.getIdentifier());
+                      final boolean loaded = loadSegment(segment, callback);
+                      if (loaded) {
+                        try {
+                          backgroundSegmentAnnouncer.announceSegment(segment);
+                        }
+                        catch (InterruptedException e) {
+                          Thread.currentThread().interrupt();
+                          throw new SegmentLoadingException(e, "Loading Interrupted");
+                        }
+                      }
+                      return loaded;
+                    } catch(SegmentLoadingException e) {
+                      log.error(e, "[%s] failed to load", segment.getIdentifier());
+                      throw e;
+                    }
+                  }
+                }
+            )
+        );
       }
 
-      if (!segmentFailures.isEmpty()) {
-        for (String segmentFailure : segmentFailures) {
-          log.error("%s failed to load", segmentFailure);
+      int failed = 0;
+      for(ListenableFuture future : segmentLoading) {
+        try {
+          future.get();
+        } catch(InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new SegmentLoadingException(e, "Loading Interrupted");
+        } catch(ExecutionException e) {
+          failed++;
         }
-        throw new SegmentLoadingException("%,d errors seen while loading segments", segmentFailures.size());
+      }
+      if(failed > 0) {
+        throw new SegmentLoadingException("%,d errors seen while loading segments", failed);
       }
 
       backgroundSegmentAnnouncer.finishAnnouncing();
@@ -292,7 +303,7 @@ public class ZkCoordinator extends BaseZkCoordinator
     private volatile ScheduledFuture startedAnnouncing = null;
     private volatile ScheduledFuture nextAnnoucement = null;
 
-    private BackgroundSegmentAnnouncer(
+    public BackgroundSegmentAnnouncer(
         DataSegmentAnnouncer announcer,
         ScheduledExecutorService exec,
         int intervalMillis
@@ -366,6 +377,7 @@ public class ZkCoordinator extends BaseZkCoordinator
           doneAnnouncing.get();
         }
         catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           throw new SegmentLoadingException(e, "Loading Interrupted");
         }
         catch (ExecutionException e) {

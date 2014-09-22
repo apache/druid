@@ -31,6 +31,7 @@ import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
@@ -156,6 +157,7 @@ public class DruidClusterBridgeTest
     BridgeZkCoordinator bridgeZkCoordinator = new BridgeZkCoordinator(
         jsonMapper,
         zkPathsConfig,
+        new SegmentLoaderConfig(),
         metadata,
         remoteCf,
         dbSegmentPublisher,
