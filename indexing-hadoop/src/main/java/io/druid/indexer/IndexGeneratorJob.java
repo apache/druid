@@ -642,7 +642,8 @@ public class IndexGeneratorJob implements Jobby
               .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build(),
-          new OffheapBufferPool(bufferSize)
+          new OffheapBufferPool(bufferSize),
+          false
       );
     }
 

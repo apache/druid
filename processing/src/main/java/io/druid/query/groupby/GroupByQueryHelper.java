@@ -73,6 +73,7 @@ public class GroupByQueryHelper
           }
         }
     );
+
     IncrementalIndex index = new IncrementalIndex(
         // use granularity truncated min timestamp
         // since incoming truncated timestamps may precede timeStart
@@ -80,7 +81,8 @@ public class GroupByQueryHelper
         gran,
         aggs.toArray(new AggregatorFactory[aggs.size()]),
         bufferPool,
-        false
+        false,
+        query.getContextValue("useOffheap", false)
     );
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()

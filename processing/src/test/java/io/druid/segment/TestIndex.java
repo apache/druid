@@ -38,6 +38,7 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -82,7 +83,7 @@ public class TestIndex
     }
   }
 
-  public static IncrementalIndex getIncrementalTestIndex()
+  public static IncrementalIndex getIncrementalTestIndex(boolean useOffheap)
   {
     synchronized (log) {
       if (realtimeIndex != null) {
@@ -90,7 +91,7 @@ public class TestIndex
       }
     }
 
-    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv");
+    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv", useOffheap);
   }
 
   public static QueryableIndex getMMappedTestIndex()
@@ -101,7 +102,7 @@ public class TestIndex
       }
     }
 
-    IncrementalIndex incrementalIndex = getIncrementalTestIndex();
+    IncrementalIndex incrementalIndex = getIncrementalTestIndex(false);
     mmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
 
     return mmappedIndex;
@@ -115,8 +116,8 @@ public class TestIndex
       }
 
       try {
-        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top");
-        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom");
+        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top", false);
+        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom", false);
 
         File tmpFile = File.createTempFile("yay", "who");
         tmpFile.delete();
@@ -151,14 +152,19 @@ public class TestIndex
     }
   }
 
-  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
+  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename, final boolean useOffheap)
   {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading index file[%s]", resource);
 
     final IncrementalIndex retVal = new IncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.NONE, METRIC_AGGS,
-        TestQueryRunners.pool
+        new IncrementalIndexSchema.Builder().withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+                                            .withQueryGranularity(QueryGranularity.NONE)
+                                            .withMetrics(METRIC_AGGS)
+                                            .build(),
+        TestQueryRunners.pool,
+        true,
+        useOffheap
     );
 
     final AtomicLong startTime = new AtomicLong();

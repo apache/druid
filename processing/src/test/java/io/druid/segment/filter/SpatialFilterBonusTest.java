@@ -125,7 +125,8 @@ public class SpatialFilterBonusTest
                                                     )
                                                 )
                                             ).build(),
-        TestQueryRunners.pool
+        TestQueryRunners.pool,
+        false
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -256,7 +257,8 @@ public class SpatialFilterBonusTest
                                                   )
 
                                               ).build(),
-          TestQueryRunners.pool
+          TestQueryRunners.pool,
+          false
       );
       IncrementalIndex second = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -274,8 +276,8 @@ public class SpatialFilterBonusTest
                                                       )
                                                   )
                                               ).build(),
-          TestQueryRunners.pool
-
+          TestQueryRunners.pool,
+          false
       );
       IncrementalIndex third = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -294,8 +296,8 @@ public class SpatialFilterBonusTest
                                                   )
 
                                               ).build(),
-          TestQueryRunners.pool
-
+          TestQueryRunners.pool,
+          false
       );
 
 

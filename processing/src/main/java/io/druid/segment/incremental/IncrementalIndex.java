@@ -21,6 +21,8 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
@@ -66,6 +68,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,8 +78,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -101,6 +105,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
   private final ResourceHolder<ByteBuffer> bufferHolder;
   private final DB db;
+  private final boolean useOffheap;
   private volatile AtomicInteger numEntries = new AtomicInteger();
   // This is modified on add() in a critical section.
   private ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -117,7 +122,8 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   public IncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       StupidPool<ByteBuffer> bufferPool,
-      final boolean deserializeComplexMetrics
+      final boolean deserializeComplexMetrics,
+      final boolean useOffheap
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -320,18 +326,24 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
     this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-    db = DBMaker.newMemoryDirectDB().transactionDisable().asyncWriteEnable().cacheLRUEnable().cacheSize(
-        Integer.getInteger(
-            "cacheSize",
-            CC.DEFAULT_CACHE_SIZE
-        )
-    ).make();
-    final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
-    this.facts = db.createTreeMap("__facts" + UUID.randomUUID())
-                   .keySerializer(timeAndDimsSerializer)
-                   .comparator(timeAndDimsSerializer.getComparator())
-                   .valueSerializer(Serializer.INTEGER)
-                   .make();
+    this.useOffheap = useOffheap;
+    if (useOffheap) {
+      db = DBMaker.newMemoryDirectDB().transactionDisable().asyncWriteEnable().cacheLRUEnable().cacheSize(
+          Integer.getInteger(
+              "cacheSize",
+              CC.DEFAULT_CACHE_SIZE
+          )
+      ).make();
+      final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
+      this.facts = db.createTreeMap("__facts" + UUID.randomUUID())
+                     .keySerializer(timeAndDimsSerializer)
+                     .comparator(timeAndDimsSerializer.getComparator())
+                     .valueSerializer(Serializer.INTEGER)
+                     .make();
+    } else {
+      db = null;
+      this.facts = new ConcurrentSkipListMap<>();
+    }
   }
 
   public IncrementalIndex(
@@ -347,16 +359,18 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                                             .withMetrics(metrics)
                                             .build(),
         bufferPool,
-        true
+        true,
+        false
     );
   }
 
   public IncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
-      StupidPool<ByteBuffer> bufferPool
+      StupidPool<ByteBuffer> bufferPool,
+      boolean useOffheap
   )
   {
-    this(incrementalIndexSchema, bufferPool, true);
+    this(incrementalIndexSchema, bufferPool, true, useOffheap);
   }
 
   public IncrementalIndex(
@@ -364,7 +378,8 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
       StupidPool<ByteBuffer> bufferPool,
-      boolean deserializeComplexMetrics
+      boolean deserializeComplexMetrics,
+      boolean useOffheap
   )
   {
     this(
@@ -373,7 +388,8 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                                             .withMetrics(metrics)
                                             .build(),
         bufferPool,
-        deserializeComplexMetrics
+        deserializeComplexMetrics,
+        useOffheap
     );
   }
 
@@ -509,9 +525,11 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     int count = 0;
     for (String dimValue : dimValues) {
-      String canonicalValue = InternUtil.intern(dimValue);
-      dimLookup.addIfAbsent(canonicalValue);
-      retVal[count] = canonicalValue;
+      String canonicalDimValue = dimLookup.getCanonicalValue(dimValue);
+      if (!dimLookup.contains(canonicalDimValue)) {
+        dimLookup.add(dimValue);
+      }
+      retVal[count] = canonicalDimValue;
       count++;
     }
     Arrays.sort(retVal);
@@ -665,31 +683,48 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   {
     try {
       bufferHolder.close();
-      db.close();
+      if (db != null) {
+        db.close();
+      }
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
   }
 
-  public static class TimeAndDimsComparator implements Comparator, Serializable
+  class DimensionHolder
   {
-    // mapdb asserts the comparator to be serializable, ugly workaround to satisfy the assert.
-    private transient final IncrementalIndex incrementalIndex;
+    private final Map<String, DimDim> dimensions;
 
-    public TimeAndDimsComparator(IncrementalIndex incrementalIndex)
+    DimensionHolder()
     {
-      this.incrementalIndex = incrementalIndex;
+      dimensions = Maps.newConcurrentMap();
     }
 
-    @Override
-    public int compare(Object o1, Object o2)
+    void reset()
     {
-      return ((TimeAndDims) o1).compareTo((io.druid.segment.incremental.IncrementalIndex.TimeAndDims) o2);
+      dimensions.clear();
+    }
+
+    DimDim add(String dimension)
+    {
+      DimDim holder = dimensions.get(dimension);
+      if (holder == null) {
+        holder = new DimDim(dimension);
+        dimensions.put(dimension, holder);
+      } else {
+        throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
+      }
+      return holder;
+    }
+
+    DimDim get(String dimension)
+    {
+      return dimensions.get(dimension);
     }
   }
 
-  static class TimeAndDims implements Comparable<TimeAndDims>, Serializable
+  static class TimeAndDims implements Comparable<TimeAndDims>
   {
     private final long timestamp;
     private final String[][] dims;
@@ -772,7 +807,164 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       ) +
              '}';
     }
+  }
 
+  class DimDim
+  {
+    private final Interner interner;
+    private final Map<String, Integer> falseIds;
+    private final Map<Integer, String> falseIdsReverse;
+    private volatile String[] sortedVals = null;
+    // size on MapDB is slow so maintain a count here
+    private volatile int size = 0;
+
+    public DimDim(String dimName)
+    {
+      if (useOffheap) {
+        falseIds = db.createHashMap(dimName)
+                     .keySerializer(Serializer.STRING)
+                     .valueSerializer(Serializer.INTEGER)
+                     .make();
+        falseIdsReverse = db.createHashMap(dimName + "_inverse")
+                            .keySerializer(Serializer.INTEGER)
+                            .valueSerializer(Serializer.STRING)
+                            .make();
+        interner = new WeakInterner();
+      } else {
+        BiMap<String, Integer> biMap = Maps.synchronizedBiMap(HashBiMap.<String, Integer>create());
+        falseIds = biMap;
+        falseIdsReverse = biMap.inverse();
+        interner = new StrongInterner();
+      }
+    }
+
+    public String getCanonicalValue(String value)
+    {
+      return interner.getCanonicalValue(value);
+    }
+
+    public int getId(String value)
+    {
+      return falseIds.get(value);
+    }
+
+    public String getValue(int id)
+    {
+      return falseIdsReverse.get(id);
+    }
+
+    public boolean contains(String value)
+    {
+      return falseIds.containsKey(value);
+    }
+
+    public int size()
+    {
+      return size;
+    }
+
+    public synchronized int add(String value)
+    {
+      int id = size++;
+      falseIds.put(value, id);
+      if (!useOffheap) {
+        // onheap implementation uses a Bimap.
+        falseIdsReverse.put(id, value);
+      }
+      return id;
+    }
+
+    public int getSortedId(String value)
+    {
+      assertSorted();
+      return Arrays.binarySearch(sortedVals, value);
+    }
+
+    public String getSortedValue(int index)
+    {
+      assertSorted();
+      return sortedVals[index];
+    }
+
+    public void sort()
+    {
+      if (sortedVals == null) {
+        sortedVals = new String[falseIds.size()];
+
+        int index = 0;
+        for (String value : falseIds.keySet()) {
+          sortedVals[index++] = value;
+        }
+        Arrays.sort(sortedVals);
+      }
+    }
+
+    private void assertSorted()
+    {
+      if (sortedVals == null) {
+        throw new ISE("Call sort() before calling the getSorted* methods.");
+      }
+    }
+
+    public boolean compareCannonicalValues(String s1, String s2)
+    {
+      return interner.compareCanonicalValues(s1, s2);
+    }
+  }
+
+  private static interface Interner
+  {
+    public String getCanonicalValue(String str);
+
+    public boolean compareCanonicalValues(String s1, String s2);
+  }
+
+  private static class WeakInterner implements Interner
+  {
+    private static final WeakHashMap<String, WeakReference<String>> cache =
+        new WeakHashMap();
+
+    @Override
+    public String getCanonicalValue(String str)
+    {
+      final WeakReference<String> cached = cache.get(str);
+      if (cached != null) {
+        final String value = cached.get();
+        if (value != null) {
+          return value;
+        }
+      }
+      cache.put(str, new WeakReference(str));
+      return str;
+    }
+
+    @Override
+    public boolean compareCanonicalValues(String s1, String s2)
+    {
+      return s1.equals(s2);
+    }
+  }
+
+  private static class StrongInterner implements Interner
+  {
+    final Map<String, String> poorMansInterning = Maps.newConcurrentMap();
+
+    @Override
+    public String getCanonicalValue(String str)
+    {
+      String value = poorMansInterning.get(str);
+      if (value != null) {
+        return value;
+      }
+      poorMansInterning.put(str, str);
+      return str;
+    }
+
+    @Override
+    public boolean compareCanonicalValues(String s1, String s2)
+    {
+      return s1 == s2;
+    }
   }
 
   public static class TimeAndDimsSerializer extends BTreeKeySerializer<TimeAndDims> implements Serializable
@@ -782,7 +974,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     TimeAndDimsSerializer(IncrementalIndex incrementalIndex)
     {
-      this.comparator = new TimeAndDimsComparator(incrementalIndex);
+      this.comparator = new TimeAndDimsComparator();
       this.incrementalIndex = incrementalIndex;
     }
 
@@ -822,7 +1014,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
             DimDim dimDim = incrementalIndex.getDimension(incrementalIndex.dimensions.get(k));
             String[] col = new String[len];
             for (int l = 0; l < col.length; l++) {
-              col[l] = InternUtil.intern(dimDim.getValue(in.readInt()));
+              col[l] = dimDim.getCanonicalValue(dimDim.getValue(in.readInt()));
             }
             dims[k] = col;
           }
@@ -839,117 +1031,12 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
   }
 
-  class DimensionHolder
+  public static class TimeAndDimsComparator implements Comparator, Serializable
   {
-    private final Map<String, DimDim> dimensions;
-
-    DimensionHolder()
+    @Override
+    public int compare(Object o1, Object o2)
     {
-      dimensions = Maps.newConcurrentMap();
-    }
-
-    void reset()
-    {
-      dimensions.clear();
-    }
-
-    DimDim add(String dimension)
-    {
-      DimDim holder = dimensions.get(dimension);
-      if (holder == null) {
-        holder = new DimDim(dimension);
-        dimensions.put(dimension, holder);
-      } else {
-        throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
-      }
-      return holder;
-    }
-
-    DimDim get(String dimension)
-    {
-      return dimensions.get(dimension);
-    }
-  }
-
-  class DimDim
-  {
-    private final ConcurrentMap<String, Integer> falseIds;
-    private final Map<Integer, String> falseIdsReverse;
-    private volatile String[] sortedVals = null;
-    // size on MapDB is slow so maintain a count here
-    private volatile int size = 0;
-
-    public DimDim(String dimName)
-    {
-      falseIds = db.createHashMap(dimName).keySerializer(Serializer.STRING).valueSerializer(Serializer.INTEGER).make();
-      falseIdsReverse = db.createHashMap(dimName + "_inverse")
-                          .keySerializer(Serializer.INTEGER)
-                          .valueSerializer(Serializer.STRING)
-                          .make();
-    }
-
-    public int getId(String value)
-    {
-      Integer id = falseIds.get(value);
-      return id == null ? -1 : id;
-    }
-
-    public String getValue(int id)
-    {
-      return falseIdsReverse.get(id);
-    }
-
-    public boolean contains(String value)
-    {
-      return falseIds.containsKey(value);
-    }
-
-    public int size()
-    {
-      return size;
-    }
-
-    public synchronized int addIfAbsent(String value)
-    {
-      Integer id = falseIds.putIfAbsent(value, size);
-      if (id == null) {
-        falseIdsReverse.put(size, value);
-        id = size;
-        size++;
-      }
-      return id;
-    }
-
-    public int getSortedId(String value)
-    {
-      assertSorted();
-      return Arrays.binarySearch(sortedVals, value);
-    }
-
-    public String getSortedValue(int index)
-    {
-      assertSorted();
-      return sortedVals[index];
-    }
-
-    public void sort()
-    {
-      if (sortedVals == null) {
-        sortedVals = new String[falseIds.size()];
-
-        int index = 0;
-        for (String value : falseIds.keySet()) {
-          sortedVals[index++] = value;
-        }
-        Arrays.sort(sortedVals);
-      }
-    }
-
-    private void assertSorted()
-    {
-      if (sortedVals == null) {
-        throw new ISE("Call sort() before calling the getSorted* methods.");
-      }
+      return ((TimeAndDims) o1).compareTo((TimeAndDims) o2);
     }
   }
 }

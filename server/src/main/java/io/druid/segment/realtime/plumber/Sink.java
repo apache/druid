@@ -188,7 +188,8 @@ public class Sink implements Iterable<FireHydrant>
             .withDimensionsSpec(schema.getParser())
             .withMetrics(schema.getAggregators())
             .build(),
-        new OffheapBufferPool(bufferSize)
+        new OffheapBufferPool(bufferSize),
+        false
     );
 
     FireHydrant old;
