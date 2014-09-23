@@ -41,7 +41,7 @@ public class SegmentLoaderConfig
   private int dropSegmentDelayMillis = 30 * 1000; // 30 seconds
 
   @JsonProperty("announceIntervalMillis")
-  private int announceIntervalMillis = 5 * 1000; // 5 seconds
+  private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
   private int numLoadingThreads = 1;
