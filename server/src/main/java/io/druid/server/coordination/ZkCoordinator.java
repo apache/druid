@@ -386,7 +386,7 @@ public class ZkCoordinator extends BaseZkCoordinator
 
         // get any exception that may have been thrown in background annoucing
         try {
-          // check in case we did not call startAnnouncing
+          // check in case intervalMillis is <= 0
           if (startedAnnouncing != null) {
             startedAnnouncing.cancel(false);
           }
