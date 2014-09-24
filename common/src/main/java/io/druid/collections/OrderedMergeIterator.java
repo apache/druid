@@ -75,7 +75,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
                               new Predicate<Iterator<T>>()
                               {
                                 @Override
-                                public boolean apply(@Nullable Iterator<T> input)
+                                public boolean apply(Iterator<T> input)
                                 {
                                   return input.hasNext();
                                 }
@@ -85,7 +85,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
                               new Function<Iterator<T>, PeekingIterator<T>>()
                               {
                                 @Override
-                                public PeekingIterator<T> apply(@Nullable Iterator<T> input)
+                                public PeekingIterator<T> apply(Iterator<T> input)
                                 {
                                   return Iterators.peekingIterator(input);
                                 }

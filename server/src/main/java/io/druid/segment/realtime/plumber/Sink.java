@@ -51,6 +51,7 @@ public class Sink implements Iterable<FireHydrant>
   private static final Logger log = new Logger(Sink.class);
 
   private volatile FireHydrant currHydrant;
+  private final Object hydrantLock = new Object();
 
   private final Interval interval;
   private final DataSchema schema;
@@ -118,7 +119,7 @@ public class Sink implements Iterable<FireHydrant>
       throw new IAE("No currHydrant but given row[%s]", row);
     }
 
-    synchronized (currHydrant) {
+    synchronized (hydrantLock) {
       IncrementalIndex index = currHydrant.getIndex();
       if (index == null) {
         return -1; // the hydrant was swapped without being replaced
@@ -129,7 +130,7 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean isEmpty()
   {
-    synchronized (currHydrant) {
+    synchronized (hydrantLock) {
       return hydrants.size() == 1 && currHydrant.getIndex().isEmpty();
     }
   }
@@ -146,7 +147,7 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean swappable()
   {
-    synchronized (currHydrant) {
+    synchronized (hydrantLock) {
       return currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
     }
   }
@@ -186,17 +187,11 @@ public class Sink implements Iterable<FireHydrant>
             .build()
     );
 
-    FireHydrant old;
-    if (currHydrant == null) {  // Only happens on initialization, cannot synchronize on null
+    final FireHydrant old;
+    synchronized (hydrantLock) {
       old = currHydrant;
       currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
       hydrants.add(currHydrant);
-    } else {
-      synchronized (currHydrant) {
-        old = currHydrant;
-        currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
-        hydrants.add(currHydrant);
-      }
     }
 
     return old;

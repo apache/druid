@@ -158,7 +158,7 @@ public class ServersResource
             new Function<DataSegment, String>()
             {
               @Override
-              public String apply(@Nullable DataSegment segment)
+              public String apply(DataSegment segment)
               {
                 return segment.getIdentifier();
               }

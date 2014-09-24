@@ -21,6 +21,7 @@ package io.druid.query.select;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -167,7 +168,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         int dimensionsBytesSize = 0;
         int index = 0;
         for (String dimension : dimensions) {
-          dimensionsBytes[index] = dimension.getBytes();
+          dimensionsBytes[index] = dimension.getBytes(Charsets.UTF_8);
           dimensionsBytesSize += dimensionsBytes[index].length;
           ++index;
         }
@@ -181,7 +182,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         int metricBytesSize = 0;
         index = 0;
         for (String metric : metrics) {
-          metricBytes[index] = metric.getBytes();
+          metricBytes[index] = metric.getBytes(Charsets.UTF_8);
           metricBytesSize += metricBytes[index].length;
           ++index;
         }

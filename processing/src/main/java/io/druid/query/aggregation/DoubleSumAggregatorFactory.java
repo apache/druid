@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnSelectorFactory;
@@ -129,7 +130,7 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes();
+    byte[] fieldNameBytes = fieldName.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
   }

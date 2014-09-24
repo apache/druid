@@ -33,6 +33,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.Properties;
 
 /**
@@ -68,8 +69,8 @@ public class PropertiesModule implements Module
 
       if (stream != null) {
         log.info("Loading properties from %s", propertiesFile);
-        try {
-          fileProps.load(new InputStreamReader(stream, Charsets.UTF_8));
+        try(Reader reader = new InputStreamReader(stream, Charsets.UTF_8)) {
+          fileProps.load(reader);
         }
         catch (IOException e) {
           throw Throwables.propagate(e);

@@ -261,7 +261,7 @@ public class DatasourcesResource
     final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
     final Interval theInterval = new Interval(interval.replace("_", "/"));
 
-    if (dataSource == null || interval == null) {
+    if (dataSource == null) {
       return Response.noContent().build();
     }
 

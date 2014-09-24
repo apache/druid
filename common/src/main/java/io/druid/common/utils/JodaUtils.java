@@ -91,7 +91,7 @@ public class JodaUtils
         intervals, new Predicate<Interval>()
     {
       @Override
-      public boolean apply(@Nullable Interval input)
+      public boolean apply(Interval input)
       {
         return input.overlaps(i);
       }

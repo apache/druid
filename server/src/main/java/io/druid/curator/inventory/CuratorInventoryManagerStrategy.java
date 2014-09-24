@@ -35,4 +35,5 @@ public interface CuratorInventoryManagerStrategy<ContainerClass, InventoryClass>
   public ContainerClass addInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
   public ContainerClass updateInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
   public ContainerClass removeInventory(ContainerClass container, String inventoryKey);
+  public void inventoryInitialized();
 }

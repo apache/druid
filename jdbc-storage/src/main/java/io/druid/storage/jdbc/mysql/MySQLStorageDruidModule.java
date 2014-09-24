@@ -34,7 +34,6 @@ import io.druid.db.MetadataTablesConfig;
 import io.druid.db.MetadataSegmentPublisherProvider;
 import io.druid.db.DerbyConnector;
 import io.druid.db.SQLMetadataActionHandler;
-import io.druid.db.SQLMetadataConnector;
 import io.druid.db.SQLMetadataRuleManager;
 import io.druid.db.SQLMetadataRuleManagerProvider;
 import io.druid.db.SQLMetadataSegmentManager;

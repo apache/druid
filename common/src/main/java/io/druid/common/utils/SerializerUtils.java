@@ -20,7 +20,6 @@
 package io.druid.common.utils;
 
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.OutputSupplier;
 import io.druid.collections.IntList;
 
