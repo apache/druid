@@ -417,7 +417,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Object get()
                     {
-                      final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
+                      final String[][] dims = currEntry.getKey().getDims();
+                      if(dimensionIndex >= dims.length) {
+                        return null;
+                      }
+                      final String[] dimVals = dims[dimensionIndex];
                       if (dimVals.length == 1) {
                         return dimVals[0];
                       }
@@ -525,6 +529,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
+            /**
+             * using == here instead of .equals() to speed up lookups made possible by
+             * {@link io.druid.segment.incremental.IncrementalIndex.DimDim#poorMansInterning}
+             */
             if (id == dimVal) {
               return true;
             }
