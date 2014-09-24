@@ -169,7 +169,7 @@ public class ZkCoordinator extends BaseZkCoordinator
         catch (IOException e) {
           throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
         }
-      };
+      }
     }
     catch (SegmentLoadingException e) {
       log.makeAlert(e, "Failed to load segment for dataSource")

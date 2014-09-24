@@ -173,8 +173,6 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   /**
    * For testing. Do not depend on unless you like things breaking.
-   * 
-   * @return
    */
   GenericIndexed<ResourceHolder<FloatBuffer>> getBaseFloatBuffers()
   {
