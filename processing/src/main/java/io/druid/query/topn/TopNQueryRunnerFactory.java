@@ -21,7 +21,6 @@ package io.druid.query.topn;
 
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
@@ -35,7 +34,8 @@ import io.druid.query.Result;
 import io.druid.segment.Segment;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -65,7 +65,10 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
     return new QueryRunner<Result<TopNResultValue>>()
     {
       @Override
-      public Sequence<Result<TopNResultValue>> run(Query<Result<TopNResultValue>> input)
+      public Sequence<Result<TopNResultValue>> run(
+          Query<Result<TopNResultValue>> input,
+          Map<String, Object> context
+      )
       {
         if (!(input instanceof TopNQuery)) {
           throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TopNQuery.class);

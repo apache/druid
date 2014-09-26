@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -371,8 +372,9 @@ public class SearchQueryRunnerTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
+    HashMap<String,List> context = new HashMap<String, List>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery),
+        runner.run(searchQuery, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
 

@@ -78,12 +78,6 @@ public class DruidCoordinatorTest
         new DruidCoordinatorConfig()
         {
           @Override
-          public String getHost()
-          {
-            return null;
-          }
-
-          @Override
           public Duration getCoordinatorStartDelay()
           {
             return null;
