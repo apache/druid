@@ -33,15 +33,21 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ReplicationThrottler
 {
   private static final EmittingLogger log = new EmittingLogger(ReplicationThrottler.class);
-  private final int maxReplicants;
-  private final int maxLifetime;
 
   private final Map<String, Boolean> replicatingLookup = Maps.newHashMap();
   private final Map<String, Boolean> terminatingLookup = Maps.newHashMap();
   private final ReplicatorSegmentHolder currentlyReplicating = new ReplicatorSegmentHolder();
   private final ReplicatorSegmentHolder currentlyTerminating = new ReplicatorSegmentHolder();
 
+  private volatile int maxReplicants;
+  private volatile int maxLifetime;
+
   public ReplicationThrottler(int maxReplicants, int maxLifetime)
+  {
+    updateParams(maxReplicants, maxLifetime);
+  }
+
+  public void updateParams(int maxReplicants, int maxLifetime)
   {
     this.maxReplicants = maxReplicants;
     this.maxLifetime = maxLifetime;
