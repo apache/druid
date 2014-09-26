@@ -29,7 +29,7 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.DbSegmentPublisher;
@@ -149,7 +149,7 @@ public class DruidClusterBridgeTest
     );
     DbSegmentPublisher dbSegmentPublisher = EasyMock.createMock(DbSegmentPublisher.class);
     EasyMock.replay(dbSegmentPublisher);
-    DatabaseSegmentManager databaseSegmentManager = EasyMock.createMock(DatabaseSegmentManager.class);
+    MetadataSegmentManager databaseSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);
     ServerView serverView = EasyMock.createMock(ServerView.class);
     EasyMock.replay(serverView);

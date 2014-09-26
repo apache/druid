@@ -42,6 +42,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.db.IndexerSQLMetadataCoordinator;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
@@ -509,7 +510,7 @@ public class TaskLifecycleTest
     return retVal;
   }
 
-  private static class MockIndexerDBCoordinator extends IndexerDBCoordinator
+  private static class MockIndexerDBCoordinator extends IndexerSQLMetadataCoordinator
   {
     final private Set<DataSegment> published = Sets.newHashSet();
     final private Set<DataSegment> nuked = Sets.newHashSet();

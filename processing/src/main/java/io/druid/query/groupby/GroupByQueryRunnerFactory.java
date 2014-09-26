@@ -22,6 +22,7 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -29,6 +30,7 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -47,6 +49,8 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -102,7 +106,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                   return new QueryRunner<Row>()
                   {
                     @Override
-                    public Sequence<Row> run(final Query<Row> query)
+                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
                     {
                       final GroupByQuery queryParam = (GroupByQuery) query;
                       final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper
@@ -121,13 +125,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                             public Void call() throws Exception
                             {
                               if (bySegment) {
-                                input.run(queryParam)
+                                input.run(queryParam, context)
                                      .accumulate(
                                          bySegmentAccumulatorPair.lhs,
                                          bySegmentAccumulatorPair.rhs
                                      );
                               } else {
-                                input.run(query).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                input.run(query, context).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;
@@ -194,7 +198,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input)
+    public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
     {
       if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);

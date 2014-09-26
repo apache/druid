@@ -17,30 +17,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+
 package io.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.metamx.common.lifecycle.Lifecycle;
+import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.IDBI;
 
-/**
- */
-public class DatabaseSegmentManagerProvider implements Provider<DatabaseSegmentManager>
+public class DerbyMetadataSegmentManagerProvider implements MetadataSegmentManagerProvider
 {
   private final ObjectMapper jsonMapper;
-  private final Supplier<DatabaseSegmentManagerConfig> config;
-  private final Supplier<DbTablesConfig> dbTables;
-  private final DbConnector dbConnector;
+  private final Supplier<MetadataSegmentManagerConfig> config;
+  private final Supplier<MetadataTablesConfig> dbTables;
+  private final MetadataDbConnector dbConnector;
+  private final IDBI dbi;
   private final Lifecycle lifecycle;
 
   @Inject
-  public DatabaseSegmentManagerProvider(
+  public DerbyMetadataSegmentManagerProvider(
       ObjectMapper jsonMapper,
-      Supplier<DatabaseSegmentManagerConfig> config,
-      Supplier<DbTablesConfig> dbTables,
-      DbConnector dbConnector,
+      Supplier<MetadataSegmentManagerConfig> config,
+      Supplier<MetadataTablesConfig> dbTables,
+      MetadataDbConnector dbConnector,
+      IDBI dbi,
       Lifecycle lifecycle
   )
   {
@@ -48,11 +50,12 @@ public class DatabaseSegmentManagerProvider implements Provider<DatabaseSegmentM
     this.config = config;
     this.dbTables = dbTables;
     this.dbConnector = dbConnector;
+    this.dbi = dbi;
     this.lifecycle = lifecycle;
   }
 
   @Override
-  public DatabaseSegmentManager get()
+  public MetadataSegmentManager get()
   {
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -71,11 +74,11 @@ public class DatabaseSegmentManagerProvider implements Provider<DatabaseSegmentM
         }
     );
 
-    return new DatabaseSegmentManager(
+    return new DerbyMetadataSegmentManager(
         jsonMapper,
         config,
         dbTables,
-        dbConnector.getDBI()
+        dbi
     );
   }
 }

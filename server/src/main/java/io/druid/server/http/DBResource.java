@@ -24,7 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -42,11 +42,11 @@ import java.util.List;
 @Path("/druid/coordinator/v1/db")
 public class DBResource
 {
-  private final DatabaseSegmentManager databaseSegmentManager;
+  private final MetadataSegmentManager databaseSegmentManager;
 
   @Inject
   public DBResource(
-      DatabaseSegmentManager databaseSegmentManager
+      MetadataSegmentManager databaseSegmentManager
   )
   {
     this.databaseSegmentManager = databaseSegmentManager;

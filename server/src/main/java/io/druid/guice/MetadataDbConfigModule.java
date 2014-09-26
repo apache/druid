@@ -19,17 +19,22 @@
 
 package io.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
-import io.druid.segment.realtime.SegmentPublisher;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.db.MetadataDbConnectorConfig;
+import io.druid.db.MetadataRuleManagerConfig;
+import io.druid.db.MetadataSegmentManagerConfig;
+import io.druid.db.MetadataTablesConfig;
 
-/**
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopSegmentPublisherProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "db", value = DbSegmentPublisherProvider.class)
-})
-public interface SegmentPublisherProvider extends Provider<SegmentPublisher>
+public class MetadataDbConfigModule implements Module
 {
+  @Override
+  public void configure(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.db.tables", MetadataTablesConfig.class);
+    JsonConfigProvider.bind(binder, "druid.db.connector", MetadataDbConnectorConfig.class);
+
+    JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
+  }
 }

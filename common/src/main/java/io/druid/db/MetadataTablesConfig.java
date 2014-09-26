@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public class DbTablesConfig
+public class MetadataTablesConfig
 {
-  public static DbTablesConfig fromBase(String base)
+  public static MetadataTablesConfig fromBase(String base)
   {
-    return new DbTablesConfig(base, null, null, null, null, null, null);
+    return new MetadataTablesConfig(base, null, null, null, null, null, null);
   }
 
   private static String defaultBase = "druid";
@@ -55,7 +55,7 @@ public class DbTablesConfig
   private final String taskLockTable;
 
   @JsonCreator
-  public DbTablesConfig(
+  public MetadataTablesConfig(
       @JsonProperty("base") String base,
       @JsonProperty("segments") String segmentsTable,
       @JsonProperty("rules") String rulesTable,

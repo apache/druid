@@ -106,21 +106,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input)
+      public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
       {
         if (input.getContextBySegment(false)) {
-          return runner.run(input);
+          return runner.run(input, context);
         }
 
         if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner);
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner, context);
         }
-        return runner.run(input);
+        return runner.run(input, context);
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
+  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, Object> context)
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
     final DataSource dataSource = query.getDataSource();
@@ -132,7 +132,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
-      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
+      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
         aggs.addAll(aggregatorFactory.getRequiredColumns());
@@ -154,7 +154,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       );
       return outerQuery.applyLimit(engine.process(outerQuery, adapter));
     } else {
-      return query.applyLimit(postAggregate(query, makeIncrementalIndex(query, runner.run(query))));
+      return query.applyLimit(postAggregate(query, makeIncrementalIndex(query, runner.run(query, context))));
     }
   }
 

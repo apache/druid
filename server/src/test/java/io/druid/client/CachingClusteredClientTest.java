@@ -127,6 +127,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -283,7 +284,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09T01"), 181, 52
         )
     );
-
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             new DateTime("2011-01-01"), 50, 5000,
@@ -304,7 +305,8 @@ public class CachingClusteredClientTest
             builder.intervals("2011-01-01/2011-01-10")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -335,7 +337,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), 85, 102
         )
     );
-
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             new DateTime("2011-11-04", TIMEZONE), 50, 5000,
@@ -347,7 +349,8 @@ public class CachingClusteredClientTest
             builder.intervals("2011-11-04/2011-11-08")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -463,7 +466,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
-
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             new DateTime("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998,
@@ -484,7 +487,8 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -518,7 +522,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986
         )
     );
-
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
 
@@ -532,7 +536,8 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -582,7 +587,7 @@ public class CachingClusteredClientTest
         )
     );
 
-
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -601,7 +606,8 @@ public class CachingClusteredClientTest
                    .metric("imps")
                    .aggregators(RENAMED_AGGS)
                    .postAggregators(RENAMED_POST_AGGS)
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -650,7 +656,7 @@ public class CachingClusteredClientTest
         )
     );
 
-
+    HashMap<String,List> context = new HashMap<String, List>();
     TestHelper.assertExpectedResults(
         makeTopNResults(
             new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -669,7 +675,8 @@ public class CachingClusteredClientTest
                    .metric("avg_imps_per_row_double")
                    .aggregators(AGGS)
                    .postAggregators(POST_AGGS)
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -716,6 +723,7 @@ public class CachingClusteredClientTest
     );
 
     QueryRunner runner = new FinalizeResultsQueryRunner(client, new SearchQueryQueryToolChest(new SearchQueryConfig()));
+    HashMap<String,Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSearchResults(
             new DateTime("2011-01-01"), "how", "howdy", "howwwwww", "howwy",
@@ -733,7 +741,8 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -786,6 +795,7 @@ public class CachingClusteredClientTest
             jsonMapper
         )
     );
+    HashMap<String,Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSelectResults(
             new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
@@ -803,7 +813,8 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
-                   .build()
+                   .build(),
+            context
         )
     );
   }
@@ -886,6 +897,7 @@ public class CachingClusteredClientTest
             )
         )
     );
+    HashMap<String,Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
             new DateTime("2011-01-05T"), ImmutableMap.of("a", "c", "rows", 3, "imps", 3, "impers", 3, "uniques", collector),
@@ -901,7 +913,8 @@ public class CachingClusteredClientTest
         ),
         runner.run(
             builder.setInterval("2011-01-05/2011-01-10")
-                   .build()
+                   .build(),
+            context
         ),
         ""
     );
@@ -1069,6 +1082,7 @@ public class CachingClusteredClientTest
                 .once();
 
         final Capture<? extends Query> capture = new Capture();
+        final Capture<? extends Map> context = new Capture();
         queryCaptures.add(capture);
         QueryRunner queryable = expectations.getQueryRunner();
 
@@ -1081,8 +1095,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-
-          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
                   .once();
 
@@ -1095,7 +1108,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SearchQuery) {
@@ -1107,7 +1120,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SelectQuery) {
@@ -1119,7 +1132,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableSelectResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof GroupByQuery) {
@@ -1131,7 +1144,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableGroupByResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof TimeBoundaryQuery) {
@@ -1143,7 +1156,7 @@ public class CachingClusteredClientTest
             intervals.add(expectation.getInterval());
             results.add(expectation.getResults());
           }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture)))
+          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
                   .once();
         } else {
@@ -1167,6 +1180,7 @@ public class CachingClusteredClientTest
             @Override
             public void run()
             {
+              HashMap<String,List> context = new HashMap<String, List>();
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable<>(
@@ -1200,7 +1214,8 @@ public class CachingClusteredClientTest
                                     actualQueryInterval
                                 )
                             )
-                        )
+                        ),
+                        context
                     )
                 );
               }

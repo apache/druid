@@ -20,6 +20,9 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.guice.RealtimeModule;
@@ -45,7 +48,15 @@ public class CliRealtime extends ServerRunnable
   protected List<Object> getModules()
   {
     return ImmutableList.<Object>of(
-        new RealtimeModule()
+        new RealtimeModule(),
+        new Module() {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/realtime");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
+          }
+        }
     );
   }
 }

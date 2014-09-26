@@ -19,26 +19,18 @@
 
 package io.druid.db;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
+import io.druid.guice.NoopSegmentPublisherProvider;
+import io.druid.segment.realtime.SegmentPublisher;
 
 /**
  */
-public class DatabaseRuleManagerConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopSegmentPublisherProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "db", value = MetadataSegmentPublisherProvider.class)
+})
+public interface SegmentPublisherProvider extends Provider<SegmentPublisher>
 {
-  @JsonProperty
-  private String defaultRule = "_default";
-
-  @JsonProperty
-  private Period pollDuration = new Period("PT1M");
-
-  public String getDefaultRule()
-  {
-    return defaultRule;
-  }
-
-  public Period getPollDuration()
-  {
-    return pollDuration;
-  }
 }

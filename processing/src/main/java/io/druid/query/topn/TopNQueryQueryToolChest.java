@@ -416,7 +416,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
 
     @Override
-    public Sequence<Result<TopNResultValue>> run(Query<Result<TopNResultValue>> input)
+    public Sequence<Result<TopNResultValue>> run(
+        Query<Result<TopNResultValue>> input,
+        Map<String, Object> context
+    )
     {
       if (!(input instanceof TopNQuery)) {
         throw new ISE("Can only handle [%s], got [%s]", TopNQuery.class, input.getClass());
@@ -424,13 +427,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       final TopNQuery query = (TopNQuery) input;
       if (query.getThreshold() > minTopNThreshold) {
-        return runner.run(query);
+        return runner.run(query, context);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withThreshold(minTopNThreshold)),
+          runner.run(query.withThreshold(minTopNThreshold), context),
           new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
           {
             @Override

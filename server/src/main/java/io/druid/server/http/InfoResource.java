@@ -33,8 +33,8 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseRuleManager;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.db.MetadataRuleManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
@@ -102,8 +102,8 @@ public class InfoResource
 
   private final DruidCoordinator coordinator;
   private final InventoryView serverInventoryView;
-  private final DatabaseSegmentManager databaseSegmentManager;
-  private final DatabaseRuleManager databaseRuleManager;
+  private final MetadataSegmentManager databaseSegmentManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
 
   private final ObjectMapper jsonMapper;
@@ -112,8 +112,8 @@ public class InfoResource
   public InfoResource(
       DruidCoordinator coordinator,
       InventoryView serverInventoryView,
-      DatabaseSegmentManager databaseSegmentManager,
-      DatabaseRuleManager databaseRuleManager,
+      MetadataSegmentManager databaseSegmentManager,
+      MetadataRuleManager databaseRuleManager,
       @Nullable
       IndexingServiceClient indexingServiceClient,
       ObjectMapper jsonMapper

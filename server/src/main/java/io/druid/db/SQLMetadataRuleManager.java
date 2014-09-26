@@ -1,3 +1,4 @@
+
 /*
  * Druid - a distributed column store.
  * Copyright (C) 2012, 2013  Metamarkets Group Inc.
@@ -32,6 +33,7 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.mysql.jdbc.Clob;
 import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
@@ -57,7 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  */
 @ManageLifecycle
-public class DatabaseRuleManager
+public class SQLMetadataRuleManager implements MetadataRuleManager
 {
   public static void createDefaultRule(
       final IDBI dbi,
@@ -76,7 +78,7 @@ public class DatabaseRuleManager
               List<Map<String, Object>> existing = handle
                   .createQuery(
                       String.format(
-                          "SELECT id from %s where datasource=:dataSource;",
+                          "SELECT id from %s where datasource=:dataSource",
                           ruleTable
                       )
                   )
@@ -118,11 +120,11 @@ public class DatabaseRuleManager
     }
   }
 
-  private static final Logger log = new Logger(DatabaseRuleManager.class);
+  private static final Logger log = new Logger(SQLMetadataRuleManager.class);
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<DatabaseRuleManagerConfig> config;
-  private final Supplier<DbTablesConfig> dbTables;
+  private final Supplier<MetadataRuleManagerConfig> config;
+  private final Supplier<MetadataTablesConfig> dbTables;
   private final IDBI dbi;
   private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
 
@@ -133,10 +135,10 @@ public class DatabaseRuleManager
   private volatile boolean started = false;
 
   @Inject
-  public DatabaseRuleManager(
+  public SQLMetadataRuleManager(
       @Json ObjectMapper jsonMapper,
-      Supplier<DatabaseRuleManagerConfig> config,
-      Supplier<DbTablesConfig> dbTables,
+      Supplier<MetadataRuleManagerConfig> config,
+      Supplier<MetadataTablesConfig> dbTables,
       IDBI dbi
   )
   {
@@ -226,14 +228,9 @@ public class DatabaseRuleManager
                             StatementContext statementContext
                         ) throws SQLException
                         {
-
                           try {
                             String dataSource = MapUtils.getString(stringObjectMap, "dataSource");
-                            List<Rule> rules = jsonMapper.readValue(
-                                MapUtils.getString(stringObjectMap, "payload"), new TypeReference<List<Rule>>()
-                            {
-                            }
-                            );
+                            List<Rule> rules = getRules(stringObjectMap);
                             retVal.put(dataSource, rules);
                             return retVal;
                           }
@@ -319,4 +316,18 @@ public class DatabaseRuleManager
   }
 
   private String getRulesTable() {return dbTables.get().getRulesTable();}
+
+  protected List<Rule> getRules(Map<String, Object> stringObjectMap) {
+    List<Rule> rules = null;
+    try {
+      rules = jsonMapper.readValue(
+          MapUtils.getString(stringObjectMap, "payload"), new TypeReference<List<Rule>>()
+          {
+          }
+      );
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    return rules;
+  }
 }

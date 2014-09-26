@@ -17,8 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord;
-
+package io.druid.db;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -28,8 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.db.DbConnector;
-import io.druid.db.DbTablesConfig;
+import io.druid.indexing.overlord.IndexerMetadataCoordinator;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -39,6 +37,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
@@ -53,30 +52,30 @@ import java.util.Set;
 
 /**
  */
-public class IndexerDBCoordinator
+public class IndexerSQLMetadataCoordinator implements IndexerMetadataCoordinator
 {
-  private static final Logger log = new Logger(IndexerDBCoordinator.class);
+  private static final Logger log = new Logger(IndexerSQLMetadataCoordinator.class);
 
   private final ObjectMapper jsonMapper;
-  private final DbTablesConfig dbTables;
-  private final DbConnector dbConnector;
+  private final MetadataTablesConfig dbTables;
+  private final IDBI dbi;
 
   @Inject
-  public IndexerDBCoordinator(
+  public IndexerSQLMetadataCoordinator(
       ObjectMapper jsonMapper,
-      DbTablesConfig dbTables,
-      DbConnector dbConnector
+      MetadataTablesConfig dbTables,
+      IDBI dbi
   )
   {
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
-    this.dbConnector = dbConnector;
+    this.dbi = dbi;
   }
 
   public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
       throws IOException
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = dbConnector.getDBI().withHandle(
+    final VersionedIntervalTimeline<String, DataSegment> timeline = dbi.withHandle(
         new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
         {
           @Override
@@ -138,12 +137,10 @@ public class IndexerDBCoordinator
    *
    * @param segments set of segments to add
    * @return set of segments actually added
-   *
-   * @throws java.io.IOException if a database error occurs
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    return dbConnector.getDBI().inTransaction(
+    return dbi.inTransaction(
         new TransactionCallback<Set<DataSegment>>()
         {
           @Override
@@ -181,11 +178,8 @@ public class IndexerDBCoordinator
       try {
         handle.createStatement(
             String.format(
-                dbConnector.isPostgreSQL() ?
-                    "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)":
-                    "INSERT INTO %s (id, dataSource, created_date, start, end, partitioned, version, used, payload) "
-                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+                + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
                 dbTables.getSegmentsTable()
             )
         )
@@ -233,7 +227,7 @@ public class IndexerDBCoordinator
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
-    dbConnector.getDBI().inTransaction(
+    dbi.inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
@@ -251,7 +245,7 @@ public class IndexerDBCoordinator
 
   public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
-    dbConnector.getDBI().inTransaction(
+    dbi.inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
@@ -294,7 +288,7 @@ public class IndexerDBCoordinator
 
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = dbConnector.getDBI().withHandle(
+    List<DataSegment> matchingSegments = dbi.withHandle(
         new HandleCallback<List<DataSegment>>()
         {
           @Override
@@ -302,9 +296,7 @@ public class IndexerDBCoordinator
           {
             return handle.createQuery(
                 String.format(
-                    dbConnector.isPostgreSQL() ?
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false":
-                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and end <= :end and used = false",
+                    "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
                     dbTables.getSegmentsTable()
                 )
             )

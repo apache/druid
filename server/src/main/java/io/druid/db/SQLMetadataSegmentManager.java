@@ -19,10 +19,13 @@
 
 package io.druid.db;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
@@ -33,6 +36,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
+import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -48,9 +52,11 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,15 +66,15 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  */
 @ManageLifecycle
-public class DatabaseSegmentManager
+public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
-  private static final Logger log = new Logger(DatabaseSegmentManager.class);
+  private static final Logger log = new Logger(SQLMetadataSegmentManager.class);
 
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<DatabaseSegmentManagerConfig> config;
-  private final Supplier<DbTablesConfig> dbTables;
+  private final Supplier<MetadataSegmentManagerConfig> config;
+  private final Supplier<MetadataTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final IDBI dbi;
 
@@ -77,10 +83,10 @@ public class DatabaseSegmentManager
   private volatile boolean started = false;
 
   @Inject
-  public DatabaseSegmentManager(
+  public SQLMetadataSegmentManager(
       ObjectMapper jsonMapper,
-      Supplier<DatabaseSegmentManagerConfig> config,
-      Supplier<DbTablesConfig> dbTables,
+      Supplier<MetadataSegmentManagerConfig> config,
+      Supplier<MetadataTablesConfig> dbTables,
       IDBI dbi
   )
   {
@@ -137,6 +143,7 @@ public class DatabaseSegmentManager
     }
   }
 
+  @Override
   public boolean enableDatasource(final String ds)
   {
     try {
@@ -234,6 +241,7 @@ public class DatabaseSegmentManager
     return true;
   }
 
+  @Override
   public boolean enableSegment(final String segmentId)
   {
     try {
@@ -261,6 +269,7 @@ public class DatabaseSegmentManager
     return true;
   }
 
+  @Override
   public boolean removeDatasource(final String ds)
   {
     try {
@@ -298,6 +307,7 @@ public class DatabaseSegmentManager
     return true;
   }
 
+  @Override
   public boolean removeSegment(String ds, final String segmentID)
   {
     try {
@@ -339,21 +349,25 @@ public class DatabaseSegmentManager
     return true;
   }
 
+  @Override
   public boolean isStarted()
   {
     return started;
   }
 
+  @Override
   public DruidDataSource getInventoryValue(String key)
   {
     return dataSources.get().get(key);
   }
 
+  @Override
   public Collection<DruidDataSource> getInventory()
   {
     return dataSources.get().values();
   }
 
+  @Override
   public Collection<String> getAllDatasourceNames()
   {
     synchronized (lock) {
@@ -392,6 +406,7 @@ public class DatabaseSegmentManager
     }
   }
 
+  @Override
   public void poll()
   {
     try {
@@ -414,6 +429,8 @@ public class DatabaseSegmentManager
           }
       );
 
+
+
       if (segmentRows == null || segmentRows.isEmpty()) {
         log.warn("No segments found in the database!");
         return;
@@ -421,7 +438,7 @@ public class DatabaseSegmentManager
 
       log.info("Polled and found %,d segments in the database", segmentRows.size());
 
-      for (Map<String, Object> segmentRow : segmentRows) {
+      for (final Map<String, Object> segmentRow : segmentRows) {
         DataSegment segment = jsonMapper.readValue((String) segmentRow.get("payload"), DataSegment.class);
 
         String datasourceName = segment.getDataSource();

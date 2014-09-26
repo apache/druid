@@ -25,21 +25,18 @@ import javax.validation.constraints.NotNull;
 
 /**
  */
-public class DbConnectorConfig
+public class MetadataDbConnectorConfig
 {
   @JsonProperty
   private boolean createTables = true;
 
   @JsonProperty
-  @NotNull
   private String connectURI = null;
 
   @JsonProperty
-  @NotNull
   private String user = null;
 
   @JsonProperty
-  @NotNull
   private String password = null;
 
   @JsonProperty

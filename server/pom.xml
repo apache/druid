@@ -28,7 +28,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.157-SNAPSHOT</version>
+        <version>0.7.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -145,8 +145,33 @@
             <groupId>com.maxmind.geoip2</groupId>
             <artifactId>geoip2</artifactId>
         </dependency>
+        <dependency>
+          <groupId>mysql</groupId>
+          <artifactId>mysql-connector-java</artifactId>
+          <version>5.1.18</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.derby</groupId>
+          <artifactId>derby</artifactId>
+          <version>10.11.1.1</version>
+        </dependency>
+      <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derbynet</artifactId>
+        <version>10.11.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derbyclient</artifactId>
+        <version>10.11.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <version>4.0</version>
+      </dependency>
 
-        <!-- Tests -->
+      <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

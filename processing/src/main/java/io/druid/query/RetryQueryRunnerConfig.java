@@ -17,32 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.query;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import io.druid.db.DbConnector;
-import io.druid.db.DbConnectorConfig;
-import io.druid.db.DbTablesConfig;
-import org.skife.jdbi.v2.IDBI;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- */
-public class DbConnectorModule implements Module
+public class RetryQueryRunnerConfig
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    JsonConfigProvider.bind(binder, "druid.db.tables", DbTablesConfig.class);
-    JsonConfigProvider.bind(binder, "druid.db.connector", DbConnectorConfig.class);
+  @JsonProperty
+  private int numTries = 0;
+  @JsonProperty
+  private boolean returnPartialResults = false;
 
-    binder.bind(DbConnector.class);
-  }
-
-  @Provides @LazySingleton
-  public IDBI getDbi(final DbConnector dbConnector)
-  {
-    return dbConnector.getDBI();
-  }
+  public int numTries() { return numTries; }
+  public boolean returnPartialResults() { return returnPartialResults; }
 }

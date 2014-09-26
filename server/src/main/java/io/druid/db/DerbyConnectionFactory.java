@@ -19,18 +19,32 @@
 
 package io.druid.db;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import org.skife.jdbi.v2.tweak.ConnectionFactory;
 
-/**
- */
-public class DatabaseSegmentManagerConfig
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DerbyConnectionFactory implements ConnectionFactory
 {
-  @JsonProperty
-  private Period pollDuration = new Period("PT1M");
+  private String dbName;
 
-  public Period getPollDuration()
-  {
-    return pollDuration;
+  public DerbyConnectionFactory(String dbName) {
+    this.dbName = dbName;
+  }
+
+  public Connection openConnection() throws SQLException {
+    String nsURL="jdbc:derby://localhost:1527/"+dbName+";create=true";
+
+    try {
+      Class.forName("org.apache.derby.jdbc.ClientDriver");
+    } catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+
+
+    Connection conn = DriverManager.getConnection(nsURL);
+    return conn;
   }
 }

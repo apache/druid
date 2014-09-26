@@ -24,16 +24,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.name.Names;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseRuleManager;
-import io.druid.db.DatabaseRuleManagerConfig;
-import io.druid.db.DatabaseRuleManagerProvider;
-import io.druid.db.DatabaseSegmentManager;
-import io.druid.db.DatabaseSegmentManagerConfig;
-import io.druid.db.DatabaseSegmentManagerProvider;
+import io.druid.db.MetadataRuleManager;
+import io.druid.db.MetadataRuleManagerConfig;
+import io.druid.db.MetadataRuleManagerProvider;
+import io.druid.db.MetadataSegmentManager;
+import io.druid.db.MetadataSegmentManagerConfig;
+import io.druid.db.MetadataSegmentManagerProvider;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -87,20 +88,23 @@ public class CliCoordinator extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/coordinator");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
+
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
-            JsonConfigProvider.bind(binder, "druid.manager.segments", DatabaseSegmentManagerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
 
-            binder.bind(DatabaseSegmentManager.class)
-                  .toProvider(DatabaseSegmentManagerProvider.class)
+            binder.bind(MetadataSegmentManager.class)
+                  .toProvider(MetadataSegmentManagerProvider.class)
                   .in(ManageLifecycle.class);
 
-            binder.bind(DatabaseRuleManager.class)
-                  .toProvider(DatabaseRuleManagerProvider.class)
+            binder.bind(MetadataRuleManager.class)
+                  .toProvider(MetadataRuleManagerProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);

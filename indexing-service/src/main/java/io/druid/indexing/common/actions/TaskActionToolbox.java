@@ -27,7 +27,7 @@ import com.metamx.common.ISE;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.IndexerDBCoordinator;
+import io.druid.indexing.overlord.IndexerMetadataCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.timeline.DataSegment;
 
@@ -37,13 +37,13 @@ import java.util.Set;
 public class TaskActionToolbox
 {
   private final TaskLockbox taskLockbox;
-  private final IndexerDBCoordinator indexerDBCoordinator;
+  private final IndexerMetadataCoordinator indexerDBCoordinator;
   private final ServiceEmitter emitter;
 
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
-      IndexerDBCoordinator indexerDBCoordinator,
+      IndexerMetadataCoordinator indexerDBCoordinator,
       ServiceEmitter emitter
   )
   {
@@ -57,7 +57,7 @@ public class TaskActionToolbox
     return taskLockbox;
   }
 
-  public IndexerDBCoordinator getIndexerDBCoordinator()
+  public IndexerMetadataCoordinator getIndexerDBCoordinator()
   {
     return indexerDBCoordinator;
   }

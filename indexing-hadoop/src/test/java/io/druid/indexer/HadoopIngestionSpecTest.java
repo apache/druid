@@ -22,7 +22,7 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.druid.db.DbConnectorConfig;
+import io.druid.db.MetadataDbConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -355,7 +355,7 @@ public class HadoopIngestionSpecTest
     );
 
     final DbUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
-    final DbConnectorConfig connectorConfig = spec.get();
+    final MetadataDbConnectorConfig connectorConfig = spec.get();
 
     Assert.assertEquals("segments", spec.getSegmentTable());
     Assert.assertEquals("jdbc:mysql://localhost/druid", connectorConfig.getConnectURI());

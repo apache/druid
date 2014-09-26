@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  */
@@ -92,20 +93,21 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         QueryRunner timeseriesRunner = new QueryRunner()
         {
           @Override
-          public Sequence run(Query query)
+          public Sequence run(Query query, Map metadata)
           {
             TimeseriesQuery tsQuery = (TimeseriesQuery) query;
 
             return Sequences.map(
                 groupByRunner.run(
                     GroupByQuery.builder()
-                                .setDataSource(tsQuery.getDataSource())
-                                .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                                .setGranularity(tsQuery.getGranularity())
-                                .setDimFilter(tsQuery.getDimensionsFilter())
-                                .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                                .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                                .build()
+                        .setDataSource(tsQuery.getDataSource())
+                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                        .setGranularity(tsQuery.getGranularity())
+                        .setDimFilter(tsQuery.getDimensionsFilter())
+                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                        .build(),
+                    metadata
                 ),
                 new Function<Row, Result<TimeseriesResultValue>>()
                 {

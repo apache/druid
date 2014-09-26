@@ -21,11 +21,13 @@ package io.druid.query.timeboundary;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.RetryQueryRunner;
 import io.druid.query.TableDataSource;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -36,7 +38,9 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -67,9 +71,9 @@ public class TimeBoundaryQueryRunnerTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery),
+        runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();
@@ -88,9 +92,10 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
-
+    Map<String, Object> context = new MapMaker().makeMap();
+    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery),
+        runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();
@@ -109,9 +114,10 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
-
+    Map<String, Object> context = new MapMaker().makeMap();
+    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery),
+        runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TimeBoundaryResultValue val = results.iterator().next().getValue();
