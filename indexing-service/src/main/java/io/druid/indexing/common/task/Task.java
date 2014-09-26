@@ -59,23 +59,27 @@ public interface Task
 {
   /**
    * Returns ID of this task. Must be unique across all tasks ever created.
+   * @return task ID
    */
   public String getId();
 
   /**
    * Returns group ID of this task. Tasks with the same group ID can share locks. If tasks do not need to share locks,
    * a common convention is to set group ID equal to task ID.
+   * @return task group ID
    */
   public String getGroupId();
 
   /**
    * Returns a {@link io.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
    * worker requirements a task may require.
+   * @return {@link io.druid.indexing.common.task.TaskResource} for this task
    */
   public TaskResource getTaskResource();
 
   /**
    * Returns a descriptive label for this task type. Used for metrics emission and logging.
+   * @return task type label
    */
   public String getType();
 
@@ -95,8 +99,16 @@ public interface Task
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.
+   * @param <T> query result type
+   * @return query runners for this task
    */
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
+
+  /**
+   * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
+   * extra classpath should be prepended, this should return null or the empty string.
+   */
+  public String getClasspathPrefix();
 
   /**
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
@@ -122,7 +134,7 @@ public interface Task
    *
    * @return Some kind of finished status (isRunnable must be false).
    *
-   * @throws Exception
+   * @throws Exception if this task failed
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
 }

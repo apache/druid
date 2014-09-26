@@ -31,6 +31,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
+import io.druid.guice.ExtensionsConfig;
+import io.druid.guice.GuiceInjectors;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -42,9 +44,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
-import io.druid.guice.ExtensionsConfig;
 import io.druid.timeline.DataSegment;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.joda.time.DateTime;
@@ -79,11 +79,13 @@ public class HadoopIndexTask extends AbstractTask
   private final HadoopIngestionSpec spec;
   @JsonIgnore
   private final List<String> hadoopDependencyCoordinates;
+  @JsonIgnore
+  private final String classpathPrefix;
 
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
-   *             <p/>
+   *             
    *             Here, we will ensure that the DbConnectorConfig field of the spec is set to null, such that the
    *             job does not push a list of published segments the database. Instead, we will use the method
    *             IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
@@ -96,7 +98,8 @@ public class HadoopIndexTask extends AbstractTask
       @JsonProperty("spec") HadoopIngestionSpec spec,
       @JsonProperty("config") HadoopIngestionSpec config, // backwards compat
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
-      @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates
+      @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
+      @JsonProperty("classpathPrefix") String classpathPrefix
   )
   {
     super(
@@ -123,6 +126,8 @@ public class HadoopIndexTask extends AbstractTask
       // Will be defaulted to something at runtime, based on taskConfig.
       this.hadoopDependencyCoordinates = null;
     }
+
+    this.classpathPrefix = classpathPrefix;
   }
 
   @Override
@@ -157,6 +162,13 @@ public class HadoopIndexTask extends AbstractTask
   public List<String> getHadoopDependencyCoordinates()
   {
     return hadoopDependencyCoordinates;
+  }
+
+  @JsonProperty
+  @Override
+  public String getClasspathPrefix()
+  {
+    return classpathPrefix;
   }
 
   @SuppressWarnings("unchecked")

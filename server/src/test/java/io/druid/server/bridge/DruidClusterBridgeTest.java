@@ -149,8 +149,8 @@ public class DruidClusterBridgeTest
     );
     DbSegmentPublisher dbSegmentPublisher = EasyMock.createMock(DbSegmentPublisher.class);
     EasyMock.replay(dbSegmentPublisher);
-    MetadataSegmentManager metadataSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
-    EasyMock.replay(metadataSegmentManager);
+    MetadataSegmentManager databaseSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
+    EasyMock.replay(databaseSegmentManager);
     ServerView serverView = EasyMock.createMock(ServerView.class);
     EasyMock.replay(serverView);
 
@@ -161,7 +161,7 @@ public class DruidClusterBridgeTest
         metadata,
         remoteCf,
         dbSegmentPublisher,
-        metadataSegmentManager,
+        databaseSegmentManager,
         serverView
     );
 
@@ -251,7 +251,7 @@ public class DruidClusterBridgeTest
 
     EasyMock.verify(batchServerInventoryView);
     EasyMock.verify(dbSegmentPublisher);
-    EasyMock.verify(metadataSegmentManager);
+    EasyMock.verify(databaseSegmentManager);
     EasyMock.verify(serverView);
   }
 

@@ -43,7 +43,7 @@ public class JacksonConfigManagerModule implements Module
 
   @Provides @ManageLifecycle
   public ConfigManager getConfigManager(
-      final MetadataDbConnector metadataDbConnector,
+      final MetadataDbConnector dbConnector,
       final Supplier<MetadataTablesConfig> dbTables,
       final Supplier<ConfigManagerConfig> config,
       final Lifecycle lifecycle
@@ -55,7 +55,7 @@ public class JacksonConfigManagerModule implements Module
           @Override
           public void start() throws Exception
           {
-            metadataDbConnector.createConfigTable();
+            dbConnector.createConfigTable();
           }
 
           @Override
@@ -66,6 +66,6 @@ public class JacksonConfigManagerModule implements Module
         }
     );
 
-    return new ConfigManager(metadataDbConnector, dbTables, config);
+    return new ConfigManager(dbConnector, dbTables, config);
   }
 }

@@ -19,7 +19,6 @@
 
 package io.druid.client.selector;
 
-import com.google.api.client.util.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;

@@ -24,7 +24,7 @@
   }],
   "firehose" : {
     "type" : "local",
-    "baseDir" : "examples/bin/examples/indexing",
+    "baseDir" : "examples/indexing/",
     "filter" : "wikipedia_data.json",
     "parser" : {
       "timestampSpec" : {

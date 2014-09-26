@@ -60,18 +60,18 @@ import java.util.TreeSet;
 public class DatasourcesResource
 {
   private final InventoryView serverInventoryView;
-  private final MetadataSegmentManager metadataSegmentManager;
+  private final MetadataSegmentManager databaseSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DatasourcesResource(
       InventoryView serverInventoryView,
-      MetadataSegmentManager metadataSegmentManager,
+      MetadataSegmentManager databaseSegmentManager,
       @Nullable IndexingServiceClient indexingServiceClient
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.metadataSegmentManager = metadataSegmentManager;
+    this.databaseSegmentManager = databaseSegmentManager;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -147,7 +147,7 @@ public class DatasourcesResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    if (!metadataSegmentManager.enableDatasource(dataSourceName)) {
+    if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
       return Response.noContent().build();
     }
 
@@ -180,7 +180,7 @@ public class DatasourcesResource
                        .build();
       }
     } else {
-      if (!metadataSegmentManager.removeDatasource(dataSourceName)) {
+      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
         return Response.noContent().build();
       }
     }
@@ -379,7 +379,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!metadataSegmentManager.removeSegment(dataSourceName, segmentId)) {
+    if (!databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
       return Response.noContent().build();
     }
 
@@ -394,7 +394,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!metadataSegmentManager.enableSegment(segmentId)) {
+    if (!databaseSegmentManager.enableSegment(segmentId)) {
       return Response.noContent().build();
     }
 

@@ -27,7 +27,6 @@ import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -65,7 +64,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") int maxPendingPersists
   )
   {
@@ -81,6 +81,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         basePersistDirectory,
         segmentGranularity,
         versioningPolicy,
+        rejectionPolicy,
         rejectionPolicyFactory,
         maxPendingPersists
     );

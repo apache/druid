@@ -68,7 +68,7 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
   @Override
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    return toolbox.getIndexerMetadataCoordinator().getUnusedSegmentsForInterval(dataSource, interval);
+    return toolbox.getIndexerDBCoordinator().getUnusedSegmentsForInterval(dataSource, interval);
   }
 
   @Override

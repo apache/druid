@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
@@ -70,9 +69,6 @@ public class CliBridge extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/bridge");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8089);
-
             ConfigProvider.bind(binder, BridgeCuratorConfig.class);
 
             binder.bind(BridgeZkCoordinator.class).in(ManageLifecycle.class);

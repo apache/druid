@@ -45,9 +45,9 @@ public class HadoopDruidIndexerJob implements Jobby
     this.config = config;
 
     if (config.isUpdaterJobSpecSet()) {
-      this.dbUpdaterJob = new DbUpdaterJob(config);
+      dbUpdaterJob = new DbUpdaterJob(config);
     } else {
-      this.dbUpdaterJob = null;
+      dbUpdaterJob = null;
     }
   }
 

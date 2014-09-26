@@ -38,21 +38,21 @@ import java.util.List;
 @Path("/druid/coordinator/v1/rules")
 public class RulesResource
 {
-  private final MetadataRuleManager metadataRuleManager;
+  private final MetadataRuleManager databaseRuleManager;
 
   @Inject
   public RulesResource(
-      MetadataRuleManager metadataRuleManager
+      MetadataRuleManager databaseRuleManager
   )
   {
-    this.metadataRuleManager = metadataRuleManager;
+    this.databaseRuleManager = databaseRuleManager;
   }
 
   @GET
   @Produces("application/json")
   public Response getRules()
   {
-    return Response.ok(metadataRuleManager.getAllRules()).build();
+    return Response.ok(databaseRuleManager.getAllRules()).build();
   }
 
   @GET
@@ -65,10 +65,10 @@ public class RulesResource
   )
   {
     if (full != null) {
-      return Response.ok(metadataRuleManager.getRulesWithDefault(dataSourceName))
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
                      .build();
     }
-    return Response.ok(metadataRuleManager.getRules(dataSourceName))
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
                    .build();
   }
 
@@ -80,7 +80,7 @@ public class RulesResource
       final List<Rule> rules
   )
   {
-    if (metadataRuleManager.overrideRule(dataSourceName, rules)) {
+    if (databaseRuleManager.overrideRule(dataSourceName, rules)) {
       return Response.ok().build();
     }
     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();

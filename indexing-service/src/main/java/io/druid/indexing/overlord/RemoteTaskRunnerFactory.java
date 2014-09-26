@@ -31,7 +31,7 @@ import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 
 /**
- */
+*/
 public class RemoteTaskRunnerFactory implements TaskRunnerFactory
 {
   private final CuratorFramework curator;

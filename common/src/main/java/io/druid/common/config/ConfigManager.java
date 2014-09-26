@@ -48,7 +48,7 @@ public class ConfigManager
   private final Object lock = new Object();
   private boolean started = false;
 
-  private final MetadataDbConnector metadataDbConnector;
+  private final MetadataDbConnector dbConnector;
   private final Supplier<ConfigManagerConfig> config;
 
   private final ScheduledExecutorService exec;
@@ -58,9 +58,9 @@ public class ConfigManager
   private volatile ConfigManager.PollingCallable poller;
 
   @Inject
-  public ConfigManager(MetadataDbConnector metadataDbConnector, Supplier<MetadataTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
+  public ConfigManager(MetadataDbConnector dbConnector, Supplier<MetadataTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
   {
-    this.metadataDbConnector = metadataDbConnector;
+    this.dbConnector = dbConnector;
     this.config = config;
 
     this.exec = ScheduledExecutors.fixed(1, "config-manager-%s");
@@ -105,7 +105,7 @@ public class ConfigManager
   {
     for (Map.Entry<String, ConfigHolder> entry : watchedConfigs.entrySet()) {
       try {
-        if (entry.getValue().swapIfNew(metadataDbConnector.lookup(configTable, "name", "payload", entry.getKey()))) {
+        if (entry.getValue().swapIfNew(dbConnector.lookup(configTable, "name", "payload", entry.getKey()))) {
           log.info("New value for key[%s] seen.", entry.getKey());
         }
       }
@@ -137,7 +137,7 @@ public class ConfigManager
                     // Multiple of these callables can be submitted at the same time, but the callables themselves
                     // are executed serially, so double check that it hasn't already been populated.
                     if (!watchedConfigs.containsKey(key)) {
-                      byte[] value = metadataDbConnector.lookup(configTable, "name", "payload", key);
+                      byte[] value = dbConnector.lookup(configTable, "name", "payload", key);
                       ConfigHolder<T> holder = new ConfigHolder<T>(value, serde);
                       watchedConfigs.put(key, holder);
                     }
@@ -181,7 +181,7 @@ public class ConfigManager
             @Override
             public Boolean call() throws Exception
             {
-              metadataDbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
+              dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
 
               final ConfigHolder configHolder = watchedConfigs.get(key);
               if (configHolder != null) {

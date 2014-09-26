@@ -144,7 +144,7 @@ public class IncrementalIndex implements Iterable<Row>
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p/>
+   * 
    *
    * Calls to add() are thread safe.
    *

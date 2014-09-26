@@ -79,9 +79,6 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
-    System.out.println(baseDir.listFiles());
-    System.out.println(filter);
-    System.out.println(baseDir);
     File[] foundFiles = baseDir.listFiles(
         new FilenameFilter()
         {

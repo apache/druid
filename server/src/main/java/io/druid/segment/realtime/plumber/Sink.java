@@ -28,7 +28,6 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;

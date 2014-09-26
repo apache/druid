@@ -31,7 +31,7 @@ import io.druid.tasklogs.TaskLogPusher;
 import java.util.Properties;
 
 /**
- */
+*/
 public class ForkingTaskRunnerFactory implements TaskRunnerFactory
 {
   private final ForkingTaskRunnerConfig config;

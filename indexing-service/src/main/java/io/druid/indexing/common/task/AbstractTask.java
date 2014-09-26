@@ -108,6 +108,12 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
+  public String getClasspathPrefix()
+  {
+    return null;
+  }
+
+  @Override
   public String toString()
   {
     return Objects.toStringHelper(this)
@@ -118,7 +124,10 @@ public abstract class AbstractTask implements Task
   }
 
   /**
-   * Start helper methods *
+   * Start helper methods
+   *
+   * @param objects objects to join
+   * @return string of joined objects
    */
   public static String joinId(Object... objects)
   {

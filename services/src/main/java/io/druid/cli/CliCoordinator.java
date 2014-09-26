@@ -93,6 +93,9 @@ public class CliCoordinator extends ServerRunnable
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
+            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
+
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
 

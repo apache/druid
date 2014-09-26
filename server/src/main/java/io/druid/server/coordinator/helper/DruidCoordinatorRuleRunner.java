@@ -81,9 +81,9 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
-    MetadataRuleManager metadataRuleManager = paramsWithReplicationManager.getMetadataRuleManager();
+    MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
-      List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
+      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {

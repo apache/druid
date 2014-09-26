@@ -49,7 +49,6 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.joda.time.DateTime;

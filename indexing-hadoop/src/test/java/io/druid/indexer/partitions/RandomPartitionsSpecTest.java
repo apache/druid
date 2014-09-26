@@ -20,7 +20,6 @@
 package io.druid.indexer.partitions;
 
 import com.google.common.base.Throwables;
-import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerConfigTest;
 import org.junit.Assert;
 import org.junit.Test;

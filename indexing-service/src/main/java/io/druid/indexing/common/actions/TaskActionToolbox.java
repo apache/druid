@@ -37,18 +37,18 @@ import java.util.Set;
 public class TaskActionToolbox
 {
   private final TaskLockbox taskLockbox;
-  private final IndexerMetadataCoordinator indexerMetadataCoordinator;
+  private final IndexerMetadataCoordinator indexerDBCoordinator;
   private final ServiceEmitter emitter;
 
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
-      IndexerMetadataCoordinator indexerMetadataCoordinator,
+      IndexerMetadataCoordinator indexerDBCoordinator,
       ServiceEmitter emitter
   )
   {
     this.taskLockbox = taskLockbox;
-    this.indexerMetadataCoordinator = indexerMetadataCoordinator;
+    this.indexerDBCoordinator = indexerDBCoordinator;
     this.emitter = emitter;
   }
 
@@ -57,9 +57,9 @@ public class TaskActionToolbox
     return taskLockbox;
   }
 
-  public IndexerMetadataCoordinator getIndexerMetadataCoordinator()
+  public IndexerMetadataCoordinator getIndexerDBCoordinator()
   {
-    return indexerMetadataCoordinator;
+    return indexerDBCoordinator;
   }
 
   public ServiceEmitter getEmitter()

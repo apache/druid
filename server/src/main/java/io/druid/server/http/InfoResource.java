@@ -102,8 +102,8 @@ public class InfoResource
 
   private final DruidCoordinator coordinator;
   private final InventoryView serverInventoryView;
-  private final MetadataSegmentManager metadataSegmentManager;
-  private final MetadataRuleManager metadataRuleManager;
+  private final MetadataSegmentManager databaseSegmentManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
 
   private final ObjectMapper jsonMapper;
@@ -112,8 +112,8 @@ public class InfoResource
   public InfoResource(
       DruidCoordinator coordinator,
       InventoryView serverInventoryView,
-      MetadataSegmentManager metadataSegmentManager,
-      MetadataRuleManager metadataRuleManager,
+      MetadataSegmentManager databaseSegmentManager,
+      MetadataRuleManager databaseRuleManager,
       @Nullable
       IndexingServiceClient indexingServiceClient,
       ObjectMapper jsonMapper
@@ -121,8 +121,8 @@ public class InfoResource
   {
     this.coordinator = coordinator;
     this.serverInventoryView = serverInventoryView;
-    this.metadataSegmentManager = metadataSegmentManager;
-    this.metadataRuleManager = metadataRuleManager;
+    this.databaseSegmentManager = databaseSegmentManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.jsonMapper = jsonMapper;
   }
@@ -358,7 +358,7 @@ public class InfoResource
     // This will def. be removed as part of the next release
     return Response.ok().entity(
         Maps.transformValues(
-            metadataRuleManager.getAllRules(),
+            databaseRuleManager.getAllRules(),
             new Function<List<Rule>, Object>()
             {
               @Override
@@ -409,10 +409,10 @@ public class InfoResource
   )
   {
     if (full != null) {
-      return Response.ok(metadataRuleManager.getRulesWithDefault(dataSourceName))
+      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
                      .build();
     }
-    return Response.ok(metadataRuleManager.getRules(dataSourceName))
+    return Response.ok(databaseRuleManager.getRules(dataSourceName))
                    .build();
   }
 
@@ -424,7 +424,7 @@ public class InfoResource
       final List<Rule> rules
   )
   {
-    if (metadataRuleManager.overrideRule(dataSourceName, rules)) {
+    if (databaseRuleManager.overrideRule(dataSourceName, rules)) {
       return Response.status(Response.Status.OK).build();
     }
     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -491,7 +491,7 @@ public class InfoResource
     if (kill != null && Boolean.valueOf(kill)) {
       indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
     } else {
-      if (!metadataSegmentManager.removeDatasource(dataSourceName)) {
+      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
     }
@@ -506,7 +506,7 @@ public class InfoResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    if (!metadataSegmentManager.enableDatasource(dataSourceName)) {
+    if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
@@ -574,7 +574,7 @@ public class InfoResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!metadataSegmentManager.removeSegment(dataSourceName, segmentId)) {
+    if (!databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
@@ -589,7 +589,7 @@ public class InfoResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!metadataSegmentManager.enableSegment(segmentId)) {
+    if (!databaseSegmentManager.enableSegment(segmentId)) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
@@ -681,15 +681,15 @@ public class InfoResource
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (includeDisabled != null) {
-      return builder.entity(metadataSegmentManager.getAllDatasourceNames()).build();
+      return builder.entity(databaseSegmentManager.getAllDatasourceNames()).build();
     }
     if (full != null) {
-      return builder.entity(metadataSegmentManager.getInventory()).build();
+      return builder.entity(databaseSegmentManager.getInventory()).build();
     }
 
     List<String> dataSourceNames = Lists.newArrayList(
         Iterables.transform(
-            metadataSegmentManager.getInventory(),
+            databaseSegmentManager.getInventory(),
             new Function<DruidDataSource, String>()
             {
               @Override
@@ -713,7 +713,7 @@ public class InfoResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -729,7 +729,7 @@ public class InfoResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -762,7 +762,7 @@ public class InfoResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = metadataSegmentManager.getInventoryValue(dataSourceName);
+    DruidDataSource dataSource = databaseSegmentManager.getInventoryValue(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

@@ -70,10 +70,14 @@ public class DurationGranularity extends BaseQueryGranularity
   }
 
   @Override
-  public long truncate(long t)
+  public long truncate(final long t)
   {
     final long duration = getDurationMillis();
-    return t - t % duration + origin;
+    long offset = t % duration - origin % duration;
+    if(offset < 0) {
+      offset += duration;
+    }
+    return t - offset;
   }
 
   @Override

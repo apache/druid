@@ -39,7 +39,7 @@ public class DruidCoordinatorRuntimeParams
 {
   private final long startTime;
   private final DruidCluster druidCluster;
-  private final MetadataRuleManager metadataRuleManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
@@ -54,7 +54,7 @@ public class DruidCoordinatorRuntimeParams
   public DruidCoordinatorRuntimeParams(
       long startTime,
       DruidCluster druidCluster,
-      MetadataRuleManager metadataRuleManager,
+      MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
@@ -69,7 +69,7 @@ public class DruidCoordinatorRuntimeParams
   {
     this.startTime = startTime;
     this.druidCluster = druidCluster;
-    this.metadataRuleManager = metadataRuleManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.segmentReplicantLookup = segmentReplicantLookup;
     this.dataSources = dataSources;
     this.availableSegments = availableSegments;
@@ -92,9 +92,9 @@ public class DruidCoordinatorRuntimeParams
     return druidCluster;
   }
 
-  public MetadataRuleManager getMetadataRuleManager()
+  public MetadataRuleManager getDatabaseRuleManager()
   {
-    return metadataRuleManager;
+    return databaseRuleManager;
   }
 
   public SegmentReplicantLookup getSegmentReplicantLookup()
@@ -162,7 +162,7 @@ public class DruidCoordinatorRuntimeParams
     return new Builder(
         startTime,
         druidCluster,
-        metadataRuleManager,
+        databaseRuleManager,
         segmentReplicantLookup,
         dataSources,
         availableSegments,
@@ -180,7 +180,7 @@ public class DruidCoordinatorRuntimeParams
   {
     private long startTime;
     private DruidCluster druidCluster;
-    private MetadataRuleManager metadataRuleManager;
+    private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
@@ -196,7 +196,7 @@ public class DruidCoordinatorRuntimeParams
     {
       this.startTime = 0;
       this.druidCluster = null;
-      this.metadataRuleManager = null;
+      this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
       this.dataSources = Sets.newHashSet();
       this.availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
@@ -212,7 +212,7 @@ public class DruidCoordinatorRuntimeParams
     Builder(
         long startTime,
         DruidCluster cluster,
-        MetadataRuleManager metadataRuleManager,
+        MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
@@ -227,7 +227,7 @@ public class DruidCoordinatorRuntimeParams
     {
       this.startTime = startTime;
       this.druidCluster = cluster;
-      this.metadataRuleManager = metadataRuleManager;
+      this.databaseRuleManager = databaseRuleManager;
       this.segmentReplicantLookup = segmentReplicantLookup;
       this.dataSources = dataSources;
       this.availableSegments = availableSegments;
@@ -245,7 +245,7 @@ public class DruidCoordinatorRuntimeParams
       return new DruidCoordinatorRuntimeParams(
           startTime,
           druidCluster,
-          metadataRuleManager,
+          databaseRuleManager,
           segmentReplicantLookup,
           dataSources,
           availableSegments,
@@ -271,9 +271,9 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withDatabaseRuleManager(MetadataRuleManager metadataRuleManager)
+    public Builder withDatabaseRuleManager(MetadataRuleManager databaseRuleManager)
     {
-      this.metadataRuleManager = metadataRuleManager;
+      this.databaseRuleManager = databaseRuleManager;
       return this;
     }
 

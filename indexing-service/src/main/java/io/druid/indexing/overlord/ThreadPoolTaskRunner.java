@@ -86,19 +86,19 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     runningItems.add(taskRunnerWorkItem);
     Futures.addCallback(
         statusFuture, new FutureCallback<TaskStatus>()
-        {
-          @Override
-          public void onSuccess(TaskStatus result)
-          {
-            runningItems.remove(taskRunnerWorkItem);
-          }
+    {
+      @Override
+      public void onSuccess(TaskStatus result)
+      {
+        runningItems.remove(taskRunnerWorkItem);
+      }
 
-          @Override
-          public void onFailure(Throwable t)
-          {
-            runningItems.remove(taskRunnerWorkItem);
-          }
-        }
+      @Override
+      public void onFailure(Throwable t)
+      {
+        runningItems.remove(taskRunnerWorkItem);
+      }
+    }
     );
 
     return statusFuture;

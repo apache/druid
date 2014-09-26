@@ -45,7 +45,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
   private static final Logger log = new Logger(BaseZkCoordinator.class);
 
   private final DbSegmentPublisher dbSegmentPublisher;
-  private final MetadataSegmentManager metadataSegmentManager;
+  private final MetadataSegmentManager databaseSegmentManager;
   private final ServerView serverView;
 
   private final ExecutorService exec = Execs.singleThreaded("BridgeZkCoordinatorServerView-%s");
@@ -58,14 +58,14 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
       DruidServerMetadata me,
       @Bridge CuratorFramework curator,
       DbSegmentPublisher dbSegmentPublisher,
-      MetadataSegmentManager metadataSegmentManager,
+      MetadataSegmentManager databaseSegmentManager,
       ServerView serverView
   )
   {
     super(jsonMapper, zkPaths, config, me, curator);
 
     this.dbSegmentPublisher = dbSegmentPublisher;
-    this.metadataSegmentManager = metadataSegmentManager;
+    this.databaseSegmentManager = databaseSegmentManager;
     this.serverView = serverView;
   }
 
@@ -112,7 +112,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
   @Override
   public void removeSegment(final DataSegment segment, final DataSegmentChangeCallback callback)
   {
-    metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
     serverView.registerSegmentCallback(
         exec,
         new ServerView.BaseSegmentCallback()

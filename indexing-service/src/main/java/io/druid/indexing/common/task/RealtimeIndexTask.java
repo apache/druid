@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,7 +43,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -115,7 +113,8 @@ public class RealtimeIndexTask extends AbstractTask
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("maxPendingPersists") int maxPendingPersists,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
+      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory
   )
   {
     super(
@@ -142,7 +141,7 @@ public class RealtimeIndexTask extends AbstractTask
               windowPeriod,
               null,
               null,
-              rejectionPolicyFactory,
+              rejectionPolicy == null ? rejectionPolicyFactory : rejectionPolicy,
               maxPendingPersists,
               spec.getShardSpec()
           ),
@@ -310,6 +309,7 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getNewSegmentServerView(),
         toolbox.getQueryExecutorService(),
+        null,
         null,
         null,
         null,

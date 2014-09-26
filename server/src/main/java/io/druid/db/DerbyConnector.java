@@ -230,8 +230,7 @@ public class DerbyConnector extends SQLMetadataConnector
   protected ConnectionFactory getConnectionFactory(String dbName)
   {
     try {
-      NetworkServerControl server = new NetworkServerControl
-          (InetAddress.getByName("localhost"),1527);
+      NetworkServerControl server = new NetworkServerControl(InetAddress.getByName("localhost"),1527);
       server.start(null);
     } catch (Exception e) {
       throw Throwables.propagate(e);

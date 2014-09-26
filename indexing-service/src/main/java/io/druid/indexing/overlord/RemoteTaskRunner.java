@@ -88,13 +88,13 @@ import java.util.concurrent.TimeUnit;
  * creating ephemeral nodes in ZK that workers must remove. Workers announce the statuses of the tasks they are running.
  * Once a task completes, it is up to the RTR to remove the task status and run any necessary cleanup.
  * The RemoteTaskRunner is event driven and updates state according to ephemeral node changes in ZK.
- * <p/>
+ * 
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
  * For example, {@link io.druid.indexing.overlord.scaling.ResourceManagementScheduler} can take care of these duties.
- * <p/>
+ * 
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the worker.
- * <p/>
+ * 
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
 public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer

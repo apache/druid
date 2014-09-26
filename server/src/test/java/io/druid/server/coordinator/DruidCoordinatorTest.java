@@ -49,7 +49,7 @@ public class DruidCoordinatorTest
   private DruidCoordinator coordinator;
   private CuratorFramework curator;
   private LoadQueueTaskMaster taskMaster;
-  private MetadataSegmentManager metadataSegmentManager;
+  private MetadataSegmentManager databaseSegmentManager;
   private SingleServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
@@ -68,8 +68,8 @@ public class DruidCoordinatorTest
     loadManagementPeons = new MapMaker().makeMap();
     serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
 
-    metadataSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
-    EasyMock.replay(metadataSegmentManager);
+    databaseSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
+    EasyMock.replay(databaseSegmentManager);
 
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
@@ -105,7 +105,7 @@ public class DruidCoordinatorTest
           }
         },
         null,
-        metadataSegmentManager,
+        databaseSegmentManager,
         serverInventoryView,
         null,
         curator,

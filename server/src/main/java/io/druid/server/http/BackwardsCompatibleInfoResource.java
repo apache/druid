@@ -40,8 +40,8 @@ public class BackwardsCompatibleInfoResource extends InfoResource
   public BackwardsCompatibleInfoResource(
       DruidCoordinator coordinator,
       InventoryView serverInventoryView,
-      MetadataSegmentManager metadataSegmentManager,
-      MetadataRuleManager metadataRuleManager,
+      MetadataSegmentManager databaseSegmentManager,
+      MetadataRuleManager databaseRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       ObjectMapper jsonMapper
   )
@@ -49,8 +49,8 @@ public class BackwardsCompatibleInfoResource extends InfoResource
     super(
         coordinator,
         serverInventoryView,
-        metadataSegmentManager,
-        metadataRuleManager,
+        databaseSegmentManager,
+        databaseRuleManager,
         indexingServiceClient,
         jsonMapper
     );
