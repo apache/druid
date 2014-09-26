@@ -343,7 +343,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
         catch (IOException | InterruptedException | ExecutionException e) {
-          throw new RE(e, "Failure getting results from[%s]", url);
+          throw new RE(e, "Failure getting results from[%s] because of [%s]", url, e.getMessage());
         }
         catch (CancellationException e) {
           throw new QueryInterruptedException("Query cancelled");
