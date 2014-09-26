@@ -57,7 +57,6 @@ import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
-import io.druid.server.coordinator.helper.DruidCoordinatorCleanup;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
