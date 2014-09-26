@@ -21,6 +21,7 @@ package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.metamx.common.logger.Logger;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
@@ -227,7 +228,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
           return null;
         }
 
-        return stringParser.parse(new String(delivery.getBody()));
+        return stringParser.parse(new String(delivery.getBody(), Charsets.UTF_8));
       }
 
       @Override

@@ -20,6 +20,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.metamx.collections.spatial.search.Bound;
 
@@ -48,7 +49,7 @@ public class SpatialDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimBytes = dimension.getBytes();
+    byte[] dimBytes = dimension.getBytes(Charsets.UTF_8);
     byte[] boundBytes = bound.getCacheKey();
 
     return ByteBuffer.allocate(1 + dimBytes.length + boundBytes.length)

@@ -46,6 +46,12 @@ The format of the result is:
 } ]
 ```
 
+Dimension columns will have type `STRING`.  
+Metric columns will have type `FLOAT`.  
+Timestamp column will have type `LONG`.
+
+Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+
 ### toInclude
 
 There are 3 types of toInclude objects.

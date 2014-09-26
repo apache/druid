@@ -104,6 +104,12 @@ public class BrokerServerView implements TimelineServerView
             serverRemovedSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
+
+          @Override
+          public CallbackAction segmentViewInitialized()
+          {
+            return ServerView.CallbackAction.CONTINUE;
+          }
         }
     );
 

@@ -21,6 +21,7 @@ package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -325,7 +326,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
   @Override
   public byte[] cacheKey()
   {
-    return (period.toString() + ":" + chronology.getZone().toString()).getBytes();
+    return (period.toString() + ":" + chronology.getZone().toString()).getBytes(Charsets.UTF_8);
   }
 
   @Override

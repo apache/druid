@@ -20,6 +20,7 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -74,6 +75,7 @@ import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -294,12 +296,16 @@ public class Initialization
 
                 }
               }
-          )
+          , false, Charsets.UTF_8.name())
       );
       return new DefaultTeslaAether(
           config.getLocalRepository(),
           remoteRepositories.toArray(new Repository[remoteRepositories.size()])
       );
+    }
+    catch(UnsupportedEncodingException e) {
+      // should never happen
+      throw new IllegalStateException(e);
     }
     finally {
       System.setOut(oldOut);

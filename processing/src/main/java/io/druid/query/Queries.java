@@ -49,7 +49,7 @@ public class Queries
               new Function<AggregatorFactory, String>()
               {
                 @Override
-                public String apply(@Nullable AggregatorFactory input)
+                public String apply(AggregatorFactory input)
                 {
                   return input.getName();
                 }

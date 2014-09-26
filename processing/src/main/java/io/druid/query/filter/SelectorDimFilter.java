@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 
 import java.nio.ByteBuffer;
@@ -47,8 +48,8 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = dimension.getBytes();
-    byte[] valueBytes = (value == null) ? new byte[]{} : value.getBytes();
+    byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
+    byte[] valueBytes = (value == null) ? new byte[]{} : value.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
                      .put(DimFilterCacheHelper.SELECTOR_CACHE_ID)

@@ -154,7 +154,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes();
+    byte[] fieldNameBytes = fieldName.getBytes(Charsets.UTF_8);
     return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 

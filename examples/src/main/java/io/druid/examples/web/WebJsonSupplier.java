@@ -20,6 +20,7 @@
 package io.druid.examples.web;
 
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.io.InputSupplier;
 import com.metamx.emitter.EmittingLogger;
@@ -55,6 +56,6 @@ public class WebJsonSupplier implements InputSupplier<BufferedReader>
   {
     URLConnection connection = url.openConnection();
     connection.setDoInput(true);
-    return new BufferedReader(new InputStreamReader(url.openStream()));
+    return new BufferedReader(new InputStreamReader(url.openStream(), Charsets.UTF_8));
   }
 }
