@@ -22,11 +22,11 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.druid.db.MetadataDbConnectorConfig;
+import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
-import io.druid.indexer.updater.DbUpdaterJobSpec;
+import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Interval;
@@ -354,8 +354,8 @@ public class HadoopIngestionSpecTest
         HadoopIngestionSpec.class
     );
 
-    final DbUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
-    final MetadataDbConnectorConfig connectorConfig = spec.get();
+    final MetadataStorageUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
+    final MetadataStorageConnectorConfig connectorConfig = spec.get();
 
     Assert.assertEquals("segments", spec.getSegmentTable());
     Assert.assertEquals("jdbc:mysql://localhost/druid", connectorConfig.getConnectURI());

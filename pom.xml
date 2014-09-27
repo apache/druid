@@ -56,11 +56,12 @@
         <module>cassandra-storage</module>
         <module>hdfs-storage</module>
         <module>s3-extensions</module>
-        <module>jdbc-storage</module>
         <module>kafka-seven</module>
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>histogram</module>
+      <module>mysql-storage</module>
+      <module>postgres-storage</module>
     </modules>
 
     <dependencyManagement>

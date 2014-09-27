@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.IDBI;
 
 
@@ -32,8 +31,8 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
 {
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
-  private final Supplier<MetadataTablesConfig> dbTables;
-  private final MetadataDbConnector dbConnector;
+  private final Supplier<MetadataStorageTablesConfig> dbTables;
+  private final MetadataStorageConnector dbConnector;
   private final IDBI dbi;
   private final Lifecycle lifecycle;
 
@@ -41,8 +40,8 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
   public SQLMetadataSegmentManagerProvider(
       ObjectMapper jsonMapper,
       Supplier<MetadataSegmentManagerConfig> config,
-      Supplier<MetadataTablesConfig> dbTables,
-      MetadataDbConnector dbConnector,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      MetadataStorageConnector dbConnector,
       IDBI dbi,
       Lifecycle lifecycle
   )

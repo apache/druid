@@ -38,7 +38,7 @@ public class DerbyMetadataRuleManager extends SQLMetadataRuleManager
   public DerbyMetadataRuleManager(
       @Json ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
-      Supplier<MetadataTablesConfig> dbTables,
+      Supplier<MetadataStorageTablesConfig> dbTables,
       IDBI dbi
   ) {
     super(jsonMapper, config, dbTables, dbi);

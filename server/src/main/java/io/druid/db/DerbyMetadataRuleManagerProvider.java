@@ -32,8 +32,8 @@ public class DerbyMetadataRuleManagerProvider implements MetadataRuleManagerProv
 {
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataRuleManagerConfig> config;
-  private final Supplier<MetadataTablesConfig> dbTables;
-  private final MetadataDbConnector dbConnector;
+  private final Supplier<MetadataStorageTablesConfig> dbTables;
+  private final MetadataStorageConnector dbConnector;
   private final Lifecycle lifecycle;
   private final IDBI dbi;
 
@@ -41,8 +41,8 @@ public class DerbyMetadataRuleManagerProvider implements MetadataRuleManagerProv
   public DerbyMetadataRuleManagerProvider(
       ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
-      Supplier<MetadataTablesConfig> dbTables,
-      MetadataDbConnector dbConnector,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      MetadataStorageConnector dbConnector,
       IDBI dbi,
       Lifecycle lifecycle
   )

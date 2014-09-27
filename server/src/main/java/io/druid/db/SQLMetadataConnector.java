@@ -34,12 +34,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-public abstract class SQLMetadataConnector implements MetadataDbConnector
+public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
-  private final Supplier<MetadataDbConnectorConfig> config;
-  private final Supplier<MetadataTablesConfig> dbTables;
+  private final Supplier<MetadataStorageConnectorConfig> config;
+  private final Supplier<MetadataStorageTablesConfig> dbTables;
 
-  protected SQLMetadataConnector(Supplier<MetadataDbConnectorConfig> config, Supplier<MetadataTablesConfig> dbTables)
+  protected SQLMetadataConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
   {
     this.config = config;
     this.dbTables = dbTables;
@@ -88,23 +88,23 @@ public abstract class SQLMetadataConnector implements MetadataDbConnector
   @Override
   public void createTaskTables() {
     if (config.get().isCreateTables()) {
-      final MetadataTablesConfig metadataTablesConfig = dbTables.get();
-      createTaskTable(getDBI(), metadataTablesConfig.getTasksTable());
-      createTaskLogTable(getDBI(), metadataTablesConfig.getTaskLogTable());
-      createTaskLockTable(getDBI(), metadataTablesConfig.getTaskLockTable());
+      final MetadataStorageTablesConfig metadataStorageTablesConfig = dbTables.get();
+      createTaskTable(getDBI(), metadataStorageTablesConfig.getTasksTable());
+      createTaskLogTable(getDBI(), metadataStorageTablesConfig.getTaskLogTable());
+      createTaskLockTable(getDBI(), metadataStorageTablesConfig.getTaskLockTable());
     }
   }
 
   @Override
   public Void insertOrUpdate(
-      final String storageName,
+      final String tableName,
       final String keyColumn,
       final String valueColumn,
       final String key,
       final byte[] value
   ) throws Exception
   {
-    final String insertOrUpdateStatement = insertOrUpdateStatement(storageName, keyColumn, valueColumn);
+    final String insertOrUpdateStatement = insertOrUpdateStatement(tableName, keyColumn, valueColumn);
 
     return getDBI().withHandle(
         new HandleCallback<Void>()
@@ -124,14 +124,14 @@ public abstract class SQLMetadataConnector implements MetadataDbConnector
 
   @Override
   public byte[] lookup(
-      final String storageName,
+      final String tableName,
       final String keyColumn,
       final String valueColumn,
       final String key
   )
   {
     final String selectStatement = String.format("SELECT %s FROM %s WHERE %s = :key", valueColumn,
-                                                 storageName, keyColumn);
+                                                 tableName, keyColumn);
 
     return getDBI().withHandle(
         new HandleCallback<byte[]>()
@@ -167,11 +167,11 @@ public abstract class SQLMetadataConnector implements MetadataDbConnector
     );
   }
 
-  public MetadataDbConnectorConfig getConfig() { return config.get(); }
+  public MetadataStorageConnectorConfig getConfig() { return config.get(); }
 
   protected DataSource getDatasource()
   {
-    MetadataDbConnectorConfig connectorConfig = config.get();
+    MetadataStorageConnectorConfig connectorConfig = config.get();
 
     BasicDataSource dataSource = new BasicDataSource();
     dataSource.setUsername(connectorConfig.getUser());

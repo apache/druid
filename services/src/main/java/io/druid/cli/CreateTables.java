@@ -27,9 +27,9 @@ import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.db.MetadataDbConnector;
-import io.druid.db.MetadataDbConnectorConfig;
-import io.druid.db.MetadataTablesConfig;
+import io.druid.db.MetadataStorageConnector;
+import io.druid.db.MetadataStorageConnectorConfig;
+import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
@@ -71,7 +71,7 @@ public class CreateTables extends GuiceRunnable
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(MetadataDbConnectorConfig.class), new MetadataDbConnectorConfig()
+                binder, Key.get(MetadataStorageConnectorConfig.class), new MetadataStorageConnectorConfig()
                 {
                   @Override
                   public String getConnectURI()
@@ -93,7 +93,7 @@ public class CreateTables extends GuiceRunnable
                 }
             );
             JsonConfigProvider.bindInstance(
-                binder, Key.get(MetadataTablesConfig.class), MetadataTablesConfig.fromBase(base)
+                binder, Key.get(MetadataStorageTablesConfig.class), MetadataStorageTablesConfig.fromBase(base)
             );
             JsonConfigProvider.bindInstance(
                 binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1)
@@ -107,7 +107,7 @@ public class CreateTables extends GuiceRunnable
   public void run()
   {
     final Injector injector = makeInjector();
-    MetadataDbConnector dbConnector = injector.getInstance(MetadataDbConnector.class);
+    MetadataStorageConnector dbConnector = injector.getInstance(MetadataStorageConnector.class);
     dbConnector.createSegmentTable();
     dbConnector.createRulesTable();
     dbConnector.createConfigTable();

@@ -31,7 +31,7 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.db.IndexerSQLMetadataCoordinator;
+import io.druid.db.IndexerSQLMetadataStorageCoordinator;
 import io.druid.guice.Binders;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.Jerseys;
@@ -50,7 +50,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
-import io.druid.indexing.overlord.IndexerMetadataCoordinator;
+import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
@@ -183,7 +183,7 @@ public class CliPeon extends GuiceRunnable
             // all of these bindings are so that we can run the peon in local mode
             binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(IndexerMetadataCoordinator.class).to(IndexerSQLMetadataCoordinator.class).in(LazySingleton.class);
+            binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(LazySingleton.class);
             taskActionBinder.addBinding("remote")
                             .to(RemoteTaskActionClientFactory.class).in(LazySingleton.class);
 

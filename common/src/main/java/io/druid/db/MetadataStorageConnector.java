@@ -23,9 +23,8 @@ package io.druid.db;
  */
 public interface MetadataStorageConnector
 {
-
   public Void insertOrUpdate(
-      final String storageName,
+      final String tableName,
       final String keyColumn,
       final String valueColumn,
       final String key,
@@ -34,7 +33,7 @@ public interface MetadataStorageConnector
 
 
   public byte[] lookup(
-      final String storageName,
+      final String tableName,
       final String keyColumn,
       final String valueColumn,
       final String key

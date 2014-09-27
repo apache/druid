@@ -53,7 +53,7 @@ public class SQLMetadataStorageActionHandler implements MetadataStorageActionHan
   /* Insert stuff. @returns number of entries inserted on success */
   public void insert(
       final String tableName,
-      final String Id,
+      final String id,
       final String createdDate,
       final String dataSource,
       final byte[] payload,
@@ -73,7 +73,7 @@ public class SQLMetadataStorageActionHandler implements MetadataStorageActionHan
                     tableName
                 )
             )
-                  .bind("id", Id)
+                  .bind("id", id)
                   .bind("created_date", createdDate)
                   .bind("datasource", dataSource)
                   .bind("payload", payload)

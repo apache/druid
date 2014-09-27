@@ -24,12 +24,10 @@ import java.util.Map;
 
 public interface MetadataStorageActionHandler
 {
-  //<T> T retryCall(Action<T> action);
-
   /* Insert stuff. @returns number of entries inserted on success */
   public void insert(
       String tableName,
-      String Id,
+      String id,
       String createdDate,
       String dataSource,
       byte[] payload,
@@ -68,8 +66,4 @@ public interface MetadataStorageActionHandler
 
   /* Get locks for task with given ID */
   public List<Map<String, Object>> getTaskLocks(String tableName, String Id);
-
-  /* Initialize and return new DbConnector */
-  // fpublic MetadataDbConnector getConnector(Supplier<MetadataDbConnectorConfig> config, Supplier<MetadataTablesConfig> dbTables);
-
 }

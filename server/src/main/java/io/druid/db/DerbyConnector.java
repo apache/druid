@@ -41,7 +41,7 @@ public class DerbyConnector extends SQLMetadataConnector
   private final DBI dbi;
 
   @Inject
-  public DerbyConnector(Supplier<MetadataDbConnectorConfig> config, Supplier<MetadataTablesConfig> dbTables)
+  public DerbyConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
   {
     super(config, dbTables);
     this.dbi = new DBI(getConnectionFactory("druidDerbyDb"));
@@ -187,7 +187,7 @@ public class DerbyConnector extends SQLMetadataConnector
 
   @Override
   public Void insertOrUpdate(
-      final String storageName,
+      final String tableName,
       final String keyColumn,
       final String valueColumn,
       final String key,
@@ -204,15 +204,17 @@ public class DerbyConnector extends SQLMetadataConnector
             handle.begin();
             conn.setAutoCommit(false);
             List<Map<String, Object>> entry = handle.createQuery(
-                String.format("SELECT * FROM %1$s WHERE %2$s=:key", storageName, keyColumn)
+                String.format("SELECT * FROM %1$s WHERE %2$s=:key", tableName, keyColumn)
             ).list();
             if (entry == null || entry.isEmpty()) {
-              handle.createStatement(String.format("INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)", storageName, keyColumn, valueColumn))
+              handle.createStatement(String.format("INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
+                                                   tableName, keyColumn, valueColumn))
                     .bind("key", key)
                     .bind("value", value)
                     .execute();
             } else {
-              handle.createStatement(String.format("UPDATE %1$s SET %3$s=:value WHERE %2$s=:key", storageName, keyColumn, valueColumn))
+              handle.createStatement(String.format("UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
+                                                   tableName, keyColumn, valueColumn))
                     .bind("key", key)
                     .bind("value", value)
                     .execute();

@@ -34,8 +34,8 @@ public interface IndexerMetadataStorageCoordinator
       throws IOException;
 
   /**
-   * Attempts to insert a set of segments to the database. Returns the set of segments actually added (segments
-   * with identifiers already in the database will not be added).
+   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
+   * with identifiers already in the metadata storage will not be added).
    *
    * @param segments set of segments to add
    * @return set of segments actually added

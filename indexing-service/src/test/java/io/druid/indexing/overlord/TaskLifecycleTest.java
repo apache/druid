@@ -42,7 +42,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.db.IndexerSQLMetadataCoordinator;
+import io.druid.db.IndexerSQLMetadataStorageCoordinator;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
@@ -101,7 +101,7 @@ public class TaskLifecycleTest
   private TaskLockbox tl = null;
   private TaskQueue tq = null;
   private TaskRunner tr = null;
-  private MockIndexerDBCoordinator mdc = null;
+  private MockIndexerDBStorageCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   TaskStorageQueryAdapter tsqa = null;
@@ -510,12 +510,12 @@ public class TaskLifecycleTest
     return retVal;
   }
 
-  private static class MockIndexerDBCoordinator extends IndexerSQLMetadataCoordinator
+  private static class MockIndexerDBStorageCoordinator extends IndexerSQLMetadataStorageCoordinator
   {
     final private Set<DataSegment> published = Sets.newHashSet();
     final private Set<DataSegment> nuked = Sets.newHashSet();
 
-    private MockIndexerDBCoordinator()
+    private MockIndexerDBStorageCoordinator()
     {
       super(null, null, null);
     }
@@ -562,9 +562,9 @@ public class TaskLifecycleTest
     }
   }
 
-  private static MockIndexerDBCoordinator newMockMDC()
+  private static MockIndexerDBStorageCoordinator newMockMDC()
   {
-    return new MockIndexerDBCoordinator();
+    return new MockIndexerDBStorageCoordinator();
   }
 
   private static ServiceEmitter newMockEmitter()

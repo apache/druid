@@ -36,7 +36,7 @@ public class SQLMetadataSegmentPublisherProvider implements MetadataSegmentPubli
 
   @JacksonInject
   @NotNull
-  private MetadataTablesConfig config = null;
+  private MetadataStorageTablesConfig config = null;
 
   @JacksonInject
   @NotNull

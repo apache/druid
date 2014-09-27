@@ -32,8 +32,8 @@ import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.db.MetadataDbConnector;
-import io.druid.db.MetadataTablesConfig;
+import io.druid.db.MetadataStorageConnector;
+import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
@@ -47,24 +47,24 @@ import java.util.Map;
 public class DbTaskStorage implements TaskStorage
 {
   private final ObjectMapper jsonMapper;
-  private final MetadataDbConnector metadataDbConnector;
-  private final MetadataTablesConfig dbTables;
+  private final MetadataStorageConnector metadataStorageConnector;
+  private final MetadataStorageTablesConfig dbTables;
   private final TaskStorageConfig config;
-  private final MetadataActionHandler handler;
+  private final MetadataStorageActionHandler handler;
 
   private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
 
   @Inject
   public DbTaskStorage(
       final ObjectMapper jsonMapper,
-      final MetadataDbConnector metadataDbConnector,
-      final MetadataTablesConfig dbTables,
+      final MetadataStorageConnector metadataStorageConnector,
+      final MetadataStorageTablesConfig dbTables,
       final TaskStorageConfig config,
-      final MetadataActionHandler handler
+      final MetadataStorageActionHandler handler
   )
   {
     this.jsonMapper = jsonMapper;
-    this.metadataDbConnector = metadataDbConnector;
+    this.metadataStorageConnector = metadataStorageConnector;
     this.dbTables = dbTables;
     this.config = config;
     this.handler = handler;
@@ -73,7 +73,7 @@ public class DbTaskStorage implements TaskStorage
   @LifecycleStart
   public void start()
   {
-    metadataDbConnector.createTaskTables();
+    metadataStorageConnector.createTaskTables();
   }
 
   @LifecycleStop

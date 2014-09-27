@@ -19,13 +19,10 @@
 
 package io.druid.db;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
@@ -36,7 +33,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
-import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -52,7 +48,6 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -74,7 +69,7 @@ public class DerbyMetadataSegmentManager implements MetadataSegmentManager
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
-  private final Supplier<MetadataTablesConfig> dbTables;
+  private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final IDBI dbi;
 
@@ -86,7 +81,7 @@ public class DerbyMetadataSegmentManager implements MetadataSegmentManager
   public DerbyMetadataSegmentManager(
       ObjectMapper jsonMapper,
       Supplier<MetadataSegmentManagerConfig> config,
-      Supplier<MetadataTablesConfig> dbTables,
+      Supplier<MetadataStorageTablesConfig> dbTables,
       IDBI dbi
   )
   {

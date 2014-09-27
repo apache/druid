@@ -33,7 +33,6 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import com.mysql.jdbc.Clob;
 import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
@@ -124,7 +123,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataRuleManagerConfig> config;
-  private final Supplier<MetadataTablesConfig> dbTables;
+  private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final IDBI dbi;
   private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
 
@@ -138,7 +137,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public SQLMetadataRuleManager(
       @Json ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
-      Supplier<MetadataTablesConfig> dbTables,
+      Supplier<MetadataStorageTablesConfig> dbTables,
       IDBI dbi
   )
   {

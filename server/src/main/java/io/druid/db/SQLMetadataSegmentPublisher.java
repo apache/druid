@@ -41,14 +41,14 @@ public class SQLMetadataSegmentPublisher implements DbSegmentPublisher
   private static final Logger log = new Logger(SQLMetadataSegmentPublisher.class);
 
   private final ObjectMapper jsonMapper;
-  private final MetadataTablesConfig config;
+  private final MetadataStorageTablesConfig config;
   private final IDBI dbi;
   private final String statement;
 
   @Inject
   public SQLMetadataSegmentPublisher(
       ObjectMapper jsonMapper,
-      MetadataTablesConfig config,
+      MetadataStorageTablesConfig config,
       IDBI dbi
   )
   {
