@@ -448,7 +448,7 @@ public class IndexGeneratorJob implements Jobby
       } else if (outputFS instanceof DistributedFileSystem) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
-            "path", indexOutURI.getPath()
+            "path", indexOutURI.toString()
         );
       } else {
         throw new ISE("Unknown file system[%s]", outputFS.getClass());
