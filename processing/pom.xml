@@ -97,6 +97,11 @@
             <artifactId>caliper</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20140107</version>
+		</dependency>
     </dependencies>
 
     <build>

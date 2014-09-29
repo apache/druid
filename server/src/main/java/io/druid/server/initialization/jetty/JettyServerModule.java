@@ -155,9 +155,9 @@ public class JettyServerModule extends JerseyServletModule
   private static Server makeJettyServer(@Self DruidNode node, ServerConfig config)
   {
     final QueuedThreadPool threadPool = new QueuedThreadPool();
-    threadPool.setMinThreads(config.getNumThreads());
-    threadPool.setMaxThreads(config.getNumThreads());
-
+    threadPool.setMinThreads(30);
+    threadPool.setMaxThreads(30);
+    log.info("start jetty server-----------------------------------");
     final Server server = new Server(threadPool);
 
     ServerConnector connector = new ServerConnector(server);

@@ -28,6 +28,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
+
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -45,6 +47,7 @@ import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
 import io.druid.timeline.DataSegment;
+
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
@@ -101,7 +104,7 @@ public class YeOldePlumberSchool implements PlumberSchool
       @Override
       public void startJob()
       {
-
+      	return;
       }
 
       @Override
@@ -206,6 +209,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             IndexMaker.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
+                null,
                 config.getIndexSpec()
             );
 
@@ -226,6 +230,19 @@ public class YeOldePlumberSchool implements PlumberSchool
       private File getSpillDir(final int n)
       {
         return new File(persistDir, String.format("spill%d", n));
+      }
+
+			@Override
+      public void persist(Committer commitRunnable)
+      {
+	      persist((Runnable)commitRunnable);
+	      
+      }
+
+			@Override
+      public Object getMetaData()
+      {
+	      return null;
       }
     };
   }

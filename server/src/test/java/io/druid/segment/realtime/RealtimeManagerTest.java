@@ -21,8 +21,10 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
+
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
@@ -41,6 +43,7 @@ import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
 import io.druid.utils.Runnables;
 import junit.framework.Assert;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -92,7 +95,8 @@ public class RealtimeManagerTest
           {
             return plumber;
           }
-        }
+        },
+        null
     );
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
@@ -263,6 +267,7 @@ public class RealtimeManagerTest
     public void startJob()
     {
       startedJob = true;
+      return;
     }
 
     @Override
@@ -305,6 +310,19 @@ public class RealtimeManagerTest
     public void finishJob()
     {
       finishedJob = true;
+    }
+
+		@Override
+    public void persist(Committer commitRunnable)
+    {
+			persistCount++;
+	    
+    }
+
+		@Override
+    public Object getMetaData()
+    {
+	    return null;
     }
   }
 }

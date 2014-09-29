@@ -30,6 +30,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
@@ -182,6 +183,7 @@ public class RealtimeManager implements QuerySegmentWalker
     private final RealtimeTuningConfig config;
 
     private volatile Firehose firehose = null;
+    private volatile FirehoseV2 firehoseV2 = null;
     private volatile Plumber plumber = null;
     private volatile boolean normalExit = true;
 
@@ -213,6 +215,26 @@ public class RealtimeManager implements QuerySegmentWalker
         return firehose;
       }
     }
+    
+    public FirehoseV2 initFirehose(Object metaData)
+    {
+      synchronized (this) {
+        if (firehose == null) {
+          try {
+            log.info("Calling the FireDepartment and getting a Firehose.");
+            firehoseV2 = fireDepartment.connect(metaData);
+            log.info("Firehose acquired!");
+          }
+          catch (IOException e) {
+            throw Throwables.propagate(e);
+          }
+        } else {
+          log.warn("Firehose already connected, skipping initFirehose().");
+        }
+
+        return firehoseV2;
+      }
+    }
 
     public Plumber initPlumber()
     {
@@ -238,63 +260,20 @@ public class RealtimeManager implements QuerySegmentWalker
     public void run()
     {
       plumber = initPlumber();
-      final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
 
       try {
         plumber.startJob();
-
+        Object metaData = plumber.getMetaData();
         // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
-        firehose = initFirehose();
-
-        long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-        while (firehose.hasMore()) {
-          InputRow inputRow = null;
-          try {
-            try {
-              inputRow = firehose.nextRow();
-            }
-            catch (Exception e) {
-              log.debug(e, "thrown away line due to exception, considering unparseable");
-              metrics.incrementUnparseable();
-              continue;
-            }
-
-            boolean lateEvent = false;
-            boolean indexLimitExceeded = false;
-            try {
-              lateEvent = plumber.add(inputRow) == -1;
-            }
-            catch (IndexSizeExceededException e) {
-              log.info("Index limit exceeded: %s", e.getMessage());
-              indexLimitExceeded = true;
-            }
-            if (indexLimitExceeded || lateEvent) {
-              metrics.incrementThrownAway();
-              log.debug("Throwing away event[%s]", inputRow);
-
-              if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
-                plumber.persist(firehose.commit());
-                nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-              }
-
-              continue;
-            }
-            final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-            if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
-              plumber.persist(firehose.commit());
-              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-            }
-            metrics.incrementProcessed();
-          }
-          catch (ParseException e) {
-            if (inputRow != null) {
-              log.error(e, "unparseable line: %s", inputRow);
-            }
-            metrics.incrementUnparseable();
-          }
+        if (fireDepartment.checkFirehoseV2()) {
+        	firehoseV2 = initFirehose(metaData);
+        	runFirehoseV2(firehoseV2);
+        } else {
+        	firehose = initFirehose();
+        	runFirehose(firehose);
         }
-      }
-      catch (RuntimeException e) {
+        
+      } catch (RuntimeException e) {
         log.makeAlert(
             e,
             "RuntimeException aborted realtime processing[%s]",
@@ -308,6 +287,11 @@ public class RealtimeManager implements QuerySegmentWalker
            .emit();
         normalExit = false;
         throw e;
+      } catch (Exception e1)
+      {
+      	log.makeAlert(e1, "Exception aborted realtime processing[%s]", fireDepartment.getDataSchema().getDataSource())
+        .emit();
+      	normalExit = false;
       }
       finally {
         CloseQuietly.close(firehose);
@@ -317,6 +301,127 @@ public class RealtimeManager implements QuerySegmentWalker
           firehose = null;
         }
       }
+    }
+
+    private void runFirehoseV2(FirehoseV2 firehose) throws Exception 
+    {
+      final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
+
+      long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+      firehose.start();
+      boolean stop = false;
+      while (true) {
+      	if (stop) {
+      		log.info("firehoseV2 stop");
+      		break;
+      	}
+        InputRow inputRow = null;
+        try {
+          try {
+            inputRow = firehose.currRow();
+          }
+          catch (Exception e) {
+            log.debug(e, "thrown away line due to exception, considering unparseable");
+            metrics.incrementUnparseable();
+            stop = !firehose.advance();
+            continue;
+          }
+
+          boolean lateEvent = false;
+          boolean indexLimitExceeded = false;
+          try {
+            lateEvent = plumber.add(inputRow) == -1;
+          }
+        
+          catch (IndexSizeExceededException e) {
+            log.info("Index limit exceeded: %s", e.getMessage());
+            indexLimitExceeded = true;
+          }
+          if (indexLimitExceeded || lateEvent) {
+            metrics.incrementThrownAway();
+            log.debug("Throwing away event[%s]", inputRow);
+
+            if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
+              plumber.persist(firehose.makeCommitter());
+              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+            }
+            stop = !firehose.advance();
+            continue;
+          }
+          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+          if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
+            plumber.persist(firehose.makeCommitter());
+            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+          }
+          metrics.incrementProcessed();
+        }
+        catch (ParseException e) {
+          if (inputRow != null) {
+            log.error(e, "unparseable line: %s", inputRow);
+          }
+          metrics.incrementUnparseable();
+        }
+        stop = !firehose.advance();
+      }
+    
+    }
+
+    
+    private void runFirehose(Firehose firehose) 
+    {
+
+      final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
+
+      long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+      
+      while (firehose.hasMore()) {
+        InputRow inputRow = null;
+        try {
+          try {
+            inputRow = firehose.nextRow();
+          }
+          catch (Exception e) {
+            log.debug(e, "thrown away line due to exception, considering unparseable");
+            metrics.incrementUnparseable();
+            continue;
+          }
+
+          boolean lateEvent = false;
+          boolean indexLimitExceeded = false;
+          try {
+            lateEvent = plumber.add(inputRow) == -1;
+          }
+          catch (IndexSizeExceededException e) {
+            log.info("Index limit exceeded: %s", e.getMessage());
+            indexLimitExceeded = true;
+          }
+          if (indexLimitExceeded || lateEvent) {
+            metrics.incrementThrownAway();
+            log.debug("Throwing away event[%s]", inputRow);
+
+            if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
+              plumber.persist(firehose.commit());
+              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+            }
+
+            continue;
+          }
+          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+          if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
+            plumber.persist(firehose.commit());
+            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+          }
+          metrics.incrementProcessed();
+        }
+        catch (ParseException e) {
+          if (inputRow != null) {
+            log.error(e, "unparseable line: %s", inputRow);
+          }
+          metrics.incrementUnparseable();
+        }
+      }
+     
+    
     }
 
     public <T> QueryRunner<T> getQueryRunner(Query<T> query)

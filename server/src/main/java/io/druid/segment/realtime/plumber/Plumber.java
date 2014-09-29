@@ -17,6 +17,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -30,6 +31,8 @@ public interface Plumber
    */
   public void startJob();
 
+  public Object getMetaData();
+  
   /**
    * @param row - the row to insert
    * @return - positive numbers indicate how many summarized rows exist in the index for that timestamp,
@@ -44,8 +47,8 @@ public interface Plumber
    *
    * @param commitRunnable code to run after persisting data
    */
+  void persist(Committer commitRunnable);
   void persist(Runnable commitRunnable);
-
   /**
    * Perform any final processing and clean up after ourselves. Should be called after all data has been
    * fed into sinks and persisted.
