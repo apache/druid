@@ -72,6 +72,7 @@ public class DbSegmentPublisher implements SegmentPublisher
 
   public void publishSegment(final DataSegment segment) throws IOException
   {
+	  log.info("start Inserting [%s] in DB", segment.getIdentifier());
     try {
       List<Map<String, Object>> exists = dbi.withHandle(
           new HandleCallback<List<Map<String, Object>>>()
@@ -92,7 +93,7 @@ public class DbSegmentPublisher implements SegmentPublisher
         log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
         return;
       }
-
+      log.info("Inserting [%s] in DB", segment.getIdentifier());
       dbi.withHandle(
           new HandleCallback<Void>()
           {

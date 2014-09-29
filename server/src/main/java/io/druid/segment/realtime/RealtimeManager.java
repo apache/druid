@@ -29,6 +29,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
+
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -43,12 +44,15 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
@@ -159,6 +163,7 @@ public class RealtimeManager implements QuerySegmentWalker
           firehose = fireDepartment.connect();
           log.info("Firehose acquired!");
           log.info("Someone get us a plumber!");
+          fireDepartment.getDataSchema().setFirehose(firehose);
           plumber = fireDepartment.findPlumber();
           log.info("We have our plumber!");
         }
@@ -184,6 +189,28 @@ public class RealtimeManager implements QuerySegmentWalker
         plumber.startJob();
 
         long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+
+        boolean hasMethod = false;
+        Method commitOffset = null;
+        Method getCurrentOffset = null;
+        Method[] methods = firehose.getClass().getMethods();
+        for (Method m : methods) {
+          if (m.getName().equals("getCurrentOffset")) {
+            hasMethod = true;
+            getCurrentOffset = m;
+            getCurrentOffset.setAccessible(true);
+            continue;
+          }
+          if (m.getName().equals("commitOffset")) {
+              hasMethod = true;
+              commitOffset = m;
+              commitOffset.setAccessible(true);
+              continue;
+          }
+        }
+        
+        log.info("we are using kafka8simple firehose");
+        
         while (firehose.hasMore()) {
           InputRow inputRow = null;
           try {
@@ -200,16 +227,45 @@ public class RealtimeManager implements QuerySegmentWalker
             if (currCount == -1) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
-
               if (System.currentTimeMillis() > nextFlush) {
-                plumber.persist(firehose.commit());
+            	if(hasMethod){
+            		try {
+            			Map<Integer, Long> map = (Map<Integer, Long>)getCurrentOffset.invoke(firehose);
+            			log.info("out put map content"+map);
+            			Map<Integer, Long> offset = (Map<Integer, Long>)getCurrentOffset.invoke(firehose);
+            			
+            			plumber.persist((Runnable)commitOffset.invoke(firehose,offset));
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+	                    log.error("error when persist"+e.getMessage());
+                    }catch (Exception e) {
+	                    log.error("unknow error when persist"+e.getMessage());
+                    }
+              	}else{
+              		plumber.persist(firehose.commit());
+              	}
                 nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
               }
 
               continue;
             }
             if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
-              plumber.persist(firehose.commit());
+            	if(hasMethod){
+            		try {
+            			Map<Integer, Long> map = (Map<Integer, Long>)getCurrentOffset.invoke(firehose);
+            			log.info("out put map content"+map);
+            			
+            			Map<Integer, Long> offset = (Map<Integer, Long>)getCurrentOffset.invoke(firehose);
+            			
+            			
+            			plumber.persist((Runnable)commitOffset.invoke(firehose,offset));
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                    	log.error("error when persist over count"+e.getMessage());
+                    }catch (Exception e) {
+	                    log.error("unknow error when persist  over count"+e.getMessage());
+                    }
+            	}else{
+            		plumber.persist(firehose.commit());
+            	}
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }
             metrics.incrementProcessed();

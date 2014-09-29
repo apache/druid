@@ -216,8 +216,12 @@ public class QueryResource
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
                     // json serializer will always close the yielder
-                    jsonWriter.writeValue(outputStream, yielder);
-                    outputStream.close();
+                	  try{
+	                    jsonWriter.writeValue(outputStream, yielder);
+                	  } finally{
+                		outputStream.close();
+                		yielder.close();
+                	  }
                   }
                 },
                 isSmile ? APPLICATION_JSON : APPLICATION_SMILE

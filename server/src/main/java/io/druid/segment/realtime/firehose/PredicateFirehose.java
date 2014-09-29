@@ -79,4 +79,10 @@ public class PredicateFirehose implements Firehose
   {
     firehose.close();
   }
+
+@Override
+public long getLastOffsetCommitTime() {
+	// TODO Auto-generated method stub
+	return 0;
+}
 }

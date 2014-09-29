@@ -150,15 +150,20 @@ public class JettyServerModule extends JerseyServletModule
   private static Server makeJettyServer(@Self DruidNode node, ServerConfig config)
   {
     final QueuedThreadPool threadPool = new QueuedThreadPool();
-    threadPool.setMinThreads(config.getNumThreads());
-    threadPool.setMaxThreads(config.getNumThreads());
-
+    threadPool.setMinThreads(30);
+    threadPool.setMaxThreads(30);
+    log.info("start jetty server-----------------------------------");
     final Server server = new Server(threadPool);
 
     ServerConnector connector = new ServerConnector(server);
     connector.setPort(node.getPort());
-    connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
-
+    connector.setIdleTimeout(3000);
+    connector.setAcceptorPriorityDelta(-1);
+    connector.setAcceptQueueSize(1000);
+//    connector.setSoLingerTime(0);
+//    connector.setStopTimeout(0);
+//    connector.getSelectorManager().setConnectTimeout(3*1000);
+//    connector.getSelectorManager().setStopTimeout(0);
     server.setConnectors(new Connector[]{connector});
 
     return server;

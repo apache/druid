@@ -636,6 +636,12 @@ public class TaskLifecycleTest
           {
 
           }
+
+		@Override
+        public long getLastOffsetCommitTime() {
+	        // TODO Auto-generated method stub
+	        return 0;
+        }
         };
       }
 
@@ -688,6 +694,12 @@ public class TaskLifecycleTest
           {
 
           }
+
+		@Override
+        public long getLastOffsetCommitTime() {
+	        // TODO Auto-generated method stub
+	        return 0;
+        }
         };
       }
 

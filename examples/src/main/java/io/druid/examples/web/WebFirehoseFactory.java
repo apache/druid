@@ -131,6 +131,13 @@ public class WebFirehoseFactory implements FirehoseFactory<InputRowParser>
         updateStream.stop();
       }
 
+
+	@Override
+    public long getLastOffsetCommitTime() {
+	    // TODO Auto-generated method stub
+	    return 0;
+    }
+
     };
   }
 
