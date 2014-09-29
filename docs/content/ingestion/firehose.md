@@ -101,7 +101,7 @@ A sample spec for rabbitmq firehose:
    }
 ```
 |property|description|Default|required?|
-|--------|-----------|---------|
+|--------|-----------|---------|--------|
 |host|The hostname of the RabbitMQ broker to connect to|localhost|no|
 |port|The port number to connect to on the RabbitMQ broker|5672|no|
 |username|The username to use to connect to RabbitMQ|guest|no|
@@ -196,3 +196,4 @@ when using above firehose the events can be sent via submitting a POST request t
 |type|receiver|yes|
 |serviceName|name used to announce the event receiver service endpoint|yes|
 |bufferSize| size of buffer used by firehose to store events|no default(100000)|
+

@@ -115,9 +115,9 @@ public class IndexMaker
     mapper = injector.getInstance(ObjectMapper.class);
   }
 
-  public static File persist(final IncrementalIndex index, File outDir, final IndexSpec indexSpec) throws IOException
+  public static File persist(final IncrementalIndex index, File outDir, final Object commitMetaData, final IndexSpec indexSpec) throws IOException
   {
-    return persist(index, index.getInterval(), outDir, indexSpec);
+    return persist(index, index.getInterval(), outDir, commitMetaData, indexSpec);
   }
 
   /**
@@ -134,16 +134,20 @@ public class IndexMaker
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
+      final Object commitMetaData,
       final IndexSpec indexSpec
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, indexSpec, new LoggingProgressIndicator(outDir.toString()));
+    return persist(
+        index, dataInterval, outDir, commitMetaData, indexSpec, new LoggingProgressIndicator(outDir.toString())
+    );
   }
 
   public static File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
+      final Object commitMetaData,
       final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -181,6 +185,7 @@ public class IndexMaker
         ),
         index.getMetricAggs(),
         outDir,
+        commitMetaData,
         indexSpec,
         progress
     );
@@ -215,22 +220,26 @@ public class IndexMaker
         ),
         metricAggs,
         outDir,
+        null,
         indexSpec,
         progress
     );
   }
 
   public static File merge(
-      List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir, final IndexSpec indexSpec
+      List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir, final String commitMetaData, final IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(adapters, metricAggs, outDir, indexSpec, new LoggingProgressIndicator(outDir.toString()));
+    return merge(
+        adapters, metricAggs, outDir, commitMetaData, indexSpec, new LoggingProgressIndicator(outDir.toString())
+    );
   }
 
   public static File merge(
       List<IndexableAdapter> adapters,
       final AggregatorFactory[] metricAggs,
       File outDir,
+      final Object commitMetaData,
       final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -320,7 +329,9 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
+    return makeIndexFiles(
+        adapters, outDir, progress, mergedDimensions, mergedMetrics, commitMetaData, rowMergerFn, indexSpec
+    );
   }
 
 
@@ -341,6 +352,7 @@ public class IndexMaker
           progress,
           Lists.newArrayList(adapter.getDimensionNames()),
           Lists.newArrayList(adapter.getMetricNames()),
+          adapter.getMetaData(),
           new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
           {
             @Nullable
@@ -362,12 +374,13 @@ public class IndexMaker
       final IndexSpec indexSpec
   ) throws IOException
   {
-    return append(adapters, outDir, new LoggingProgressIndicator(outDir.toString()), indexSpec);
+    return append(adapters, outDir, null, new LoggingProgressIndicator(outDir.toString()), indexSpec);
   }
 
   public static File append(
       final List<IndexableAdapter> adapters,
       final File outDir,
+      final String commitMetaData,
       final ProgressIndicator progress,
       final IndexSpec indexSpec
   ) throws IOException
@@ -438,7 +451,7 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
+    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, commitMetaData, rowMergerFn, indexSpec);
   }
 
   private static File makeIndexFiles(
@@ -447,6 +460,7 @@ public class IndexMaker
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
+      final Object commitMetaData,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
       final IndexSpec indexSpec
   ) throws IOException
@@ -540,15 +554,9 @@ public class IndexMaker
 
     progress.progress();
     makeIndexBinary(
-        v9Smoosher,
-        adapters,
-        outDir,
-        mergedDimensions,
-        mergedMetrics,
-        skippedDimensions,
-        progress,
-        indexSpec
+        v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, skippedDimensions, progress, indexSpec
     );
+    makeMetadataBinary(v9Smoosher, progress, commitMetaData);
 
     v9Smoosher.close();
 
@@ -1396,8 +1404,7 @@ public class IndexMaker
                           + 16
                           + serializerUtils.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
-    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
-
+    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);    
     cols.writeToChannel(writer);
     dims.writeToChannel(writer);
 
@@ -1412,6 +1419,7 @@ public class IndexMaker
 
     serializerUtils.writeLong(writer, dataInterval.getStartMillis());
     serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+
     serializerUtils.writeString(
         writer, bitmapSerdeFactoryType
     );
@@ -1420,6 +1428,19 @@ public class IndexMaker
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
 
     progress.stopSection(section);
+  }
+
+  private static void makeMetadataBinary(
+      final FileSmoosher v9Smoosher,
+      final ProgressIndicator progress,
+      final Object commitMetadata
+  ) throws IOException
+  {
+    progress.startSection("metadata.drd");
+    if (commitMetadata != null) {
+      v9Smoosher.add("metadata.drd", ByteBuffer.wrap(mapper.writeValueAsBytes(commitMetadata)));
+    }
+    progress.stopSection("metadata.drd");
   }
 
   private static void writeColumn(

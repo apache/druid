@@ -21,12 +21,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseV2;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
@@ -41,7 +43,6 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
   private final DataSchema dataSchema;
   private final RealtimeIOConfig ioConfig;
   private final RealtimeTuningConfig tuningConfig;
-
   private final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
 
   @JsonCreator
@@ -92,9 +93,19 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
     return ioConfig.getPlumberSchool().findPlumber(dataSchema, tuningConfig, metrics);
   }
 
+  public boolean checkFirehoseV2()
+  {
+    return ioConfig.getFirehoseFactoryV2() != null;
+  }
+
   public Firehose connect() throws IOException
   {
     return ioConfig.getFirehoseFactory().connect(dataSchema.getParser());
+  }
+
+  public FirehoseV2 connect(Object metaData) throws IOException
+  {
+    return ioConfig.getFirehoseFactoryV2().connect(dataSchema.getParser(), metaData);
   }
 
   public FireDepartmentMetrics getMetrics()

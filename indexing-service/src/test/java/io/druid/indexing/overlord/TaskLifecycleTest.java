@@ -675,7 +675,8 @@ public class TaskLifecycleTest
                 IR(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
             )
         ),
-        null // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
+        null, // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
+        null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,

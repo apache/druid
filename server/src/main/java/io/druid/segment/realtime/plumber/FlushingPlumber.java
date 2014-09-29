@@ -81,7 +81,7 @@ public class FlushingPlumber extends RealtimePlumber
   }
 
   @Override
-  public void startJob()
+  public Object startJob()
   {
     log.info("Starting job for %s", getSchema().getDataSource());
 
@@ -92,8 +92,9 @@ public class FlushingPlumber extends RealtimePlumber
       flushScheduledExec = Execs.scheduledSingleThreaded("flushing_scheduled_%d");
     }
 
-    bootstrapSinksFromDisk();
+    Object retVal = bootstrapSinksFromDisk();
     startFlushThread();
+    return retVal;
   }
 
   protected void flushAfterDuration(final long truncatedTime, final Sink sink)
