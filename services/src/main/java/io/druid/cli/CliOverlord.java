@@ -70,6 +70,8 @@ import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactoryImpl
 import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
+import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -196,6 +198,20 @@ public class CliOverlord extends ServerRunnable
 
             biddy.addBinding("remote").to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.runner.workerSelectStrategy.type",
+                Key.get(WorkerSelectStrategy.class),
+                Key.get(FillCapacityWorkerSelectStrategy.class)
+            );
+            final MapBinder<String, WorkerSelectStrategy> stratBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(WorkerSelectStrategy.class)
+            );
+
+            stratBinder.addBinding("fillCapacity").to(FillCapacityWorkerSelectStrategy.class);
+            binder.bind(FillCapacityWorkerSelectStrategy.class).in(LazySingleton.class);
           }
 
           private void configureAutoscale(Binder binder)
