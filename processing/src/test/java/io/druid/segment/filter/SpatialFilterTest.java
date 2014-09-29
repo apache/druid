@@ -76,7 +76,7 @@ public class SpatialFilterTest
       new LongSumAggregatorFactory("val", "val")
   };
 
-  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long");
+  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -110,6 +110,10 @@ public class SpatialFilterTest
                                                     new SpatialDimensionSchema(
                                                         "dim.geo",
                                                         Arrays.asList("lat", "long")
+                                                    ),
+                                                    new SpatialDimensionSchema(
+                                                        "spatialIsRad",
+                                                        Arrays.asList("lat2", "long2")
                                                     )
                                                 )
                                             ).build()
@@ -204,6 +208,18 @@ public class SpatialFilterTest
             )
         )
     );
+    theIndex.add(
+        new MapBasedInputRow(
+            new DateTime("2013-01-05").getMillis(),
+            DIMS,
+            ImmutableMap.<String, Object>of(
+                "timestamp", new DateTime("2013-01-05").toString(),
+                "lat2", 0.0f,
+                "long2", 0.0f,
+                "val", 13l
+            )
+        )
+    );
 
     // Add a bunch of random points
     Random rand = new Random();
@@ -250,6 +266,10 @@ public class SpatialFilterTest
                                                       new SpatialDimensionSchema(
                                                           "dim.geo",
                                                           Arrays.asList("lat", "long")
+                                                      ),
+                                                      new SpatialDimensionSchema(
+                                                          "spatialIsRad",
+                                                          Arrays.asList("lat2", "long2")
                                                       )
                                                   )
                                               ).build()
@@ -263,6 +283,10 @@ public class SpatialFilterTest
                                                       new SpatialDimensionSchema(
                                                           "dim.geo",
                                                           Arrays.asList("lat", "long")
+                                                      ),
+                                                      new SpatialDimensionSchema(
+                                                          "spatialIsRad",
+                                                          Arrays.asList("lat2", "long2")
                                                       )
                                                   )
                                               ).build()
@@ -276,6 +300,10 @@ public class SpatialFilterTest
                                                       new SpatialDimensionSchema(
                                                           "dim.geo",
                                                           Arrays.asList("lat", "long")
+                                                      ),
+                                                      new SpatialDimensionSchema(
+                                                          "spatialIsRad",
+                                                          Arrays.asList("lat2", "long2")
                                                       )
                                                   )
                                               ).build()
@@ -372,6 +400,18 @@ public class SpatialFilterTest
               )
           )
       );
+      second.add(
+          new MapBasedInputRow(
+              new DateTime("2013-01-05").getMillis(),
+              DIMS,
+              ImmutableMap.<String, Object>of(
+                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "lat2", 0.0f,
+                  "long2", 0.0f,
+                  "val", 13l
+              )
+          )
+      );
 
       // Add a bunch of random points
       Random rand = new Random();
@@ -463,6 +503,58 @@ public class SpatialFilterTest
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 3L)
                             .put("val", 59l)
+                            .build()
+            )
+        )
+    );
+    try {
+      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
+          new TimeseriesQueryQueryToolChest(new QueryConfig()),
+          new TimeseriesQueryEngine(),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+
+      QueryRunner runner = new FinalizeResultsQueryRunner(
+          factory.createRunner(segment),
+          factory.getToolchest()
+      );
+
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+
+  @Test
+  public void testSpatialQueryWithOtherSpatialDim()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test")
+                                  .granularity(QueryGranularity.ALL)
+                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .filters(
+                                      new SpatialDimFilter(
+                                          "spatialIsRad",
+                                          new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+                                      )
+                                  )
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          new CountAggregatorFactory("rows"),
+                                          new LongSumAggregatorFactory("val", "val")
+                                      )
+                                  )
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2013-01-01T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                            .put("rows", 1L)
+                            .put("val", 13l)
                             .build()
             )
         )
