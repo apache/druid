@@ -93,7 +93,7 @@ public class DruidCoordinatorRuleRunnerTest
   @After
   public void tearDown() throws Exception
   {
-    //EasyMock.verify(coordinator);
+    EasyMock.verify(coordinator);
     EasyMock.verify(databaseRuleManager);
   }
 
@@ -492,12 +492,21 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testDropRemove() throws Exception
   {
-    mockCoordinator();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
     EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
     EasyMock.replay(mockPeon);
+
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
+        new CoordinatorDynamicConfig(
+            0, 0, 0, 0, 1, 24, 0, false
+        )
+    ).anyTimes();
+    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.replay(coordinator);
+
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
         Lists.<Rule>newArrayList(
             new IntervalLoadRule(new Interval("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"), null, 1, "normal"),
