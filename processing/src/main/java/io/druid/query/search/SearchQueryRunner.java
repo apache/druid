@@ -162,13 +162,16 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
             while (!cursor.isDone()) {
               for (Map.Entry<String, DimensionSelector> entry : dimSelectors.entrySet()) {
                 final DimensionSelector selector = entry.getValue();
-                final IndexedInts vals = selector.getRow();
-                for (int i = 0; i < vals.size(); ++i) {
-                  final String dimVal = selector.lookupName(vals.get(i));
-                  if (searchQuerySpec.accept(dimVal)) {
-                    set.add(new SearchHit(entry.getKey(), dimVal));
-                    if (set.size() >= limit) {
-                      return set;
+
+                if (selector != null) {
+                  final IndexedInts vals = selector.getRow();
+                  for (int i = 0; i < vals.size(); ++i) {
+                    final String dimVal = selector.lookupName(vals.get(i));
+                    if (searchQuerySpec.accept(dimVal)) {
+                      set.add(new SearchHit(entry.getKey(), dimVal));
+                      if (set.size() >= limit) {
+                        return set;
+                      }
                     }
                   }
                 }
