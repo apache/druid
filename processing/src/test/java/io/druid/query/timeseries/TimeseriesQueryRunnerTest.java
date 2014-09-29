@@ -21,6 +21,7 @@ package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
@@ -454,6 +455,121 @@ public class TimeseriesQueryRunnerTest
             new DateTime("2011-01-13T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 91L, "idx", 33382L)
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
+        runner.run(query1),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults1, results1);
+  }
+
+  @Test
+  public void testTimeseriesQueryZeroFilling()
+  {
+    TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                   .dataSource(QueryRunnerTestHelper.dataSource)
+                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .granularity(QueryGranularity.HOUR)
+                                   .intervals(
+                                       Arrays.asList(
+                                           new Interval(
+                                               "2011-04-14T00:00:00.000Z/2011-05-01T00:00:00.000Z"
+                                           )
+                                       )
+                                   )
+                                   .aggregators(
+                                       Arrays.<AggregatorFactory>asList(
+                                           QueryRunnerTestHelper.rowsCount,
+                                           new LongSumAggregatorFactory(
+                                               "idx",
+                                               "index"
+                                           )
+                                       )
+                                   )
+                                   .build();
+
+    List<Result<TimeseriesResultValue>> lotsOfZeroes = Lists.newArrayList();
+    for (final Long millis : QueryGranularity.HOUR.iterable(
+        new DateTime("2011-04-14T01").getMillis(),
+        new DateTime("2011-04-15").getMillis()
+    )) {
+      lotsOfZeroes.add(
+          new Result<>(
+              new DateTime(millis),
+              new TimeseriesResultValue(
+                  ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
+              )
+          )
+      );
+    }
+    List<Result<TimeseriesResultValue>> expectedResults1 = Lists.newArrayList(
+        Iterables.concat(
+            Arrays.asList(
+                new Result<>(
+                    new DateTime("2011-04-14T00"),
+                    new TimeseriesResultValue(
+                        ImmutableMap.<String, Object>of("rows", 13L, "idx", 4907L)
+                    )
+                )
+            ),
+            lotsOfZeroes,
+            Arrays.asList(
+                new Result<>(
+                    new DateTime("2011-04-15T00"),
+                    new TimeseriesResultValue(
+                        ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
+                    )
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
+        runner.run(query1),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults1, results1);
+  }
+
+  @Test
+  public void testTimeseriesQueryGranularityNotAlignedWithRollupGranularity()
+  {
+    TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                   .dataSource(QueryRunnerTestHelper.dataSource)
+                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .granularity(
+                                       new PeriodGranularity(
+                                           new Period("PT1H"),
+                                           new DateTime(60000),
+                                           DateTimeZone.UTC
+                                       )
+                                   )
+                                   .intervals(
+                                       Arrays.asList(
+                                           new Interval(
+                                               "2011-04-15T00:00:00.000Z/2012"
+                                           )
+                                       )
+                                   )
+                                   .aggregators(
+                                       Arrays.<AggregatorFactory>asList(
+                                           QueryRunnerTestHelper.rowsCount,
+                                           new LongSumAggregatorFactory(
+                                               "idx",
+                                               "index"
+                                           )
+                                       )
+                                   )
+                                   .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-14T23:01Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of("rows", 13L, "idx", 4717L)
             )
         )
     );

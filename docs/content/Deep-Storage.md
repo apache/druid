@@ -47,3 +47,11 @@ druid.storage.storageDirectory=<directory for storing segments>
 Note that you should generally set `druid.storage.storageDirectory` to something different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.
 
 If you are using the Hadoop indexer in local mode, then just give it a local file as your output directory and it will work.
+
+
+## Cassandra
+
+[Apache Cassandra](http://www.datastax.com/what-we-offer/products-services/datastax-enterprise/apache-cassandra) can also be leveraged for deep storage.  This requires some additional druid configuration as well as setting up the necessary schema within a Cassandra keystore.
+
+For more information on using Cassandra as deep storage, see [Cassandra Deep Storage](Cassandra-Deep-Storage.html).
+

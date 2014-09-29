@@ -28,7 +28,7 @@ import java.util.List;
 
 public class TaskConfig
 {
-  public static List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
+  public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
       "org.apache.hadoop:hadoop-client:2.3.0"
   );
 

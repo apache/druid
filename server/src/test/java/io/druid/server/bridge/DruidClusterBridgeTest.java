@@ -31,12 +31,12 @@ import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.db.DatabaseSegmentManager;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
-import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
@@ -157,6 +157,7 @@ public class DruidClusterBridgeTest
     BridgeZkCoordinator bridgeZkCoordinator = new BridgeZkCoordinator(
         jsonMapper,
         zkPathsConfig,
+        new SegmentLoaderConfig(),
         metadata,
         remoteCf,
         dbSegmentPublisher,

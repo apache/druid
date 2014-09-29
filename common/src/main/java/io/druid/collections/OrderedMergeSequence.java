@@ -22,7 +22,6 @@ package io.druid.collections;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
-import com.google.common.io.Closeables;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
@@ -38,13 +37,13 @@ import java.util.PriorityQueue;
 /**
  * An OrderedMergeIterator is an iterator that merges together multiple sorted iterators.  It is written assuming
  * that the input Iterators are provided in order.  That is, it places an extra restriction in the input iterators.
- * <p/>
+ *
  * Normally a merge operation could operate with the actual input iterators in any order as long as the actual values
  * in the iterators are sorted.  This requires that not only the individual values be sorted, but that the iterators
  * be provided in the order of the first element of each iterator.
- * <p/>
+ *
  * If this doesn't make sense, check out OrderedMergeSequenceTest.testScrewsUpOnOutOfOrderBeginningOfList()
- * <p/>
+ *
  * It places this extra restriction on the input data in order to implement an optimization that allows it to
  * remain as lazy as possible in the face of a common case where the iterators are just appended one after the other.
  */
@@ -84,7 +83,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
             new Function<Yielder<T>, T>()
             {
               @Override
-              public T apply(@Nullable Yielder<T> input)
+              public T apply(Yielder<T> input)
               {
                 return input.get();
               }

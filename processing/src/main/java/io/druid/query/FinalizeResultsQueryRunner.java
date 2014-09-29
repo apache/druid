@@ -22,12 +22,11 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
-
-import javax.annotation.Nullable;
 
 /**
  */
@@ -73,9 +72,14 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
 
         @Override
         @SuppressWarnings("unchecked")
-        public T apply(@Nullable T input)
+        public T apply(T input)
         {
           Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
+
+          if (input == null) {
+            throw new ISE("Cannot have a null result!");
+          }
+
           BySegmentResultValueClass<T> resultsClass = result.getValue();
 
           return (T) new Result<BySegmentResultValueClass>(

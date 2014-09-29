@@ -21,10 +21,13 @@ package io.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Sets;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+
+import java.util.Set;
 
 /**
  */
@@ -44,7 +47,31 @@ public class DataSchema
   )
   {
     this.dataSource = dataSource;
-    this.parser = parser;
+
+    final Set<String> dimensionExclusions = Sets.newHashSet();
+    for (AggregatorFactory aggregator : aggregators) {
+      dimensionExclusions.add(aggregator.getName());
+    }
+    if (parser != null && parser.getParseSpec() != null) {
+      if (parser.getParseSpec().getTimestampSpec() != null) {
+        dimensionExclusions.add(parser.getParseSpec().getTimestampSpec().getTimestampColumn());
+      }
+      if (parser.getParseSpec().getDimensionsSpec() != null) {
+        this.parser = parser.withParseSpec(
+            parser.getParseSpec()
+                  .withDimensionsSpec(
+                      parser.getParseSpec()
+                            .getDimensionsSpec()
+                            .withDimensionExclusions(dimensionExclusions)
+                  )
+        );
+      } else {
+        this.parser = parser;
+      }
+    } else {
+      this.parser = parser;
+    }
+
     this.aggregators = aggregators;
     this.granularitySpec = granularitySpec == null
                            ? new UniformGranularitySpec(null, null, null, null)

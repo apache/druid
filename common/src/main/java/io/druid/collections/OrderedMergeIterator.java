@@ -34,13 +34,13 @@ import java.util.PriorityQueue;
 /**
  * An OrderedMergeIterator is an iterator that merges together multiple sorted iterators.  It is written assuming
  * that the input Iterators are provided in order.  That is, it places an extra restriction in the input iterators.
- * <p/>
+ *
  * Normally a merge operation could operate with the actual input iterators in any order as long as the actual values
  * in the iterators are sorted.  This requires that not only the individual values be sorted, but that the iterators
  * be provided in the order of the first element of each iterator.
- * <p/>
+ *
  * If this doesn't make sense, check out OrderedMergeIteratorTest.testScrewsUpOnOutOfOrderBeginningOfList()
- * <p/>
+ *
  * It places this extra restriction on the input data in order to implement an optimization that allows it to
  * remain as lazy as possible in the face of a common case where the iterators are just appended one after the other.
  */
@@ -75,7 +75,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
                               new Predicate<Iterator<T>>()
                               {
                                 @Override
-                                public boolean apply(@Nullable Iterator<T> input)
+                                public boolean apply(Iterator<T> input)
                                 {
                                   return input.hasNext();
                                 }
@@ -85,7 +85,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
                               new Function<Iterator<T>, PeekingIterator<T>>()
                               {
                                 @Override
-                                public PeekingIterator<T> apply(@Nullable Iterator<T> input)
+                                public PeekingIterator<T> apply(Iterator<T> input)
                                 {
                                   return Iterators.peekingIterator(input);
                                 }

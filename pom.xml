@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.144-SNAPSHOT</version>
+    <version>0.6.157-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -39,9 +39,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <metamx.java-util.version>0.26.6</metamx.java-util.version>
+        <metamx.java-util.version>0.26.7</metamx.java-util.version>
         <apache.curator.version>2.6.0</apache.curator.version>
-        <druid.api.version>0.2.7</druid.api.version>
+        <druid.api.version>0.2.10</druid.api.version>
     </properties>
 
     <modules>
@@ -568,6 +568,9 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
                     <version>2.5</version>
+                    <configuration>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

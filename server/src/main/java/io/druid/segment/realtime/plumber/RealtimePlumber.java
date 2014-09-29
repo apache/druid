@@ -72,10 +72,8 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
-
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
-
   private final RejectionPolicy rejectionPolicy;
   private final FireDepartmentMetrics metrics;
   private final ServiceEmitter emitter;
@@ -312,6 +310,22 @@ public class RealtimePlumber implements Plumber
           {
             final Interval interval = sink.getInterval();
 
+            // use a file to indicate that pushing has completed
+            final File persistDir = computePersistDir(schema, interval);
+            final File mergedTarget = new File(persistDir, "merged");
+            final File isPushedMarker = new File(persistDir, "isPushedMarker");
+
+            if (!isPushedMarker.exists()) {
+              removeSegment(sink, mergedTarget);
+              if (mergedTarget.exists()) {
+                log.wtf("Merged target[%s] exists?!", mergedTarget);
+                return;
+              }
+            } else {
+              log.info("Already pushed sink[%s]", sink);
+              return;
+            }
+
             for (FireHydrant hydrant : sink) {
               synchronized (hydrant) {
                 if (!hydrant.hasSwapped()) {
@@ -320,12 +334,6 @@ public class RealtimePlumber implements Plumber
                   metrics.incrementRowOutputCount(rowCount);
                 }
               }
-            }
-
-            final File mergedTarget = new File(computePersistDir(schema, interval), "merged");
-            if (mergedTarget.exists()) {
-              log.info("Skipping already-merged sink: %s", sink);
-              return;
             }
 
             try {
@@ -351,6 +359,14 @@ public class RealtimePlumber implements Plumber
               );
 
               segmentPublisher.publishSegment(segment);
+
+              if (!isPushedMarker.createNewFile()) {
+                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
+                   .addData("interval", sink.getInterval())
+                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
+                   .addData("marker", isPushedMarker)
+                   .emit();
+              }
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
@@ -360,9 +376,6 @@ public class RealtimePlumber implements Plumber
                 // We're trying to shut down, and this segment failed to push. Let's just get rid of it.
                 // This call will also delete possibly-partially-written files, so we don't need to do it explicitly.
                 abandonSegment(truncatedTime, sink);
-              } else {
-                // Delete any possibly-partially-written files, so we can try again on the next push cycle.
-                removeMergedSegment(sink);
               }
             }
           }
@@ -610,9 +623,15 @@ public class RealtimePlumber implements Plumber
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
     log.info("Starting merge and push.");
-
     DateTime minTimestampAsDate = segmentGranularity.truncate(
-        rejectionPolicy.getCurrMaxTime().minus(windowMillis)
+        new DateTime(
+            Math.max(
+                windowMillis,
+                rejectionPolicy.getCurrMaxTime()
+                               .getMillis()
+            )
+            - windowMillis
+        )
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
@@ -644,12 +663,15 @@ public class RealtimePlumber implements Plumber
    * Unannounces a given sink and removes all local references to it. It is important that this is only called
    * from the single-threaded mergeExecutor, since otherwise chaos may ensue if merged segments are deleted while
    * being created.
+   *
+   * @param truncatedTime sink key
+   * @param sink sink to unannounce
    */
   protected void abandonSegment(final long truncatedTime, final Sink sink)
   {
     try {
       segmentAnnouncer.unannounceSegment(sink.getSegment());
-      removeMergedSegment(sink);
+      removeSegment(sink, computePersistDir(schema, sink.getInterval()));
       log.info("Removing sinkKey %d for segment %s", truncatedTime, sink.getSegment().getIdentifier());
       sinks.remove(truncatedTime);
       sinkTimeline.remove(
@@ -681,9 +703,9 @@ public class RealtimePlumber implements Plumber
   /**
    * Persists the given hydrant and returns the number of rows persisted
    *
-   * @param indexToPersist
-   * @param schema
-   * @param interval
+   * @param indexToPersist hydrant to persist
+   * @param schema datasource schema
+   * @param interval interval to persist
    *
    * @return the number of rows persisted
    */
@@ -785,29 +807,29 @@ public class RealtimePlumber implements Plumber
                 && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 && Iterables.any(
                     sinks.keySet(), new Predicate<Long>()
-                    {
-                      @Override
-                      public boolean apply(Long sinkKey)
-                      {
-                        return segment.getInterval().contains(sinkKey);
-                      }
-                    }
+                {
+                  @Override
+                  public boolean apply(Long sinkKey)
+                  {
+                    return segment.getInterval().contains(sinkKey);
+                  }
+                }
                 );
           }
         }
     );
   }
 
-  private void removeMergedSegment(final Sink sink)
+  private void removeSegment(final Sink sink, final File target)
   {
-    final File mergedTarget = new File(computePersistDir(schema, sink.getInterval()), "merged");
-    if (mergedTarget.exists()) {
+    if (target.exists()) {
       try {
-        log.info("Deleting Index File[%s]", mergedTarget);
-        FileUtils.deleteDirectory(mergedTarget);
+        log.info("Deleting Index File[%s]", target);
+        FileUtils.deleteDirectory(target);
       }
       catch (Exception e) {
-        log.makeAlert(e, "Unable to remove merged segment for dataSource[%s]", schema.getDataSource())
+        log.makeAlert(e, "Unable to remove file for dataSource[%s]", schema.getDataSource())
+           .addData("file", target)
            .addData("interval", sink.getInterval())
            .emit();
       }

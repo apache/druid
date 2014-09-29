@@ -40,11 +40,14 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * This method doesn't belong here, but it's here for now just to make it work.
    *
-   * @param seqOfSequences
+   * @param seqOfSequences sequence of sequences to be merged
    *
-   * @return
+   * @return the sequence of merged results
    */
   public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences);
+
+  public abstract Sequence<ResultType> mergeSequencesUnordered(Sequence<Sequence<ResultType>> seqOfSequences);
+
 
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
 

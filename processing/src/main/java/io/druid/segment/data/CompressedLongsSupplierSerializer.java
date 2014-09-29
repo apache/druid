@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.io.ByteStreams;
-import com.google.common.io.Closeables;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;

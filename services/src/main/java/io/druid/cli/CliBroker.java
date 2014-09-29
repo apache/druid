@@ -34,19 +34,18 @@ import io.druid.client.cache.CacheProvider;
 import io.druid.client.selector.CustomTierSelectorStrategyConfig;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.client.selector.TierSelectorStrategy;
-import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Self;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
+import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import org.eclipse.jetty.server.Server;
@@ -95,8 +94,8 @@ public class CliBroker extends ServerRunnable
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
             LifecycleModule.register(binder, QueryResource.class);
+            LifecycleModule.register(binder, DruidBroker.class);
 
-            DiscoveryModule.register(binder, Self.class);
             MetricsModule.register(binder, CacheMonitor.class);
 
             LifecycleModule.register(binder, Server.class);

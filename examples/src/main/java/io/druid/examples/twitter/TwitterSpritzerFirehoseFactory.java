@@ -58,18 +58,11 @@ import static java.lang.Thread.sleep;
  * with timestamps along with ??.
  * The generated tuples have the form (timestamp, ????)
  * where the timestamp is from the twitter event.
- * <p>
- * <p/>
- * </p>
+ *
  * Example spec file:
- * <pre>
- * </pre>
- * <p/>
+ *
  * Example query using POST to /druid/v2/?w  (where w is an arbitrary parameter and the date and time
  * is UTC):
- * <pre>
- * </pre>
- *
  *
  * Notes on twitter.com HTTP (REST) API: v1.0 will be disabled around 2013-03 so v1.1 should be used;
  * twitter4j 3.0 (not yet released) will support the v1.1 api.

@@ -34,7 +34,7 @@ public interface ObjectStrategy<T> extends Comparator<T>
    *
    * @param buffer buffer to read value from
    * @param numBytes number of bytes used to store the value, starting at buffer.position()
-   * @return
+   * @return an object created from the given byte buffer representation
    */
   public T fromByteBuffer(ByteBuffer buffer, int numBytes);
   public byte[] toBytes(T val);

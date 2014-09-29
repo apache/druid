@@ -572,6 +572,12 @@ public class ServerManagerTest
     }
 
     @Override
+    public Sequence<T> mergeSequencesUnordered(Sequence<Sequence<T>> seqOfSequences)
+    {
+      return new ConcatSequence<T>(seqOfSequences);
+    }
+
+    @Override
     public ServiceMetricEvent.Builder makeMetricBuilder(QueryType query)
     {
       return new ServiceMetricEvent.Builder();

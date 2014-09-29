@@ -145,7 +145,7 @@ public class SQLRunner
     final URLConnection urlConnection = url.openConnection();
     urlConnection.addRequestProperty("content-type", "application/json");
     urlConnection.getOutputStream().write(queryStr.getBytes(Charsets.UTF_8));
-    BufferedReader stdInput = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+    BufferedReader stdInput = new BufferedReader(new InputStreamReader(urlConnection.getInputStream(), Charsets.UTF_8));
 
     Object res = objectMapper.readValue(stdInput, typeRef);
 

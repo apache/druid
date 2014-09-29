@@ -26,7 +26,6 @@ import com.metamx.common.ISE;
 import io.druid.TestUtil;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;

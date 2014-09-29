@@ -127,7 +127,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
-        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
+        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(query.getContext());
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
@@ -193,7 +193,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    return new OrderedMergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Row> mergeSequencesUnordered(Sequence<Sequence<Row>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  private Ordering<Row> getOrdering()
+  {
+    return Ordering.<Row>natural().nullsFirst();
   }
 
   @Override
@@ -257,6 +268,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
     return new CacheStrategy<Row, Object, GroupByQuery>()
     {
+      private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
@@ -342,14 +355,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
             DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
 
+            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
+
+            Map<String, Object> event = jsonMapper.convertValue(
+                results.next(),
+                new TypeReference<Map<String, Object>>()
+                {
+                }
+            );
+
+            while (aggsIter.hasNext()) {
+              final AggregatorFactory factory = aggsIter.next();
+              Object agg = event.get(factory.getName());
+              if (agg != null) {
+                event.put(factory.getName(), factory.deserialize(agg));
+              }
+            }
+
             return new MapBasedRow(
                 timestamp,
-                (Map<String, Object>) jsonMapper.convertValue(
-                    results.next(),
-                    new TypeReference<Map<String, Object>>()
-                    {
-                    }
-                )
+                event
             );
           }
         };
@@ -358,7 +383,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
       {
-        return new MergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

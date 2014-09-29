@@ -48,6 +48,7 @@ import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -1436,6 +1437,56 @@ public class GroupByQueryRunnerTest
             "js_outer_agg",
             162.74722290039062
         )
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<Row> results = runQuery(query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testSubqueryWithHyperUniques()
+  {
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index"),
+                new HyperUniquesAggregatorFactory("quality_uniques", "quality_uniques")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongSumAggregatorFactory("rows", "rows"),
+                new LongSumAggregatorFactory("idx", "idx"),
+                new HyperUniquesAggregatorFactory("uniq", "quality_uniques")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 282L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 230L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 324L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 233L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 5317L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 235L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 5405L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 175L, "uniq", 1.0002442201269182),
+        createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 245L, "uniq", 1.0002442201269182)
     );
 
     // Subqueries are handled by the ToolChest

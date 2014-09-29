@@ -176,6 +176,7 @@ public class CuratorInventoryManagerTest extends io.druid.curator.CuratorTestBas
     private volatile CountDownLatch deadContainerLatch = null;
     private volatile CountDownLatch newInventoryLatch = null;
     private volatile CountDownLatch deadInventoryLatch = null;
+    private volatile boolean initialized = false;
 
     @Override
     public Map<String, Integer> deserializeContainer(byte[] bytes)
@@ -270,6 +271,12 @@ public class CuratorInventoryManagerTest extends io.druid.curator.CuratorTestBas
     private void setDeadInventoryLatch(CountDownLatch deadInventoryLatch)
     {
       this.deadInventoryLatch = deadInventoryLatch;
+    }
+
+    @Override
+    public void inventoryInitialized()
+    {
+      initialized = true;
     }
   }
 }

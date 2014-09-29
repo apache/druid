@@ -20,6 +20,7 @@
 package io.druid.query.search;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -111,7 +112,13 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public Sequence<Result<SearchResultValue>> mergeSequences(Sequence<Sequence<Result<SearchResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<SearchResultValue>>(getOrdering(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Result<SearchResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<SearchResultValue>>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -166,7 +173,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         int dimensionsBytesSize = 0;
         int index = 0;
         for (String dimension : dimensions) {
-          dimensionsBytes[index] = dimension.getBytes();
+          dimensionsBytes[index] = dimension.getBytes(Charsets.UTF_8);
           dimensionsBytesSize += dimensionsBytes[index].length;
           ++index;
         }

@@ -47,14 +47,14 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * A QueryRunner that combines a list of other QueryRunners and executes them in parallel on an executor.
- * <p/>
+ *
  * When using this, it is important to make sure that the list of QueryRunners provided is fully flattened.
  * If, for example, you were to pass a list of a Chained QueryRunner (A) and a non-chained QueryRunner (B).  Imagine
  * A has 2 QueryRunner chained together (Aa and Ab), the fact that the Queryables are run in parallel on an
  * executor would mean that the Queryables are actually processed in the order
- * <p/>
- * A -> B -> Aa -> Ab
- * <p/>
+ *
+ * <pre>A -&gt; B -&gt; Aa -&gt; Ab</pre>
+ *
  * That is, the two sub queryables for A would run *after* B is run, effectively meaning that the results for B
  * must be fully cached in memory before the results for Aa and Ab are computed.
  */

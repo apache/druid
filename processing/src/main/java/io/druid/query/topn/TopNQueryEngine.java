@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -38,7 +37,6 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
-import javax.sql.rowset.Predicate;
 import java.nio.ByteBuffer;
 import java.util.List;
 

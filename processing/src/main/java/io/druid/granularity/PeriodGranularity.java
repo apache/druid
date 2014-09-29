@@ -21,6 +21,7 @@ package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -301,14 +302,17 @@ public class  PeriodGranularity extends BaseQueryGranularity
     return current;
   }
 
-  private long truncateMillisPeriod(long t)
+  private long truncateMillisPeriod(final long t)
   {
     // toStandardDuration assumes days are always 24h, and hours are always 60 minutes,
     // which may not always be the case, e.g if there are daylight saving changes.
-    if(chronology.days().isPrecise() && chronology.hours().isPrecise()) {
+    if (chronology.days().isPrecise() && chronology.hours().isPrecise()) {
       final long millis = period.toStandardDuration().getMillis();
-      t -= t % millis + origin % millis;
-      return t;
+      long offset = t % millis - origin % millis;
+      if(offset < 0) {
+        offset += millis;
+      }
+      return t - offset;
     }
     else
     {
@@ -322,7 +326,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
   @Override
   public byte[] cacheKey()
   {
-    return (period.toString() + ":" + chronology.getZone().toString()).getBytes();
+    return (period.toString() + ":" + chronology.getZone().toString()).getBytes(Charsets.UTF_8);
   }
 
   @Override

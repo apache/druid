@@ -19,9 +19,7 @@
 
 package io.druid.storage.hdfs;
 
-import com.google.common.io.Closeables;
 import com.google.inject.Inject;
-import com.metamx.common.guava.CloseQuietly;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
