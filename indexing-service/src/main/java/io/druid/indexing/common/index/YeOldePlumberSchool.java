@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -99,9 +100,9 @@ public class YeOldePlumberSchool implements PlumberSchool
     return new Plumber()
     {
       @Override
-      public void startJob()
+      public Object startJob()
       {
-
+        return null;
       }
 
       @Override
@@ -226,6 +227,12 @@ public class YeOldePlumberSchool implements PlumberSchool
       private File getSpillDir(final int n)
       {
         return new File(persistDir, String.format("spill%d", n));
+      }
+
+      @Override
+      public void persist(Committer commitRunnable)
+      {
+        persist(commitRunnable);
       }
     };
   }

@@ -38,6 +38,12 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
+  public Object getMetaData()
+  {
+  	return null;
+  }
+  
+  @Override
   public Interval getDataInterval()
   {
     return baseAdapter.getDataInterval();

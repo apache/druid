@@ -281,8 +281,9 @@ public class TaskSerdeTest
               {
                 return null;
               }
-            }
-            ),
+            },
+            null),
+
             new RealtimeTuningConfig(
                 1,
                 new Period("PT10M"),

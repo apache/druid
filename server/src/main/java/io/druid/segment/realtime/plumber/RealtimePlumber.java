@@ -40,6 +40,9 @@ import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
+import io.druid.data.input.Committer;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
@@ -82,6 +85,9 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -120,7 +126,6 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService persistExecutor = null;
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
-
 
   public RealtimePlumber(
       DataSchema schema,
@@ -171,15 +176,17 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public void startJob()
+  public Object startJob()
   {
     computeBaseDir(schema).mkdirs();
     initializeExecutors();
-    bootstrapSinksFromDisk();
+    Object retVal = bootstrapSinksFromDisk();
     registerServerViewCallback();
     startPersistThread();
     // Push pending sinks bootstrapped from previous run
     mergeAndPush();
+
+    return retVal;
   }
 
   @Override
@@ -333,6 +340,27 @@ public class RealtimePlumber implements Plumber
   @Override
   public void persist(final Runnable commitRunnable)
   {
+    persist(
+        new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return null;
+          }
+
+          @Override
+          public void run()
+          {
+            commitRunnable.run();
+          }
+        }
+    );
+  }
+
+  @Override
+  public void persist(final Committer commitRunnable)
+  {
     final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
     for (Sink sink : sinks.values()) {
       if (sink.swappable()) {
@@ -352,7 +380,11 @@ public class RealtimePlumber implements Plumber
           {
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
-                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs));
+                metrics.incrementRowOutputCount(
+                    persistHydrant(
+                        pair.lhs, schema, pair.rhs, commitRunnable.getMetadata()
+                    )
+                );
               }
               commitRunnable.run();
             }
@@ -417,7 +449,7 @@ public class RealtimePlumber implements Plumber
               synchronized (hydrant) {
                 if (!hydrant.hasSwapped()) {
                   log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                  final int rowCount = persistHydrant(hydrant, schema, interval);
+                  final int rowCount = persistHydrant(hydrant, schema, interval, null);
                   metrics.incrementRowOutputCount(rowCount);
                 }
               }
@@ -450,19 +482,27 @@ public class RealtimePlumber implements Plumber
               }
 
               QueryableIndex index = IndexIO.loadIndex(mergedFile);
+              log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
+              try {
+                DataSegment segment = dataSegmentPusher.push(
+                    mergedFile,
+                    sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+                );
+                log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
+                segmentPublisher.publishSegment(segment);
 
-              DataSegment segment = dataSegmentPusher.push(
-                  mergedFile,
-                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
-              );
-
-              segmentPublisher.publishSegment(segment);
-
-              if (!isPushedMarker.createNewFile()) {
-                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
-                   .addData("interval", sink.getInterval())
-                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
-                   .addData("marker", isPushedMarker)
+                if (!isPushedMarker.createNewFile()) {
+                  log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
+                     .addData("interval", sink.getInterval())
+                     .addData("partitionNum", segment.getShardSpec().getPartitionNum())
+                     .addData("marker", isPushedMarker)
+                     .emit();
+                }
+              }
+              catch (Throwable e) {
+                log.info("Exception happen when pushing to deep storage");
+                log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
+                   .addData("interval", interval)
                    .emit();
               }
             }
@@ -565,20 +605,22 @@ public class RealtimePlumber implements Plumber
     }
   }
 
-  protected void bootstrapSinksFromDisk()
+  protected Object bootstrapSinksFromDisk()
   {
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
     File baseDir = computeBaseDir(schema);
     if (baseDir == null || !baseDir.exists()) {
-      return;
+      return null;
     }
 
     File[] files = baseDir.listFiles();
     if (files == null) {
-      return;
+      return null;
     }
 
+    Object metadata = null;
+    long latestCommitTime = 0;
     for (File sinkDir : files) {
       Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
 
@@ -611,7 +653,7 @@ public class RealtimePlumber implements Plumber
             }
           }
       );
-
+      boolean isCorrupted = false;
       try {
         List<FireHydrant> hydrants = Lists.newArrayList();
         for (File segmentDir : sinkFiles) {
@@ -623,7 +665,35 @@ public class RealtimePlumber implements Plumber
           if (Ints.tryParse(segmentDir.getName()) == null) {
             continue;
           }
-
+          QueryableIndex queryableIndex = null;
+          try {
+            queryableIndex = IndexIO.loadIndex(segmentDir);
+          }
+          catch (IOException e) {
+            log.error(e, "Problem loading segmentDir from disk.");
+            isCorrupted = true;
+          }
+          if (isCorrupted) {
+            try {
+              File corruptSegmentDir = computeCorruptedFileDumpDir(segmentDir, schema);
+              log.info("Renaming %s to %s", segmentDir.getAbsolutePath(), corruptSegmentDir.getAbsolutePath());
+              FileUtils.copyDirectory(segmentDir, corruptSegmentDir);
+              FileUtils.deleteDirectory(segmentDir);
+            }
+            catch (Exception e1) {
+              log.error(e1, "Failed to rename %s", segmentDir.getAbsolutePath());
+            }
+            continue;
+          }
+          BasicFileAttributes attr = Files.readAttributes(segmentDir.toPath(), BasicFileAttributes.class);
+          if (attr.creationTime().toMillis() > latestCommitTime) {
+            log.info(
+                "Found metaData [%s] with latestCommitTime [%s] greater than previous recorded [%s]",
+                queryableIndex.getMetaData(), attr.creationTime().toMillis(), latestCommitTime
+            );
+            latestCommitTime = attr.creationTime().toMillis();
+            metadata = queryableIndex.getMetaData();
+          }
           hydrants.add(
               new FireHydrant(
                   new QueryableIndexSegment(
@@ -634,13 +704,12 @@ public class RealtimePlumber implements Plumber
                           versioningPolicy.getVersion(sinkInterval),
                           config.getShardSpec()
                       ),
-                      IndexIO.loadIndex(segmentDir)
+                      queryableIndex
                   ),
                   Integer.parseInt(segmentDir.getName())
               )
           );
         }
-
         Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
@@ -657,6 +726,7 @@ public class RealtimePlumber implements Plumber
            .emit();
       }
     }
+    return metadata;
   }
 
   protected void startPersistThread()
@@ -798,6 +868,11 @@ public class RealtimePlumber implements Plumber
     return new File(config.getBasePersistDirectory(), schema.getDataSource());
   }
 
+  protected File computeCorruptedFileDumpDir(File persistDir, DataSchema schema)
+  {
+    return new File(persistDir.getAbsolutePath().replace(schema.getDataSource(), "corrupted/"+schema.getDataSource()));
+  }
+ 
   protected File computePersistDir(DataSchema schema, Interval interval)
   {
     return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
@@ -812,7 +887,7 @@ public class RealtimePlumber implements Plumber
    *
    * @return the number of rows persisted
    */
-  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval)
+  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval, Object commitMetaData)
   {
     synchronized (indexToPersist) {
       if (indexToPersist.hasSwapped()) {
@@ -824,9 +899,10 @@ public class RealtimePlumber implements Plumber
       }
 
       log.info(
-          "DataSource[%s], Interval[%s], persisting Hydrant[%s]",
+          "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
+          commitMetaData,
           indexToPersist
       );
       try {
@@ -838,6 +914,7 @@ public class RealtimePlumber implements Plumber
           persistedFile = IndexMaker.persist(
               indexToPersist.getIndex(),
               new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
+              commitMetaData,
               indexSpec
           );
         } else {

@@ -486,7 +486,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       return IndexMaker.persist(
-          index, interval, file, config.getIndexSpec(), progressIndicator
+          index, interval, file, null, config.getIndexSpec(), progressIndicator
       );
     }
 

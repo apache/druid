@@ -128,7 +128,7 @@ public class IndexMakerParameterizedTest
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
     final File tempDir = temporaryFolder.newFolder();
-    QueryableIndex index = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist, tempDir, indexSpec)));
+    QueryableIndex index = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist, tempDir, null, indexSpec)));
 
     Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
@@ -171,13 +171,13 @@ public class IndexMakerParameterizedTest
     final File tempDir2 = temporaryFolder.newFolder();
     final File mergedDir = temporaryFolder.newFolder();
 
-    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, indexSpec)));
+    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, null, indexSpec)));
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
-    QueryableIndex index2 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist2, tempDir2, indexSpec)));
+    QueryableIndex index2 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist2, tempDir2, null, indexSpec)));
 
     Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
@@ -242,6 +242,7 @@ public class IndexMakerParameterizedTest
             IndexMaker.persist(
                 toPersist1,
                 tmpDir1,
+                null,
                 indexSpec
             )
         )
@@ -251,6 +252,7 @@ public class IndexMakerParameterizedTest
             IndexMaker.persist(
                 toPersist1,
                 tmpDir2,
+                null,
                 indexSpec
             )
         )
@@ -291,7 +293,7 @@ public class IndexMakerParameterizedTest
                  .getBitmapFactory()
     );
 
-    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, indexSpec)));
+    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, null, indexSpec)));
 
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
@@ -394,7 +396,7 @@ public class IndexMakerParameterizedTest
                  .getBitmapFactory()
     );
 
-    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, indexSpec)));
+    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, null, indexSpec)));
 
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
@@ -451,7 +453,7 @@ public class IndexMakerParameterizedTest
                  .getBitmapFactory()
     );
 
-    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, indexSpec)));
+    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, null, indexSpec)));
 
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
@@ -500,7 +502,7 @@ public class IndexMakerParameterizedTest
                  .getBitmapFactory()
     );
 
-    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, indexSpec)));
+    QueryableIndex index1 = closer.closeLater(IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1, null, indexSpec)));
 
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
