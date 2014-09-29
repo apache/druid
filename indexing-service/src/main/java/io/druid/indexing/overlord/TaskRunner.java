@@ -42,6 +42,8 @@ public interface TaskRunner
   /**
    * Inform the task runner it can clean up any resources associated with a task. This implies shutdown of any
    * currently-running tasks.
+   *
+   * @param taskid task ID to clean up resources for
    */
   public void shutdown(String taskid);
 

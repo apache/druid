@@ -28,7 +28,7 @@ import com.google.common.base.Preconditions;
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
  * ({@link #isComplete()} false) or it may be complete ({@link #isComplete()} true).
- * <p/>
+ *
  * TaskStatus objects are immutable.
  */
 public class TaskStatus
@@ -101,6 +101,8 @@ public class TaskStatus
   /**
    * Signals that a task is not yet complete, and is still runnable on a worker. Exactly one of isRunnable,
    * isSuccess, or isFailure will be true at any one time.
+   *
+   * @return whether the task is runnable.
    */
   @JsonIgnore
   public boolean isRunnable()
@@ -110,6 +112,8 @@ public class TaskStatus
 
   /**
    * Inverse of {@link #isRunnable}.
+   *
+   * @return whether the task is complete.
    */
   @JsonIgnore
   public boolean isComplete()
@@ -120,6 +124,8 @@ public class TaskStatus
   /**
    * Returned by tasks when they spawn subtasks. Exactly one of isRunnable, isSuccess, or isFailure will
    * be true at any one time.
+   *
+   * @return whether the task succeeded.
    */
   @JsonIgnore
   public boolean isSuccess()
@@ -130,6 +136,8 @@ public class TaskStatus
   /**
    * Returned by tasks when they complete unsuccessfully. Exactly one of isRunnable, isSuccess, or
    * isFailure will be true at any one time.
+   *
+   * @return whether the task failed
    */
   @JsonIgnore
   public boolean isFailure()

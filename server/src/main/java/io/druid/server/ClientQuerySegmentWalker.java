@@ -19,6 +19,8 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -26,6 +28,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachingClusteredClient;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
+import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
@@ -38,6 +41,7 @@ import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  */
@@ -47,19 +51,22 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final CachingClusteredClient baseClient;
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
+  private final ObjectMapper objectMapper;
 
   @Inject
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
       CachingClusteredClient baseClient,
       QueryToolChestWarehouse warehouse,
-      RetryQueryRunnerConfig retryConfig
+      RetryQueryRunnerConfig retryConfig,
+      ObjectMapper objectMapper
   )
   {
     this.emitter = emitter;
     this.baseClient = baseClient;
     this.warehouse = warehouse;
     this.retryConfig = retryConfig;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -74,13 +81,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return makeRunner(query);
   }
 
-  private <T> FinalizeResultsQueryRunner<T> makeRunner(final Query<T> query)
+  private <T> QueryRunner<T> makeRunner(final Query<T> query)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    return new FinalizeResultsQueryRunner<T>(
+    final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                new UnionQueryRunner<T>(
+                new UnionQueryRunner<>(
                     new MetricsEmittingQueryRunner<T>(
                         emitter,
                         new Function<Query<T>, ServiceMetricEvent.Builder>()
@@ -91,8 +98,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                             return toolChest.makeMetricBuilder(query);
                           }
                         },
-                        toolChest.preMergeQueryDecoration(new RetryQueryRunner<T>(baseClient, toolChest, retryConfig)
+                        toolChest.preMergeQueryDecoration(
+                            new RetryQueryRunner<T>(
+                                baseClient,
+                                retryConfig,
+                                objectMapper
                             )
+                        )
                     ).withWaitMeasuredFromNow(),
                     toolChest
                 )
@@ -100,5 +112,20 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         ),
         toolChest
     );
+
+
+    final Map<String, Object> context = query.getContext();
+    PostProcessingOperator<T> postProcessing = null;
+    if (context != null) {
+      postProcessing = objectMapper.convertValue(
+          context.get("postProcessing"),
+          new TypeReference<PostProcessingOperator<T>>()
+          {
+          }
+      );
+    }
+
+    return postProcessing != null ?
+           postProcessing.postProcess(baseRunner) : baseRunner;
   }
 }

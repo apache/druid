@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.metamx.common.guava.Sequence;
 import io.druid.data.input.Row;
-import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;

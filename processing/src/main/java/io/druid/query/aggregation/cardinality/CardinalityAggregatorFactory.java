@@ -39,7 +39,6 @@ import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -231,6 +230,40 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   public Object getAggregatorStartValue()
   {
     return HyperLogLogCollector.makeLatestCollector();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    CardinalityAggregatorFactory that = (CardinalityAggregatorFactory) o;
+
+    if (byRow != that.byRow) {
+      return false;
+    }
+    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) {
+      return false;
+    }
+    if (name != null ? !name.equals(that.name) : that.name != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (fieldNames != null ? fieldNames.hashCode() : 0);
+    result = 31 * result + (byRow ? 1 : 0);
+    return result;
   }
 
   @Override

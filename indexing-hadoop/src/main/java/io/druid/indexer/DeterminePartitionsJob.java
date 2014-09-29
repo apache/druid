@@ -81,13 +81,13 @@ import java.util.Map;
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
  * choosing the best dimension that satisfies the criteria:
- * <p/>
+ * 
  * <ul>
  * <li>Must have exactly one value per row.</li>
  * <li>Must not generate oversized partitions. A dimension with N rows having the same value will necessarily
  * put all those rows in the same partition, and that partition may be much larger than the target size.</li>
  * </ul>
- * <p/>
+ * 
  * "Best" means a very high cardinality dimension, or, if none exist, the dimension that minimizes variation of
  * segment size relative to the target.
  */

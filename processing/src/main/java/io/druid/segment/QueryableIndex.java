@@ -33,7 +33,7 @@ public interface QueryableIndex extends ColumnSelector
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
-   * @throws java.io.IOException
+   * @throws java.io.IOException if an exception was thrown closing the index
    */
   @Deprecated
   public void close() throws IOException;

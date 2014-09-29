@@ -19,7 +19,6 @@
 
 package io.druid.server.http;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -43,7 +42,6 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;

@@ -28,8 +28,6 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.SequenceTestHelper;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.TestSequence;
-import com.metamx.common.guava.Yielder;
-import com.metamx.common.guava.YieldingAccumulator;
 import junit.framework.Assert;
 import org.junit.Test;
 

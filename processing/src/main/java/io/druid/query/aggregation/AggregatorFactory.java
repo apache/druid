@@ -26,9 +26,9 @@ import java.util.List;
 
 /**
  * Processing related interface
- * <p/>
+ * 
  * An AggregatorFactory is an object that knows how to generate an Aggregator using a ColumnSelectorFactory.
- * <p/>
+ * 
  * This is useful as an abstraction to allow Aggregator classes to be written in terms of MetricSelector objects
  * without making any assumptions about how they are pulling values out of the base data.  That is, the data is
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how

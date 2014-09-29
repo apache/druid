@@ -21,9 +21,6 @@ package io.druid.examples.web;
 
 import org.junit.Test;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-
 public class WebJsonSupplierTest
 {
   @Test(expected = IllegalStateException.class)

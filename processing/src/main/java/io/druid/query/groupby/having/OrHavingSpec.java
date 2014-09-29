@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Row;
-import io.druid.query.Result;
 
 import java.nio.ByteBuffer;
 import java.util.List;

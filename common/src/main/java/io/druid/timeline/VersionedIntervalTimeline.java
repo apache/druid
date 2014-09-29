@@ -42,17 +42,17 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * VersionedIntervalTimeline is a data structure that manages objects on a specific timeline.
- * <p/>
+ *
  * It associates a jodatime Interval and a generically-typed version with the object that is being stored.
- * <p/>
+ *
  * In the event of overlapping timeline entries, timeline intervals may be chunked. The underlying data associated
  * with a timeline entry remains unchanged when chunking occurs.
- * <p/>
+ *
  * After loading objects via the add() method, the lookup(Interval) method can be used to get the list of the most
  * recent objects (according to the version) that match the given interval.  The intent is that objects represent
  * a certain time period and when you do a lookup(), you are asking for all of the objects that you need to look
  * at in order to get a correct answer about that time period.
- * <p/>
+ *
  * The findOvershadowed() method returns a list of objects that will never be returned by a call to lookup() because
  * they are overshadowed by some other object.  This can be used in conjunction with the add() and remove() methods
  * to achieve "atomic" updates.  First add new items, then check if those items caused anything to be overshadowed, if
