@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
@@ -30,6 +31,7 @@ public class FileTaskLogsConfig
   @NotNull
   private File directory = new File("log");
 
+  @JsonCreator
   public FileTaskLogsConfig(File directory)
   {
     this.directory = directory;
