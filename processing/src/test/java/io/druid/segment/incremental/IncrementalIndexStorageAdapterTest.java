@@ -112,7 +112,7 @@ public class IncrementalIndexStorageAdapterTest
   public void testObjectColumnSelectorOnVaryingColumnSchema() throws Exception
   {
     IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, TestQueryRunners.pool
     );
 
     index.add(
