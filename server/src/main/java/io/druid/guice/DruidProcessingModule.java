@@ -98,9 +98,6 @@ public class DruidProcessingModule implements Module
     } catch(UnsupportedOperationException e) {
       log.info(e.getMessage());
     }
-    catch(RuntimeException e) {
-      log.warn(e, e.getMessage());
-    }
 
     return new IntermediateProcessingBufferPool(config.intermediateComputeSizeBytes());
   }
