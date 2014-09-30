@@ -160,7 +160,7 @@ public class ZkWorker implements Closeable
 
   public ImmutableZkWorker toImmutable()
   {
-    return new ImmutableZkWorker(this);
+    return new ImmutableZkWorker(worker, getCurrCapacityUsed(), getAvailabilityGroups());
   }
 
   @Override

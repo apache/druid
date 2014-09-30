@@ -24,10 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableZkWorker;
-import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 
 import java.util.Comparator;
@@ -37,8 +35,6 @@ import java.util.TreeSet;
  */
 public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 {
-  private static final EmittingLogger log = new EmittingLogger(FillCapacityWorkerSelectStrategy.class);
-
   private final RemoteTaskRunnerConfig config;
 
   @Inject
@@ -77,7 +73,6 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
         return Optional.of(zkWorker);
       }
     }
-    log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
 
     return Optional.absent();
   }

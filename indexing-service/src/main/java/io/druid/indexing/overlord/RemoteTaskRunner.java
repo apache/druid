@@ -544,6 +544,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         announceTask(task, zkWorker, taskRunnerWorkItem);
         return true;
       } else {
+        log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
         return false;
       }
     }
