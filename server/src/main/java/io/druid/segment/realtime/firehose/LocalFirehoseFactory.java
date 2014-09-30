@@ -30,11 +30,12 @@ import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.apache.commons.io.filefilter.RegexFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -79,25 +80,19 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
-    File[] foundFiles = baseDir.listFiles(
-        new FilenameFilter()
-        {
-          @Override
-          public boolean accept(File file, String name)
-          {
-            return name.contains(filter);
-          }
-        }
+    Collection<File> foundFiles = FileUtils.listFiles(
+        baseDir,
+        new RegexFileFilter(filter),
+        TrueFileFilter.INSTANCE
     );
 
-    if (foundFiles == null || foundFiles.length == 0) {
+    if (foundFiles == null || foundFiles.isEmpty()) {
       throw new ISE("Found no files to ingest! Check your schema.");
     }
 
-    final LinkedList<File> files = Lists.<File>newLinkedList(
-        Arrays.asList(foundFiles)
+    final LinkedList<File> files = Lists.newLinkedList(
+        foundFiles
     );
-
 
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
