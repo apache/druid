@@ -97,6 +97,7 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
           ((RealtimePlumberSchool) plumberSchool).getRejectionPolicyFactory(),
           ((RealtimePlumberSchool) plumberSchool).getMaxPendingPersists(),
           schema.getShardSpec(),
+          false,
           false
       );
     } else {

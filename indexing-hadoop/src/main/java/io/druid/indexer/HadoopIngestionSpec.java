@@ -166,6 +166,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           ignoreInvalidRows,
           jobProperties,
           combineText,
+          false,
           false
       );
     }

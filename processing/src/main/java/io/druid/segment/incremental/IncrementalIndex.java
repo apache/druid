@@ -57,6 +57,7 @@ import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.mapdb.BTreeKeySerializer;
+import org.mapdb.CC;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
@@ -326,17 +327,20 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
     this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-    this.useOffheap = true;
+    this.useOffheap = useOffheap;
     if (this.useOffheap) {
-      final DBMaker dbMaker = DBMaker.newMemoryDirectDB().transactionDisable().asyncWriteEnable().cacheSoftRefEnable();
+      final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
+                                     .transactionDisable()
+                                     .asyncWriteEnable()
+                                     .cacheSoftRefEnable();
       db = dbMaker.make();
       factsDb = dbMaker.make();
       final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
       this.facts = factsDb.createTreeMap("__facts" + UUID.randomUUID())
-                     .keySerializer(timeAndDimsSerializer)
-                     .comparator(timeAndDimsSerializer.getComparator())
-                     .valueSerializer(Serializer.INTEGER)
-                     .make();
+                          .keySerializer(timeAndDimsSerializer)
+                          .comparator(timeAndDimsSerializer.getComparator())
+                          .valueSerializer(Serializer.INTEGER)
+                          .make();
     } else {
       db = null;
       factsDb = null;

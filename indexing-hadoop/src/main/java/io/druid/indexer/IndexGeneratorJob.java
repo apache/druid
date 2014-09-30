@@ -634,7 +634,8 @@ public class IndexGeneratorJob implements Jobby
       for (AggregatorFactory agg : aggs) {
         aggsSize += agg.getMaxIntermediateSize();
       }
-      int bufferSize = aggsSize * config.getSchema().getTuningConfig().getRowFlushBoundary();
+      final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
+      int bufferSize = aggsSize * tuningConfig.getRowFlushBoundary();
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
@@ -643,7 +644,7 @@ public class IndexGeneratorJob implements Jobby
               .withMetrics(aggs)
               .build(),
           new OffheapBufferPool(bufferSize),
-          false
+          tuningConfig.isIngestOffheap()
       );
     }
 

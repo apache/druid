@@ -189,7 +189,7 @@ public class Sink implements Iterable<FireHydrant>
             .withMetrics(schema.getAggregators())
             .build(),
         new OffheapBufferPool(bufferSize),
-        false
+        config.isIngestOffheap()
     );
 
     FireHydrant old;
