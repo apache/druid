@@ -47,7 +47,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
     this.config = config;
   }
 
-  public Optional<ZkWorker> findWorkerForTask(
+  public Optional<ImmutableZkWorker> findWorkerForTask(
       final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
       final Task task
   )

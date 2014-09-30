@@ -76,7 +76,7 @@ public class Worker
     return "Worker{" +
            "host='" + host + '\'' +
            ", ip='" + ip + '\'' +
-           ", capacity=" + capacity +
+           ",  capacity=" + capacity +
            ", version='" + version + '\'' +
            '}';
   }
