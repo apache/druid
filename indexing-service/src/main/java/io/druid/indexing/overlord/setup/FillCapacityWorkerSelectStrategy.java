@@ -74,7 +74,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 
     for (ImmutableZkWorker zkWorker : sortedWorkers) {
       if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
-        return Optional.of(zkWorker.getMutableZkWorker());
+        return Optional.of(zkWorker);
       }
     }
     log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
