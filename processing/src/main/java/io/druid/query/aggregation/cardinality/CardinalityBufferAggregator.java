@@ -79,7 +79,7 @@ public class CardinalityBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("CardinalityBufferAggregator does not support getFloat()");
   }
 
 

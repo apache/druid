@@ -23,7 +23,7 @@ package io.druid.segment.column;
  */
 public interface Column
 {
-  public static String TIME_COLUMN_NAME = "__time";
+  public static final String TIME_COLUMN_NAME = "__time";
   public ColumnCapabilities getCapabilities();
 
   public int getLength();
