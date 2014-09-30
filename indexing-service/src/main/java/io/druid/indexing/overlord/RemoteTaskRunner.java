@@ -27,8 +27,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -62,6 +64,7 @@ import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -83,13 +86,13 @@ import java.util.concurrent.TimeUnit;
  * creating ephemeral nodes in ZK that workers must remove. Workers announce the statuses of the tasks they are running.
  * Once a task completes, it is up to the RTR to remove the task status and run any necessary cleanup.
  * The RemoteTaskRunner is event driven and updates state according to ephemeral node changes in ZK.
- * 
+ * <p/>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
  * For example, {@link io.druid.indexing.overlord.scaling.ResourceManagementScheduler} can take care of these duties.
- * 
+ * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the worker.
- * 
+ * <p/>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
 public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
@@ -519,7 +522,24 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       return true;
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
-      Optional<ZkWorker> zkWorker = strategy.findWorkerForTask(zkWorkers, task);
+      Optional<ZkWorker> zkWorker = strategy.findWorkerForTask(
+          ImmutableMap.copyOf(
+              Maps.transformEntries(
+                  zkWorkers,
+                  new Maps.EntryTransformer<String, ZkWorker, ImmutableZkWorker>()
+                  {
+                    @Override
+                    public ImmutableZkWorker transformEntry(
+                        String key, ZkWorker value
+                    )
+                    {
+                      return value.toImmutable();
+                    }
+                  }
+              )
+          ),
+          task
+      );
       if (zkWorker.isPresent()) {
         announceTask(task, zkWorker.get(), taskRunnerWorkItem);
         return true;

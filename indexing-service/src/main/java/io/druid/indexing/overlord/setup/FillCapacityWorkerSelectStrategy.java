@@ -20,16 +20,17 @@
 package io.druid.indexing.overlord.setup;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 
 import java.util.Comparator;
-import java.util.Map;
 import java.util.TreeSet;
 
 /**
@@ -46,14 +47,17 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
     this.config = config;
   }
 
-  public Optional<ZkWorker> findWorkerForTask(final Map<String, ZkWorker> zkWorkers, final Task task)
+  public Optional<ZkWorker> findWorkerForTask(
+      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+      final Task task
+  )
   {
-    TreeSet<ZkWorker> sortedWorkers = Sets.newTreeSet(
-        new Comparator<ZkWorker>()
+    TreeSet<ImmutableZkWorker> sortedWorkers = Sets.newTreeSet(
+        new Comparator<ImmutableZkWorker>()
         {
           @Override
           public int compare(
-              ZkWorker zkWorker, ZkWorker zkWorker2
+              ImmutableZkWorker zkWorker, ImmutableZkWorker zkWorker2
           )
           {
             int retVal = Ints.compare(zkWorker2.getCurrCapacityUsed(), zkWorker.getCurrCapacityUsed());
@@ -68,9 +72,9 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
     sortedWorkers.addAll(zkWorkers.values());
     final String minWorkerVer = config.getMinWorkerVersion();
 
-    for (ZkWorker zkWorker : sortedWorkers) {
+    for (ImmutableZkWorker zkWorker : sortedWorkers) {
       if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
-        return Optional.of(zkWorker);
+        return Optional.of(zkWorker.getMutableZkWorker());
       }
     }
     log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());

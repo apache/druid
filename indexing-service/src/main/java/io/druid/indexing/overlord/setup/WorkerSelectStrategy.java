@@ -22,12 +22,15 @@ package io.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.ZkWorker;
 
 import java.util.Map;
 
 /**
+ * The {@link io.druid.indexing.overlord.RemoteTaskRunner} uses this class to select a worker to assign tasks to.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -35,5 +38,16 @@ import java.util.Map;
 })
 public interface WorkerSelectStrategy
 {
-  public Optional<ZkWorker> findWorkerForTask(final Map<String, ZkWorker> zkWorkers, final Task task);
+  /**
+   * Customizable logic for selecting a worker to run a task.
+   *
+   * @param zkWorkers An immutable map of workers to choose from.
+   * @param task      The task to assign.
+   *
+   * @return A {@link io.druid.indexing.overlord.ZkWorker} to run the task if one is available.
+   */
+  public Optional<ZkWorker> findWorkerForTask(
+      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+      final Task task
+  );
 }
