@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import io.druid.query.extraction.DimExtractionFn;
 
 import java.nio.ByteBuffer;
@@ -68,7 +69,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = dimension.getBytes();
+    byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length)
                      .put(CACHE_TYPE_ID)

@@ -841,6 +841,10 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       }
     }
 
+    /**
+     * Returns the interned String value to allow fast comparisons using `==` instead of `.equals()`
+     * @see io.druid.segment.incremental.IncrementalIndexStorageAdapter.EntryHolderValueMatcherFactory#makeValueMatcher(String, String)
+     */
     public String get(String value)
     {
       return interner.getCanonicalValue(value);
@@ -966,6 +970,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     @Override
     public boolean compareCanonicalValues(String s1, String s2)
     {
+      /**
+       * using == here instead of .equals() to speed up lookups
+       */
       return s1 == s2;
     }
   }

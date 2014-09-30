@@ -30,6 +30,8 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
+import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
 import org.joda.time.DateTime;
@@ -350,6 +352,97 @@ public class SelectQueryRunnerTest
                             .put(QueryRunnerTestHelper.qualityDimension, "news")
                             .put(QueryRunnerTestHelper.indexMetric, 102.851683F)
                             .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(expectedResults, results);
+  }
+
+  @Test
+  public void testFullSelectNoResults()
+  {
+    SelectQuery query = new SelectQuery(
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
+        new AndDimFilter(
+            Arrays.<DimFilter>asList(
+                new SelectorDimFilter(QueryRunnerTestHelper.providerDimension, "spot"),
+                new SelectorDimFilter(QueryRunnerTestHelper.providerDimension, "foo")
+            )
+        ),
+        QueryRunnerTestHelper.allGran,
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        new PagingSpec(null, 3),
+        null
+    );
+
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, Maps.newHashMap()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.<String, Integer>of(),
+                Lists.<EventHolder>newArrayList()
+            )
+        )
+    );
+
+    verify(expectedResults, results);
+  }
+
+
+  @Test
+  public void testFullSelectNoDimensionAndMetric()
+  {
+    SelectQuery query = new SelectQuery(
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
+        null,
+        QueryRunnerTestHelper.allGran,
+        Lists.<String>newArrayList("foo"),
+        Lists.<String>newArrayList("foo2"),
+        new PagingSpec(null, 3),
+        null
+    );
+
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, Maps.newHashMap()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    Map<String, Object> res = Maps.newHashMap();
+    res.put("timestamp", new DateTime("2011-01-12T00:00:00.000Z"));
+    res.put("foo", null);
+    res.put("foo2", null);
+
+    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        0,
+                        res
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        1,
+                        res
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        2,
+                        res
                     )
                 )
             )

@@ -21,6 +21,7 @@ package io.druid.query.groupby.orderby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -182,8 +183,8 @@ public class OrderByColumnSpec
 
   public byte[] getCacheKey()
   {
-    final byte[] dimensionBytes = dimension.getBytes();
-    final byte[] directionBytes = direction.name().getBytes();
+    final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
+    final byte[] directionBytes = direction.name().getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(dimensionBytes.length + directionBytes.length)
                      .put(dimensionBytes)

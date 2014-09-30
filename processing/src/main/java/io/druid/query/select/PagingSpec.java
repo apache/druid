@@ -21,6 +21,7 @@ package io.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.primitives.Ints;
 
 import java.nio.ByteBuffer;
@@ -65,7 +66,7 @@ public class PagingSpec
     int pagingKeysSize = 0;
     int pagingValuesSize = 0;
     for (Map.Entry<String, Integer> entry : pagingIdentifiers.entrySet()) {
-      pagingKeys[index] = entry.getKey().getBytes();
+      pagingKeys[index] = entry.getKey().getBytes(Charsets.UTF_8);
       pagingValues[index] = ByteBuffer.allocate(Ints.BYTES).putInt(entry.getValue()).array();
       pagingKeysSize += pagingKeys[index].length;
       pagingValuesSize += Ints.BYTES;

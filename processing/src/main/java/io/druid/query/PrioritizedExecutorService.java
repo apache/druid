@@ -249,7 +249,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     @Override
     public int compareTo(PrioritizedListenableFutureTask otherTask)
     {
-      return -Ints.compare(getPriority(), otherTask.getPriority());
+      return Ints.compare(otherTask.getPriority(), getPriority());
     }
   }
 }

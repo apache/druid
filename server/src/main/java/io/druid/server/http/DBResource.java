@@ -74,7 +74,7 @@ public class DBResource
             new Function<DruidDataSource, String>()
             {
               @Override
-              public String apply(@Nullable DruidDataSource dataSource)
+              public String apply(DruidDataSource dataSource)
               {
                 return dataSource.getName();
               }
@@ -126,7 +126,7 @@ public class DBResource
             new Function<DataSegment, Object>()
             {
               @Override
-              public Object apply(@Nullable DataSegment segment)
+              public Object apply(DataSegment segment)
               {
                 return segment.getIdentifier();
               }
