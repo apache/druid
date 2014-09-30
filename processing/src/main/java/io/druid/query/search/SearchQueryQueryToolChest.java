@@ -20,6 +20,7 @@
 package io.druid.query.search;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -172,7 +173,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         int dimensionsBytesSize = 0;
         int index = 0;
         for (String dimension : dimensions) {
-          dimensionsBytes[index] = dimension.getBytes();
+          dimensionsBytes[index] = dimension.getBytes(Charsets.UTF_8);
           dimensionsBytesSize += dimensionsBytes[index].length;
           ++index;
         }

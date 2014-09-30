@@ -21,6 +21,7 @@ package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 
 import java.nio.ByteBuffer;
 
@@ -58,7 +59,7 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] valueBytes = value.getBytes();
+    byte[] valueBytes = value.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + valueBytes.length)
                      .put(CACHE_TYPE_ID)

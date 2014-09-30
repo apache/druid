@@ -21,6 +21,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.ibm.icu.text.SimpleDateFormat;
 
 import java.nio.ByteBuffer;
@@ -55,7 +56,7 @@ public class TimeDimExtractionFn implements DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    byte[] timeFormatBytes = timeFormat.getBytes();
+    byte[] timeFormatBytes = timeFormat.getBytes(Charsets.UTF_8);
     return ByteBuffer.allocate(1 + timeFormatBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(timeFormatBytes)

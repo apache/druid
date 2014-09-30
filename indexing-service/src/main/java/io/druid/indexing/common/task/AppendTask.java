@@ -97,7 +97,7 @@ public class AppendTask extends MergeTaskBase
               new Predicate<Rowboat>()
               {
                 @Override
-                public boolean apply(@Nullable Rowboat input)
+                public boolean apply(Rowboat input)
                 {
                   return holder.getInterval().contains(input.getTimestamp());
                 }
@@ -115,7 +115,7 @@ public class AppendTask extends MergeTaskBase
     return "append";
   }
 
-  private class SegmentToMergeHolder
+  private static class SegmentToMergeHolder
   {
     private final DataSegment segment;
     private final Interval interval;

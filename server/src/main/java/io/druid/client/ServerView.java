@@ -91,6 +91,8 @@ public interface ServerView
      * should remain registered.
      */
     public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment);
+
+    public CallbackAction segmentViewInitialized();
   }
 
   public static abstract class BaseSegmentCallback implements SegmentCallback
@@ -103,6 +105,12 @@ public interface ServerView
 
     @Override
     public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
+    {
+      return CallbackAction.CONTINUE;
+    }
+
+    @Override
+    public CallbackAction segmentViewInitialized()
     {
       return CallbackAction.CONTINUE;
     }

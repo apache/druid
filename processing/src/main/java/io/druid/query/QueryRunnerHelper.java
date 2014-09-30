@@ -71,7 +71,7 @@ public class QueryRunnerHelper
             new Function<Cursor, Result<T>>()
             {
               @Override
-              public Result<T> apply(@Nullable Cursor input)
+              public Result<T> apply(Cursor input)
               {
                 log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 return mapFn.apply(input);
