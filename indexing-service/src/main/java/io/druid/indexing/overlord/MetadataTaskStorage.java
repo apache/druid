@@ -40,11 +40,13 @@ import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
+import org.skife.jdbi.v2.exceptions.StatementException;
 
 import java.util.List;
 import java.util.Map;
 
-public class DbTaskStorage implements TaskStorage
+public class MetadataTaskStorage implements TaskStorage
 {
   private final ObjectMapper jsonMapper;
   private final MetadataStorageConnector metadataStorageConnector;
@@ -52,10 +54,10 @@ public class DbTaskStorage implements TaskStorage
   private final TaskStorageConfig config;
   private final MetadataStorageActionHandler handler;
 
-  private static final EmittingLogger log = new EmittingLogger(DbTaskStorage.class);
+  private static final EmittingLogger log = new EmittingLogger(MetadataTaskStorage.class);
 
   @Inject
-  public DbTaskStorage(
+  public MetadataTaskStorage(
       final ObjectMapper jsonMapper,
       final MetadataStorageConnector metadataStorageConnector,
       final MetadataStorageTablesConfig dbTables,
@@ -108,7 +110,9 @@ public class DbTaskStorage implements TaskStorage
       );
     }
     catch (Exception e) {
-      final boolean isStatementException = handler.isStatementException(e);
+      final boolean isStatementException =  e instanceof StatementException ||
+                                            (e instanceof CallbackFailedException
+                                             && e.getCause() instanceof StatementException);
       if (isStatementException && getTask(task.getId()).isPresent()) {
         throw new TaskExistsException(task.getId(), e);
       } else {

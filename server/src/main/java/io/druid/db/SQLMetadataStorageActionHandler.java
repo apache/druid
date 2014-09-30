@@ -86,14 +86,6 @@ public class SQLMetadataStorageActionHandler implements MetadataStorageActionHan
     );
   }
 
-  /* Determines whether the exception happened in the insert statement is caused by already existing task */
-  public boolean isStatementException(Exception e)
-  {
-    return e instanceof StatementException ||
-                                          (e instanceof CallbackFailedException
-                                           && e.getCause() instanceof StatementException);
-  }
-
   /* Insert stuff. @returns 1 if status of the task with the given id has been updated successfully */
   public int setStatus(final String tableName, final String Id, final int active, final byte[] statusPayload)
   {

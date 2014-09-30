@@ -50,7 +50,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
-import io.druid.indexing.overlord.DbTaskStorage;
+import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -176,8 +176,8 @@ public class CliOverlord extends ServerRunnable
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);
 
-            storageBinder.addBinding("db").to(DbTaskStorage.class).in(ManageLifecycle.class);
-            binder.bind(DbTaskStorage.class).in(LazySingleton.class);
+            storageBinder.addBinding("db").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
+            binder.bind(MetadataTaskStorage.class).in(LazySingleton.class);
           }
 
           private void configureRunners(Binder binder)

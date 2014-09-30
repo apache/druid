@@ -35,9 +35,6 @@ public interface MetadataStorageActionHandler
       byte[] statusPayload
   ) throws Exception;
 
-  /* Determines whether the exception happened in the insert statement is caused by already existing task */
-  public boolean isStatementException(Exception e);
-
   /* Insert stuff. @returns 1 if status of the task with the given id has been updated successfully */
   public int setStatus(String tableName, String Id, int active, byte[] statusPayload);
 
