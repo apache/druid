@@ -56,7 +56,9 @@ public class SpatialDimensionRowFormatter
   {
     this.spatialDimensionMap = Maps.newHashMap();
     for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
-      this.spatialDimensionMap.put(spatialDimension.getDimName(), spatialDimension);
+      if (this.spatialDimensionMap.put(spatialDimension.getDimName(), spatialDimension) != null) {
+        throw new ISE("Duplicate spatial dimension names found! Check your schema yo!");
+      }
     }
     this.spatialPartialDimNames = Sets.newHashSet(
         Iterables.concat(
