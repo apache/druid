@@ -44,9 +44,9 @@ public interface WorkerSelectStrategy
    * @param zkWorkers An immutable map of workers to choose from.
    * @param task      The task to assign.
    *
-   * @return A {@link io.druid.indexing.overlord.ZkWorker} to run the task if one is available.
+   * @return A {@link io.druid.indexing.overlord.ImmutableZkWorker} to run the task if one is available.
    */
-  public Optional<ZkWorker> findWorkerForTask(
+  public Optional<ImmutableZkWorker> findWorkerForTask(
       final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
       final Task task
   );

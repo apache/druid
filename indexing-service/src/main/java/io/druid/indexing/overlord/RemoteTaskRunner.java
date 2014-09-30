@@ -64,7 +64,6 @@ import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -522,7 +521,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       return true;
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
-      Optional<ZkWorker> zkWorker = strategy.findWorkerForTask(
+      final Optional<ImmutableZkWorker> immutableZkWorker = strategy.findWorkerForTask(
           ImmutableMap.copyOf(
               Maps.transformEntries(
                   zkWorkers,
@@ -540,8 +539,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           ),
           task
       );
-      if (zkWorker.isPresent()) {
-        announceTask(task, zkWorker.get(), taskRunnerWorkItem);
+      if (immutableZkWorker.isPresent()) {
+        final ZkWorker zkWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
+        announceTask(task, zkWorker, taskRunnerWorkItem);
         return true;
       } else {
         return false;

@@ -30,24 +30,15 @@ import java.util.Set;
  */
 public class ImmutableZkWorker
 {
-  private final ZkWorker mutableZkWorker;
   private final Worker worker;
   private final int currCapacityUsed;
   private final Set<String> availabilityGroups;
 
-  public ImmutableZkWorker(
-      ZkWorker mutableZkWorker
-  )
+  public ImmutableZkWorker(Worker worker, int currCapacityUsed, Set<String> availabilityGroups)
   {
-    this.mutableZkWorker = mutableZkWorker;
-    this.worker = mutableZkWorker.getWorker();
-    this.currCapacityUsed = mutableZkWorker.getCurrCapacityUsed();
-    this.availabilityGroups = ImmutableSet.copyOf(mutableZkWorker.getAvailabilityGroups());
-  }
-
-  public ZkWorker getMutableZkWorker()
-  {
-    return mutableZkWorker;
+    this.worker = worker;
+    this.currCapacityUsed = currCapacityUsed;
+    this.availabilityGroups = ImmutableSet.copyOf(availabilityGroups);
   }
 
   public Worker getWorker()
