@@ -56,7 +56,7 @@ A sample local firehose spec is shown below:
         "format": "yyyy-MM-dd HH:mm:ss"
       },
       "data": {
-        "format": "tsv",
+        "format": "csv",
         "columns": [...],
         "dimensions": [...]
       }
@@ -66,7 +66,7 @@ A sample local firehose spec is shown below:
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|This should be local|yes|
+|type|This should be "local".|yes|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
 |data|A data spec similar to what is used for batch ingestion.|yes|
 
