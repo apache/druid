@@ -30,8 +30,8 @@ import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
-import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,7 +82,7 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   {
     Collection<File> foundFiles = FileUtils.listFiles(
         baseDir,
-        new RegexFileFilter(filter),
+        new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
 
