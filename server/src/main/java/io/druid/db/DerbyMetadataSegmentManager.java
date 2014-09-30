@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class DerbyMetadataSegmentManager implements MetadataSegmentManager
 {
-  private static final Logger log = new Logger(SQLMetadataSegmentManager.class);
+  private static final Logger log = new Logger(DerbyMetadataSegmentManager.class);
 
   private final Object lock = new Object();
 

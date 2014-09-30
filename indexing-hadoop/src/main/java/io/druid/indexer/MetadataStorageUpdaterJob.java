@@ -19,7 +19,6 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.timeline.DataSegment;
 

@@ -24,7 +24,7 @@ import java.util.Map;
 
 public interface MetadataStorageActionHandler
 {
-  /* Insert stuff. @returns number of entries inserted on success */
+  /* Insert stuff on the table */
   public void insert(
       String tableName,
       String id,
