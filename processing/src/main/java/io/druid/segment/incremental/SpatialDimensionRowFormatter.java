@@ -49,26 +49,17 @@ public class SpatialDimensionRowFormatter
   private static final Joiner JOINER = Joiner.on(",");
   private static final Splitter SPLITTER = Splitter.on(",");
 
-  private final List<SpatialDimensionSchema> spatialDimensions;
-  private final Set<String> spatialDimNames;
+  private final Map<String, SpatialDimensionSchema> spatialDimensionMap;
   private final Set<String> spatialPartialDimNames;
 
   public SpatialDimensionRowFormatter(List<SpatialDimensionSchema> spatialDimensions)
   {
-    this.spatialDimensions = spatialDimensions;
-    this.spatialDimNames = Sets.newHashSet(
-        Lists.transform(
-            spatialDimensions,
-            new Function<SpatialDimensionSchema, String>()
-            {
-              @Override
-              public String apply(SpatialDimensionSchema input)
-              {
-                return input.getDimName();
-              }
-            }
-        )
-    );
+    this.spatialDimensionMap = Maps.newHashMap();
+    for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
+      if (this.spatialDimensionMap.put(spatialDimension.getDimName(), spatialDimension) != null) {
+        throw new ISE("Duplicate spatial dimension names found! Check your schema yo!");
+      }
+    }
     this.spatialPartialDimNames = Sets.newHashSet(
         Iterables.concat(
             Lists.transform(
@@ -110,7 +101,7 @@ public class SpatialDimensionRowFormatter
               @Override
               public boolean apply(String input)
               {
-                return !spatialDimNames.contains(input) && !spatialPartialDimNames.contains(input);
+                return !spatialDimensionMap.containsKey(input) && !spatialPartialDimNames.contains(input);
               }
             }
         )
@@ -173,30 +164,30 @@ public class SpatialDimensionRowFormatter
       }
     };
 
-    if (!spatialPartialDimNames.isEmpty()) {
-      for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
-        List<String> spatialDimVals = Lists.newArrayList();
+    for (Map.Entry<String, SpatialDimensionSchema> entry : spatialDimensionMap.entrySet()) {
+      final String spatialDimName = entry.getKey();
+      final SpatialDimensionSchema spatialDim = entry.getValue();
 
-        for (String partialSpatialDim : spatialDimension.getDims()) {
-          List<String> dimVals = row.getDimension(partialSpatialDim);
-          if (isSpatialDimValsValid(dimVals)) {
-            spatialDimVals.addAll(dimVals);
-          }
-        }
-
-        if (spatialDimVals.size() == spatialPartialDimNames.size()) {
-          spatialLookup.put(spatialDimension.getDimName(), Arrays.asList(JOINER.join(spatialDimVals)));
-          finalDims.add(spatialDimension.getDimName());
-        }
-      }
-    } else {
-      for (String spatialDimName : spatialDimNames) {
-        List<String> dimVals = row.getDimension(spatialDimName);
+      List<String> dimVals = row.getDimension(spatialDimName);
+      if (dimVals != null && !dimVals.isEmpty()) {
         if (dimVals.size() != 1) {
-          throw new ISE("Cannot have a spatial dimension value with size[%d]", dimVals.size());
+          throw new ISE("Spatial dimension value must be in an array!");
         }
         if (isJoinedSpatialDimValValid(dimVals.get(0))) {
           spatialLookup.put(spatialDimName, dimVals);
+          finalDims.add(spatialDimName);
+        }
+      } else {
+        List<String> spatialDimVals = Lists.newArrayList();
+        for (String dim : spatialDim.getDims()) {
+          List<String> partialDimVals = row.getDimension(dim);
+          if (isSpatialDimValsValid(partialDimVals)) {
+            spatialDimVals.addAll(partialDimVals);
+          }
+        }
+
+        if (spatialDimVals.size() == spatialDim.getDims().size()) {
+          spatialLookup.put(spatialDimName, Arrays.asList(JOINER.join(spatialDimVals)));
           finalDims.add(spatialDimName);
         }
       }
