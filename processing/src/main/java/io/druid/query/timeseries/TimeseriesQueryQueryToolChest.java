@@ -62,7 +62,6 @@ import java.util.Map;
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
@@ -131,8 +130,20 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
     return new ServiceMetricEvent.Builder()
         .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4("timeseries")
-        .setUser5(COMMA_JOIN.join(query.getIntervals()))
+        .setUser4(query.getType())
+        .setUser5(
+            Lists.transform(
+                query.getIntervals(),
+                new Function<Interval, String>()
+                {
+                  @Override
+                  public String apply(Interval input)
+                  {
+                    return input.toString();
+                  }
+                }
+            ).toArray(new String[query.getIntervals().size()])
+        )
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
         .setUser9(Minutes.minutes(numMinutes).toString());

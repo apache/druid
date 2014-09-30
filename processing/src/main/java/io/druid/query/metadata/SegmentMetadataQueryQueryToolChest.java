@@ -22,8 +22,8 @@ package io.druid.query.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -166,7 +166,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return new ServiceMetricEvent.Builder()
         .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4(query.getType())
-        .setUser5(Joiner.on(",").join(query.getIntervals()))
+        .setUser5(
+            Lists.transform(
+                query.getIntervals(),
+                new Function<Interval, String>()
+                {
+                  @Override
+                  public String apply(Interval input)
+                  {
+                    return input.toString();
+                  }
+                }
+            ).toArray(new String[query.getIntervals().size()])
+        )
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser9(Minutes.minutes(numMinutes).toString());
   }
@@ -195,9 +207,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
         return ByteBuffer.allocate(1 + includerBytes.length)
-            .put(SEGMENT_METADATA_CACHE_PREFIX)
-            .put(includerBytes)
-            .array();
+                         .put(SEGMENT_METADATA_CACHE_PREFIX)
+                         .put(includerBytes)
+                         .array();
       }
 
       @Override

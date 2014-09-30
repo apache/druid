@@ -21,7 +21,6 @@ package io.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -65,7 +64,6 @@ import java.util.Map;
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
   private static final byte TOPN_QUERY = 0x1;
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<Result<TopNResultValue>>()
   {
   };
@@ -147,7 +145,19 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new ServiceMetricEvent.Builder()
         .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser4(String.format("topN/%s/%s", query.getThreshold(), query.getDimensionSpec().getDimension()))
-        .setUser5(COMMA_JOIN.join(query.getIntervals()))
+        .setUser5(
+            Lists.transform(
+                query.getIntervals(),
+                new Function<Interval, String>()
+                {
+                  @Override
+                  public String apply(Interval input)
+                  {
+                    return input.toString();
+                  }
+                }
+            ).toArray(new String[query.getIntervals().size()])
+        )
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
         .setUser9(Minutes.minutes(numMinutes).toString());

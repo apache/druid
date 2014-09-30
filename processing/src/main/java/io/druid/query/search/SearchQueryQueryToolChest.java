@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -39,7 +38,6 @@ import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -67,7 +65,6 @@ import java.util.Set;
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x2;
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
   {
   };
@@ -130,9 +127,21 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     }
 
     return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4("search")
-        .setUser5(COMMA_JOIN.join(query.getIntervals()))
+        .setUser2(query.getDataSource().getNames().toArray(new String[query.getDataSource().getNames().size()]))
+        .setUser4(query.getType())
+        .setUser5(
+            Lists.transform(
+                query.getIntervals(),
+                new Function<Interval, String>()
+                {
+                  @Override
+                  public String apply(Interval input)
+                  {
+                    return input.toString();
+                  }
+                }
+            ).toArray(new String[query.getIntervals().size()])
+        )
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser9(Minutes.minutes(numMinutes).toString());
   }
@@ -181,7 +190,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1 + 4 + granularityBytes.length + filterBytes.length +
-                    querySpecBytes.length + dimensionsBytesSize
+                querySpecBytes.length + dimensionsBytesSize
             )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))

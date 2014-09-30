@@ -20,7 +20,9 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -41,6 +43,7 @@ import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
@@ -259,6 +262,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     public void onComplete(Result result)
     {
       final long requestTime = System.currentTimeMillis() - start;
+      // toArray() will give compilation error
+      final String[] intervals = new String[query.getIntervals().size()];
+      int i = 0;
+      for (Object interval : query.getIntervals()) {
+        intervals[i] = interval.toString();
+      }
       try {
         emitter.emit(
             new ServiceMetricEvent.Builder()
@@ -271,7 +280,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
                     )
                 )
                 .setUser4(query.getType())
-                .setUser5(DataSourceUtil.COMMA_JOIN.join(query.getIntervals()))
+                .setUser5(intervals)
                 .setUser6(String.valueOf(query.hasFilters()))
                 .setUser7(req.getRemoteAddr())
                 .setUser8(query.getId())

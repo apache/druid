@@ -23,9 +23,10 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
@@ -37,13 +38,13 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -59,6 +60,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -67,7 +69,6 @@ import java.util.UUID;
 public class QueryResource
 {
   private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   public static final String APPLICATION_SMILE = "application/smile";
   public static final String APPLICATION_JSON = "application/json";
 
@@ -175,9 +176,15 @@ public class QueryResource
 
       try {
         long requestTime = System.currentTimeMillis() - start;
+        // toArray() will give compilation error
+        final String[] intervals = new String[query.getIntervals().size()];
+        int i = 0;
+        for (Object interval : query.getIntervals()) {
+          intervals[i] = interval.toString();
+        }
         emitter.emit(
             new ServiceMetricEvent.Builder()
-                .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
+                .setUser2(query.getDataSource().getNames().toArray(new String[query.getDataSource().getNames().size()]))
                 .setUser3(
                     jsonMapper.writeValueAsString(
                         query.getContext() == null
@@ -186,7 +193,7 @@ public class QueryResource
                     )
                 )
                 .setUser4(query.getType())
-                .setUser5(COMMA_JOIN.join(query.getIntervals()))
+                .setUser5(intervals)
                 .setUser6(String.valueOf(query.hasFilters()))
                 .setUser7(req.getRemoteAddr())
                 .setUser8(queryId)

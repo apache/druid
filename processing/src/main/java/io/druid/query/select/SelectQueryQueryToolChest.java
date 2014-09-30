@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -62,7 +62,6 @@ import java.util.Set;
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
   private static final byte SELECT_QUERY = 0x13;
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
@@ -133,8 +132,20 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
     return new ServiceMetricEvent.Builder()
         .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4("Select")
-        .setUser5(COMMA_JOIN.join(query.getIntervals()))
+        .setUser4(query.getType())
+        .setUser5(
+            Lists.transform(
+                query.getIntervals(),
+                new Function<Interval, String>()
+                {
+                  @Override
+                  public String apply(Interval input)
+                  {
+                    return input.toString();
+                  }
+                }
+            ).toArray(new String[query.getIntervals().size()])
+        )
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser9(Minutes.minutes(numMinutes).toString());
   }
@@ -261,13 +272,13 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
                 new SelectResultValue(
                     (Map<String, Integer>) jsonMapper.convertValue(
                         resultIter.next(), new TypeReference<Map<String, Integer>>()
-                    {
-                    }
+                        {
+                        }
                     ),
                     (List<EventHolder>) jsonMapper.convertValue(
                         resultIter.next(), new TypeReference<List<EventHolder>>()
-                    {
-                    }
+                        {
+                        }
                     )
                 )
             );

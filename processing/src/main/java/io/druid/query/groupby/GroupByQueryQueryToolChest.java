@@ -218,8 +218,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new ServiceMetricEvent.Builder()
         .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
         .setUser3(String.format("%,d dims", query.getDimensions().size()))
-        .setUser4("groupBy")
-        .setUser5(Joiner.on(",").join(query.getIntervals()))
+        .setUser4(query.getType())
+        .setUser5(
+            Lists.transform(
+                query.getIntervals(),
+                new Function<Interval, String>()
+                {
+                  @Override
+                  public String apply(Interval input)
+                  {
+                    return input.toString();
+                  }
+                }
+            ).toArray(new String[query.getIntervals().size()])
+        )
         .setUser6(String.valueOf(query.hasFilters()))
         .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
         .setUser9(Minutes.minutes(numMinutes).toString());
