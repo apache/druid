@@ -135,6 +135,12 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
         }
       }
     }
+
+	@Override
+    public long getLastOffsetCommitTime() {
+	    // TODO Auto-generated method stub
+	    return 0;
+    }
   }
 
   @JsonProperty("delegate")

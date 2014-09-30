@@ -21,14 +21,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.druid.extensions</groupId>
-    <artifactId>druid-cassandra-storage</artifactId>
-    <name>druid-cassandra-storage</name>
-    <description>druid-cassandra-storage</description>
+    <artifactId>druid-kafka-eight-simple-consumer</artifactId>
+    <name>druid-kafka-eight-simple-consumer</name>
+    <description>druid-kafka-eight-simple-consumer</description>
 
-    <parent>
+     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.6.157-SNAPSHOT</version>
+        <version>0.6.146</version>
     </parent>
 
     <dependencies>
@@ -37,18 +37,21 @@
             <artifactId>druid-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.netflix.astyanax</groupId>
-            <artifactId>astyanax</artifactId>
-            <version>1.0.1</version>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.9.2</artifactId>
+            <version>0.8.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.zookeeper</groupId>
+                    <artifactId>zookeeper</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-        </dependency>
-        <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-            </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>

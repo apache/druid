@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
+
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -151,6 +152,11 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
       {
         connector.shutdown();
       }
+      
+      @Override
+		public long getLastOffsetCommitTime() {
+			return 0;
+		}
     };
   }
 

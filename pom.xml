@@ -56,10 +56,10 @@
         <module>cassandra-storage</module>
         <module>hdfs-storage</module>
         <module>s3-extensions</module>
-        <module>kafka-seven</module>
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>histogram</module>
+        <module>kafka-eight-simpleConsumer</module>
     </modules>
 
     <dependencyManagement>
@@ -199,7 +199,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>16.0.1</version>
+                <version>15.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -324,22 +324,22 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-proxy</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>

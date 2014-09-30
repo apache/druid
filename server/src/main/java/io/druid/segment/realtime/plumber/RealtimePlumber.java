@@ -17,11 +17,13 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
+import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
@@ -49,6 +51,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
+
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -56,9 +59,13 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -147,7 +154,7 @@ public class RealtimePlumber implements Plumber
   {
     computeBaseDir(schema).mkdirs();
     initializeExecutors();
-    bootstrapSinksFromDisk();
+    bootstrapSinksFromDisk(schema.getFirehose());
     registerServerViewCallback();
     startPersistThread();
     // Push pending sinks bootstrapped from previous run
@@ -352,21 +359,29 @@ public class RealtimePlumber implements Plumber
               );
 
               QueryableIndex index = IndexIO.loadIndex(mergedFile);
-
-              DataSegment segment = dataSegmentPusher.push(
-                  mergedFile,
-                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
-              );
-
-              segmentPublisher.publishSegment(segment);
-
-              if (!isPushedMarker.createNewFile()) {
-                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
-                   .addData("interval", sink.getInterval())
-                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
-                   .addData("marker", isPushedMarker)
-                   .emit();
+              log.info("i am going pubshing [%s] to hdfs", sink.getSegment().getIdentifier());
+              try{
+	              DataSegment segment = dataSegmentPusher.push(
+	                  mergedFile,
+	                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+	              );
+	              log.info("i am going to Inserting [%s] in DB", sink.getSegment().getIdentifier());
+	              segmentPublisher.publishSegment(segment);
+	
+	              if (!isPushedMarker.createNewFile()) {
+	                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
+	                   .addData("interval", sink.getInterval())
+	                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
+	                   .addData("marker", isPushedMarker)
+	                   .emit();
+	              }
+              }catch(Throwable  e){
+            	  log.info("exception happen when pubshing to hdfs");
+            	  log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
+                  .addData("interval", interval)
+                  .emit();
               }
+              
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
@@ -467,7 +482,7 @@ public class RealtimePlumber implements Plumber
     }
   }
 
-  protected void bootstrapSinksFromDisk()
+  protected void bootstrapSinksFromDisk(final Firehose firehose)
   {
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
@@ -492,7 +507,22 @@ public class RealtimePlumber implements Plumber
             @Override
             public boolean accept(File dir, String fileName)
             {
-              return !(Ints.tryParse(fileName) == null);
+              try {
+            	  if(firehose!=null){
+            		BasicFileAttributes attr = Files.readAttributes(Paths.get(dir.getPath()+File.separator+fileName), BasicFileAttributes.class);
+            		log.info("checking files younger than last offset commit time, last offset time " + firehose.getLastOffsetCommitTime()+"file create time " + attr.creationTime().toMillis());
+            		if(attr.creationTime().toMillis() > firehose.getLastOffsetCommitTime()){
+            			log.info("file "+ dir.getAbsolutePath()+File.separator+fileName+" should not appear");
+            		}
+      	            return !(Ints.tryParse(fileName) == null) && (! (firehose.getLastOffsetCommitTime() > 0) || !(attr.creationTime().toMillis() > firehose.getLastOffsetCommitTime()));
+            	  }else{
+            		return !(Ints.tryParse(fileName) == null);
+            	  }
+            } catch (IOException e) {
+	            log.error("exception happens when fetching meta"+ e.getMessage());
+	            return false;
+            }
+              
             }
           }
       );

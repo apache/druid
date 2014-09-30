@@ -263,6 +263,12 @@ public class RandomFirehoseFactory implements FirehoseFactory<InputRowParser>
       {
         // do nothing
       }
+
+	@Override
+    public long getLastOffsetCommitTime() {
+	    // TODO Auto-generated method stub
+	    return 0;
+    }
     };
   }
 

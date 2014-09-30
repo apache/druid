@@ -101,7 +101,7 @@ public class FlushingPlumber extends RealtimePlumber
       );
     }
 
-    bootstrapSinksFromDisk();
+    bootstrapSinksFromDisk(null);
     startFlushThread();
   }
 
