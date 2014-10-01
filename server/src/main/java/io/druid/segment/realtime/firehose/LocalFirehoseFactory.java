@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
@@ -43,6 +44,8 @@ import java.util.LinkedList;
  */
 public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
+  private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
+
   private final File baseDir;
   private final String filter;
   private final StringInputRowParser parser;
@@ -80,6 +83,8 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
+    log.info("Searching for all [%s] in [%s]", filter, baseDir.getAbsoluteFile());
+
     Collection<File> foundFiles = FileUtils.listFiles(
         baseDir.getAbsoluteFile(),
         new WildcardFileFilter(filter),
