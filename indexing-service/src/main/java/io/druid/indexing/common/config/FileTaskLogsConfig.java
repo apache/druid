@@ -30,6 +30,10 @@ public class FileTaskLogsConfig
   @NotNull
   private File directory = new File("log");
 
+  public FileTaskLogsConfig()
+  {
+  }
+
   public FileTaskLogsConfig(File directory)
   {
     this.directory = directory;
