@@ -54,6 +54,7 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         false,
+        false,
         false
     );
   }
@@ -70,6 +71,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<String, String> jobProperties;
   private final boolean combineText;
   private final boolean persistInHeap;
+  private final boolean ingestOffheap;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -84,7 +86,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
-      final @JsonProperty("persistInHeap") boolean persistInHeap
+      final @JsonProperty("persistInHeap") boolean persistInHeap,
+      final @JsonProperty("ingestOffheap") boolean ingestOffheap
   )
   {
     this.workingPath = workingPath == null ? null : workingPath;
@@ -101,6 +104,7 @@ public class HadoopTuningConfig implements TuningConfig
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
     this.persistInHeap = persistInHeap;
+    this.ingestOffheap = ingestOffheap;
   }
 
   @JsonProperty
@@ -175,6 +179,11 @@ public class HadoopTuningConfig implements TuningConfig
     return persistInHeap;
   }
 
+  @JsonProperty
+  public boolean isIngestOffheap(){
+    return ingestOffheap;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -189,7 +198,8 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        persistInHeap
+        persistInHeap,
+        ingestOffheap
     );
   }
 
@@ -207,7 +217,8 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        persistInHeap
+        persistInHeap,
+        ingestOffheap
     );
   }
 
@@ -225,7 +236,8 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        persistInHeap
+        persistInHeap,
+        ingestOffheap
     );
   }
 }

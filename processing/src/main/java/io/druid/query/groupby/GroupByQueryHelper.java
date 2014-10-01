@@ -31,6 +31,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -73,7 +74,19 @@ public class GroupByQueryHelper
           }
         }
     );
-    IncrementalIndex index = new IncrementalIndex(
+    final IncrementalIndex index;
+    if(query.getContextValue("useOffheap", false)){
+      index = new OffheapIncrementalIndex(
+          // use granularity truncated min timestamp
+          // since incoming truncated timestamps may precede timeStart
+          granTimeStart,
+          gran,
+          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          bufferPool,
+          false
+      );
+    } else {
+     index = new IncrementalIndex(
         // use granularity truncated min timestamp
         // since incoming truncated timestamps may precede timeStart
         granTimeStart,
@@ -82,6 +95,7 @@ public class GroupByQueryHelper
         bufferPool,
         false
     );
+    }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {

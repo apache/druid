@@ -45,6 +45,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
@@ -634,16 +635,25 @@ public class IndexGeneratorJob implements Jobby
       for (AggregatorFactory agg : aggs) {
         aggsSize += agg.getMaxIntermediateSize();
       }
-      int bufferSize = aggsSize * config.getSchema().getTuningConfig().getRowFlushBoundary();
-      return new IncrementalIndex(
-          new IncrementalIndexSchema.Builder()
-              .withMinTimestamp(theBucket.time.getMillis())
-              .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
-              .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
-              .withMetrics(aggs)
-              .build(),
-          new OffheapBufferPool(bufferSize)
-      );
+      final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
+      int bufferSize = aggsSize * tuningConfig.getRowFlushBoundary();
+      final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+          .withMinTimestamp(theBucket.time.getMillis())
+          .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+          .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
+          .withMetrics(aggs)
+          .build();
+      if (tuningConfig.isIngestOffheap()) {
+        return new OffheapIncrementalIndex(
+            indexSchema,
+            new OffheapBufferPool(bufferSize)
+        );
+      } else {
+        return new IncrementalIndex(
+            indexSchema,
+            new OffheapBufferPool(bufferSize)
+        );
+      }
     }
 
     private void createNewZipEntry(ZipOutputStream out, String name) throws IOException

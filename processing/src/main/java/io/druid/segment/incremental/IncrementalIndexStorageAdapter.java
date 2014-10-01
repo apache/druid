@@ -29,8 +29,8 @@ import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -501,8 +501,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
-      String idObject = index.getDimension(dimension.toLowerCase()).get(value);
-      if (idObject == null) {
+      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
+      if (!dimDim.contains(value)) {
         if (value == null || "".equals(value)) {
           final int dimIndex = dimIndexObject;
 
@@ -523,7 +523,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       }
 
       final int dimIndex = dimIndexObject;
-      final String id = idObject;
+      final String id = dimDim.get(value);
 
       return new ValueMatcher()
       {
@@ -536,11 +536,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
-            /**
-             * using == here instead of .equals() to speed up lookups made possible by
-             * {@link io.druid.segment.incremental.IncrementalIndex.DimDim#poorMansInterning}
-             */
-            if (id == dimVal) {
+            if (dimDim.compareCannonicalValues(id,dimVal)) {
               return true;
             }
           }
