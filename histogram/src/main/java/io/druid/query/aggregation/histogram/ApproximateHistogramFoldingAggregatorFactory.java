@@ -76,7 +76,8 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
       };
     }
 
-    if (ApproximateHistogram.class.isAssignableFrom(selector.classOfObject())) {
+    final Class classOfObject = selector.classOfObject();
+    if (classOfObject.equals(Object.class) || ApproximateHistogram.class.isAssignableFrom(classOfObject)) {
       return new ApproximateHistogramFoldingAggregator(
           name,
           selector,

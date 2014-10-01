@@ -29,8 +29,14 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesBufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -78,6 +84,18 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
+
+    if (selector == null) {
+      return Aggregators.noopAggregator();
+    }
+
+    final Class classOfObject = selector.classOfObject();
+    if (classOfObject != null && (classOfObject.equals(Object.class)
+                                  || ApproximateHistogramAggregator.class.isAssignableFrom(classOfObject))) {
+      System.out.println("here");
+      //return new HyperUniquesAggregator(name, selector);
+    }
     return new ApproximateHistogramAggregator(
         name,
         metricFactory.makeFloatColumnSelector(fieldName),
@@ -90,6 +108,18 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    //ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
+    //
+    //if (selector == null) {
+    //  return Aggregators.noopBufferAggregator();
+    //}
+    //
+    //final Class classOfObject = selector.classOfObject();
+    //if (classOfObject != null && (classOfObject.equals(Object.class) || ApproximateHistogramAggregator.class.isAssignableFrom(classOfObject))) {
+    //  System.out.println("here");
+    //  //return new HyperUniquesAggregator(name, selector);
+    //}
+
     return new ApproximateHistogramBufferAggregator(
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
