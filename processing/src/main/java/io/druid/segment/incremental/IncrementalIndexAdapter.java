@@ -23,10 +23,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -45,10 +44,8 @@ import java.util.Map;
 public class IncrementalIndexAdapter implements IndexableAdapter
 {
   private static final Logger log = new Logger(IncrementalIndexAdapter.class);
-
   private final Interval dataInterval;
   private final IncrementalIndex index;
-
   private final Map<String, Map<String, ConciseSet>> invertedIndexes;
 
   public IncrementalIndexAdapter(
@@ -114,13 +111,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getAvailableDimensions()
+  public Indexed<String> getDimensionNames()
   {
     return new ListIndexed<String>(index.getDimensions(), String.class);
   }
 
   @Override
-  public Indexed<String> getAvailableMetrics()
+  public Indexed<String> getMetricNames()
   {
     return new ListIndexed<String>(index.getMetricNames(), String.class);
   }
@@ -171,18 +168,18 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return FunctionalIterable
         .create(index.getFacts().entrySet())
         .transform(
-            new Function<Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]>, Rowboat>()
+            new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
             {
               int count = 0;
 
               @Override
               public Rowboat apply(
-                  @Nullable Map.Entry<IncrementalIndex.TimeAndDims, Aggregator[]> input
+                  @Nullable Map.Entry<IncrementalIndex.TimeAndDims, Integer> input
               )
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
                 final String[][] dimValues = timeAndDims.getDims();
-                final Aggregator[] aggs = input.getValue();
+                final int rowOffset = input.getValue();
 
                 int[][] dims = new int[dimValues.length][];
                 for (String dimension : index.getDimensions()) {
@@ -205,21 +202,17 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                   }
                 }
 
-                Object[] metrics = new Object[aggs.length];
-                for (int i = 0; i < aggs.length; i++) {
-                  metrics[i] = aggs[i].get();
+                Object[] metrics = new Object[index.getMetricAggs().length];
+                for (int i = 0; i < metrics.length; i++) {
+                  metrics[i] = index.getAggregator(i)
+                                    .get(index.getMetricBuffer(), index.getMetricPosition(rowOffset, i));
                 }
 
-                Map<String, String> description = Maps.newHashMap();
-                for (SpatialDimensionSchema spatialDimensionSchema : index.getSpatialDimensions()) {
-                  description.put(spatialDimensionSchema.getDimName(), "spatial");
-                }
                 return new Rowboat(
                     timeAndDims.getTimestamp(),
                     dims,
                     metrics,
-                    count++,
-                    description
+                    count++
                 );
               }
             }
@@ -288,5 +281,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public String getMetricType(String metric)
   {
     return index.getMetricType(metric);
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return index.getCapabilities(column);
   }
 }

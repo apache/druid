@@ -42,6 +42,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
@@ -125,7 +126,8 @@ public class GroupByQueryRunnerTest
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, mapper, engine)
+        new GroupByQueryQueryToolChest(configSupplier,mapper,  engine, TestQueryRunners.pool),
+        TestQueryRunners.pool
     );
 
     GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
@@ -145,7 +147,8 @@ public class GroupByQueryRunnerTest
         singleThreadEngine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         singleThreadedConfigSupplier,
-        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine)
+        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine, pool),
+        pool
     );
 
 
@@ -833,13 +836,9 @@ public class GroupByQueryRunnerTest
             }
         )
     );
-
     HashMap<String,Object> context = new HashMap<String, Object>();
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(
-        configSupplier,
-        new DefaultObjectMapper(),
-        engine
-    ).mergeResults(runner);
+
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier,new DefaultObjectMapper(),  engine, TestQueryRunners.pool).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
@@ -888,12 +887,9 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(
-        configSupplier,
-        new DefaultObjectMapper(),
-        engine
-    ).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, new DefaultObjectMapper(), engine, TestQueryRunners.pool).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+
   }
 
   @Test
@@ -942,11 +938,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(
-        configSupplier,
-        new DefaultObjectMapper(),
-        engine
-    ).mergeResults(runner);
+    QueryRunner<Row> mergeRunner = new GroupByQueryQueryToolChest(configSupplier, new DefaultObjectMapper(), engine, TestQueryRunners.pool).mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 

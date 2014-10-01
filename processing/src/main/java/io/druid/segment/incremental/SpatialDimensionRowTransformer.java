@@ -44,7 +44,7 @@ import java.util.Set;
 /**
  * We throw away all invalid spatial dimensions
  */
-public class SpatialDimensionRowFormatter
+public class SpatialDimensionRowTransformer implements Function<InputRow, InputRow>
 {
   private static final Joiner JOINER = Joiner.on(",");
   private static final Splitter SPLITTER = Splitter.on(",");
@@ -53,7 +53,7 @@ public class SpatialDimensionRowFormatter
   private final Set<String> spatialDimNames;
   private final Set<String> spatialPartialDimNames;
 
-  public SpatialDimensionRowFormatter(List<SpatialDimensionSchema> spatialDimensions)
+  public SpatialDimensionRowTransformer(List<SpatialDimensionSchema> spatialDimensions)
   {
     this.spatialDimensions = spatialDimensions;
     this.spatialDimNames = Sets.newHashSet(
@@ -86,7 +86,8 @@ public class SpatialDimensionRowFormatter
     );
   }
 
-  public InputRow formatRow(final InputRow row)
+  @Override
+  public InputRow apply(final InputRow row)
   {
     final Map<String, List<String>> spatialLookup = Maps.newHashMap();
 

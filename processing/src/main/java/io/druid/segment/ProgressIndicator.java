@@ -17,30 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexer.rollup;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.granularity.QueryGranularity;
-import io.druid.query.aggregation.AggregatorFactory;
-
-import java.util.List;
+package io.druid.segment;
 
 /**
- * Class uses public fields to work around http://jira.codehaus.org/browse/MSHADE-92
- *
- * Adjust to JsonCreator and final fields when resolved.
  */
-@Deprecated
-public class DataRollupSpec
+public interface ProgressIndicator
 {
-  @JsonProperty
-  public List<AggregatorFactory> aggs;
+  public void progress();
 
-  @JsonProperty
-  public QueryGranularity rollupGranularity = QueryGranularity.NONE;
+  public void start();
 
-  public List<AggregatorFactory> getAggs()
-  {
-    return aggs;
-  }
+  public void stop();
+
+  public void startSection(String section);
+
+  public void progressSection(String section, String message);
+
+  public void stopSection(String section);
 }

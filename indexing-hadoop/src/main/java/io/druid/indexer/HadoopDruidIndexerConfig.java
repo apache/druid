@@ -390,6 +390,11 @@ public class HadoopDruidIndexerConfig
     }
   }
 
+  public boolean isPersistInHeap()
+  {
+    return schema.getTuningConfig().isPersistInHeap();
+  }
+
   /******************************************
    Path helper logic
    ******************************************/

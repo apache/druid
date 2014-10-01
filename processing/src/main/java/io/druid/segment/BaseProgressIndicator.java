@@ -19,55 +19,43 @@
 
 package io.druid.segment;
 
-import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.joda.time.Interval;
-
-import java.io.IOException;
-
 /**
  */
-public class IncrementalIndexSegment implements Segment
+public class BaseProgressIndicator implements ProgressIndicator
 {
-  private final IncrementalIndex index;
-  private final String segmentIdentifier;
-
-  public IncrementalIndexSegment(
-      IncrementalIndex index,
-      String segmentIdentifier
-  )
+  @Override
+  public void progress()
   {
-    this.index = index;
-    this.segmentIdentifier = segmentIdentifier;
+    // do nothing
   }
 
   @Override
-  public String getIdentifier()
+  public void start()
   {
-    return segmentIdentifier;
+    // do nothing
   }
 
   @Override
-  public Interval getDataInterval()
+  public void stop()
   {
-    return index.getInterval();
+    // do nothing
   }
 
   @Override
-  public QueryableIndex asQueryableIndex()
+  public void startSection(String section)
   {
-    return null;
+    // do nothing
   }
 
   @Override
-  public StorageAdapter asStorageAdapter()
+  public void progressSection(String section, String message)
   {
-    return new IncrementalIndexStorageAdapter(index);
+    // do nothing
   }
 
   @Override
-  public void close() throws IOException
+  public void stopSection(String section)
   {
-    index.close();
+    // do nothing
   }
 }
