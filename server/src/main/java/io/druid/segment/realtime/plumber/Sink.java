@@ -31,6 +31,7 @@ import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
@@ -180,16 +181,24 @@ public class Sink implements Iterable<FireHydrant>
       aggsSize += agg.getMaxIntermediateSize();
     }
     int bufferSize = aggsSize * config.getMaxRowsInMemory();
-    IncrementalIndex newIndex = new IncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withDimensionsSpec(schema.getParser())
-            .withMetrics(schema.getAggregators())
-            .build(),
-        new OffheapBufferPool(bufferSize),
-        config.isIngestOffheap()
-    );
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(minTimestamp)
+        .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
+        .withDimensionsSpec(schema.getParser())
+        .withMetrics(schema.getAggregators())
+        .build();
+    final IncrementalIndex newIndex;
+    if (config.isIngestOffheap()) {
+      newIndex = new OffheapIncrementalIndex(
+          indexSchema,
+          new OffheapBufferPool(bufferSize)
+      );
+    } else {
+      newIndex = new IncrementalIndex(
+          indexSchema,
+          new OffheapBufferPool(bufferSize)
+      );
+    }
 
     final FireHydrant old;
     synchronized (hydrantLock) {
