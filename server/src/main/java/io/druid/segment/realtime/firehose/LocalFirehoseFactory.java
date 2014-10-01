@@ -81,7 +81,7 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
     Collection<File> foundFiles = FileUtils.listFiles(
-        baseDir,
+        baseDir.getAbsoluteFile(),
         new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
