@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.firehose.kafka;
 
 import java.io.BufferedWriter;
@@ -65,13 +84,13 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 	@JsonProperty
 	private final ByteBufferInputRowParser parser;
 
-	private Map<Integer, KafkaSimpleConsumer> simpleConsumerMap = new HashMap<Integer, KafkaSimpleConsumer>();
+	private final Map<Integer, KafkaSimpleConsumer> simpleConsumerMap = new HashMap<Integer, KafkaSimpleConsumer>();
 
 	private final static int fileRetention = 5;
 
 	private long lastCommitTime = 0;
 
-	private Map<Integer, Long> lastOffsetPartitions = new HashMap<Integer, Long>();
+	private final Map<Integer, Long> lastOffsetPartitions = new HashMap<Integer, Long>();
 
 	private static final String PARTITION_SEPERATOR = " ";
 	private static final String PARTITION_OFFSET_SEPERATOR = ",";
@@ -83,6 +102,10 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 	        fileRetention);
 
 	private List<Thread> consumerThreadList = new ArrayList<Thread>();
+	
+	private  InputRow nextMsg;
+	
+	private boolean stop;
 
 	@JsonCreator
 	public KafkaEightSimpleConsumerFirehoseFactory(
@@ -93,18 +116,12 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 	        @JsonProperty("parser") ByteBufferInputRowParser parser,
 	        @JsonProperty("offsetPosition") String offsetPosition,
 	        @JsonProperty("queueBufferLength") int queueBufferLength) {
-		log.info("brokerList:" + brokerList);
 		this.brokerList = brokerList;
-		log.info("partitionIdList:" + partitionIdList);
 		this.partitionIdList = partitionIdList;
-		log.info("clientId:" + clientId);
 		this.clientId = clientId;
-		log.info("feed:" + feed);
 		this.feed = feed;
 		this.parser = (parser == null) ? null : parser;
-		log.info("queueBufferLength:" + queueBufferLength);
 		this.queueBufferLength = queueBufferLength;
-		log.info("offsetPosition:" + offsetPosition);
 		this.offsetPosition = offsetPosition;
 		try {
 			md = MessageDigest.getInstance("MD5");
@@ -152,10 +169,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 					log.error("can't read file when load offset from disk", e);
 				}
 				if (!md5String.equals(getMd5String(new String(fileContents)))) {
-					log.info("offset file " + fileTimeStamp
-					        + "file name and content mismatch, "
-					        + new String(fileContents) + "file content md5:"
-					        + getMd5String(new String(fileContents)));
+					log.info("offset file  [%s] file name and content mismatch,  [%s] file content md5: [%s]" ,fileTimeStamp,new String(fileContents),getMd5String(new String(fileContents)));
 					file.delete();
 					continue;
 				}
@@ -175,7 +189,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 					if (!partitionOffsetString.trim().equals("")) {
 						String[] partitionOffset = partitionOffsetString
 						        .split(PARTITION_OFFSET_SEPERATOR);
-						log.info(Arrays.toString(partitionOffset));
 						if (lastOffsetPartitions.containsKey(Integer
 						        .parseInt(partitionOffset[0]))
 						        && lastOffsetPartitions.get(Integer
@@ -221,8 +234,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 
 			@Override
 			public void run() {
-				log.info("start running parition " + partitionId
-				        + " thread name :" + getName());
+				log.info("start running parition [%s] thread name : [%s]",partitionId, getName());
 				try {
 					Long offset = lastOffsetPartitions.get(partitionId);
 					if (offset == null) {
@@ -240,8 +252,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 								messageQueue.put(msgWithOffset);
 								count++;
 							}
-							log.debug("fetch " + count + " msgs for partition "
-							        + partitionId + " in one time");
+							log.debug("fetch [%s] msgs for partition [%s] in one time", count, partitionId);
 						} catch (InterruptedException e) {
 							log.error("Intrerupted when fecthing data");
 							return;
@@ -273,42 +284,51 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 		return new Firehose() {
 			@Override
 			public boolean hasMore() {
+				if(stop){
+					return false;
+				}
+				BytesMessageWithOffset msg;
+				try {
+					msg = messageQueue.take();
+				} catch (InterruptedException e) {
+					log.info(" interrupted when taken from queue");
+					nextMsg = null;
+					return true;
+				}
+				final byte[] message = msg.message();
+
+				if (message == null) {
+					nextMsg = null;
+					return true;
+				}
+				lastOffsetPartitions.put(msg.getPartition(), msg.offset());
+				nextMsg = theParser.parse(ByteBuffer.wrap(message));
 				return true;
 			}
 
 			@Override
 			public InputRow nextRow() {
-				BytesMessageWithOffset msg;
-				try {
-					msg = messageQueue.take();
-				} catch (InterruptedException e) {
-					log.info(" interrupted when taken fromm queue");
-					return null;
-				}
-				final byte[] message = msg.message();
-
-				if (message == null) {
-					return null;
-				}
-				lastOffsetPartitions.put(msg.getPartition(), msg.offset());
-				return theParser.parse(ByteBuffer.wrap(message));
+				return nextMsg;
 			}
 
 			@Override
 			public Runnable commit() {
+				final java.util.Date date = new java.util.Date();
+
+				StringBuilder fileContent = new StringBuilder();
+				for (int partition : lastOffsetPartitions.keySet()) {
+					fileContent.append(partition
+					        + PARTITION_OFFSET_SEPERATOR
+					        + lastOffsetPartitions.get(partition)
+					        + PARTITION_SEPERATOR);
+				}
+				final String fileName =getMd5String(fileContent.toString());
+				final String fileContentStr = fileContent.toString();
 				return new Runnable() {
+					
 					@Override
 					public void run() {
-						java.util.Date date = new java.util.Date();
-
-						StringBuilder fileContent = new StringBuilder();
-						for (int partition : lastOffsetPartitions.keySet()) {
-							fileContent.append(partition
-							        + PARTITION_OFFSET_SEPERATOR
-							        + lastOffsetPartitions.get(partition)
-							        + PARTITION_SEPERATOR);
-						}
-						String fileName =getMd5String(fileContent.toString());
+						
 
 						File file = new File(offsetPosition + File.separator
 						        + date.getTime() + FILE_NAME_SEPERATOR
@@ -321,9 +341,8 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 							FileWriter fw = new FileWriter(
 							        file.getAbsoluteFile());
 							BufferedWriter bw = new BufferedWriter(fw);
-							bw.write(fileContent.toString());
+							bw.write(fileContentStr);
 							bw.close();
-
 							log.info("committing offsets");
 							offsetFileList.add(file);
 							lastCommitTime = file.lastModified();
@@ -338,12 +357,8 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 
 			@Override
 			public void close() throws IOException {
-				log.info("stoping partition print trace ----------");
-				for (StackTraceElement ste : Thread.currentThread()
-				        .getStackTrace()) {
-					log.info(ste.toString());
-				}
-				log.info("stoping partition ----------");
+				log.info("stoping kafka 0.8 simple firehose");
+				stop = true;
 				for (Thread t : consumerThreadList) {
 					try {
 						t.interrupt();
@@ -357,53 +372,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 			@Override
 			public long getLastOffsetCommitTime() {
 				return lastCommitTime;
-			}
-			
-			public Runnable commitOffset(final Map<Integer, Long> offset){
-				return new Runnable() {
-					@Override
-					public void run() {
-						java.util.Date date = new java.util.Date();
-
-						StringBuilder fileContent = new StringBuilder();
-						for (int partition : offset.keySet()) {
-							fileContent.append(partition
-							        + PARTITION_OFFSET_SEPERATOR
-							        + offset.get(partition)
-							        + PARTITION_SEPERATOR);
-						}
-						String fileName = getMd5String(fileContent.toString());
-
-						File file = new File(offsetPosition + File.separator
-						        + date.getTime() + FILE_NAME_SEPERATOR
-						        + fileName);
-						try {
-							// if file doesnt exists, then create it
-							if (!file.exists()) {
-								file.createNewFile();
-							}
-							FileWriter fw = new FileWriter(
-							        file.getAbsoluteFile());
-							BufferedWriter bw = new BufferedWriter(fw);
-							bw.write(fileContent.toString());
-							bw.close();
-
-							log.info("committing offsets");
-							offsetFileList.add(file);
-							lastCommitTime = file.lastModified();
-						} catch (Exception e) {
-							log.info(
-							        "exception happens when creating offset file"+
-							        e.getMessage());
-							log.info("stackTrace" + Arrays.toString(e.getStackTrace()));
-							        
-						}
-					}
-				};
-			}
-			
-			public Map<Integer, Long> getCurrentOffset(){
-				return new HashMap<Integer, Long>(lastOffsetPartitions);
 			}
 		};
 	}

@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.firehose.kafka;
 
 import java.nio.ByteBuffer;
@@ -25,7 +44,6 @@ import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
-
 /**
  * refer @{link https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example}
  *
@@ -57,7 +75,7 @@ public class KafkaSimpleConsumer {
 		for (String broker: brokers) {
 			String[] tokens = broker.split(":");
 			if (tokens.length != 2) {
-				logger.warn("wrong broker name {}, its format should be host:port", broker);
+				logger.warn("wrong broker name [%s], its format should be host:port", broker);
 				continue;
 			}
 			String host = tokens[0];
@@ -65,7 +83,7 @@ public class KafkaSimpleConsumer {
 			try {
 				port = Integer.parseInt(tokens[1]);
 			} catch (NumberFormatException e) {
-				logger.warn("wrong broker name {}, its format should be host:port", broker);
+				logger.warn("wrong broker name [%s], its format should be host:port", broker);
 				continue;
 			}
 			brokerList.add(new KafkaBroker(host, port));
@@ -112,7 +130,7 @@ public class KafkaSimpleConsumer {
 				leaderBroker = findNewLeader(leader);
 			}
 			
-			logger.info("create SimpleConsumer for {} - {}, leader broker {}:{}", topic, partitionId, leaderBroker.host(), leaderBroker.port());
+			logger.info("create SimpleConsumer for [%s] - [%s], leader broker [%s]:[%s]", topic, partitionId, leaderBroker.host(), leaderBroker.port());
 
 			consumer = new SimpleConsumer(leaderBroker.host(),
 					leaderBroker.port(), soTimeout,
@@ -193,11 +211,11 @@ public class KafkaSimpleConsumer {
 				throw new InterruptedException();
 			}
 
-        	logger.error("caught exception in getOffsetsBefore {} - {}", topic, partitionId, e);
+        	logger.error("caught exception in getOffsetsBefore [%s] - [%s]", topic, partitionId, e);
         	return -1;
         }
         if (response.hasError()) {
-            logger.error("error fetching data Offset from the Broker {}. reason: {}", leaderBroker.host(), response.errorCode(topic, partitionId));
+            logger.error("error fetching data Offset from the Broker [%s]. reason: [%s]", leaderBroker.host(), response.errorCode(topic, partitionId));
             return -1;
         }
         long[] offsets = response.offsets(topic, partitionId);
@@ -274,9 +292,9 @@ public class KafkaSimpleConsumer {
 		if (consumer != null) {
 			try {
 				consumer.close();
-				logger.info("stop consumer for {} - {}, leader broker {}", topic, partitionId, leaderBroker);
+				logger.info("stop consumer for [%s] - [%s], leader broker {}", topic, partitionId, leaderBroker);
 			} catch (Exception e) {
-				logger.warn("stop consumer for {} - {} failed", topic, partitionId, e);
+				logger.warn("stop consumer for [%s] - [%s] failed", topic, partitionId, e);
 			} finally {
 				consumer = null;
 			}
@@ -317,12 +335,12 @@ public class KafkaSimpleConsumer {
 			} catch (Exception e) {
 				// e could be an instance of ClosedByInterruptException as SimpleConsumer.send uses nio
 				if (Thread.interrupted()) {
-					logger.info("catch exception of {} with interrupted in find leader for {} - {}", 
+					logger.info("catch exception of [%s] with interrupted in find leader for [%s] - [%s]", 
 							e.getClass().getName(), topic, partitionId);
 					
 					throw new InterruptedException();
 				}
-				logger.warn("error communicating with Broker {} to find leader for {} - {}", broker, topic, partitionId, e);
+				logger.warn("error communicating with Broker [%s] to find leader for [%s] - [%s]", broker, topic, partitionId, e);
 			} finally {
 				if (consumer != null) {
 					try {
@@ -339,13 +357,13 @@ public class KafkaSimpleConsumer {
 		long retryCnt = 0;
 		while (true) {
 			PartitionMetadata metadata = findLeader();
-			logger.debug("findNewLeader - meta leader {}, previous leader {}", metadata, oldLeader);
+			logger.debug("findNewLeader - meta leader [%s], previous leader [%s]", metadata, oldLeader);
 			if (metadata != null && metadata.leader() != null && (oldLeader == null ||
 					(!(oldLeader.host().equalsIgnoreCase(metadata.leader().host()) && 
 					  (oldLeader.port() == metadata.leader().port())) || retryCnt != 0))) {
 				// first time through if the leader hasn't changed give ZooKeeper a second to recover
                 // second time, assume the broker did recover before failover, or it was a non-Broker issue
-				logger.info("findNewLeader - using new leader {} from meta data, previous leader {}", metadata.leader(), oldLeader);
+				logger.info("findNewLeader - using new leader [%s] from meta data, previous leader [%s]", metadata.leader(), oldLeader);
 				return metadata.leader();
 			}
 			//TODO: backoff retry
@@ -353,7 +371,7 @@ public class KafkaSimpleConsumer {
 			retryCnt ++;
 			// if could not find the leader for current replicaBrokers, let's try to find one via allBrokers
 			if (retryCnt >= 3 && (retryCnt - 3) % 5 == 0) {
-				logger.warn("can nof find leader for {} - {} after {} retries", topic, partitionId, retryCnt);
+				logger.warn("can nof find leader for [%s] - [%s] after [%s] retries", topic, partitionId, retryCnt);
 				replicaBrokers.clear();
 				replicaBrokers.addAll(allBrokers);
 			}
@@ -376,18 +394,18 @@ public class KafkaSimpleConsumer {
 			} catch (Exception e) {
 				// e could be an instance of ClosedByInterruptException as SimpleConsumer.fetch uses nio
 				if (Thread.interrupted()) {
-					logger.info("catch exception of {} with interrupted in getLastOffset for {} - {}", 
+					logger.info("catch exception of [%s] with interrupted in getLastOffset for [%s] - [%s]", 
 							e.getClass().getName(), topic, partitionId);
 					
 					throw new InterruptedException();
 				}
-				logger.warn("caughte exception in getLastOffset {} - {}", topic, partitionId, e);
+				logger.warn("caughte exception in getLastOffset [%s] - [%s]", topic, partitionId, e);
 				response = null;
 			}
 			if (response == null || response.hasError()) {
 				short errorCode = response != null ? response.errorCode(topic, partitionId) : ErrorMapping.UnknownCode();
 
-				logger.warn("Error fetching data Offset for {} - {}, the Broker. Reason: {}", 
+				logger.warn("Error fetching data Offset for [%s] - [%s], the Broker. Reason: [%s]", 
 						topic, partitionId, errorCode);
 				
 				stopConsumer();
