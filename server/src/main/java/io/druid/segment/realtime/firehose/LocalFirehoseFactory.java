@@ -24,17 +24,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -42,6 +44,8 @@ import java.util.LinkedList;
  */
 public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
+  private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
+
   private final File baseDir;
   private final String filter;
   private final StringInputRowParser parser;
@@ -79,25 +83,21 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
-    File[] foundFiles = baseDir.listFiles(
-        new FilenameFilter()
-        {
-          @Override
-          public boolean accept(File file, String name)
-          {
-            return name.contains(filter);
-          }
-        }
+    log.info("Searching for all [%s] in [%s]", filter, baseDir.getAbsoluteFile());
+
+    Collection<File> foundFiles = FileUtils.listFiles(
+        baseDir.getAbsoluteFile(),
+        new WildcardFileFilter(filter),
+        TrueFileFilter.INSTANCE
     );
 
-    if (foundFiles == null || foundFiles.length == 0) {
+    if (foundFiles == null || foundFiles.isEmpty()) {
       throw new ISE("Found no files to ingest! Check your schema.");
     }
 
-    final LinkedList<File> files = Lists.<File>newLinkedList(
-        Arrays.asList(foundFiles)
+    final LinkedList<File> files = Lists.newLinkedList(
+        foundFiles
     );
-
 
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()

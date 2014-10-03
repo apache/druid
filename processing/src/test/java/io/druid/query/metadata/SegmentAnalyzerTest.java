@@ -99,7 +99,7 @@ public class SegmentAnalyzerTest
   {
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new SegmentMetadataQueryRunnerFactory(
-            new SegmentMetadataQueryQueryToolChest(new QueryConfig()),
+            new SegmentMetadataQueryQueryToolChest(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ), index
     );

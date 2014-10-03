@@ -17,15 +17,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query;
+package io.druid.guice;
 
-import java.util.List;
+import com.google.inject.ProvisionException;
+import io.druid.query.DruidProcessingConfig;
+import org.junit.Test;
 
-public class DataSourceUtil
+public class DruidProcessingModuleTest
 {
-  public static String getMetricName(DataSource dataSource)
-  {
-    final List<String> names = dataSource.getNames();
-    return names.size() == 1 ? names.get(0) : names.toString();
+
+  @Test(expected=ProvisionException.class)
+  public void testMemoryCheckThrowsException() {
+    DruidProcessingModule module = new DruidProcessingModule();
+    module.getIntermediateResultsPool(new DruidProcessingConfig()
+    {
+      @Override
+      public String getFormatString()
+      {
+        return "test";
+      }
+
+      @Override
+      public int intermediateComputeSizeBytes()
+      {
+        return Integer.MAX_VALUE;
+      }
+    });
   }
+
 }
