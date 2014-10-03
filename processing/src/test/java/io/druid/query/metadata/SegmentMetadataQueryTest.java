@@ -47,7 +47,7 @@ public class SegmentMetadataQueryTest
   @SuppressWarnings("unchecked")
   private final QueryRunner runner = makeQueryRunner(
       new SegmentMetadataQueryRunnerFactory(
-          new SegmentMetadataQueryQueryToolChest(new QueryConfig()),
+          new SegmentMetadataQueryQueryToolChest(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER)
   );
   private ObjectMapper mapper = new DefaultObjectMapper();

@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -42,11 +41,11 @@ import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -58,8 +57,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -210,19 +207,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(GroupByQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser3(String.format("%,d dims", query.getDimensions().size()))
-        .setUser4("groupBy")
-        .setUser5(Joiner.on(",").join(query.getIntervals()))
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query)
+                          .setUser3(String.format("%,d dims", query.getDimensions().size()))
+                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
   }
 
   @Override
