@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -35,10 +34,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryConfig;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -47,8 +46,6 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -125,29 +122,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(SelectQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4(query.getType())
-        .setUser5(
-            Lists.transform(
-                query.getIntervals(),
-                new Function<Interval, String>()
-                {
-                  @Override
-                  public String apply(Interval input)
-                  {
-                    return input.toString();
-                  }
-                }
-            ).toArray(new String[query.getIntervals().size()])
-        )
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query);
   }
 
   @Override

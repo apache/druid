@@ -20,16 +20,13 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
+import io.druid.query.QueryMetricUtil;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -43,7 +40,6 @@ import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
@@ -262,30 +258,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     public void onComplete(Result result)
     {
       final long requestTime = System.currentTimeMillis() - start;
-      // toArray() will give compilation error
-      final String[] intervals = new String[query.getIntervals().size()];
-      int i = 0;
-      for (Object interval : query.getIntervals()) {
-        intervals[i] = interval.toString();
-      }
       try {
         emitter.emit(
-            new ServiceMetricEvent.Builder()
-                .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-                .setUser3(
-                    jsonMapper.writeValueAsString(
-                        query.getContext() == null
-                        ? ImmutableMap.of()
-                        : query.getContext()
-                    )
-                )
-                .setUser4(query.getType())
-                .setUser5(intervals)
-                .setUser6(String.valueOf(query.hasFilters()))
-                .setUser7(req.getRemoteAddr())
-                .setUser8(query.getId())
-                .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
-                .build("request/time", requestTime)
+            QueryMetricUtil.makeRequestTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                           .build("request/time", requestTime)
         );
 
         requestLogger.log(

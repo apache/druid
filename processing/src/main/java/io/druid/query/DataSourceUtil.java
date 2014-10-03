@@ -19,14 +19,10 @@
 
 package io.druid.query;
 
-import com.google.common.base.Joiner;
-
 import java.util.List;
 
 public class DataSourceUtil
 {
-  public static final Joiner COMMA_JOIN = Joiner.on(",");
-
   public static String getMetricName(DataSource dataSource)
   {
     final List<String> names = dataSource.getNames();

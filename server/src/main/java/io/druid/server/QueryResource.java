@@ -23,10 +23,8 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
@@ -35,16 +33,15 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -60,7 +57,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -176,29 +172,9 @@ public class QueryResource
 
       try {
         long requestTime = System.currentTimeMillis() - start;
-        // toArray() will give compilation error
-        final String[] intervals = new String[query.getIntervals().size()];
-        int i = 0;
-        for (Object interval : query.getIntervals()) {
-          intervals[i] = interval.toString();
-        }
         emitter.emit(
-            new ServiceMetricEvent.Builder()
-                .setUser2(query.getDataSource().getNames().toArray(new String[query.getDataSource().getNames().size()]))
-                .setUser3(
-                    jsonMapper.writeValueAsString(
-                        query.getContext() == null
-                        ? ImmutableMap.of()
-                        : query.getContext()
-                    )
-                )
-                .setUser4(query.getType())
-                .setUser5(intervals)
-                .setUser6(String.valueOf(query.hasFilters()))
-                .setUser7(req.getRemoteAddr())
-                .setUser8(queryId)
-                .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
-                .build("request/time", requestTime)
+            QueryMetricUtil.makeRequestTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                           .build("request/time", requestTime)
         );
 
         requestLogger.log(
