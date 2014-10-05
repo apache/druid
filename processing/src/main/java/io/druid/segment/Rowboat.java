@@ -37,21 +37,17 @@ public class Rowboat implements Comparable<Rowboat>
   private final int rowNum;
   private final Map<Integer, TreeSet<Integer>> comprisedRows;
 
-  private Map<String, String> columnDescriptor;
-
   public Rowboat(
       long timestamp,
       int[][] dims,
       Object[] metrics,
-      int rowNum,
-      Map<String, String> columnDescriptor
+      int rowNum
   )
   {
     this.timestamp = timestamp;
     this.dims = dims;
     this.metrics = metrics;
     this.rowNum = rowNum;
-    this.columnDescriptor = columnDescriptor;
 
     this.comprisedRows = Maps.newHashMap();
   }
@@ -89,11 +85,6 @@ public class Rowboat implements Comparable<Rowboat>
   public int getRowNum()
   {
     return rowNum;
-  }
-
-  public Map<String, String> getDescriptions()
-  {
-    return columnDescriptor;
   }
 
   @Override

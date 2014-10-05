@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.157-SNAPSHOT</version>
+    <version>0.7.0-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.131-SNAPSHOT</tag>
+        <tag>druid-0.7.0-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
@@ -74,7 +74,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.11</version>
+                <version>0.2.12</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -384,7 +384,7 @@
             <dependency>
                 <groupId>net.jpountz.lz4</groupId>
                 <artifactId>lz4</artifactId>
-                <version>1.1.2</version>
+                <version>1.2.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -428,6 +428,11 @@
                 <artifactId>hadoop-client</artifactId>
                 <version>2.3.0</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mapdb</groupId>
+                <artifactId>mapdb</artifactId>
+                <version>1.0.6</version>
             </dependency>
 
             <!-- Test Scope -->

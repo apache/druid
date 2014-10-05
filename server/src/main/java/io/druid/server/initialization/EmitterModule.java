@@ -67,6 +67,7 @@ public class EmitterModule implements Module
   {
     String emitterType = props.getProperty(EMITTER_PROPERTY, "");
 
+    binder.install(new NoopEmitterModule());
     binder.install(new LogEmitterModule());
     binder.install(new HttpEmitterModule());
 
@@ -104,7 +105,7 @@ public class EmitterModule implements Module
       emitter = findEmitter(emitterType, emitterBindings);
 
       if (emitter == null) {
-        emitter = findEmitter(LogEmitterModule.EMITTER_TYPE, emitterBindings);
+        emitter = findEmitter(NoopEmitterModule.EMITTER_TYPE, emitterBindings);
       }
 
       if (emitter == null) {
@@ -115,7 +116,7 @@ public class EmitterModule implements Module
             knownTypes.add(((Named) annotation).value());
           }
         }
-        throw new ISE("Uknown emitter type[%s]=[%s], known types[%s]", EMITTER_PROPERTY, emitterType, knownTypes);
+        throw new ISE("Unknown emitter type[%s]=[%s], known types[%s]", EMITTER_PROPERTY, emitterType, knownTypes);
       }
     }
 

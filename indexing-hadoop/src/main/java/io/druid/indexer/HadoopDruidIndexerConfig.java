@@ -47,7 +47,6 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
@@ -389,6 +388,11 @@ public class HadoopDruidIndexerConfig
     } else {
       return Optional.absent();
     }
+  }
+
+  public boolean isPersistInHeap()
+  {
+    return schema.getTuningConfig().isPersistInHeap();
   }
 
   /******************************************

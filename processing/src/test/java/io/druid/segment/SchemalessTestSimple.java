@@ -60,6 +60,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -164,7 +165,8 @@ public class SchemalessTestSimple
         )
     );
     QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
 
@@ -237,7 +239,8 @@ public class SchemalessTestSimple
     );
 
     QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
   @Test
@@ -265,7 +268,8 @@ public class SchemalessTestSimple
     );
 
     QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
   @Test
@@ -290,6 +294,7 @@ public class SchemalessTestSimple
     );
 
     QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 }

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -45,7 +46,10 @@ public class IncrementalIndexTest
 
   public static IncrementalIndex createCaseInsensitiveIndex(long timestamp)
   {
-    IncrementalIndex index = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    IncrementalIndex index = new IncrementalIndex(
+        0L, QueryGranularity.NONE, new AggregatorFactory[]{},
+        TestQueryRunners.pool
+    );
 
     index.add(
         new MapBasedInputRow(
@@ -105,7 +109,8 @@ public class IncrementalIndexTest
     final IncrementalIndex index = new IncrementalIndex(
         0L,
         QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        TestQueryRunners.pool
     );
     final int threadCount = 10;
     final int elementsPerThread = 200;

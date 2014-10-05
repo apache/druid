@@ -44,6 +44,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -89,9 +90,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(null, 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -158,9 +159,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(null, 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -218,9 +219,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -278,9 +279,9 @@ public class SelectQueryRunnerTest
         new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
         null
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -380,7 +381,7 @@ public class SelectQueryRunnerTest
     );
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
@@ -413,7 +414,7 @@ public class SelectQueryRunnerTest
     );
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 

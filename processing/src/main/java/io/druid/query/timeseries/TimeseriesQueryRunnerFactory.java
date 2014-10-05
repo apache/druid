@@ -32,6 +32,8 @@ import io.druid.query.Result;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -89,7 +91,10 @@ public class TimeseriesQueryRunnerFactory
     }
 
     @Override
-    public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> input)
+    public Sequence<Result<TimeseriesResultValue>> run(
+        Query<Result<TimeseriesResultValue>> input,
+        Map<String, Object> context
+    )
     {
       if (!(input instanceof TimeseriesQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeseriesQuery.class);
