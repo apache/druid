@@ -532,10 +532,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
-            /**
-             * using == here instead of .equals() to speed up lookups made possible by
-             * {@link io.druid.segment.incremental.IncrementalIndex.DimDim#poorMansInterning}
-             */
+            // using == here instead of .equals() to speed up lookups made possible by
+            // io.druid.segment.incremental.IncrementalIndex.DimDim#poorMansInterning
             if (id == dimVal) {
               return true;
             }
