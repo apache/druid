@@ -38,6 +38,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.http.HistoricalResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import org.eclipse.jetty.server.Server;
@@ -68,6 +69,8 @@ public class CliHistorical extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
+            LifecycleModule.register(binder, Server.class);
             binder.bind(ServerManager.class).in(LazySingleton.class);
             binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
@@ -75,10 +78,10 @@ public class CliHistorical extends ServerRunnable
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
+            Jerseys.addResource(binder, HistoricalResource.class);
             LifecycleModule.register(binder, QueryResource.class);
-
+            LifecycleModule.register(binder, HistoricalResource.class);
             LifecycleModule.register(binder, ZkCoordinator.class);
-            LifecycleModule.register(binder, Server.class);
 
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheProvider.class);
