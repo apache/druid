@@ -5,13 +5,13 @@ layout: doc_page
 Router Node
 ===========
 
-You should only ever need the router node if you have a Druid cluster well into the terabyte range. The router node can be used to route queries to different broker instances. By default, the broker routes queries based on how [Rules](Rules.html) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data. 
+You should only ever need the router node if you have a Druid cluster well into the terabyte range. The router node can be used to route queries to different broker nodes. By default, the broker routes queries based on how [Rules](Rules.html) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data. 
 
 Running
 -------
 
 ```
-io.druid.cli.Main server historical
+io.druid.cli.Main server router
 ```
 
 Example Production Configuration
@@ -22,7 +22,6 @@ In this example, we have two tiers in our production cluster: `hot` and `_defaul
 JVM settings:
 
 ```
--server
 -server
 -Xmx13g
 -Xms13g
@@ -96,7 +95,7 @@ The router module uses several of the default modules in [Configuration](Configu
 
 Router Strategies
 -----------------
-The router has a configurable list of strategies for how it select which broker to route queries to. The order of the strategies matter because as soon as something matches a condition, a broker is selected.
+The router has a configurable list of strategies for how it selects which brokers to route queries to. The order of the strategies matter because as soon as a strategy condition is matched, a broker is selected.
 
 ### timeBoundary
 
@@ -118,4 +117,4 @@ Including this strategy means all timeBoundary queries are always routed to the 
 }
 ```
 
-Queries with a priority set < minPriority are routed to the lowest priority broker. Queries with priority > maxPriority are routed to the highest priority broker. minPriority default is 0, maxPriority default is 1. Using default strategy values, if a query with priority 0 (the default) is sent, it skips the priority selection logic. 
+Queries with a priority set to less than minPriority are routed to the lowest priority broker. Queries with priority set to greater than maxPriority are routed to the highest priority broker. By default, minPriority is 0 and maxPriority is 1. Using these default values, if a query with priority 0 (the default query priority is 0) is sent, the query skips the priority selection logic. 
