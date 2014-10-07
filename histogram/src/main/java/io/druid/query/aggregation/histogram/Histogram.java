@@ -84,5 +84,12 @@ public class Histogram
     return result;
   }
 
-
+  @Override
+  public String toString()
+  {
+    return "Histogram{" +
+           "breaks=" + Arrays.toString(breaks) +
+           ", counts=" + Arrays.toString(counts) +
+           '}';
+  }
 }

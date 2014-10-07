@@ -1,3 +1,22 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2014  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 package io.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +42,8 @@ import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import io.druid.query.groupby.orderby.DefaultLimitSpec;
+import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.segment.TestHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -130,7 +151,7 @@ public class ApproximateHistogramGroupByQueryTest
   }
 
   @Test
-  public void testGroupByNWithApproximateHistogramAgg()
+  public void testGroupByWithApproximateHistogramAgg()
   {
     ApproximateHistogramAggregatorFactory aggFactory = new ApproximateHistogramAggregatorFactory(
         "apphisto",
@@ -146,8 +167,18 @@ public class ApproximateHistogramGroupByQueryTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(Arrays.<DimensionSpec>asList(new LegacyDimensionSpec(QueryRunnerTestHelper.providerDimension)))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Lists.newArrayList(
+                    new OrderByColumnSpec(
+                        QueryRunnerTestHelper.providerDimension,
+                        OrderByColumnSpec.Direction.DESCENDING
+                    )
+                ), 1
+            )
+        )
         .setAggregatorSpecs(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
@@ -159,7 +190,7 @@ public class ApproximateHistogramGroupByQueryTest
             )
         )
         .setPostAggregatorSpecs(
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.addRowsIndexConstant,
                 QueryRunnerTestHelper.dependentPostAgg,
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
@@ -167,7 +198,37 @@ public class ApproximateHistogramGroupByQueryTest
         )
         .build();
 
-    List<Row> expectedResults = Arrays.<Row>asList(
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01T00:00:00.000Z",
+            "provider", "spot",
+            "rows", 837L,
+            "addRowsIndexConstant", 96444.5703125,
+            "dependentPostAgg", 97282.5703125,
+            "index", 95606.5703125,
+            "maxIndex", 277.2735290527344,
+            "minIndex", 59.02102279663086,
+            "quantile", 101.78856f,
+            "uniques", QueryRunnerTestHelper.UNIQUES_9,
+            "apphisto",
+            new Histogram(
+                new float[]{
+                    4.457897186279297f,
+                    59.02102279663086f,
+                    113.58415222167969f,
+                    168.14727783203125f,
+                    222.7104034423828f,
+                    277.2735290527344f
+                },
+                new double[]{
+                    0.0,
+                    462.4309997558594,
+                    357.5404968261719,
+                    15.022850036621094,
+                    2.0056631565093994
+                }
+            )
+        )
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

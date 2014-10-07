@@ -84,18 +84,6 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-
-    if (selector == null) {
-      return Aggregators.noopAggregator();
-    }
-
-    final Class classOfObject = selector.classOfObject();
-    if (classOfObject != null && (classOfObject.equals(Object.class)
-                                  || ApproximateHistogramAggregator.class.isAssignableFrom(classOfObject))) {
-      System.out.println("here");
-      //return new HyperUniquesAggregator(name, selector);
-    }
     return new ApproximateHistogramAggregator(
         name,
         metricFactory.makeFloatColumnSelector(fieldName),
@@ -108,18 +96,6 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    //ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    //
-    //if (selector == null) {
-    //  return Aggregators.noopBufferAggregator();
-    //}
-    //
-    //final Class classOfObject = selector.classOfObject();
-    //if (classOfObject != null && (classOfObject.equals(Object.class) || ApproximateHistogramAggregator.class.isAssignableFrom(classOfObject))) {
-    //  System.out.println("here");
-    //  //return new HyperUniquesAggregator(name, selector);
-    //}
-
     return new ApproximateHistogramBufferAggregator(
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
@@ -143,7 +119,7 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new ApproximateHistogramAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit);
+    return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit);
   }
 
   @Override
