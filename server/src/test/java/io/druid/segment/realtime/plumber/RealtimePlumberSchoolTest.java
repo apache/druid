@@ -123,7 +123,11 @@ public class RealtimePlumberSchoolTest
           @Override
           public ParseSpec getParseSpec()
           {
-            return new JSONParseSpec(new TimestampSpec("timestamp", "auto"), new DimensionsSpec(null, null, null));
+            return new JSONParseSpec(
+                new TimestampSpec("timestamp", "auto"),
+                new DimensionsSpec(null, null, null),
+                JSONParseSpec.JSON
+            );
           }
 
           @Override
