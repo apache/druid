@@ -69,7 +69,8 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
     if (parseSpec == null) {
       this.parseSpec = new JSONParseSpec(
           timestampSpec,
-          new DimensionsSpec(dimensions, dimensionExclusions, spatialDimensions)
+          new DimensionsSpec(dimensions, dimensionExclusions, spatialDimensions),
+          JSONParseSpec.JSON
       );
     } else {
       this.parseSpec = parseSpec;

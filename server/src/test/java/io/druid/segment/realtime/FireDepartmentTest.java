@@ -61,7 +61,8 @@ public class FireDepartmentTest
                         Arrays.asList("dim1", "dim2"),
                         null,
                         null
-                    )
+                    ),
+                    JSONParseSpec.JSON
                 ),
                 null, null, null, null
             ),
