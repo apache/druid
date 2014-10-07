@@ -125,8 +125,7 @@ public class RealtimePlumberSchoolTest
           {
             return new JSONParseSpec(
                 new TimestampSpec("timestamp", "auto"),
-                new DimensionsSpec(null, null, null),
-                JSONParseSpec.JSON
+                new DimensionsSpec(null, null, null)
             );
           }
 
