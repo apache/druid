@@ -84,6 +84,7 @@ h2. Experimental
 * "Geographic Queries":./GeographicQueries.html
 * "Select Query":./SelectQuery.html
 * "Approximate Histograms and Quantiles":./ApproxHisto.html
+* "Router node":./Router.html
 
 h2. Development
 * "Versioning":./Versioning.html
