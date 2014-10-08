@@ -17,6 +17,7 @@ h2. Getting Started
 h2. Booting a Druid Cluster
 * "Simple Cluster Configuration":Simple-Cluster-Configuration.html
 * "Production Cluster Configuration":Production-Cluster-Configuration.html
+* "Production Hadoop Configuration":Hadoop-Configuration.html
 * "Rolling Cluster Updates":Rolling-Updates.html
 
 h2. Configuration
