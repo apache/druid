@@ -5,7 +5,7 @@ layout: doc_page
 Example Production Hadoop Configuration
 =======================================
 
-The following configuration should work relatively well for Druid indexing and Hadoop. In the example, we are using EC2 cc2.8xlarge nodes.
+The following configuration should work relatively well for Druid indexing and Hadoop. In the example, we are using Hadoop 2.4 with EC2 m1.xlarge nodes for NameNodes and cc2.8xlarge nodes for DataNodes.
 
 ### Core-site.xml
 
