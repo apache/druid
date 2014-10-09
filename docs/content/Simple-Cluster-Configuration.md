@@ -28,7 +28,7 @@ Configuration:
 
 -Ddruid.zk.service.host=localhost
 
--Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.157"]
+-Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.158"]
 
 -Ddruid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
 -Ddruid.db.connector.user=druid
