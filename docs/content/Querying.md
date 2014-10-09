@@ -127,7 +127,7 @@ Properties shared by all query types
 |timeseries, topN, groupBy, search|filter|Specifies the filter (the "WHERE" clause in SQL) for the query. See [Filters](Filters.html)|no|
 |timeseries, topN, groupBy, search|granularity|the timestamp granularity to bucket results into (i.e. "hour"). See [Granularities](Granularities.html) for more information.|no|
 |timeseries, topN, groupBy|aggregations|aggregations that combine values in a bucket. See [Aggregations](Aggregations.html).|yes|
-|timeseries, topN, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post Aggregations.html).|yes|
+|timeseries, topN, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post-Aggregations.html).|yes|
 |groupBy|dimensions|constrains the groupings; if empty, then one value per time granularity bucket|yes|
 |search|limit|maximum number of results (default is 1000), a system-level maximum can also be set via `com.metamx.query.search.maxSearchLimit`|no|
 |search|searchDimensions|Dimensions to apply the search query to. If not specified, it will search through all dimensions.|no|
