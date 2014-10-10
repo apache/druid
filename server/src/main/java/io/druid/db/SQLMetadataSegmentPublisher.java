@@ -24,7 +24,7 @@ package io.druid.db;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-public class SQLMetadataSegmentPublisher implements DbSegmentPublisher
+public class SQLMetadataSegmentPublisher implements SegmentPublisher
 {
   private static final Logger log = new Logger(SQLMetadataSegmentPublisher.class);
 

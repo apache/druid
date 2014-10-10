@@ -27,7 +27,7 @@ import io.druid.client.ServerView;
 import io.druid.concurrent.Execs;
 import io.druid.db.MetadataSegmentManager;
 import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.BaseZkCoordinator;
 import io.druid.server.coordination.DataSegmentChangeCallback;
 import io.druid.server.coordination.DataSegmentChangeHandler;
@@ -44,7 +44,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
 {
   private static final Logger log = new Logger(BaseZkCoordinator.class);
 
-  private final DbSegmentPublisher dbSegmentPublisher;
+  private final SegmentPublisher dbSegmentPublisher;
   private final MetadataSegmentManager databaseSegmentManager;
   private final ServerView serverView;
 
@@ -57,7 +57,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
       SegmentLoaderConfig config,
       DruidServerMetadata me,
       @Bridge CuratorFramework curator,
-      DbSegmentPublisher dbSegmentPublisher,
+      SegmentPublisher dbSegmentPublisher,
       MetadataSegmentManager databaseSegmentManager,
       ServerView serverView
   )

@@ -42,7 +42,7 @@ import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.MetadataStorageActionHandler;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import org.skife.jdbi.v2.IDBI;
 
 public class DerbyMetadataStorageDruidModule implements Module
@@ -68,7 +68,7 @@ public class DerbyMetadataStorageDruidModule implements Module
         binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(DerbyMetadataRuleManagerProvider.class)
     );
     PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(DbSegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
+        binder, "druid.db.type", Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
     );
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(MetadataSegmentPublisherProvider.class), Key.get(SQLMetadataSegmentPublisherProvider.class)
@@ -112,7 +112,7 @@ public class DerbyMetadataStorageDruidModule implements Module
             .to(DerbyMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(DbSegmentPublisher.class))
+    PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))
             .addBinding("derby")
             .to(SQLMetadataSegmentPublisher.class)
             .in(LazySingleton.class);

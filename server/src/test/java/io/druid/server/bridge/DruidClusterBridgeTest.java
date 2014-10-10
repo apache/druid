@@ -32,7 +32,7 @@ import io.druid.curator.announcement.Announcer;
 import io.druid.db.MetadataSegmentManager;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -147,7 +147,7 @@ public class DruidClusterBridgeTest
         DruidServer.DEFAULT_TIER,
         0
     );
-    DbSegmentPublisher dbSegmentPublisher = EasyMock.createMock(DbSegmentPublisher.class);
+    SegmentPublisher dbSegmentPublisher = EasyMock.createMock(SegmentPublisher.class);
     EasyMock.replay(dbSegmentPublisher);
     MetadataSegmentManager databaseSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);

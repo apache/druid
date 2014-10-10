@@ -48,7 +48,7 @@ import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.MetadataStorageActionHandler;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import org.skife.jdbi.v2.IDBI;
 
 import java.util.List;
@@ -100,7 +100,7 @@ public class PostgresMetadataStorageModule implements DruidModule
             .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(DbSegmentPublisher.class))
+    PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))
             .addBinding("postgresql")
             .to(SQLMetadataSegmentPublisher.class)
             .in(LazySingleton.class);
