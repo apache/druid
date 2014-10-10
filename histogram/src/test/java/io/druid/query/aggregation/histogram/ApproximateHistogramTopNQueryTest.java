@@ -113,7 +113,7 @@ public class ApproximateHistogramTopNQueryTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.providerDimension)
+        .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -144,7 +144,7 @@ public class ApproximateHistogramTopNQueryTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.providerDimension, "total_market")
+                                .put(QueryRunnerTestHelper.marketDimension, "total_market")
                                 .put("rows", 186L)
                                 .put("index", 215679.82879638672D)
                                 .put("addRowsIndexConstant", 215866.82879638672D)
@@ -175,7 +175,7 @@ public class ApproximateHistogramTopNQueryTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.providerDimension, "upfront")
+                                .put(QueryRunnerTestHelper.marketDimension, "upfront")
                                 .put("rows", 186L)
                                 .put("index", 192046.1060180664D)
                                 .put("addRowsIndexConstant", 192233.1060180664D)
@@ -206,7 +206,7 @@ public class ApproximateHistogramTopNQueryTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.providerDimension, "spot")
+                                .put(QueryRunnerTestHelper.marketDimension, "spot")
                                 .put("rows", 837L)
                                 .put("index", 95606.57232284546D)
                                 .put("addRowsIndexConstant", 96444.57232284546D)

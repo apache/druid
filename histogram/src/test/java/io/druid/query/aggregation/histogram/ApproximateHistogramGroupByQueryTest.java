@@ -64,13 +64,6 @@ public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
-  private Supplier<GroupByQueryConfig> configSupplier;
-
-  @Before
-  public void setUp() throws Exception
-  {
-    configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
-  }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -165,14 +158,14 @@ public class ApproximateHistogramGroupByQueryTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(Arrays.<DimensionSpec>asList(new LegacyDimensionSpec(QueryRunnerTestHelper.providerDimension)))
+        .setDimensions(Arrays.<DimensionSpec>asList(new LegacyDimensionSpec(QueryRunnerTestHelper.marketDimension)))
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        QueryRunnerTestHelper.providerDimension,
-                        OrderByColumnSpec.Direction.DESCENDING
+                        QueryRunnerTestHelper.marketDimension,
+                        OrderByColumnSpec.Direction.ASCENDING
                     )
                 ), 1
             )
@@ -201,7 +194,7 @@ public class ApproximateHistogramGroupByQueryTest
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01T00:00:00.000Z",
-            "provider", "spot",
+            "market", "spot",
             "rows", 837L,
             "addRowsIndexConstant", 96444.5703125,
             "dependentPostAgg", 97282.5703125,
