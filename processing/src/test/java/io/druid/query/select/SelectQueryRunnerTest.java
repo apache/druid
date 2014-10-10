@@ -65,7 +65,7 @@ public class SelectQueryRunnerTest
     );
   }
 
-  private static final String providerLowercase = "provider";
+  private static final String providerLowercase = "market";
 
   private final QueryRunner runner;
 
@@ -271,7 +271,7 @@ public class SelectQueryRunnerTest
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
         new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
-        new SelectorDimFilter(QueryRunnerTestHelper.providerDimension, "spot"),
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
         QueryRunnerTestHelper.dayGran,
         Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension),
         Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
@@ -368,8 +368,8 @@ public class SelectQueryRunnerTest
         new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
         new AndDimFilter(
             Arrays.<DimFilter>asList(
-                new SelectorDimFilter(QueryRunnerTestHelper.providerDimension, "spot"),
-                new SelectorDimFilter(QueryRunnerTestHelper.providerDimension, "foo")
+                new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
+                new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo")
             )
         ),
         QueryRunnerTestHelper.allGran,

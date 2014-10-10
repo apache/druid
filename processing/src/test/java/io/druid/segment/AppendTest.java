@@ -79,7 +79,7 @@ public class AppendTest
   final QueryGranularity allGran = QueryGranularity.ALL;
   final String dimensionValue = "dimension";
   final String valueValue = "value";
-  final String providerDimension = "provider";
+  final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
   final String placementishDimension = "placementish";
@@ -309,7 +309,7 @@ public class AppendTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 3L)
                                 .put("index", 300.0D)
                                 .put("addRowsIndexConstant", 304.0D)
@@ -319,7 +319,7 @@ public class AppendTest
                                 .build(),
                     new HashMap<String, Object>()
                     {{
-                        put("provider", null);
+                        put("market", null);
                         put("rows", 3L);
                         put("index", 200.0D);
                         put("addRowsIndexConstant", 204.0D);
@@ -328,7 +328,7 @@ public class AppendTest
                         put("minIndex", 0.0);
                       }},
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
+                                .put("market", "total_market")
                                 .put("rows", 2L)
                                 .put("index", 200.0D)
                                 .put("addRowsIndexConstant", 203.0D)
@@ -355,7 +355,7 @@ public class AppendTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
+                                .put("market", "total_market")
                                 .put("rows", 3L)
                                 .put("index", 300.0D)
                                 .put("addRowsIndexConstant", 304.0D)
@@ -365,7 +365,7 @@ public class AppendTest
                                 .build(),
                     new HashMap<String, Object>()
                     {{
-                        put("provider", null);
+                        put("market", null);
                         put("rows", 3L);
                         put("index", 100.0D);
                         put("addRowsIndexConstant", 104.0D);
@@ -374,7 +374,7 @@ public class AppendTest
                         put("minIndex", 0.0);
                       }},
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -401,7 +401,7 @@ public class AppendTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -447,7 +447,7 @@ public class AppendTest
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -468,7 +468,7 @@ public class AppendTest
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -488,7 +488,7 @@ public class AppendTest
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -509,7 +509,7 @@ public class AppendTest
                 Arrays.<SearchHit>asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -543,7 +543,7 @@ public class AppendTest
                                   .dataSource(dataSource)
                                   .granularity(allGran)
                                   .intervals(fullOnInterval)
-                                  .filters(providerDimension, "breakstuff")
+                                  .filters(marketDimension, "breakstuff")
                                   .aggregators(
                                       Lists.<AggregatorFactory>newArrayList(
                                           Iterables.concat(
@@ -593,11 +593,11 @@ public class AppendTest
                            .fields(
                                Arrays.<DimFilter>asList(
                                    Druids.newSelectorDimFilterBuilder()
-                                         .dimension(providerDimension)
+                                         .dimension(marketDimension)
                                          .value("spot")
                                          .build(),
                                    Druids.newSelectorDimFilterBuilder()
-                                         .dimension(providerDimension)
+                                         .dimension(marketDimension)
                                          .value("total_market")
                                          .build()
                                )
@@ -623,7 +623,7 @@ public class AppendTest
     return new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
-        .dimension(providerDimension)
+        .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
         .intervals(fullOnInterval)
@@ -647,7 +647,7 @@ public class AppendTest
     return new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
-        .dimension(providerDimension)
+        .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
         .filters(
@@ -655,7 +655,7 @@ public class AppendTest
                   .fields(
                       Arrays.<DimFilter>asList(
                           Druids.newSelectorDimFilterBuilder()
-                                .dimension(providerDimension)
+                                .dimension(marketDimension)
                                 .value("spot")
                                 .build(),
                           Druids.newSelectorDimFilterBuilder()
@@ -699,7 +699,7 @@ public class AppendTest
                      Druids.newNotDimFilterBuilder()
                            .field(
                                Druids.newSelectorDimFilterBuilder()
-                                     .dimension(providerDimension)
+                                     .dimension(marketDimension)
                                      .value("spot")
                                      .build()
                            ).build()

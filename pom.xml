@@ -30,7 +30,7 @@
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.131-SNAPSHOT</tag>
+        <tag>druid-0.6.159-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
@@ -41,7 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
         <apache.curator.version>2.6.0</apache.curator.version>
-        <druid.api.version>0.2.14</druid.api.version>
+        <druid.api.version>0.2.15</druid.api.version>
     </properties>
 
     <modules>
