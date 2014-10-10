@@ -93,4 +93,4 @@ h2. Development
 * "Libraries":./Libraries.html
 
 h2. Misc
-* "Thanks":./Thanks.html
+* "Thanks":/thanks.html
