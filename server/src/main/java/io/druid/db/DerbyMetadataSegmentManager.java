@@ -61,14 +61,13 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  */
 @ManageLifecycle
-public class DerbyMetadataSegmentManager implements MetadataSegmentManager
+public class DerbyMetadataSegmentManager extends SQLMetadataSegmentManager
 {
   private static final Logger log = new Logger(DerbyMetadataSegmentManager.class);
 
   private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataSegmentManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final IDBI dbi;
@@ -85,57 +84,13 @@ public class DerbyMetadataSegmentManager implements MetadataSegmentManager
       IDBI dbi
   )
   {
+    super(jsonMapper, config, dbTables, dbi);
     this.jsonMapper = jsonMapper;
-    this.config = config;
     this.dbTables = dbTables;
     this.dataSources = new AtomicReference<ConcurrentHashMap<String, DruidDataSource>>(
         new ConcurrentHashMap<String, DruidDataSource>()
     );
     this.dbi = dbi;
-  }
-
-  @LifecycleStart
-  public void start()
-  {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
-
-      this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
-
-      final Duration delay = config.get().getPollDuration().toStandardDuration();
-      ScheduledExecutors.scheduleWithFixedDelay(
-          exec,
-          new Duration(0),
-          delay,
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              poll();
-            }
-          }
-      );
-
-      started = true;
-    }
-  }
-
-  @LifecycleStop
-  public void stop()
-  {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
-
-      started = false;
-      dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
-      exec.shutdownNow();
-      exec = null;
-    }
   }
 
   @Override
@@ -236,171 +191,6 @@ public class DerbyMetadataSegmentManager implements MetadataSegmentManager
     }
 
     return true;
-  }
-
-  @Override
-  public boolean enableSegment(final String segmentId)
-  {
-    try {
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
-              )
-                    .bind("id", segmentId)
-                    .execute();
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Exception enabling segment %s", segmentId);
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public boolean removeDatasource(final String ds)
-  {
-    try {
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
-
-      if (!dataSourceMap.containsKey(ds)) {
-        log.warn("Cannot delete datasource %s, does not exist", ds);
-        return false;
-      }
-
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
-              )
-                    .bind("dataSource", ds)
-                    .execute();
-
-              return null;
-            }
-          }
-      );
-
-      dataSourceMap.remove(ds);
-    }
-    catch (Exception e) {
-      log.error(e, "Error removing datasource %s", ds);
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public boolean removeSegment(String ds, final String segmentID)
-  {
-    try {
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
-              ).bind("segmentID", segmentID)
-                    .execute();
-
-              return null;
-            }
-          }
-      );
-
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
-
-      if (!dataSourceMap.containsKey(ds)) {
-        log.warn("Cannot find datasource %s", ds);
-        return false;
-      }
-
-      DruidDataSource dataSource = dataSourceMap.get(ds);
-      dataSource.removePartition(segmentID);
-
-      if (dataSource.isEmpty()) {
-        dataSourceMap.remove(ds);
-      }
-    }
-    catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public boolean isStarted()
-  {
-    return started;
-  }
-
-  @Override
-  public DruidDataSource getInventoryValue(String key)
-  {
-    return dataSources.get().get(key);
-  }
-
-  @Override
-  public Collection<DruidDataSource> getInventory()
-  {
-    return dataSources.get().values();
-  }
-
-  @Override
-  public Collection<String> getAllDatasourceNames()
-  {
-    synchronized (lock) {
-      return dbi.withHandle(
-          new HandleCallback<List<String>>()
-          {
-            @Override
-            public List<String> withHandle(Handle handle) throws Exception
-            {
-              return handle.createQuery(
-                  String.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
-              )
-                           .fold(
-                               Lists.<String>newArrayList(),
-                               new Folder3<ArrayList<String>, Map<String, Object>>()
-                               {
-                                 @Override
-                                 public ArrayList<String> fold(
-                                     ArrayList<String> druidDataSources,
-                                     Map<String, Object> stringObjectMap,
-                                     FoldController foldController,
-                                     StatementContext statementContext
-                                 ) throws SQLException
-                                 {
-                                   druidDataSources.add(
-                                       MapUtils.getString(stringObjectMap, "datasource")
-                                   );
-                                   return druidDataSources;
-                                 }
-                               }
-                           );
-
-            }
-          }
-      );
-    }
   }
 
   @Override
