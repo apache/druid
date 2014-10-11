@@ -101,7 +101,7 @@ public class TaskLifecycleTest
   private TaskLockbox tl = null;
   private TaskQueue tq = null;
   private TaskRunner tr = null;
-  private MockIndexerDBStorageCoordinator mdc = null;
+  private MockIndexerMetadataStorageCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   TaskStorageQueryAdapter tsqa = null;
@@ -510,12 +510,12 @@ public class TaskLifecycleTest
     return retVal;
   }
 
-  private static class MockIndexerDBStorageCoordinator extends IndexerSQLMetadataStorageCoordinator
+  private static class MockIndexerMetadataStorageCoordinator extends IndexerSQLMetadataStorageCoordinator
   {
     final private Set<DataSegment> published = Sets.newHashSet();
     final private Set<DataSegment> nuked = Sets.newHashSet();
 
-    private MockIndexerDBStorageCoordinator()
+    private MockIndexerMetadataStorageCoordinator()
     {
       super(null, null, null);
     }
@@ -562,9 +562,9 @@ public class TaskLifecycleTest
     }
   }
 
-  private static MockIndexerDBStorageCoordinator newMockMDC()
+  private static MockIndexerMetadataStorageCoordinator newMockMDC()
   {
-    return new MockIndexerDBStorageCoordinator();
+    return new MockIndexerMetadataStorageCoordinator();
   }
 
   private static ServiceEmitter newMockEmitter()
