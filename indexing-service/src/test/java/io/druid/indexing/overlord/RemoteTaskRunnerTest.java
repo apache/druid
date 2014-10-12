@@ -361,6 +361,29 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
   }
 
+  @Test
+  public void testWorkerDisabled() throws Exception
+  {
+    doSetup();
+    final ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+
+    // Disable while task running
+    disableWorker();
+
+    // Continue test
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+
+    // Confirm RTR thinks the worker is disabled.
+    Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().getVersion());
+  }
+
   private void doSetup() throws Exception
   {
     makeWorker();
@@ -402,6 +425,14 @@ public class RemoteTaskRunnerTest
     cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
         announcementsPath,
         jsonMapper.writeValueAsBytes(worker)
+    );
+  }
+
+  private void disableWorker() throws Exception
+  {
+    cf.setData().forPath(
+        announcementsPath,
+        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
     );
   }
 
