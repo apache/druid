@@ -42,7 +42,6 @@ import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.segment.TestHelper;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -61,13 +60,6 @@ public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
-  private Supplier<GroupByQueryConfig> configSupplier;
-
-  @Before
-  public void setUp() throws Exception
-  {
-    configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
-  }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
