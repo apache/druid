@@ -30,12 +30,9 @@ import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.dimension.LegacyDimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
@@ -165,13 +162,20 @@ public class ApproximateHistogramGroupByQueryTest
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
-        .setDimensions(Arrays.<DimensionSpec>asList(new LegacyDimensionSpec(QueryRunnerTestHelper.providerDimension)))
+        .setDimensions(
+            Arrays.<DimensionSpec>asList(
+                new DefaultDimensionSpec(
+                    QueryRunnerTestHelper.providerDimension,
+                    "provider"
+                )
+            )
+        )
         .setInterval(QueryRunnerTestHelper.fullOnInterval)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        QueryRunnerTestHelper.providerDimension,
+                        "provider",
                         OrderByColumnSpec.Direction.DESCENDING
                     )
                 ), 1
@@ -179,20 +183,12 @@ public class ApproximateHistogramGroupByQueryTest
         )
         .setAggregatorSpecs(
             Lists.newArrayList(
-                Iterables.concat(
-                    QueryRunnerTestHelper.commonAggregators,
-                    Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index"),
-                        aggFactory
-                    )
-                )
+                QueryRunnerTestHelper.rowsCount,
+                aggFactory
             )
         )
         .setPostAggregatorSpecs(
-            Arrays.asList(
-                QueryRunnerTestHelper.addRowsIndexConstant,
-                QueryRunnerTestHelper.dependentPostAgg,
+            Arrays.<PostAggregator>asList(
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)
             )
         )
@@ -201,31 +197,21 @@ public class ApproximateHistogramGroupByQueryTest
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01T00:00:00.000Z",
-            "provider", "spot",
-            "rows", 837L,
-            "addRowsIndexConstant", 96444.5703125,
-            "dependentPostAgg", 97282.5703125,
-            "index", 95606.5703125,
-            "maxIndex", 277.2735290527344,
-            "minIndex", 59.02102279663086,
-            "quantile", 101.78856f,
-            "uniques", QueryRunnerTestHelper.UNIQUES_9,
+            "provider", "upfront",
+            "rows", 186L,
+            "quantile", 880.9881f,
             "apphisto",
             new Histogram(
                 new float[]{
-                    4.457897186279297f,
-                    59.02102279663086f,
-                    113.58415222167969f,
-                    168.14727783203125f,
-                    222.7104034423828f,
-                    277.2735290527344f
+                    214.97299194335938f,
+                    545.9906005859375f,
+                    877.0081787109375f,
+                    1208.0257568359375f,
+                    1539.0433349609375f,
+                    1870.06103515625f
                 },
                 new double[]{
-                    0.0,
-                    462.4309997558594,
-                    357.5404968261719,
-                    15.022850036621094,
-                    2.0056631565093994
+                    0.0, 67.53287506103516, 72.22068786621094, 31.984678268432617, 14.261756896972656
                 }
             )
         )
