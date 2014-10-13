@@ -41,19 +41,11 @@ public class IntervalLoadRule extends LoadRule
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
-      // Replicants and tier are deprecated
-      @JsonProperty("replicants") Integer replicants,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
     this.interval = interval;
-
-    if (tieredReplicants != null) {
-      this.tieredReplicants = tieredReplicants;
-    } else { // Backwards compatible
-      this.tieredReplicants = ImmutableMap.of(tier, replicants);
-    }
+    this.tieredReplicants = tieredReplicants;
   }
 
   @Override
