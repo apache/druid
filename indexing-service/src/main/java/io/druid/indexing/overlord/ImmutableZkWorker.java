@@ -32,7 +32,7 @@ public class ImmutableZkWorker
 {
   private final Worker worker;
   private final int currCapacityUsed;
-  private final Set<String> availabilityGroups;
+  private final ImmutableSet<String> availabilityGroups;
 
   public ImmutableZkWorker(Worker worker, int currCapacityUsed, Set<String> availabilityGroups)
   {
