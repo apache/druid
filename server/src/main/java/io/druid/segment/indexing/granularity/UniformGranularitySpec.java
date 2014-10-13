@@ -47,16 +47,12 @@ public class UniformGranularitySpec implements GranularitySpec
   public UniformGranularitySpec(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
-      @JsonProperty("intervals") List<Interval> inputIntervals,
-      // Backwards compatible
-      @JsonProperty("gran") Granularity granularity
+      @JsonProperty("intervals") List<Interval> inputIntervals
 
   )
   {
     if (segmentGranularity != null) {
       this.segmentGranularity = segmentGranularity;
-    } else if (granularity != null) { // backwards compatibility
-      this.segmentGranularity = granularity;
     } else {
       this.segmentGranularity = defaultSegmentGranularity;
     }
@@ -111,8 +107,7 @@ public class UniformGranularitySpec implements GranularitySpec
     return new UniformGranularitySpec(
         segmentGranularity,
         queryGranularity,
-        inputIntervals,
-        segmentGranularity
+        inputIntervals
     );
   }
 

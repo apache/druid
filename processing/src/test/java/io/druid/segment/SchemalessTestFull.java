@@ -79,7 +79,7 @@ public class SchemalessTestFull
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
   final HyperUniquesAggregatorFactory uniques = new HyperUniquesAggregatorFactory("uniques", "quality_uniques");
-  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
+  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   final ArithmeticPostAggregator addRowsIndexConstant =

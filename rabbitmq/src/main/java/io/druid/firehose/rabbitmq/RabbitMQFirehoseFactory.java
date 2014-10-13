@@ -109,21 +109,16 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
   private final RabbitMQFirehoseConfig config;
 
   @JsonProperty
-  private final StringInputRowParser parser;
-
-  @JsonProperty
   private final ConnectionFactory connectionFactory;
 
   @JsonCreator
   public RabbitMQFirehoseFactory(
       @JsonProperty("connection") JacksonifiedConnectionFactory connectionFactory,
-      @JsonProperty("config") RabbitMQFirehoseConfig config,
-      @JsonProperty("parser") StringInputRowParser parser
+      @JsonProperty("config") RabbitMQFirehoseConfig config
   )
   {
     this.connectionFactory = connectionFactory;
     this.config = config;
-    this.parser = parser;
   }
 
   @Override
@@ -268,12 +263,6 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
         connection.close();
       }
     };
-  }
-
-  @Override
-  public ByteBufferInputRowParser getParser()
-  {
-    return parser;
   }
 
   private static class QueueingConsumer extends DefaultConsumer

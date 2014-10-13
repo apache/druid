@@ -61,7 +61,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
   protected void setUp() throws Exception
   {
 
-    final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
+    final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
     final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
     final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
 

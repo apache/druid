@@ -57,12 +57,6 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
     return new CombiningFirehose(parser);
   }
 
-  @Override
-  public InputRowParser getParser()
-  {
-    return delegateFactoryList.get(0).getParser();
-  }
-
   @JsonProperty("delegates")
   public List<FirehoseFactory> getDelegateFactoryList()
   {

@@ -54,7 +54,6 @@ import io.druid.query.topn.TopNResultValue;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -88,7 +87,7 @@ public class AppendTest
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
   final HyperUniquesAggregatorFactory uniques = new HyperUniquesAggregatorFactory("uniques", "quality_uniques");
-  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
+  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   final ArithmeticPostAggregator addRowsIndexConstant =
