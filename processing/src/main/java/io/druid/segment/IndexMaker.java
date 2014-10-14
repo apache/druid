@@ -105,7 +105,6 @@ import java.util.TreeSet;
 public class IndexMaker
 {
   private static final Logger log = new Logger(IndexMaker.class);
-
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
@@ -115,7 +114,6 @@ public class IndexMaker
     final Injector injector = GuiceInjectors.makeStartupInjector();
     mapper = injector.getInstance(ObjectMapper.class);
   }
-
 
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
   {
@@ -806,7 +804,6 @@ public class IndexMaker
     progress.stopSection(dimSection);
   }
 
-
   private static void makeDimColumn(
       final FileSmoosher v9Smoosher,
       final List<IndexableAdapter> adapters,
@@ -1237,7 +1234,7 @@ public class IndexMaker
     ValueType type = valueTypes.get(metric);
 
     switch (type) {
-      case FLOAT:
+      case FLOAT: {
         metBuilder.setValueType(ValueType.FLOAT);
 
         float[] arr = new float[rowCount];
@@ -1260,6 +1257,31 @@ public class IndexMaker
             metric
         );
         break;
+      }
+      case LONG: {
+        metBuilder.setValueType(ValueType.LONG);
+
+        long[] arr = new long[rowCount];
+        int rowNum = 0;
+        for (Rowboat theRow : theRows) {
+          Object obj = theRow.getMetrics()[metricIndex];
+          arr[rowNum++] = (obj == null) ? 0 : ((Number) obj).longValue();
+        }
+
+        CompressedLongsIndexedSupplier compressedLongs = CompressedLongsIndexedSupplier.fromLongBuffer(
+            LongBuffer.wrap(arr),
+            IndexIO.BYTE_ORDER,
+            CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        );
+
+        writeColumn(
+            v9Smoosher,
+            new LongGenericColumnPartSerde(compressedLongs, IndexIO.BYTE_ORDER),
+            metBuilder,
+            metric
+        );
+        break;
+      }
       case COMPLEX:
         String complexType = metricTypeNames.get(metric);
 
@@ -1392,11 +1414,15 @@ public class IndexMaker
     return Lists.newArrayList(retVal);
   }
 
+  private static interface ColumnDictionaryEntryStore
+  {
+    public void add(int[] vals);
+  }
+
   private static class DimValueConverter
   {
     private final Indexed<String> dimSet;
     private final IntBuffer conversionBuf;
-
     private int currIndex;
     private String lastVal = null;
 
@@ -1670,11 +1696,6 @@ public class IndexMaker
 
       return retVal;
     }
-  }
-
-  private static interface ColumnDictionaryEntryStore
-  {
-    public void add(int[] vals);
   }
 
   private static class SingleValColumnDictionaryEntryStore implements ColumnDictionaryEntryStore

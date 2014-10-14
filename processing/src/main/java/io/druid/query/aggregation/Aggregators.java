@@ -95,6 +95,13 @@ public class Aggregators
         return 0;
       }
 
+
+      @Override
+      public long getLong(ByteBuffer buf, int position)
+      {
+        return 0L;
+      }
+
       @Override
       public void close()
       {

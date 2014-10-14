@@ -203,6 +203,12 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    public long getLongMetric(String s)
+    {
+      return 0L;
+    }
+
+    @Override
     public int compareTo(Row o)
     {
       return 0;

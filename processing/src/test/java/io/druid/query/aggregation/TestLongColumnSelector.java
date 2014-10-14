@@ -17,11 +17,32 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment;
+package io.druid.query.aggregation;
+
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 
 /**
  */
-public interface TimestampColumnSelector
+public class TestLongColumnSelector implements LongColumnSelector
 {
-  public long getTimestamp();
+  private final long[] longs;
+
+  private int index = 0;
+
+  public TestLongColumnSelector(long[] longs)
+  {
+    this.longs = longs;
+  }
+
+  @Override
+  public long get()
+  {
+    return longs[index];
+  }
+
+  public void increment()
+  {
+    ++index;
+  }
 }

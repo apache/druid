@@ -62,6 +62,11 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    replicatorThrottler.updateParams(
+        coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+        coordinator.getDynamicConfigs().getReplicantLifetime()
+    );
+
     CoordinatorStats stats = new CoordinatorStats();
     DruidCluster cluster = params.getDruidCluster();
 

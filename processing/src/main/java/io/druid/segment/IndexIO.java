@@ -715,15 +715,14 @@ public class IndexIO
       }
 
       String[] cols = colSet.toArray(new String[colSet.size()]);
-
+      columns.put(Column.TIME_COLUMN_NAME, new ColumnBuilder()
+          .setType(ValueType.LONG)
+          .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
+          .build());
       return new SimpleQueryableIndex(
           index.getDataInterval(),
           new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
-          new ColumnBuilder()
-              .setType(ValueType.LONG)
-              .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
-              .build(),
           columns,
           index.getFileMapper()
       );
@@ -756,8 +755,10 @@ public class IndexIO
         columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName)));
       }
 
+      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time")));
+
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, deserializeColumn(mapper, smooshedFiles.mapFile("__time")), columns, smooshedFiles
+          dataInterval, cols, dims, columns, smooshedFiles
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);

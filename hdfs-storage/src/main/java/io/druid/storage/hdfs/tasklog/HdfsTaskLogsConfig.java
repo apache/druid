@@ -23,19 +23,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.NotNull;
 
 /**
- * Indexer hdfs task logs configuration
- *
- * Created by Frank Ren on 6/20/14.
+ * Indexer hdfs task logs configuration.
  */
 public class HdfsTaskLogsConfig
 {
-    @JsonProperty
-    @NotNull
-    private String directory;
 
-    public String getDirectory()
-    {
-        return directory;
-    }
+  @JsonProperty
+  @NotNull
+  private String directory;
+
+  public HdfsTaskLogsConfig(String directory)
+  {
+    this.directory = directory;
+  }
+
+  public String getDirectory()
+  {
+    return directory;
+  }
 }
 
