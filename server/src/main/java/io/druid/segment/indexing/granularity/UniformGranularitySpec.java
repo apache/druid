@@ -101,16 +101,6 @@ public class UniformGranularitySpec implements GranularitySpec
     return queryGranularity;
   }
 
-  @Override
-  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
-  {
-    return new UniformGranularitySpec(
-        segmentGranularity,
-        queryGranularity,
-        inputIntervals
-    );
-  }
-
   @JsonProperty("intervals")
   public Optional<List<Interval>> getIntervals()
   {

@@ -97,24 +97,4 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
 		log.info("Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
 		    meta.getObjectSize());
 	}
-
-	@Override
-	public long getLastModified(DataSegment segment) throws SegmentLoadingException
-	{
-		String key = (String) segment.getLoadSpec().get("key");
-		OperationResult<ColumnList<String>> result;
-		try
-		{
-			result = this.keyspace.prepareQuery(descriptorStorage)
-			    .getKey(key)
-			    .execute();
-			ColumnList<String> children = result.getResult();
-			long lastModified = children.getColumnByName("lastmodified").getLongValue();
-			log.info("Read lastModified for [%s] as [%d]", key, lastModified);
-			return lastModified;
-		} catch (ConnectionException e)
-		{
-			throw new SegmentLoadingException(e, e.getMessage());
-		}
-	}
 }

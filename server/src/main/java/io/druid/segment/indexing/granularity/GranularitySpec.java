@@ -59,6 +59,4 @@ public interface GranularitySpec
 
   public QueryGranularity getQueryGranularity();
 
-  @Deprecated
-  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity);
 }
