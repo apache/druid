@@ -44,6 +44,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.server.DruidNode;
@@ -161,10 +162,19 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               final List<String> command = Lists.newArrayList();
                               final String childHost = String.format("%s:%d", node.getHostNoPort(), childPort);
+                              final String taskClasspath;
+                              if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
+                                taskClasspath = Joiner.on(File.pathSeparator).join(
+                                    task.getClasspathPrefix(),
+                                    config.getClasspath()
+                                );
+                              } else {
+                                taskClasspath = config.getClasspath();
+                              }
 
                               command.add(config.getJavaCommand());
                               command.add("-cp");
-                              command.add(config.getClasspath());
+                              command.add(taskClasspath);
 
                               Iterables.addAll(command, whiteSpaceSplitter.split(config.getJavaOpts()));
 
@@ -382,39 +392,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
           @Override
           public InputStream getInput() throws IOException
           {
-            final RandomAccessFile raf = new RandomAccessFile(processHolder.logFile, "r");
-            final long rafLength = raf.length();
-            if (offset > 0) {
-              raf.seek(offset);
-            } else if (offset < 0 && offset < rafLength) {
-              raf.seek(Math.max(0, rafLength + offset));
-            }
-            return Channels.newInputStream(raf.getChannel());
+            return LogUtils.streamFile(processHolder.logFile, offset);
           }
         }
     );
-  }
-
-  private int findUnusedPort()
-  {
-    synchronized (tasks) {
-      int port = config.getStartPort();
-      int maxPortSoFar = -1;
-
-      for (ForkingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
-        if (taskWorkItem.processHolder != null) {
-          if (taskWorkItem.processHolder.port > maxPortSoFar) {
-            maxPortSoFar = taskWorkItem.processHolder.port;
-          }
-
-          if (taskWorkItem.processHolder.port == port) {
-            port = maxPortSoFar + 1;
-          }
-        }
-      }
-
-      return port;
-    }
   }
 
   private static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

@@ -22,12 +22,10 @@ package io.druid.query.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
@@ -36,9 +34,8 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
-import io.druid.query.QueryConfig;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
@@ -47,7 +44,6 @@ import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -61,14 +57,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
-
-  private final QueryConfig config;
-
-  @Inject
-  public SegmentMetadataQueryQueryToolChest(QueryConfig config)
-  {
-    this.config = config;
-  }
 
   @Override
   public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)
@@ -146,23 +134,19 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
   {
-    return new OrderedMergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<SegmentAnalysis> mergeSequencesUnordered(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(SegmentMetadataQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4(query.getType())
-        .setUser5(Joiner.on(",").join(query.getIntervals()))
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query);
   }
 
   @Override
@@ -189,9 +173,9 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
         return ByteBuffer.allocate(1 + includerBytes.length)
-            .put(SEGMENT_METADATA_CACHE_PREFIX)
-            .put(includerBytes)
-            .array();
+                         .put(SEGMENT_METADATA_CACHE_PREFIX)
+                         .put(includerBytes)
+                         .array();
       }
 
       @Override

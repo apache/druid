@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -69,7 +68,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -81,9 +80,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 {
   private final long minTimestamp;
   private final QueryGranularity gran;
-
-  private final Set<Function<InputRow, InputRow>> rowTransformers;
-
+  private final List<Function<InputRow, InputRow>> rowTransformers;
   private final AggregatorFactory[] metrics;
   private final Map<String, Integer> metricIndexes;
   private final Map<String, String> metricTypes;
@@ -92,12 +89,10 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   private final int[] aggPositionOffsets;
   private final int totalAggSize;
   private final LinkedHashMap<String, Integer> dimensionOrder;
-  private final CopyOnWriteArrayList<String> dimensions;
+  protected final CopyOnWriteArrayList<String> dimensions;
   private final DimensionHolder dimValues;
-
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
-
-  private final ConcurrentSkipListMap<TimeAndDims, Integer> facts;
+  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
   private final ResourceHolder<ByteBuffer> bufferHolder;
   private volatile AtomicInteger numEntries = new AtomicInteger();
   // This is modified on add() in a critical section.
@@ -121,7 +116,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
     this.metrics = incrementalIndexSchema.getMetrics();
-    this.rowTransformers = Sets.newHashSet();
+    this.rowTransformers = Lists.newCopyOnWriteArrayList();
 
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
@@ -298,11 +293,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<>();
-    int index = 0;
-    for (String dim : incrementalIndexSchema.getDimensionsSpec().getDimensions()) {
-      dimensionOrder.put(dim, index++);
-      dimensions.add(dim);
-    }
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = incrementalIndexSchema.getDimensionsSpec().getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
@@ -336,7 +326,11 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
     this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-    this.facts = new ConcurrentSkipListMap<>();
+    this.facts = createFactsTable();
+  }
+
+  protected ConcurrentNavigableMap<TimeAndDims, Integer> createFactsTable() {
+    return new ConcurrentSkipListMap<>();
   }
 
   public IncrementalIndex(
@@ -461,22 +455,24 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
 
     final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
-
+    Integer rowOffset;
     synchronized (this) {
-      if (!facts.containsKey(key)) {
-        int rowOffset = totalAggSize * numEntries.getAndIncrement();
+      rowOffset = totalAggSize * numEntries.get();
+      final Integer prev = facts.putIfAbsent(key, rowOffset);
+      if (prev != null) {
+        rowOffset = prev;
+      } else {
         if (rowOffset + totalAggSize > bufferHolder.get().limit()) {
-          throw new ISE("Buffer Full cannot add more rows current rowSize : %d", numEntries.get());
+          facts.remove(key);
+          throw new ISE("Buffer full, cannot add more rows! Current rowSize[%,d].", numEntries.get());
         }
+        numEntries.incrementAndGet();
         for (int i = 0; i < aggs.length; i++) {
           aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
         }
-        facts.put(key, rowOffset);
-
       }
     }
     in.set(row);
-    int rowOffset = facts.get(key);
     for (int i = 0; i < aggs.length; i++) {
       synchronized (aggs[i]) {
         aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
@@ -513,11 +509,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     int count = 0;
     for (String dimValue : dimValues) {
       String canonicalDimValue = dimLookup.get(dimValue);
-      if (canonicalDimValue == null) {
-        canonicalDimValue = dimValue;
+      if (!dimLookup.contains(canonicalDimValue)) {
         dimLookup.add(dimValue);
       }
-
       retVal[count] = canonicalDimValue;
       count++;
     }
@@ -606,7 +600,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     return columnCapabilities.get(column);
   }
 
-  ConcurrentSkipListMap<TimeAndDims, Integer> getFacts()
+  ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
   {
     return facts;
   }
@@ -678,7 +672,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
   }
 
-  static class DimensionHolder
+  class DimensionHolder
   {
     private final Map<String, DimDim> dimensions;
 
@@ -696,7 +690,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     {
       DimDim holder = dimensions.get(dimension);
       if (holder == null) {
-        holder = new DimDim();
+        holder = createDimDim(dimension);
         dimensions.put(dimension, holder);
       } else {
         throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
@@ -708,6 +702,10 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     {
       return dimensions.get(dimension);
     }
+  }
+
+  protected DimDim createDimDim(String dimension){
+    return new DimDimImpl();
   }
 
   static class TimeAndDims implements Comparable<TimeAndDims>
@@ -795,23 +793,51 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     }
   }
 
-  static class DimDim
+  static interface DimDim
   {
-    private final Map<String, String> poorMansInterning = Maps.newConcurrentMap();
+    public String get(String value);
+
+    public int getId(String value);
+
+    public String getValue(int id);
+
+    public boolean contains(String value);
+
+    public int size();
+
+    public int add(String value);
+
+    public int getSortedId(String value);
+
+    public String getSortedValue(int index);
+
+    public void sort();
+
+    public boolean compareCannonicalValues(String s1, String s2);
+  }
+
+  private static class DimDimImpl implements DimDim{
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
     private volatile String[] sortedVals = null;
+    final ConcurrentMap<String, String> poorMansInterning = Maps.newConcurrentMap();
 
-    public DimDim()
+
+    public DimDimImpl()
     {
-      BiMap<String, Integer> biMap = Maps.synchronizedBiMap(HashBiMap.<String, Integer>create());
-      falseIds = biMap;
-      falseIdsReverse = biMap.inverse();
+        BiMap<String, Integer> biMap = Maps.synchronizedBiMap(HashBiMap.<String, Integer>create());
+        falseIds = biMap;
+        falseIdsReverse = biMap.inverse();
     }
 
-    public String get(String value)
+    /**
+     * Returns the interned String value to allow fast comparisons using `==` instead of `.equals()`
+     * @see io.druid.segment.incremental.IncrementalIndexStorageAdapter.EntryHolderValueMatcherFactory#makeValueMatcher(String, String)
+     */
+    public String get(String str)
     {
-      return value == null ? null : poorMansInterning.get(value);
+      String prev = poorMansInterning.putIfAbsent(str, str);
+      return prev != null ? prev : str;
     }
 
     public int getId(String value)
@@ -824,20 +850,21 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       return falseIdsReverse.get(id);
     }
 
+    public boolean contains(String value)
+    {
+      return falseIds.containsKey(value);
+    }
+
     public int size()
     {
-      return poorMansInterning.size();
+      return falseIds.size();
     }
 
-    public Set<String> keySet()
+    public synchronized int add(String value)
     {
-      return poorMansInterning.keySet();
-    }
-
-    public synchronized void add(String value)
-    {
-      poorMansInterning.put(value, value);
-      falseIds.put(value, falseIds.size());
+      int id = falseIds.size();
+      falseIds.put(value, id);
+      return id;
     }
 
     public int getSortedId(String value)
@@ -870,6 +897,11 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       if (sortedVals == null) {
         throw new ISE("Call sort() before calling the getSorted* methods.");
       }
+    }
+
+    public boolean compareCannonicalValues(String s1, String s2)
+    {
+      return s1 ==s2;
     }
   }
 }

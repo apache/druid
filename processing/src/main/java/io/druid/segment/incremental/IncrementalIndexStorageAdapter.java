@@ -29,8 +29,8 @@ import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -133,8 +133,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     Interval actualIntervalTmp = interval;
 
+    final Interval dataInterval = new Interval(
+        getMinTime().getMillis(),
+        gran.next(gran.truncate(getMaxTime().getMillis()))
+    );
 
-    final Interval dataInterval = new Interval(getMinTime().getMillis(), gran.next(getMaxTime().getMillis()));
     if (!actualIntervalTmp.overlaps(dataInterval)) {
       return Sequences.empty();
     }
@@ -454,7 +457,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Object get()
                     {
-                      final String[] dimVals = currEntry.getKey().getDims()[dimensionIndex];
+                      final String[][] dims = currEntry.getKey().getDims();
+                      if(dimensionIndex >= dims.length) {
+                        return null;
+                      }
+                      final String[] dimVals = dims[dimensionIndex];
                       if (dimVals.length == 1) {
                         return dimVals[0];
                       } else if (dimVals.length == 0) {
@@ -525,8 +532,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
-      String idObject = index.getDimension(dimension.toLowerCase()).get(value);
-      if (idObject == null) {
+      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
+      if (!dimDim.contains(value)) {
         if (value == null || "".equals(value)) {
           final int dimIndex = dimIndexObject;
 
@@ -547,7 +554,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       }
 
       final int dimIndex = dimIndexObject;
-      final String id = idObject;
+      final String id = dimDim.get(value);
 
       return new ValueMatcher()
       {
@@ -560,7 +567,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
-            if (id == dimVal) {
+            if (dimDim.compareCannonicalValues(id,dimVal)) {
               return true;
             }
           }

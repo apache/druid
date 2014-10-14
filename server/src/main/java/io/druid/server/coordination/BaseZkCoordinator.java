@@ -21,10 +21,13 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -34,6 +37,8 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  */
@@ -45,23 +50,33 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
 
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPaths;
+  private final SegmentLoaderConfig config;
   private final DruidServerMetadata me;
   private final CuratorFramework curator;
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started;
+  private final ListeningExecutorService loadingExec;
 
   public BaseZkCoordinator(
       ObjectMapper jsonMapper,
       ZkPathsConfig zkPaths,
+      SegmentLoaderConfig config,
       DruidServerMetadata me,
       CuratorFramework curator
   )
   {
     this.jsonMapper = jsonMapper;
     this.zkPaths = zkPaths;
+    this.config = config;
     this.me = me;
     this.curator = curator;
+    this.loadingExec = MoreExecutors.listeningDecorator(
+        Executors.newFixedThreadPool(
+            config.getNumLoadingThreads(),
+            new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ZkCoordinator-%s").build()
+        )
+    );
   }
 
   @LifecycleStart
@@ -83,7 +98,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
           loadQueueLocation,
           true,
           true,
-          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ZkCoordinator-%s").build()
+          loadingExec
       );
 
       try {
@@ -200,4 +215,9 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
   public abstract void loadLocalCache();
 
   public abstract DataSegmentChangeHandler getDataSegmentChangeHandler();
+
+  public ListeningExecutorService getLoadingExecutor()
+  {
+    return loadingExec;
+  }
 }

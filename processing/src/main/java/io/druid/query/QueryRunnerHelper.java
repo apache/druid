@@ -22,7 +22,6 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -72,7 +71,7 @@ public class QueryRunnerHelper
             new Function<Cursor, Result<T>>()
             {
               @Override
-              public Result<T> apply(@Nullable Cursor input)
+              public Result<T> apply(Cursor input)
               {
                 log.debug("Running over cursor[%s]", adapter.getInterval(), input.getTime());
                 return mapFn.apply(input);

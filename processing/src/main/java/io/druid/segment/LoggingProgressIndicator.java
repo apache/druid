@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class LoggingProgressIndicator extends AbstractProgressIndicator
+public class LoggingProgressIndicator extends BaseProgressIndicator
 {
   private static Logger log = new Logger(LoggingProgressIndicator.class);
 
@@ -76,7 +76,7 @@ public class LoggingProgressIndicator extends AbstractProgressIndicator
   @Override
   public void progressSection(String section, String message)
   {
-    Stopwatch sectionWatch = sections.remove(section);
+    Stopwatch sectionWatch = sections.get(section);
     if (sectionWatch == null) {
       throw new ISE("[%s]: Cannot progress tracker for [%s]. Nothing started.", progressName, section);
     }

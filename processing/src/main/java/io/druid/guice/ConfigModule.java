@@ -23,8 +23,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.config.Config;
-import io.druid.guice.JsonConfigurator;
-import io.druid.guice.LazySingleton;
 import org.skife.config.ConfigurationObjectFactory;
 
 import javax.validation.Validation;

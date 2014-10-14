@@ -133,7 +133,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
               new Function<DataSegment, String>()
               {
                 @Override
-                public String apply(@Nullable DataSegment input)
+                public String apply(DataSegment input)
                 {
                   return input.getIdentifier();
                 }

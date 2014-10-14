@@ -22,9 +22,7 @@ package io.druid.server;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
@@ -36,12 +34,11 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.RetryQueryRunner;
 import io.druid.server.initialization.ServerConfig;
@@ -72,7 +69,6 @@ import java.util.UUID;
 public class QueryResource
 {
   private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   public static final String APPLICATION_SMILE = "application/smile";
   public static final String APPLICATION_JSON = "application/json";
 
@@ -157,9 +153,8 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      Map<String, Object> context = new MapMaker().makeMap();
-      context.put(RetryQueryRunner.missingSegments, Lists.newArrayList());
-      Sequence res = query.run(texasRanger, context);
+      final Map<String, Object> context = new MapMaker().makeMap();
+      final Sequence res = query.run(texasRanger, context);
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -181,28 +176,11 @@ public class QueryResource
       );
 
       try {
-        String headerContext = "";
-        if (!((List)context.get(RetryQueryRunner.missingSegments)).isEmpty()) {
-          headerContext = jsonMapper.writeValueAsString(context);
-        }
         long requestTime = System.currentTimeMillis() - start;
+
         emitter.emit(
-            new ServiceMetricEvent.Builder()
-                .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-                .setUser3(
-                    jsonMapper.writeValueAsString(
-                        query.getContext() == null
-                        ? ImmutableMap.of()
-                        : query.getContext()
-                    )
-                )
-                .setUser4(query.getType())
-                .setUser5(COMMA_JOIN.join(query.getIntervals()))
-                .setUser6(String.valueOf(query.hasFilters()))
-                .setUser7(req.getRemoteAddr())
-                .setUser8(queryId)
-                .setUser9(query.getDuration().toPeriod().toStandardMinutes().toString())
-                .build("request/time", requestTime)
+            QueryMetricUtil.makeRequestTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                           .build("request/time", requestTime)
         );
 
         requestLogger.log(
@@ -234,7 +212,7 @@ public class QueryResource
                 isSmile ? APPLICATION_JSON : APPLICATION_SMILE
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("Context", headerContext)
+            .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(context))
             .build();
       }
       catch (Exception e) {

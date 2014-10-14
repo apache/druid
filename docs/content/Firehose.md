@@ -40,6 +40,36 @@ See [Examples](Examples.html). This firehose creates a stream of random numbers.
 
 This firehose ingests events from a define rabbit-mq queue.
 
+#### LocalFirehose
+
+This Firehose can be used to read the data from files on local disk.
+It can be used for POCs to ingest data on disk.
+A sample local firehose spec is shown below:
+
+```json
+{
+    "type"    : "local",
+    "filter"   : "*.csv",
+    "parser" : {
+      "timestampSpec": {
+        "column": "mytimestamp",
+        "format": "yyyy-MM-dd HH:mm:ss"
+      },
+      "data": {
+        "format": "csv",
+        "columns": [...],
+        "dimensions": [...]
+      }
+    }
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "local".|yes|
+|filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
+|data|A data spec similar to what is used for batch ingestion.|yes|
+
 #### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments.
@@ -50,9 +80,7 @@ A sample ingest firehose spec is shown below -
 {
     "type"    : "ingestSegment",
     "dataSource"   : "wikipedia",
-    "interval" : "2013-01-01/2013-01-02",
-    "dimensions":[],
-    "metrics":[]
+    "interval" : "2013-01-01/2013-01-02"
 }
 ```
 
@@ -61,14 +89,9 @@ A sample ingest firehose spec is shown below -
 |type|ingestSegment. Type of firehose|yes|
 |dataSource|A String defining the data source to fetch rows from, very similar to a table in a relational database|yes|
 |interval|A String representing ISO-8601 Interval. This defines the time range to fetch the data over.|yes|
-|dimensions|The list of dimensions to select. If left empty, all dimensions are selected.|no|
-|metrics|The list of metrics to select. If left empty, all metrics are returned.|no|
+|dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
+|metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](Filters.html)|yes|
-
-
-
-
-
 
 Parsing Data
 ------------

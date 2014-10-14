@@ -21,15 +21,15 @@ package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 import io.druid.data.input.Row;
-import io.druid.query.Result;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
- * The ">" operator in a "having" clause. This is similar to SQL's "having aggregation > value",
+ * The "&gt;" operator in a "having" clause. This is similar to SQL's "having aggregation &gt; value",
  * except that an aggregation in SQL is an expression instead of an aggregation name as in Druid.
  */
 public class GreaterThanHavingSpec implements HavingSpec
@@ -72,7 +72,7 @@ public class GreaterThanHavingSpec implements HavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] aggBytes = aggregationName.getBytes();
+    final byte[] aggBytes = aggregationName.getBytes(Charsets.UTF_8);
     final byte[] valBytes = Bytes.toArray(Arrays.asList(value));
     return ByteBuffer.allocate(1 + aggBytes.length + valBytes.length)
                      .put(CACHE_KEY)

@@ -34,7 +34,7 @@ public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStr
     @Override
     public int compare(Integer o1, Integer o2)
     {
-      return -Ints.compare(o1, o2);
+      return Ints.compare(o2, o1);
     }
   };
 

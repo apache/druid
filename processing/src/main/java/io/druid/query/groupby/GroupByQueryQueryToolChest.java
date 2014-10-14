@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -45,11 +44,11 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -61,8 +60,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -137,7 +134,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
-        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery();
+        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(query.getContext());
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
@@ -213,25 +210,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
   {
-    return new OrderedMergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Row> mergeSequencesUnordered(Sequence<Sequence<Row>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  private Ordering<Row> getOrdering()
+  {
+    return Ordering.<Row>natural().nullsFirst();
   }
 
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(GroupByQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser3(String.format("%,d dims", query.getDimensions().size()))
-        .setUser4("groupBy")
-        .setUser5(Joiner.on(",").join(query.getIntervals()))
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query)
+                          .setUser3(String.format("%,d dims", query.getDimensions().size()))
+                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
   }
 
   @Override
@@ -277,6 +275,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
     return new CacheStrategy<Row, Object, GroupByQuery>()
     {
+      private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
@@ -362,14 +362,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
             DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
 
+            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
+
+            Map<String, Object> event = jsonMapper.convertValue(
+                results.next(),
+                new TypeReference<Map<String, Object>>()
+                {
+                }
+            );
+
+            while (aggsIter.hasNext()) {
+              final AggregatorFactory factory = aggsIter.next();
+              Object agg = event.get(factory.getName());
+              if (agg != null) {
+                event.put(factory.getName(), factory.deserialize(agg));
+              }
+            }
+
             return new MapBasedRow(
                 timestamp,
-                (Map<String, Object>) jsonMapper.convertValue(
-                    results.next(),
-                    new TypeReference<Map<String, Object>>()
-                    {
-                    }
-                )
+                event
             );
           }
         };
@@ -378,7 +390,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       @Override
       public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
       {
-        return new MergeSequence<>(Ordering.<Row>natural().nullsFirst(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

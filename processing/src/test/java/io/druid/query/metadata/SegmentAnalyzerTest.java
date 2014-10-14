@@ -50,7 +50,7 @@ public class SegmentAnalyzerTest
   public void testIncrementalDoesNotWork() throws Exception
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null)
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), null)
     );
 
     Assert.assertEquals(0, results.size());
@@ -99,7 +99,7 @@ public class SegmentAnalyzerTest
   {
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new SegmentMetadataQueryRunnerFactory(
-            new SegmentMetadataQueryQueryToolChest(new QueryConfig()),
+            new SegmentMetadataQueryQueryToolChest(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ), index
     );

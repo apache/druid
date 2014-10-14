@@ -158,6 +158,11 @@ public class ZkWorker implements Closeable
     lastCompletedTaskTime.getAndSet(completedTaskTime);
   }
 
+  public ImmutableZkWorker toImmutable()
+  {
+    return new ImmutableZkWorker(worker, getCurrCapacityUsed(), getAvailabilityGroups());
+  }
+
   @Override
   public void close() throws IOException
   {

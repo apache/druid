@@ -178,7 +178,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       } else {
         Set<String> metricsSet = new HashSet<>();
         for (TimelineObjectHolder<String, DataSegment> timelineObjectHolder : timeLineSegments) {
-          metricsSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getDimensions());
+          metricsSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getMetrics());
         }
         metricsList = Lists.newArrayList(metricsSet);
       }
@@ -237,7 +237,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           {
             @Nullable
             @Override
-            public Sequence<InputRow> apply(@Nullable StorageAdapter adapter)
+            public Sequence<InputRow> apply(StorageAdapter adapter)
             {
               return Sequences.concat(
                   Sequences.map(
@@ -249,20 +249,25 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                   {
                     @Nullable
                     @Override
-                    public Sequence<InputRow> apply(@Nullable final Cursor cursor)
+                    public Sequence<InputRow> apply(final Cursor cursor)
                     {
                       final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
                       final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                       for (String dim : dims) {
                         final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
-                        dimSelectors.put(dim, dimSelector);
+                        // dimSelector is null if the dimension is not present
+                        if (dimSelector != null) {
+                          dimSelectors.put(dim, dimSelector);
+                        }
                       }
 
                       final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
                       for (String metric : metrics) {
                         final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
-                        metSelectors.put(metric, metricSelector);
+                        if (metricSelector != null) {
+                          metSelectors.put(metric, metricSelector);
+                        }
                       }
 
                       return Sequences.simple(

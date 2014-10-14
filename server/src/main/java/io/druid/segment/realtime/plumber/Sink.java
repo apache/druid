@@ -26,12 +26,12 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
@@ -48,14 +48,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class Sink implements Iterable<FireHydrant>
 {
-  private static final Logger log = new Logger(Sink.class);
+
+  private final Object hydrantLock = new Object();
   private final Interval interval;
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
   private volatile FireHydrant currHydrant;
-
 
   public Sink(
       Interval interval,
@@ -117,7 +117,7 @@ public class Sink implements Iterable<FireHydrant>
       throw new IAE("No currHydrant but given row[%s]", row);
     }
 
-    synchronized (currHydrant) {
+    synchronized (hydrantLock) {
       IncrementalIndex index = currHydrant.getIndex();
       if (index == null) {
         return -1; // the hydrant was swapped without being replaced
@@ -128,7 +128,7 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean isEmpty()
   {
-    synchronized (currHydrant) {
+    synchronized (hydrantLock) {
       return hydrants.size() == 1 && currHydrant.getIndex().isEmpty();
     }
   }
@@ -145,7 +145,7 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean swappable()
   {
-    synchronized (currHydrant) {
+    synchronized (hydrantLock) {
       return currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
     }
   }
@@ -181,27 +181,30 @@ public class Sink implements Iterable<FireHydrant>
       aggsSize += agg.getMaxIntermediateSize();
     }
     int bufferSize = aggsSize * config.getMaxRowsInMemory();
-    IncrementalIndex newIndex = new IncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withDimensionsSpec(schema.getParser())
-            .withMetrics(schema.getAggregators())
-            .build(),
-        new OffheapBufferPool(bufferSize)
-    );
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(minTimestamp)
+        .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
+        .withDimensionsSpec(schema.getParser())
+        .withMetrics(schema.getAggregators())
+        .build();
+    final IncrementalIndex newIndex;
+    if (config.isIngestOffheap()) {
+      newIndex = new OffheapIncrementalIndex(
+          indexSchema,
+          new OffheapBufferPool(bufferSize)
+      );
+    } else {
+      newIndex = new IncrementalIndex(
+          indexSchema,
+          new OffheapBufferPool(bufferSize)
+      );
+    }
 
-    FireHydrant old;
-    if (currHydrant == null) {  // Only happens on initialization, cannot synchronize on null
+    final FireHydrant old;
+    synchronized (hydrantLock) {
       old = currHydrant;
       currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
       hydrants.add(currHydrant);
-    } else {
-      synchronized (currHydrant) {
-        old = currHydrant;
-        currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
-        hydrants.add(currHydrant);
-      }
     }
 
     return old;

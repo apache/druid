@@ -37,13 +37,15 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.AbstractProgressIndicator;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
+import io.druid.segment.LoggingProgressIndicator;
+import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
@@ -88,16 +90,6 @@ import java.util.zip.ZipOutputStream;
 public class IndexGeneratorJob implements Jobby
 {
   private static final Logger log = new Logger(IndexGeneratorJob.class);
-  private final HadoopDruidIndexerConfig config;
-  private IndexGeneratorStats jobStats;
-
-  public IndexGeneratorJob(
-      HadoopDruidIndexerConfig config
-  )
-  {
-    this.config = config;
-    this.jobStats = new IndexGeneratorStats();
-  }
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
@@ -131,6 +123,22 @@ public class IndexGeneratorJob implements Jobby
     return publishedSegments;
   }
 
+  private final HadoopDruidIndexerConfig config;
+  private IndexGeneratorStats jobStats;
+
+  public IndexGeneratorJob(
+      HadoopDruidIndexerConfig config
+  )
+  {
+    this.config = config;
+    this.jobStats = new IndexGeneratorStats();
+  }
+
+  protected void setReducerClass(final Job job)
+  {
+    job.setReducerClass(IndexGeneratorReducer.class);
+  }
+
   public IndexGeneratorStats getJobStats()
   {
     return jobStats;
@@ -162,7 +170,7 @@ public class IndexGeneratorJob implements Jobby
       job.setNumReduceTasks(Iterables.size(config.getAllBuckets().get()));
       job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
-      job.setReducerClass(IndexGeneratorReducer.class);
+      setReducerClass(job);
       job.setOutputKeyClass(BytesWritable.class);
       job.setOutputValueClass(Text.class);
       job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
@@ -191,7 +199,6 @@ public class IndexGeneratorJob implements Jobby
   }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
-
   {
     @Override
     protected void innerMap(
@@ -257,6 +264,42 @@ public class IndexGeneratorJob implements Jobby
     private List<String> metricNames = Lists.newArrayList();
     private StringInputRowParser parser;
 
+    protected ProgressIndicator makeProgressIndicator(final Context context)
+    {
+      return new LoggingProgressIndicator("IndexGeneratorJob")
+      {
+        @Override
+        public void progress()
+        {
+          context.progress();
+        }
+      };
+    }
+
+    protected File persist(
+        final IncrementalIndex index,
+        final Interval interval,
+        final File file,
+        final ProgressIndicator progressIndicator
+    ) throws IOException
+    {
+      return IndexMaker.persist(
+          index, interval, file, progressIndicator
+      );
+    }
+
+    protected File mergeQueryableIndex(
+        final List<QueryableIndex> indexes,
+        final AggregatorFactory[] aggs,
+        final File file,
+        ProgressIndicator progressIndicator
+    ) throws IOException
+    {
+      return IndexMaker.mergeQueryableIndex(
+          indexes, aggs, file, progressIndicator
+      );
+    }
+
     @Override
     protected void setup(Context context)
         throws IOException, InterruptedException
@@ -295,6 +338,7 @@ public class IndexGeneratorJob implements Jobby
         long startTime = System.currentTimeMillis();
 
         Set<String> allDimensionNames = Sets.newHashSet();
+        final ProgressIndicator progressIndicator = makeProgressIndicator(context);
 
         for (final Text value : values) {
           context.progress();
@@ -317,16 +361,7 @@ public class IndexGeneratorJob implements Jobby
             toMerge.add(file);
 
             context.progress();
-            IndexMaker.persist(
-                index, interval, file, new AbstractProgressIndicator()
-            {
-              @Override
-              public void progress()
-              {
-                context.progress();
-              }
-            }
-            );
+            persist(index, interval, file, progressIndicator);
             // close this index and make a new one
             index.close();
             index = makeIncrementalIndex(bucket, aggs);
@@ -347,44 +382,19 @@ public class IndexGeneratorJob implements Jobby
           }
 
           mergedBase = new File(baseFlushFile, "merged");
-          IndexMaker.persist(
-              index, interval, mergedBase, new AbstractProgressIndicator()
-          {
-            @Override
-            public void progress()
-            {
-              context.progress();
-            }
-          }
-          );
+          persist(index, interval, mergedBase, progressIndicator);
         } else {
           if (!index.isEmpty()) {
             final File finalFile = new File(baseFlushFile, "final");
-            IndexMaker.persist(
-                index, interval, finalFile, new AbstractProgressIndicator()
-            {
-              @Override
-              public void progress()
-              {
-                context.progress();
-              }
-            }
-            );
+            persist(index, interval, finalFile, progressIndicator);
             toMerge.add(finalFile);
           }
 
           for (File file : toMerge) {
             indexes.add(IndexIO.loadIndex(file));
           }
-          mergedBase = IndexMaker.mergeQueryableIndex(
-              indexes, aggs, new File(baseFlushFile, "merged"), new AbstractProgressIndicator()
-          {
-            @Override
-            public void progress()
-            {
-              context.progress();
-            }
-          }
+          mergedBase = mergeQueryableIndex(
+              indexes, aggs, new File(baseFlushFile, "merged"), progressIndicator
           );
         }
         serializeOutIndex(context, bucket, mergedBase, Lists.newArrayList(allDimensionNames));
@@ -395,7 +405,6 @@ public class IndexGeneratorJob implements Jobby
       finally {
         index.close();
       }
-
     }
 
     private void serializeOutIndex(Context context, Bucket bucket, File mergedBase, List<String> dimensionNames)
@@ -454,7 +463,7 @@ public class IndexGeneratorJob implements Jobby
       } else if (outputFS instanceof DistributedFileSystem) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
-            "path", indexOutURI.getPath()
+            "path", indexOutURI.toString()
         );
       } else {
         throw new ISE("Unknown file system[%s]", outputFS.getClass());
@@ -626,16 +635,25 @@ public class IndexGeneratorJob implements Jobby
       for (AggregatorFactory agg : aggs) {
         aggsSize += agg.getMaxIntermediateSize();
       }
-      int bufferSize = aggsSize * config.getSchema().getTuningConfig().getRowFlushBoundary();
-      return new IncrementalIndex(
-          new IncrementalIndexSchema.Builder()
-              .withMinTimestamp(theBucket.time.getMillis())
-              .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
-              .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
-              .withMetrics(aggs)
-              .build(),
-          new OffheapBufferPool(bufferSize)
-      );
+      final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
+      int bufferSize = aggsSize * tuningConfig.getRowFlushBoundary();
+      final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+          .withMinTimestamp(theBucket.time.getMillis())
+          .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+          .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
+          .withMetrics(aggs)
+          .build();
+      if (tuningConfig.isIngestOffheap()) {
+        return new OffheapIncrementalIndex(
+            indexSchema,
+            new OffheapBufferPool(bufferSize)
+        );
+      } else {
+        return new IncrementalIndex(
+            indexSchema,
+            new OffheapBufferPool(bufferSize)
+        );
+      }
     }
 
     private void createNewZipEntry(ZipOutputStream out, String name) throws IOException

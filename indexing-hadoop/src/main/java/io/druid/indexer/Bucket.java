@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 
 public class Bucket
 {
-  public static int PREAMBLE_BYTES = 16;
+  public static final int PREAMBLE_BYTES = 16;
 
   /** ID for this bucket, unique for this indexer run. Used for grouping and partitioning. */
   private final int shardNum;

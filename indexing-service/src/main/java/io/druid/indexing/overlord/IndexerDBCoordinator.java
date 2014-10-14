@@ -39,12 +39,10 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
@@ -140,6 +138,8 @@ public class IndexerDBCoordinator
    *
    * @param segments set of segments to add
    * @return set of segments actually added
+   *
+   * @throws java.io.IOException if a database error occurs
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {

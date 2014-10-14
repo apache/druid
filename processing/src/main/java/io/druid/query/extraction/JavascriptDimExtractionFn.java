@@ -21,6 +21,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -80,7 +81,7 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    byte[] bytes = function.getBytes();
+    byte[] bytes = function.getBytes(Charsets.UTF_8);
     return ByteBuffer.allocate(1 + bytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(bytes)

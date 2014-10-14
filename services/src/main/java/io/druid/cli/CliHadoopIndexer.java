@@ -26,8 +26,8 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.initialization.Initialization;
 import io.druid.guice.ExtensionsConfig;
+import io.druid.initialization.Initialization;
 import io.tesla.aether.internal.DefaultTeslaAether;
 
 import java.io.File;
@@ -46,20 +46,21 @@ import java.util.List;
 public class CliHadoopIndexer implements Runnable
 {
 
-  private static String defaultHadoopCoordinates = "org.apache.hadoop:hadoop-client:2.3.0";
+  private static final String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
-  @Option(name = "hadoop",
-          description = "The maven coordinates to the version of hadoop to run with. Defaults to org.apache.hadoop:hadoop-client:2.3.0")
-  private String hadoopCoordinates = defaultHadoopCoordinates;
+  @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
+          description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
+  private List<String> coordinates;
 
-  @Option(name = "hadoopDependencies",
-          description = "The maven coordinates to the version of hadoop and all dependencies to run with. Defaults to using org.apache.hadoop:hadoop-client:2.3.0")
-  private List<String> hadoopDependencyCoordinates = Arrays.<String>asList(defaultHadoopCoordinates);
+  @Option(name = "--no-default-hadoop",
+          description = "don't pull down the default hadoop version (currently " + DEFAULT_HADOOP_COORDINATES + ")",
+          required = false)
+  public boolean noDefaultHadoop;
 
   @Inject
   private ExtensionsConfig extensionsConfig = null;
@@ -69,6 +70,14 @@ public class CliHadoopIndexer implements Runnable
   public void run()
   {
     try {
+      final List<String> allCoordinates = Lists.newArrayList();
+      if (coordinates != null) {
+        allCoordinates.addAll(coordinates);
+      }
+      if (!noDefaultHadoop) {
+        allCoordinates.add(DEFAULT_HADOOP_COORDINATES);
+      }
+
       final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
 
       final List<URL> extensionURLs = Lists.newArrayList();
@@ -85,7 +94,7 @@ public class CliHadoopIndexer implements Runnable
       final List<URL> driverURLs = Lists.newArrayList();
       driverURLs.addAll(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-      for (String coordinate : hadoopDependencyCoordinates) {
+      for (String coordinate : allCoordinates) {
         final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
             aetherClient, coordinate
         );

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
@@ -36,7 +37,6 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
-import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
@@ -44,6 +44,7 @@ import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.indexing.worker.http.WorkerResource;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
@@ -74,6 +75,9 @@ public class CliMiddleManager extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
+
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);

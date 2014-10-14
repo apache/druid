@@ -29,6 +29,8 @@ public interface QuerySegmentWalker
    * Gets the Queryable for a given interval, the Queryable returned can be any version(s) or partitionNumber(s)
    * such that it represents the interval.
    *
+   * @param <T> query result type
+   * @param query the query to find a Queryable for
    * @param intervals the intervals to find a Queryable for
    * @return a Queryable object that represents the interval
    */
@@ -36,8 +38,10 @@ public interface QuerySegmentWalker
 
   /**
    * Gets the Queryable for a given list of SegmentSpecs.
-   * exist.
    *
+   * @param <T> the query result type
+   * @param query the query to return a Queryable for
+   * @param specs the list of SegmentSpecs to find a Queryable for
    * @return the Queryable object with the given SegmentSpecs
    */
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs);

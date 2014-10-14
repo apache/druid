@@ -21,7 +21,6 @@ package io.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -37,10 +36,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -52,8 +51,6 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -65,14 +62,12 @@ import java.util.Map;
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
   private static final byte TOPN_QUERY = 0x1;
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<Result<TopNResultValue>>()
   {
   };
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
   {
   };
-
   private final TopNQueryConfig config;
 
   @Inject
@@ -128,24 +123,27 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public Sequence<Result<TopNResultValue>> mergeSequences(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<TopNResultValue>>(getOrdering(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Result<TopNResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TopNQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4(String.format("topN/%s/%s", query.getThreshold(), query.getDimensionSpec().getDimension()))
-        .setUser5(COMMA_JOIN.join(query.getIntervals()))
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query)
+                          .setUser4(
+                              String.format(
+                                  "topN/%s/%s",
+                                  query.getThreshold(),
+                                  query.getDimensionSpec().getDimension()
+                              )
+                          )
+                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
   }
 
   @Override

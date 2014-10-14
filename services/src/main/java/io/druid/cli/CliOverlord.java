@@ -26,6 +26,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
@@ -46,7 +47,6 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
-import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.DbTaskStorage;
@@ -71,8 +71,11 @@ import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactoryImpl
 import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
+import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.JettyServerInitializer;
@@ -114,6 +117,9 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/overlord");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
+
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
 
@@ -196,6 +202,20 @@ public class CliOverlord extends ServerRunnable
 
             biddy.addBinding("remote").to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.runner.workerSelectStrategy.type",
+                Key.get(WorkerSelectStrategy.class),
+                Key.get(FillCapacityWorkerSelectStrategy.class)
+            );
+            final MapBinder<String, WorkerSelectStrategy> stratBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(WorkerSelectStrategy.class)
+            );
+
+            stratBinder.addBinding("fillCapacity").to(FillCapacityWorkerSelectStrategy.class);
+            binder.bind(FillCapacityWorkerSelectStrategy.class).in(LazySingleton.class);
           }
 
           private void configureAutoscale(Binder binder)

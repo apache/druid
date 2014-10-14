@@ -63,7 +63,9 @@ public class SinkTest
         null,
         null,
         null,
-        null
+        null,
+        false,
+        false
     );
     final Sink sink = new Sink(interval, schema, tuningConfig, version);
 

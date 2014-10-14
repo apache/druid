@@ -57,8 +57,8 @@ import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
-import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
+import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -454,7 +454,7 @@ public class DruidCoordinator
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(zkPaths.getCoordinatorPath(), COORDINATOR_OWNER_NODE), config.getHost()
+        curator, ZKPaths.makePath(zkPaths.getCoordinatorPath(), COORDINATOR_OWNER_NODE), self.getHost()
     );
 
     newLeaderLatch.addListener(

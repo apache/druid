@@ -44,7 +44,6 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import org.eclipse.jetty.server.Connector;
@@ -159,6 +158,9 @@ public class JettyServerModule extends JerseyServletModule
     ServerConnector connector = new ServerConnector(server);
     connector.setPort(node.getPort());
     connector.setIdleTimeout(Ints.checkedCast(config.getMaxIdleTime().toStandardDuration().getMillis()));
+    // workaround suggested in -
+    // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
+    connector.setAcceptorPriorityDelta(-1);
 
     server.setConnectors(new Connector[]{connector});
 

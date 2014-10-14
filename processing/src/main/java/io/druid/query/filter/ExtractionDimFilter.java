@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import io.druid.query.extraction.DimExtractionFn;
 
@@ -71,8 +72,8 @@ public class ExtractionDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = dimension.getBytes();
-    byte[] valueBytes = value.getBytes();
+    byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
+    byte[] valueBytes = value.getBytes(Charsets.UTF_8);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
                      .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)

@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.google.inject.Injector;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -45,9 +46,11 @@ import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidPool;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.guice.GuiceInjectors;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
@@ -79,7 +82,9 @@ import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -89,7 +94,6 @@ import java.nio.LongBuffer;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -104,8 +108,12 @@ public class IndexMaker
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
-  // This should really be provided by DI, should be changed once we switch around to using a DI framework
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper;
+
+  static {
+    final Injector injector = GuiceInjectors.makeStartupInjector();
+    mapper = injector.getInstance(ObjectMapper.class);
+  }
 
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
   {
@@ -553,8 +561,28 @@ public class IndexMaker
 
       // sort all dimension values and treat all null values as empty strings
       final Iterable<String> dimensionValues = CombiningIterable.createSplatted(
-          dimValueLookups,
-          Ordering.<String>natural().nullsFirst()
+          Iterables.transform(
+              dimValueLookups,
+              new Function<Indexed<String>, Iterable<String>>()
+              {
+                @Override
+                public Iterable<String> apply(Indexed<String> indexed)
+                {
+                  return Iterables.transform(
+                      indexed,
+                      new Function<String, String>()
+                      {
+                        @Override
+                        public String apply(@Nullable String input)
+                        {
+                          return (input == null) ? "" : input;
+                        }
+                      }
+                  );
+                }
+              }
+          ),
+          Ordering.<String>natural()
       );
 
       int cardinality = 0;
@@ -568,6 +596,7 @@ public class IndexMaker
 
         ++cardinality;
       }
+
       if (cardinality == 0) {
         log.info("Skipping [%s], it is empty!", dimension);
         skippedDimensions.add(dimension);
@@ -787,7 +816,6 @@ public class IndexMaker
       final List<IntBuffer> rowNumConversions
   ) throws IOException
   {
-
     final String section = String.format("make %s", dimension);
     progress.startSection(section);
 
@@ -813,6 +841,7 @@ public class IndexMaker
 
     ConciseSet nullSet = null;
     int rowCount = 0;
+
     for (Rowboat theRow : theRows) {
       if (dimIndex > theRow.getDims().length) {
         if (nullSet == null) {
@@ -833,32 +862,141 @@ public class IndexMaker
       rowCount++;
     }
 
-    GenericIndexed<String> dictionary = null;
     final Iterable<String> dimensionValues = dimensionValuesLookup.get(dimension);
+    GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
+        dimensionValues,
+        GenericIndexed.stringStrategy
+    );
     boolean bumpDictionary = false;
 
     if (hasMultipleValues) {
-      List<List<Integer>> vals = ((MultiValColumnDictionaryEntryStore) adder).get();
-      multiValCol = VSizeIndexed.fromIterable(
-          Iterables.transform(
-              vals,
-              new Function<List<Integer>, VSizeIndexedInts>()
-              {
-                @Override
-                public VSizeIndexedInts apply(List<Integer> input)
-                {
-                  return VSizeIndexedInts.fromList(
-                      input,
-                      Collections.max(input)
-                  );
-                }
-              }
-          )
-      );
-      dictionary = GenericIndexed.fromIterable(
-          dimensionValues,
-          GenericIndexed.stringStrategy
-      );
+      final List<List<Integer>> vals = ((MultiValColumnDictionaryEntryStore) adder).get();
+      if (nullSet != null) {
+        log.info("Dimension[%s] has null rows.", dimension);
+
+        if (Iterables.getFirst(dimensionValues, "") != null) {
+          bumpDictionary = true;
+          log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
+
+          final List<String> nullList = Lists.newArrayList();
+          nullList.add(null);
+
+          dictionary = GenericIndexed.fromIterable(
+              Iterables.concat(nullList, dimensionValues),
+              GenericIndexed.stringStrategy
+          );
+
+          final int dictionarySize = dictionary.size();
+          multiValCol = VSizeIndexed.fromIterable(
+              FunctionalIterable
+                  .create(vals)
+                  .transform(
+                      new Function<List<Integer>, VSizeIndexedInts>()
+                      {
+                        @Override
+                        public VSizeIndexedInts apply(final List<Integer> input)
+                        {
+                          if (input == null) {
+                            return VSizeIndexedInts.fromList(
+                                new AbstractList<Integer>()
+                                {
+                                  @Override
+                                  public Integer get(int index)
+                                  {
+                                    return 0;
+                                  }
+
+                                  @Override
+                                  public int size()
+                                  {
+                                    return 1;
+                                  }
+                                }, dictionarySize
+                            );
+                          }
+                          return VSizeIndexedInts.fromList(
+                              new AbstractList<Integer>()
+                              {
+                                @Override
+                                public Integer get(int index)
+                                {
+                                  Integer val = input.get(index);
+                                  if (val == null) {
+                                    return 0;
+                                  }
+                                  return val + 1;
+                                }
+
+                                @Override
+                                public int size()
+                                {
+                                  return input.size();
+                                }
+                              },
+                              dictionarySize
+                          );
+                        }
+                      }
+                  )
+          );
+        } else {
+          final int dictionarySize = dictionary.size();
+          multiValCol = VSizeIndexed.fromIterable(
+              FunctionalIterable
+                  .create(vals)
+                  .transform(
+                      new Function<List<Integer>, VSizeIndexedInts>()
+                      {
+                        @Override
+                        public VSizeIndexedInts apply(List<Integer> input)
+                        {
+                          if (input == null) {
+                            return VSizeIndexedInts.fromList(
+                                new AbstractList<Integer>()
+                                {
+                                  @Override
+                                  public Integer get(int index)
+                                  {
+                                    return 0;
+                                  }
+
+                                  @Override
+                                  public int size()
+                                  {
+                                    return 1;
+                                  }
+                                }, dictionarySize
+                            );
+                          }
+                          return VSizeIndexedInts.fromList(
+                              input,
+                              dictionarySize
+                          );
+                        }
+                      }
+                  )
+          );
+        }
+      } else {
+        final int dictionarySize = dictionary.size();
+        multiValCol = VSizeIndexed.fromIterable(
+            FunctionalIterable
+                .create(vals)
+                .transform(
+                    new Function<List<Integer>, VSizeIndexedInts>()
+                    {
+                      @Override
+                      public VSizeIndexedInts apply(List<Integer> input)
+                      {
+                        return VSizeIndexedInts.fromList(
+                            input,
+                            dictionarySize
+                        );
+                      }
+                    }
+                )
+        );
+      }
     } else {
       final List<Integer> vals = ((SingleValColumnDictionaryEntryStore) adder).get();
 
@@ -896,12 +1034,29 @@ public class IndexMaker
                 }
               }, dictionary.size()
           );
+        } else {
+          singleValCol = VSizeIndexedInts.fromList(
+              new AbstractList<Integer>()
+              {
+                @Override
+                public Integer get(int index)
+                {
+                  Integer val = vals.get(index);
+                  if (val == null) {
+                    return 0;
+                  }
+                  return val;
+                }
+
+                @Override
+                public int size()
+                {
+                  return vals.size();
+                }
+              }, dictionary.size()
+          );
         }
       } else {
-        dictionary = GenericIndexed.fromIterable(
-            dimensionValues,
-            GenericIndexed.stringStrategy
-        );
         singleValCol = VSizeIndexedInts.fromList(vals, dictionary.size());
       }
     }
@@ -932,65 +1087,49 @@ public class IndexMaker
     }
 
     GenericIndexed<ImmutableConciseSet> bitmaps;
-    if (!hasMultipleValues) {
-      if (nullSet != null) {
-        final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullSet);
-        if (bumpDictionary) {
-          bitmaps = GenericIndexed.fromIterable(
-              Iterables.concat(
-                  Arrays.asList(theNullSet),
-                  Iterables.transform(
-                      conciseSets,
-                      new Function<ConciseSet, ImmutableConciseSet>()
-                      {
-                        @Override
-                        public ImmutableConciseSet apply(ConciseSet input)
-                        {
-                          return ImmutableConciseSet.newImmutableFromMutable(input);
-                        }
-                      }
-                  )
-              ),
-              ConciseCompressedIndexedInts.objectStrategy
-          );
-        } else {
-          Iterable<ImmutableConciseSet> immutableConciseSets = Iterables.transform(
-              conciseSets,
-              new Function<ConciseSet, ImmutableConciseSet>()
-              {
-                @Override
-                public ImmutableConciseSet apply(ConciseSet input)
-                {
-                  return ImmutableConciseSet.newImmutableFromMutable(input);
-                }
-              }
-          );
 
-          bitmaps = GenericIndexed.fromIterable(
-              Iterables.concat(
-                  Arrays.asList(
-                      ImmutableConciseSet.union(
-                          theNullSet,
-                          Iterables.getFirst(immutableConciseSets, null)
-                      )
-                  ),
-                  Iterables.skip(immutableConciseSets, 1)
-              ),
-              ConciseCompressedIndexedInts.objectStrategy
-          );
-        }
-      } else {
+    if (nullSet != null) {
+      final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullSet);
+      if (bumpDictionary) {
         bitmaps = GenericIndexed.fromIterable(
-            Iterables.transform(
-                conciseSets,
-                new Function<ConciseSet, ImmutableConciseSet>()
-                {
-                  @Override
-                  public ImmutableConciseSet apply(ConciseSet input)
-                  {
-                    return ImmutableConciseSet.newImmutableFromMutable(input);
-                  }
-                }
+            Iterables.concat(
+                Arrays.asList(theNullSet),
+                Iterables.transform(
+                    conciseSets,
+                    new Function<ConciseSet, ImmutableConciseSet>()
+                    {
+                      @Override
+                      public ImmutableConciseSet apply(ConciseSet input)
+                      {
+                        return ImmutableConciseSet.newImmutableFromMutable(input);
+                      }
+                    }
+                )
+            ),
+            ConciseCompressedIndexedInts.objectStrategy
+        );
+      } else {
+        Iterable<ImmutableConciseSet> immutableConciseSets = Iterables.transform(
+            conciseSets,
+            new Function<ConciseSet, ImmutableConciseSet>()
+            {
+              @Override
+              public ImmutableConciseSet apply(ConciseSet input)
+              {
+                return ImmutableConciseSet.newImmutableFromMutable(input);
+              }
+            }
+        );
+
+        bitmaps = GenericIndexed.fromIterable(
+            Iterables.concat(
+                Arrays.asList(
+                    ImmutableConciseSet.union(
+                        theNullSet,
+                        Iterables.getFirst(immutableConciseSets, null)
+                    )
+                ),
+                Iterables.skip(immutableConciseSets, 1)
             ),
             ConciseCompressedIndexedInts.objectStrategy
         );
@@ -1023,17 +1162,22 @@ public class IndexMaker
     int dimValIndex = 0;
     for (String dimVal : dimensionValuesLookup.get(dimension)) {
       if (hasSpatialIndexes) {
-        List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-        float[] coords = new float[stringCoords.size()];
-        for (int j = 0; j < coords.length; j++) {
-          coords[j] = Float.valueOf(stringCoords.get(j));
+        if (dimVal != null && !dimVal.isEmpty()) {
+          List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+          float[] coords = new float[stringCoords.size()];
+          for (int j = 0; j < coords.length; j++) {
+            coords[j] = Float.valueOf(stringCoords.get(j));
+          }
+          tree.insert(coords, conciseSets.get(dimValIndex));
         }
-        tree.insert(coords, conciseSets.get(dimValIndex++));
+        dimValIndex++;
       }
     }
     if (hasSpatialIndexes) {
       spatialIndex = ImmutableRTree.newImmutableFromMutable(tree);
     }
+
+    log.info("Completed dimension[%s] with cardinality[%,d]. Starting write.", dimension, dictionary.size());
 
     writeColumn(
         v9Smoosher,
@@ -1096,7 +1240,7 @@ public class IndexMaker
         float[] arr = new float[rowCount];
         int rowNum = 0;
         for (Rowboat theRow : theRows) {
-          Object obj = theRow.getMetrics()[metricIndex]; // TODO
+          Object obj = theRow.getMetrics()[metricIndex];
           arr[rowNum++] = (obj == null) ? 0 : ((Number) obj).floatValue();
         }
 
@@ -1155,7 +1299,7 @@ public class IndexMaker
                   @Override
                   public Object apply(Rowboat input)
                   {
-                    return input.getMetrics()[metricIndex]; // TODO
+                    return input.getMetrics()[metricIndex];
                   }
                 }
             ),
@@ -1287,9 +1431,11 @@ public class IndexMaker
     )
     {
       this.dimSet = dimSet;
-      conversionBuf = ByteBuffer.allocateDirect(dimSet.size() * Ints.BYTES).asIntBuffer();
+      final int bufferSize = dimSet.size() * Ints.BYTES;
+      log.info("Allocating new dimension conversion buffer of size[%,d]", bufferSize);
+      this.conversionBuf = ByteBuffer.allocateDirect(bufferSize).asIntBuffer();
 
-      currIndex = 0;
+      this.currIndex = 0;
     }
 
     public void convert(String value, int index)
@@ -1536,7 +1682,7 @@ public class IndexMaker
       final Rowboat retVal = new Rowboat(
           lhs.getTimestamp(),
           lhs.getDims(),
-          lhs.getMetrics(),
+          metrics,
           lhs.getRowNum()
       );
 
@@ -1578,7 +1724,11 @@ public class IndexMaker
 
     public void add(int[] vals)
     {
-      data.add(Ints.asList(vals));
+      if (vals == null || vals.length == 0) {
+        data.add(null);
+      } else {
+        data.add(Ints.asList(vals));
+      }
     }
 
     public List<List<Integer>> get()

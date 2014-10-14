@@ -39,7 +39,6 @@ import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.TableDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;

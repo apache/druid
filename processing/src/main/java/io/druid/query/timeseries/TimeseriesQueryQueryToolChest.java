@@ -21,7 +21,6 @@ package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -33,11 +32,11 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryConfig;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -48,8 +47,6 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -62,7 +59,6 @@ import java.util.Map;
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
   private static final byte TIMESERIES_QUERY = 0x0;
-  private static final Joiner COMMA_JOIN = Joiner.on(",");
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
@@ -112,24 +108,20 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
   {
-    return new OrderedMergeSequence<Result<TimeseriesResultValue>>(getOrdering(), seqOfSequences);
+    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
+  }
+
+  @Override
+  public Sequence<Result<TimeseriesResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
+  {
+    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeseriesQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4("timeseries")
-        .setUser5(COMMA_JOIN.join(query.getIntervals()))
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query)
+                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
   }
 
   @Override

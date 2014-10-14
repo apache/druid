@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.concurrent.Execs;
 import io.druid.db.DatabaseSegmentManager;
+import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.DbSegmentPublisher;
 import io.druid.server.coordination.BaseZkCoordinator;
 import io.druid.server.coordination.DataSegmentChangeCallback;
@@ -54,6 +54,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
   public BridgeZkCoordinator(
       ObjectMapper jsonMapper,
       ZkPathsConfig zkPaths,
+      SegmentLoaderConfig config,
       DruidServerMetadata me,
       @Bridge CuratorFramework curator,
       DbSegmentPublisher dbSegmentPublisher,
@@ -61,7 +62,7 @@ public class BridgeZkCoordinator extends BaseZkCoordinator
       ServerView serverView
   )
   {
-    super(jsonMapper, zkPaths, me, curator);
+    super(jsonMapper, zkPaths, config, me, curator);
 
     this.dbSegmentPublisher = dbSegmentPublisher;
     this.databaseSegmentManager = databaseSegmentManager;

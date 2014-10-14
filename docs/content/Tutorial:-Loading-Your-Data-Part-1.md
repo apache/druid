@@ -91,7 +91,7 @@ druid.service=overlord
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.143"]
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.156"]
 
 druid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
 druid.db.connector.user=druid
@@ -105,12 +105,6 @@ druid.indexer.fork.property.druid.computation.buffer.size=100000000
 ```
 
 If you are interested in reading more about these configurations, see [here](Indexing-Service.html).
-
-When the overlord node is ready for tasks, you should see a message like the following:
-
-```bash
-2013-10-09 21:30:32,817 INFO [Thread-14] io.druid.indexing.overlord.TaskQueue - Waiting for work...
-```
 
 #### Starting Other Nodes
 
