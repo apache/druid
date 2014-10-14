@@ -59,9 +59,8 @@ public class DerbyConnector extends SQLMetadataConnector
               List<Map<String, Object>> tables = handle.select("select * from SYS.SYSTABLES");
               boolean tableExists = false;
               String existingTableName = "";
-              String tableNameUpper = tableName.toUpperCase();
               for (Map<String, Object> t : tables) {
-                if (t.get("tablename").equals(tableNameUpper)) {
+                if (((String)t.get("tablename")).equalsIgnoreCase(tableName)) {
                   tableExists = true;
                   existingTableName = (String)t.get("tablename");
                 }
@@ -229,7 +228,7 @@ public class DerbyConnector extends SQLMetadataConnector
 
   public DBI getDBI() { return dbi; }
 
-  protected ConnectionFactory getConnectionFactory(String dbName)
+  private ConnectionFactory getConnectionFactory(String dbName)
   {
     try {
       NetworkServerControl server = new NetworkServerControl(InetAddress.getByName("localhost"),1527);

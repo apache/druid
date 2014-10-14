@@ -28,23 +28,20 @@ import java.sql.SQLException;
 
 public class DerbyConnectionFactory implements ConnectionFactory
 {
-  private String dbName;
+  final private String dbName;
 
   public DerbyConnectionFactory(String dbName) {
     this.dbName = dbName;
   }
 
   public Connection openConnection() throws SQLException {
-    String nsURL="jdbc:derby://localhost:1527/"+dbName+";create=true";
-
+    final String nsURL=String.format("jdbc:derby://localhost:1527/%s;create=true", dbName);
     try {
       Class.forName("org.apache.derby.jdbc.ClientDriver");
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }
 
-
-    Connection conn = DriverManager.getConnection(nsURL);
-    return conn;
+    return DriverManager.getConnection(nsURL);
   }
 }

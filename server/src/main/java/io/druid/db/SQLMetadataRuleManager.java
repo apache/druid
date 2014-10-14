@@ -317,9 +317,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   private String getRulesTable() {return dbTables.get().getRulesTable();}
 
   protected List<Rule> getRules(Map<String, Object> stringObjectMap) {
-    List<Rule> rules = null;
     try {
-      rules = jsonMapper.readValue(
+      return jsonMapper.readValue(
           MapUtils.getString(stringObjectMap, "payload"), new TypeReference<List<Rule>>()
           {
           }
@@ -327,6 +326,5 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }
-    return rules;
   }
 }
