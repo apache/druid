@@ -146,8 +146,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             new UniformGranularitySpec(
                 config.getGranularitySpec().getSegmentGranularity(),
                 config.getGranularitySpec().getQueryGranularity(),
-                intervals,
-                config.getGranularitySpec().getSegmentGranularity()
+                intervals
             )
         );
         log.info("Determined Intervals for Job [%s]" + config.getSegmentGranularIntervals());

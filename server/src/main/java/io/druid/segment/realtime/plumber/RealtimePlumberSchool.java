@@ -51,14 +51,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
 
-  // Backwards compatible
-  private final Period windowPeriod;
-  private final File basePersistDirectory;
-  private final Granularity segmentGranularity;
-  private final VersioningPolicy versioningPolicy;
-  private final RejectionPolicyFactory rejectionPolicyFactory;
-  private final int maxPendingPersists;
-
   @JsonCreator
   public RealtimePlumberSchool(
       @JacksonInject ServiceEmitter emitter,
@@ -67,15 +59,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject FilteredServerView serverView,
-      @JacksonInject @Processing ExecutorService executorService,
-      // Backwards compatible
-      @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
-      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
-      @JsonProperty("maxPendingPersists") int maxPendingPersists
+      @JacksonInject @Processing ExecutorService executorService
   )
   {
     this.emitter = emitter;
@@ -85,49 +69,6 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
     this.queryExecutorService = executorService;
-    this.windowPeriod = windowPeriod;
-    this.basePersistDirectory = basePersistDirectory;
-    this.segmentGranularity = segmentGranularity;
-    this.versioningPolicy = versioningPolicy;
-    this.rejectionPolicyFactory = (rejectionPolicy == null) ? rejectionPolicyFactory : rejectionPolicy;
-    this.maxPendingPersists = maxPendingPersists;
-  }
-
-  @Deprecated
-  public Period getWindowPeriod()
-  {
-    return windowPeriod;
-  }
-
-  @Deprecated
-  public File getBasePersistDirectory()
-  {
-    return basePersistDirectory;
-  }
-
-  @Override
-  @JsonProperty
-  public Granularity getSegmentGranularity()
-  {
-    return segmentGranularity;
-  }
-
-  @Deprecated
-  public VersioningPolicy getVersioningPolicy()
-  {
-    return versioningPolicy;
-  }
-
-  @Deprecated
-  public RejectionPolicyFactory getRejectionPolicyFactory()
-  {
-    return rejectionPolicyFactory;
-  }
-
-  @Deprecated
-  public int getMaxPendingPersists()
-  {
-    return maxPendingPersists;
   }
 
   @Override

@@ -42,6 +42,4 @@ public interface PlumberSchool
    */
   public Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
 
-  @Deprecated
-  public Granularity getSegmentGranularity();
 }

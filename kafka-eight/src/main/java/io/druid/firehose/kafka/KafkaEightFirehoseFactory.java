@@ -54,20 +54,15 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   @JsonProperty
   private final String feed;
 
-  @JsonProperty
-  private final ByteBufferInputRowParser parser;
-
   @JsonCreator
   public KafkaEightFirehoseFactory(
       @JsonProperty("consumerProps") Properties consumerProps,
-      @JsonProperty("feed") String feed,
-      // backwards compatible
-      @JsonProperty("parser") ByteBufferInputRowParser parser
+      @JsonProperty("feed") String feed
+
   )
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
-    this.parser = (parser == null) ? null : parser;
   }
 
   @Override
@@ -154,9 +149,4 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
     };
   }
 
-  @Override
-  public ByteBufferInputRowParser getParser()
-  {
-    return parser;
-  }
 }

@@ -47,7 +47,7 @@ public class TopNBinaryFnTest
 {
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
-  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
+  final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   final ArithmeticPostAggregator addrowsindexconstant = new ArithmeticPostAggregator(

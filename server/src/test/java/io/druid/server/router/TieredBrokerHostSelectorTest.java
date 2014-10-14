@@ -262,13 +262,11 @@ public class TieredBrokerHostSelectorTest
     public List<Rule> getRulesWithDefault(String dataSource)
     {
       return Arrays.<Rule>asList(
-          new IntervalLoadRule(new Interval("2013/2014"), ImmutableMap.<String, Integer>of("hot", 1), null, null),
-          new IntervalLoadRule(new Interval("2012/2013"), ImmutableMap.<String, Integer>of("medium", 1), null, null),
+          new IntervalLoadRule(new Interval("2013/2014"), ImmutableMap.<String, Integer>of("hot", 1)),
+          new IntervalLoadRule(new Interval("2012/2013"), ImmutableMap.<String, Integer>of("medium", 1)),
           new IntervalLoadRule(
               new Interval("2011/2012"),
-              ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 1),
-              null,
-              null
+              ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 1)
           )
       );
     }

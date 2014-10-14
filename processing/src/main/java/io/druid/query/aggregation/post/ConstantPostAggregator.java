@@ -39,12 +39,11 @@ public class ConstantPostAggregator implements PostAggregator
   @JsonCreator
   public ConstantPostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("value") Number constantValue,
-      @JsonProperty("constantValue") Number backwardsCompatibleValue
+      @JsonProperty("value") Number constantValue
   )
   {
     this.name = name;
-    this.constantValue = constantValue == null ? backwardsCompatibleValue : constantValue;
+    this.constantValue = constantValue;
     Preconditions.checkNotNull(this.constantValue);
   }
 

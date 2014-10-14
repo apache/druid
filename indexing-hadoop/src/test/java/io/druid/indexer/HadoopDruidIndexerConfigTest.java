@@ -52,14 +52,20 @@ public class HadoopDruidIndexerConfigTest
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + "\"dataSource\": \"source\","
-          + " \"granularitySpec\":{"
-          + "   \"type\":\"uniform\","
-          + "   \"gran\":\"hour\","
-          + "   \"intervals\":[\"2012-07-10/P1D\"]"
-          + " },"
-          + "\"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\""
+          "{\n"
+          + "    \"dataSchema\": {\n"
+          + "        \"dataSource\": \"source\",\n"
+          + "        \"metricsSpec\": [],\n"
+          + "        \"granularitySpec\": {\n"
+          + "            \"type\": \"uniform\",\n"
+          + "            \"segmentGranularity\": \"hour\",\n"
+          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
+          + "        }\n"
+          + "    },\n"
+          + "    \"ioConfig\": {\n"
+          + "        \"type\": \"hadoop\",\n"
+          + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );
@@ -92,14 +98,20 @@ public class HadoopDruidIndexerConfigTest
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + "\"dataSource\": \"the:data:source\","
-          + " \"granularitySpec\":{"
-          + "   \"type\":\"uniform\","
-          + "   \"gran\":\"hour\","
-          + "   \"intervals\":[\"2012-07-10/P1D\"]"
-          + " },"
-          + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
+          "{\n"
+          + "    \"dataSchema\": {\n"
+          + "        \"dataSource\": \"the:data:source\",\n"
+          + "        \"metricsSpec\": [],\n"
+          + "        \"granularitySpec\": {\n"
+          + "            \"type\": \"uniform\",\n"
+          + "            \"segmentGranularity\": \"hour\",\n"
+          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
+          + "        }\n"
+          + "    },\n"
+          + "    \"ioConfig\": {\n"
+          + "        \"type\": \"hadoop\",\n"
+          + "        \"segmentOutputPath\": \"/tmp/dru:id/data:test\"\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );

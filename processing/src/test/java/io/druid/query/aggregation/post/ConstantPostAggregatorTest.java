@@ -34,11 +34,11 @@ public class ConstantPostAggregatorTest
   {
     ConstantPostAggregator constantPostAggregator;
 
-    constantPostAggregator = new ConstantPostAggregator("shichi", 7, null);
+    constantPostAggregator = new ConstantPostAggregator("shichi", 7);
     Assert.assertEquals(7, constantPostAggregator.compute(null));
-    constantPostAggregator = new ConstantPostAggregator("rei", 0.0, null);
+    constantPostAggregator = new ConstantPostAggregator("rei", 0.0);
     Assert.assertEquals(0.0, constantPostAggregator.compute(null));
-    constantPostAggregator = new ConstantPostAggregator("ichi", 1.0, null);
+    constantPostAggregator = new ConstantPostAggregator("ichi", 1.0);
     Assert.assertNotSame(1, constantPostAggregator.compute(null));
   }
 
@@ -46,7 +46,7 @@ public class ConstantPostAggregatorTest
   public void testComparator()
   {
     ConstantPostAggregator constantPostAggregator =
-        new ConstantPostAggregator("thistestbasicallydoesnothing unhappyface", 1, null);
+        new ConstantPostAggregator("thistestbasicallydoesnothing unhappyface", 1);
     Comparator comp = constantPostAggregator.getComparator();
     Assert.assertEquals(0, comp.compare(0, constantPostAggregator.compute(null)));
     Assert.assertEquals(0, comp.compare(0, 1));
@@ -54,21 +54,10 @@ public class ConstantPostAggregatorTest
   }
 
   @Test
-  public void testSerdeBackwardsCompatible() throws Exception
-  {
-    DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ConstantPostAggregator aggregator = mapper.readValue(
-        "{\"type\":\"constant\",\"name\":\"thistestbasicallydoesnothing unhappyface\",\"constantValue\":1}\n",
-        ConstantPostAggregator.class
-    );
-    Assert.assertEquals(new Integer(1), aggregator.getConstantValue());
-  }
-
-  @Test
   public void testSerde() throws Exception
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ConstantPostAggregator aggregator = new ConstantPostAggregator("aggregator", 2, null);
+    ConstantPostAggregator aggregator = new ConstantPostAggregator("aggregator", 2);
     ConstantPostAggregator aggregator1 = mapper.readValue(
         mapper.writeValueAsString(aggregator),
         ConstantPostAggregator.class

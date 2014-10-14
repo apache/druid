@@ -150,10 +150,5 @@ public class CombiningFirehoseFactoryTest
       };
     }
 
-    @Override
-    public InputRowParser getParser()
-    {
-      return null;
-    }
   }
 }

@@ -102,7 +102,6 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
   private final String host;
   private final List<String> channels;
   private final IrcDecoder decoder;
-  private final IrcParser parser;
 
   @JsonCreator
   public IrcFirehoseFactory(
@@ -116,7 +115,6 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
     this.host = host;
     this.channels = channels;
     this.decoder = decoder;
-    this.parser = new IrcParser(decoder);
   }
 
   @JsonProperty
@@ -267,12 +265,6 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
         irc.disconnect("");
       }
     };
-  }
-
-  @Override
-  public IrcParser getParser()
-  {
-    return parser;
   }
 }
 

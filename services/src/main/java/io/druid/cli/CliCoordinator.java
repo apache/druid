@@ -44,14 +44,11 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
-import io.druid.server.http.BackwardsCompatibleCoordinatorResource;
-import io.druid.server.http.BackwardsCompatibleInfoResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
 import io.druid.server.http.DBResource;
 import io.druid.server.http.DatasourcesResource;
-import io.druid.server.http.InfoResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RulesResource;
@@ -116,9 +113,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(JettyServerInitializer.class)
                   .to(CoordinatorJettyServerInitializer.class);
 
-            Jerseys.addResource(binder, BackwardsCompatibleInfoResource.class);
-            Jerseys.addResource(binder, InfoResource.class);
-            Jerseys.addResource(binder, BackwardsCompatibleCoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);

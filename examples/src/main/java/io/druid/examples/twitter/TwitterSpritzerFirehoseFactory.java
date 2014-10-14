@@ -311,9 +311,4 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
     };
   }
 
-  @Override
-  public InputRowParser getParser()
-  {
-    return null;
-  }
 }
