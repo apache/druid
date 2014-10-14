@@ -173,7 +173,7 @@ public class DefaultLimitSpec implements LimitSpec
                          public String apply(Row input)
                          {
                            // Multi-value dimensions have all been flattened at this point;
-                           final List<String> dimList = input.getDimension(dimension);
+                           final List<String> dimList = input.getDimension(dimension.toLowerCase());
                            return dimList.isEmpty() ? null : dimList.get(0);
                          }
                        }
