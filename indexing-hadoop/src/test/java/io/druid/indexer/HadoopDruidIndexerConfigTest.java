@@ -20,14 +20,33 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Lists;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.metamx.common.Granularity;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.JSONDataSpec;
+import io.druid.data.input.impl.TimestampSpec;
+import io.druid.granularity.QueryGranularity;
+import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -123,6 +142,70 @@ public class HadoopDruidIndexerConfigTest
         "/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712",
         path.toString()
     );
+
+  }
+
+  @Test
+  public void testHashedBucketSelection() {
+    List<HadoopyShardSpec> specs = Lists.newArrayList();
+    final int partitionCount = 10;
+    for (int i = 0; i < partitionCount; i++) {
+      specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, new DefaultObjectMapper()), i));
+    }
+    HadoopIngestionSpec spec = new HadoopIngestionSpec(
+        null, null, null,
+        "foo",
+        new TimestampSpec("timestamp", "auto"),
+        new JSONDataSpec(ImmutableList.of("foo"), null),
+        new UniformGranularitySpec(
+            Granularity.HOUR,
+            QueryGranularity.MINUTE,
+            ImmutableList.of(new Interval("2010-01-01/P1D")),
+            Granularity.HOUR
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        true,
+        ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
+        false,
+        new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.MINUTE),
+        null,
+        false,
+        ImmutableMap.of("foo", "bar"),
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(spec);
+    final List<String> dims = Arrays.asList("diM1", "dIM2");
+    final ImmutableMap<String, Object> values = ImmutableMap.<String, Object>of(
+        "Dim1",
+        "1",
+        "DiM2",
+        "2",
+        "dim1",
+        "3",
+        "dim2",
+        "4"
+    );
+    final long timestamp = new DateTime("2010-01-01T01:00:01").getMillis();
+    final Bucket expectedBucket = config.getBucket(new MapBasedInputRow(timestamp, dims, values)).get();
+    final long nextBucketTimestamp = QueryGranularity.MINUTE.next(QueryGranularity.MINUTE.truncate(timestamp));
+    // check that all rows having same set of dims and truncated timestamp hash to same bucket
+    for (int i = 0; timestamp + i < nextBucketTimestamp; i++) {
+      Assert.assertEquals(
+          expectedBucket.partitionNum,
+          config.getBucket(new MapBasedInputRow(timestamp + i, dims, values)).get().partitionNum
+      );
+    }
 
   }
 }
