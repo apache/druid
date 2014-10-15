@@ -97,7 +97,7 @@ public class SchemalessTestSimple
   final QueryGranularity allGran = QueryGranularity.ALL;
   final String dimensionValue = "dimension";
   final String valueValue = "value";
-  final String providerDimension = "provider";
+  final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
   final String placementishDimension = "placementish";
@@ -175,7 +175,7 @@ public class SchemalessTestSimple
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
-        .dimension(providerDimension)
+        .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
         .intervals(fullOnInterval)
@@ -200,7 +200,7 @@ public class SchemalessTestSimple
                 Arrays.<DimensionAndMetricValueExtractor>asList(
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("provider", "spot")
+                                    .put("market", "spot")
                                     .put("rows", 4L)
                                     .put("index", 400.0D)
                                     .put("addRowsIndexConstant", 405.0D)
@@ -211,7 +211,7 @@ public class SchemalessTestSimple
                     ),
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("provider", "")
+                                    .put("market", "")
                                     .put("rows", 2L)
                                     .put("index", 200.0D)
                                     .put("addRowsIndexConstant", 203.0D)
@@ -222,7 +222,7 @@ public class SchemalessTestSimple
                     ),
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
-                                    .put("provider", "total_market")
+                                    .put("market", "total_market")
                                     .put("rows", 2L)
                                     .put("index", 200.0D)
                                     .put("addRowsIndexConstant", 203.0D)
@@ -258,7 +258,7 @@ public class SchemalessTestSimple
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )

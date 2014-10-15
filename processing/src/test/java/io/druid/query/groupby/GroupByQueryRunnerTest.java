@@ -742,8 +742,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.providerDimension,
-                    "ProviderAlias"
+                    QueryRunnerTestHelper.marketDimension,
+                    "MarketAlias"
                 )
             )
         )
@@ -752,7 +752,7 @@ public class GroupByQueryRunnerTest
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        "providerALIAS",
+                        "marketALIAS",
                         OrderByColumnSpec.Direction.DESCENDING
                     )
                 ), 3
@@ -766,9 +766,9 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "provideralias", "upfront", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "provideralias", "total_market", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "provideralias", "spot", "rows", 837L)
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "marketalias", "upfront", "rows", 186L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "marketalias", "total_market", "rows", 186L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "marketalias", "spot", "rows", 837L)
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -1333,14 +1333,14 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("provider", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter("market", "function(dim){ return true; }"))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
                 new DoubleSumAggregatorFactory("idx_subagg", "index"),
                 new JavaScriptAggregatorFactory(
                     "js_agg",
-                    Arrays.asList("index", "provider"),
+                    Arrays.asList("index", "market"),
                     "function(current, index, dim){return current + index + dim.length;}",
                     "function(){return 0;}",
                     "function(a,b){return a + b;}"
