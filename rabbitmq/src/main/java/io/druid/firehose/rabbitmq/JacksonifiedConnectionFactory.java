@@ -20,8 +20,10 @@
 package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Maps;
 import com.rabbitmq.client.ConnectionFactory;
 
+import javax.annotation.Nullable;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -161,7 +163,17 @@ public class JacksonifiedConnectionFactory extends ConnectionFactory
   @JsonProperty
   public Map<String, Object> getClientProperties()
   {
-    return super.getClientProperties();
+    return Maps.transformEntries(
+        super.getClientProperties(),
+        new Maps.EntryTransformer<String, Object, Object>()
+        {
+          @Override
+          public Object transformEntry(String key, Object value)
+          {
+            return value.toString();
+          }
+        }
+    );
   }
 
   @Override

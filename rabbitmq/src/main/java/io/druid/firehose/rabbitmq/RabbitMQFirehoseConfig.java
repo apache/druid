@@ -105,29 +105,35 @@ public class RabbitMQFirehoseConfig
   }
 
   @JsonProperty
-  public int getMaxRetries() {
+  public int getMaxRetries()
+  {
     return maxRetries;
   }
 
-  public void setMaxRetries(int maxRetries) {
+  public void setMaxRetries(int maxRetries)
+  {
     this.maxRetries = maxRetries;
   }
 
   @JsonProperty
-  public int getRetryIntervalSeconds() {
+  public int getRetryIntervalSeconds()
+  {
     return retryIntervalSeconds;
   }
 
-  public void setRetryIntervalSeconds(int retryIntervalSeconds) {
+  public void setRetryIntervalSeconds(int retryIntervalSeconds)
+  {
     this.retryIntervalSeconds = retryIntervalSeconds;
   }
 
   @JsonProperty
-  public long getMaxDurationSeconds() {
+  public long getMaxDurationSeconds()
+  {
     return maxDurationSeconds;
   }
 
-  public void setMaxDurationSeconds(int maxDurationSeconds) {
+  public void setMaxDurationSeconds(int maxDurationSeconds)
+  {
     this.maxDurationSeconds = maxDurationSeconds;
   }
 }
