@@ -23,21 +23,22 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import io.druid.db.DerbyMetadataRuleManager;
-import io.druid.db.SQLMetadataRuleManagerProvider;
-import io.druid.db.DerbyMetadataSegmentManager;
-import io.druid.db.SQLMetadataSegmentManagerProvider;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerProvider;
-import io.druid.db.MetadataStorageConnector;
-import io.druid.db.MetadataSegmentPublisherProvider;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.DerbyConnector;
-import io.druid.db.SQLMetadataStorageActionHandler;
-import io.druid.db.SQLMetadataSegmentPublisher;
-import io.druid.db.SQLMetadataSegmentPublisherProvider;
+import io.druid.metadata.DerbyMetadataRuleManager;
+import io.druid.metadata.DerbyMetadataRuleManagerProvider;
+import io.druid.metadata.SQLMetadataRuleManagerProvider;
+import io.druid.metadata.DerbyMetadataSegmentManager;
+import io.druid.metadata.SQLMetadataSegmentManagerProvider;
+import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import io.druid.metadata.MetadataRuleManager;
+import io.druid.metadata.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManagerProvider;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.MetadataSegmentPublisherProvider;
+import io.druid.metadata.MetadataRuleManagerProvider;
+import io.druid.metadata.DerbyConnector;
+import io.druid.metadata.SQLMetadataStorageActionHandler;
+import io.druid.metadata.SQLMetadataSegmentPublisher;
+import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -65,7 +66,7 @@ public class DerbyMetadataStorageDruidModule implements Module
         binder, "druid.db.type", Key.get(MetadataRuleManager.class), Key.get(DerbyMetadataRuleManager.class)
     );
     PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(SQLMetadataRuleManagerProvider.class)
+        binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(DerbyMetadataRuleManagerProvider.class)
     );
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
@@ -109,7 +110,7 @@ public class DerbyMetadataStorageDruidModule implements Module
 
     PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
             .addBinding("derby")
-            .to(SQLMetadataRuleManagerProvider.class)
+            .to(DerbyMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))

@@ -33,6 +33,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -133,7 +134,7 @@ public class SchemalessIndex
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new IncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS);
+          theIndex = new IncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS, TestQueryRunners.pool);
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -178,11 +179,11 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, topFile);
-        IndexMerger.persist(bottom, bottomFile);
+        IndexMaker.persist(top, topFile);
+        IndexMaker.persist(bottom, bottomFile);
 
         mergedIndex = io.druid.segment.IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(
+            IndexMaker.mergeQueryableIndex(
                 Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)), METRIC_AGGS, mergedFile
             )
         );
@@ -224,7 +225,7 @@ public class SchemalessIndex
         mergedFile.deleteOnExit();
 
         QueryableIndex index = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(
+            IndexMaker.mergeQueryableIndex(
                 Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)), METRIC_AGGS, mergedFile
             )
         );
@@ -261,7 +262,7 @@ public class SchemalessIndex
         }
 
         QueryableIndex index = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile)
+            IndexMaker.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile)
         );
 
         return index;
@@ -330,7 +331,7 @@ public class SchemalessIndex
           }
 
           final IncrementalIndex rowIndex = new IncrementalIndex(
-              timestamp, QueryGranularity.MINUTE, METRIC_AGGS
+              timestamp, QueryGranularity.MINUTE, METRIC_AGGS, TestQueryRunners.pool
           );
 
           rowIndex.add(
@@ -342,7 +343,7 @@ public class SchemalessIndex
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          IndexMerger.persist(rowIndex, tmpFile);
+          IndexMaker.persist(rowIndex, tmpFile);
           rowPersistedIndexes.add(IndexIO.loadIndex(tmpFile));
         }
       }
@@ -360,7 +361,7 @@ public class SchemalessIndex
     log.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new IncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs
+        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs, TestQueryRunners.pool
     );
 
     try {
@@ -402,7 +403,7 @@ public class SchemalessIndex
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      IndexMerger.persist(index, theFile);
+      IndexMaker.persist(index, theFile);
     }
 
     return filesToMap;
@@ -462,7 +463,7 @@ public class SchemalessIndex
         );
       }
 
-      return IndexIO.loadIndex(IndexMerger.append(adapters, mergedFile));
+      return IndexIO.loadIndex(IndexMaker.append(adapters, mergedFile));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -481,7 +482,7 @@ public class SchemalessIndex
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
       return IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(
+          IndexMaker.mergeQueryableIndex(
               Lists.newArrayList(
                   Iterables.transform(
                       filesToMap,

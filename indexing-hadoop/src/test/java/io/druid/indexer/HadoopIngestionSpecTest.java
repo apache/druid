@@ -22,7 +22,7 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.druid.db.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;

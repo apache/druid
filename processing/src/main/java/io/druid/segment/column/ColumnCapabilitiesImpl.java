@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.metamx.common.ISE;
 
 /**
  */
@@ -107,6 +108,30 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
     this.hasMultipleValues = hasMultipleValues;
+    return this;
+  }
+
+  @Override
+  public ColumnCapabilitiesImpl merge(ColumnCapabilities other)
+  {
+    if (other == null) {
+      return this;
+    }
+
+    if (type == null) {
+      type = other.getType();
+    }
+
+    if (!type.equals(other.getType())) {
+      throw new ISE("Cannot merge columns of type[%s] and [%s]", type, other.getType());
+    }
+
+    this.dictionaryEncoded |= other.isDictionaryEncoded();
+    this.runLengthEncoded |= other.isRunLengthEncoded();
+    this.hasInvertedIndexes |= other.hasBitmapIndexes();
+    this.hasSpatialIndexes |= other.hasSpatialIndexes();
+    this.hasMultipleValues |= other.hasMultipleValues();
+
     return this;
   }
 }

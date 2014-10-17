@@ -64,6 +64,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -141,15 +142,12 @@ import java.util.concurrent.Executor;
 public class CachingClusteredClientTest
 {
   public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
-
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
   protected static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
-
   static {
     jsonMapper.getFactory().setCodec(jsonMapper);
   }
-
   /**
    * We want a deterministic test, but we'd also like a bit of randomness for the distribution of segments
    * across servers.  Thus, we loop multiple times and each time use a deterministically created Random instance.
@@ -199,10 +197,10 @@ public class CachingClusteredClientTest
   private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
   private final Random random;
+  public CachingClusteredClient client;
   protected VersionedIntervalTimeline<String, ServerSelector> timeline;
   protected TimelineServerView serverView;
   protected Cache cache;
-  public CachingClusteredClient client;
   DruidServer[] servers;
 
   public CachingClusteredClientTest(int randomSeed)
@@ -894,7 +892,8 @@ public class CachingClusteredClientTest
                       }
                     }
                 )
-            )
+            ),
+            TestQueryRunners.pool
         )
     );
     HashMap<String,Object> context = new HashMap<String, Object>();
@@ -1758,7 +1757,8 @@ public class CachingClusteredClientTest
                                           }
                                         }
                                     )
-                                )
+                                ),
+                                TestQueryRunners.pool
                             )
                         )
                         .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())

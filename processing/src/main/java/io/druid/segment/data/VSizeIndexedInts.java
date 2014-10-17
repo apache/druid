@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
 
@@ -44,6 +45,11 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return fromList(Ints.asList(array), maxValue);
   }
 
+  public static VSizeIndexedInts empty()
+  {
+    return fromList(Lists.<Integer>newArrayList(), 0);
+  }
+
   public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
@@ -57,7 +63,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
       if (val > maxValue) {
         throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", val, maxValue, i);
       }
-      
+
       byte[] intAsBytes = Ints.toByteArray(val);
       buffer.put(intAsBytes, intAsBytes.length - numBytes, numBytes);
       ++i;
@@ -138,8 +144,8 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     if (retVal == 0) {
       retVal = buffer.compareTo(o.buffer);
     }
-    
-    return retVal;    
+
+    return retVal;
   }
 
   public int getNumBytes()
@@ -149,6 +155,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public int getSerializedSize()
   {
+    // version, numBytes, size, remaining
     return 1 + 1 + 4 + buffer.remaining();
   }
 

@@ -27,6 +27,7 @@ import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
@@ -94,18 +95,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getAvailableDimensions()
+  public Indexed<String> getDimensionNames()
   {
-    return new ListIndexed<String>(availableDimensions, String.class);
+    return new ListIndexed<>(availableDimensions, String.class);
   }
 
   @Override
-  public Indexed<String> getAvailableMetrics()
+  public Indexed<String> getMetricNames()
   {
     final Set<String> columns = Sets.newLinkedHashSet(input.getColumnNames());
-    final HashSet<String> dimensions = Sets.newHashSet(getAvailableDimensions());
+    final HashSet<String> dimensions = Sets.newHashSet(getDimensionNames());
 
-    return new ListIndexed<String>(
+    return new ListIndexed<>(
         Lists.newArrayList(Sets.difference(columns, dimensions)),
         String.class
     );
@@ -174,18 +175,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           final Object[] metrics;
           final Map<String, DictionaryEncodedColumn> dimensions;
 
-          final int numMetrics = getAvailableMetrics().size();
+          final int numMetrics = getMetricNames().size();
 
           int currRow = 0;
           boolean done = false;
 
           {
             dimensions = Maps.newLinkedHashMap();
-            for (String dim : getAvailableDimensions()) {
+            for (String dim : getDimensionNames()) {
               dimensions.put(dim, input.getColumn(dim).getDictionaryEncoding());
             }
 
-            final Indexed<String> availableMetrics = getAvailableMetrics();
+            final Indexed<String> availableMetrics = getMetricNames();
             metrics = new Object[availableMetrics.size()];
             for (int i = 0; i < metrics.length; ++i) {
               final Column column = input.getColumn(availableMetrics.get(i));
@@ -254,14 +255,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               }
             }
 
-            Map<String, String> descriptions = Maps.newHashMap();
-            for (String columnName : input.getColumnNames()) {
-              if (input.getColumn(columnName).getSpatialIndex() != null) {
-                descriptions.put(columnName, "spatial");
-              }
-            }
             final Rowboat retVal = new Rowboat(
-                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow, descriptions
+                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow
             );
 
             ++currRow;
@@ -310,5 +305,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       default:
         throw new ISE("Unknown type[%s]", type);
     }
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return input.getColumn(column).getCapabilities();
   }
 }

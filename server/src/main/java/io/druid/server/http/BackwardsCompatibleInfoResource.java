@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataSegmentManager;
+import io.druid.metadata.MetadataRuleManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.coordinator.DruidCoordinator;
 
 import javax.annotation.Nullable;

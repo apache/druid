@@ -42,10 +42,10 @@ public class VMUtils
       throw new UnsupportedOperationException("VM.maxDirectMemory doesn't exist, cannot do memory check.", e);
     }
     catch (InvocationTargetException e) {
-      throw new RuntimeException("static method shouldn't throw this", e);
+      throw new UnsupportedOperationException("static method shouldn't throw this", e);
     }
     catch (IllegalAccessException e) {
-      throw new RuntimeException("public method, shouldn't throw this", e);
+      throw new UnsupportedOperationException("public method, shouldn't throw this", e);
     }
   }
 }

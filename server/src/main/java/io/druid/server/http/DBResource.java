@@ -24,10 +24,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
-import io.druid.db.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;

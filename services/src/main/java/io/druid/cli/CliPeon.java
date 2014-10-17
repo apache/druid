@@ -31,7 +31,7 @@ import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
+import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.guice.Binders;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.Jerseys;

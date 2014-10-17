@@ -1,0 +1,13 @@
+<div class="disable-data-source">
+  <div class="modal-header">
+      <h1>Confirm disabling {{ dataSourceId }}<small>Really? REALLY???</small></h1>
+  </div>
+  <div class="modal-body">
+    <p ng-hide="loading">Do you really want to disable the {{ dataSourceId }} dataSource?</p>
+    <span class="fa fa-cog fa-spin fa-4x" ng-show="loading"></span>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-default" ng-click="cancel()" ng-disabled="loading">Never mind...</button>
+    <button class="btn btn-danger" ng-click="confirm()" ng-disabled="loading">Yes, disable {{ dataSourceId }}</button>
+  </div>
+</div>

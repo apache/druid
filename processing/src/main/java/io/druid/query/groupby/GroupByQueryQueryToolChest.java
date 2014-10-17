@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -33,20 +32,23 @@ import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.MergeSequence;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.guice.annotations.Global;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.DataSourceUtil;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
+import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -58,8 +60,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.Minutes;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -85,19 +85,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   );
 
   private final Supplier<GroupByQueryConfig> configSupplier;
+
+  private final StupidPool<ByteBuffer> bufferPool;
   private final ObjectMapper jsonMapper;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
+
 
   @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
       ObjectMapper jsonMapper,
-      GroupByQueryEngine engine
+      GroupByQueryEngine engine,
+      @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;
     this.jsonMapper = jsonMapper;
     this.engine = engine;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -123,7 +128,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, Object> context)
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
+
     final DataSource dataSource = query.getDataSource();
+
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
@@ -132,6 +139,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
+
       final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
@@ -148,13 +156,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final GroupByQuery outerQuery = new GroupByQuery.Builder(query)
           .setLimitSpec(query.getLimitSpec().merge(subquery.getLimitSpec()))
           .build();
+      IncrementalIndex index = makeIncrementalIndex(innerQuery, subqueryResult);
 
-      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(
-          makeIncrementalIndex(innerQuery, subqueryResult)
+      return new ResourceClosingSequence<>(
+          outerQuery.applyLimit(
+              engine.process(
+                  outerQuery,
+                  new IncrementalIndexStorageAdapter(
+                      index
+                  )
+              )
+          ),
+          index
       );
-      return outerQuery.applyLimit(engine.process(outerQuery, adapter));
     } else {
-      return query.applyLimit(postAggregate(query, makeIncrementalIndex(query, runner.run(query, context))));
+      final IncrementalIndex index = makeIncrementalIndex(query, runner.run(query, context));
+      return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
     }
   }
 
@@ -183,12 +200,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     final GroupByQueryConfig config = configSupplier.get();
     Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        config
+        config,
+        bufferPool
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
-
 
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
@@ -210,19 +227,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(GroupByQuery query)
   {
-    int numMinutes = 0;
-    for (Interval interval : query.getIntervals()) {
-      numMinutes += Minutes.minutesIn(interval).getMinutes();
-    }
-
-    return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser3(String.format("%,d dims", query.getDimensions().size()))
-        .setUser4("groupBy")
-        .setUser5(Joiner.on(",").join(query.getIntervals()))
-        .setUser6(String.valueOf(query.hasFilters()))
-        .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()))
-        .setUser9(Minutes.minutes(numMinutes).toString());
+    return QueryMetricUtil.makeQueryTimeMetric(query)
+                          .setUser3(String.format("%,d dims", query.getDimensions().size()))
+                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
   }
 
   @Override

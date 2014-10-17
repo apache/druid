@@ -19,17 +19,21 @@
 
 package io.druid.segment.realtime;
 
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import io.druid.segment.IncrementalIndexSegment;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 
+import java.io.IOException;
+
 /**
-*/
+ */
 public class FireHydrant
 {
-  private volatile IncrementalIndex index;
-  private volatile Segment adapter;
   private final int count;
+  private volatile IncrementalIndex index;
+  private volatile ReferenceCountingSegment adapter;
 
   public FireHydrant(
       IncrementalIndex index,
@@ -38,7 +42,7 @@ public class FireHydrant
   )
   {
     this.index = index;
-    this.adapter = new IncrementalIndexSegment(index, segmentIdentifier);
+    this.adapter = new ReferenceCountingSegment(new IncrementalIndexSegment(index, segmentIdentifier));
     this.count = count;
   }
 
@@ -48,7 +52,7 @@ public class FireHydrant
   )
   {
     this.index = null;
-    this.adapter = adapter;
+    this.adapter = new ReferenceCountingSegment(adapter);
     this.count = count;
   }
 
@@ -57,7 +61,7 @@ public class FireHydrant
     return index;
   }
 
-  public Segment getSegment()
+  public ReferenceCountingSegment getSegment()
   {
     return adapter;
   }
@@ -74,7 +78,15 @@ public class FireHydrant
 
   public void swapSegment(Segment adapter)
   {
-    this.adapter = adapter;
+    if (this.adapter != null) {
+      try {
+        this.adapter.close();
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+    this.adapter = new ReferenceCountingSegment(adapter);
     this.index = null;
   }
 

@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -30,11 +29,12 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.ExecutorExecutingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
+import io.druid.guice.annotations.Global;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
@@ -48,9 +48,9 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -61,25 +61,27 @@ import java.util.concurrent.TimeoutException;
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
 {
+  private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
   private final GroupByQueryEngine engine;
   private final QueryWatcher queryWatcher;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
-
-  private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
+  private final StupidPool<ByteBuffer> computationBufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
       QueryWatcher queryWatcher,
       Supplier<GroupByQueryConfig> config,
-      GroupByQueryQueryToolChest toolChest
+      GroupByQueryQueryToolChest toolChest,
+      @Global StupidPool<ByteBuffer> computationBufferPool
   )
   {
     this.engine = engine;
     this.queryWatcher = queryWatcher;
     this.config = config;
     this.toolChest = toolChest;
+    this.computationBufferPool = computationBufferPool;
   }
 
   @Override
@@ -112,7 +114,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                       final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper
                           .createIndexAccumulatorPair(
                               queryParam,
-                              config.get()
+                              config.get(),
+                              computationBufferPool
                           );
                       final Pair<List, Accumulator<List, Row>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
                       final int priority = query.getContextPriority(0);
@@ -131,7 +134,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                                          bySegmentAccumulatorPair.rhs
                                      );
                               } else {
-                                input.run(query, context).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                input.run(query, context)
+                                     .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;
@@ -176,7 +180,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, config, queryWatcher, queryRunners);
+
+      return new GroupByParallelQueryRunner(queryExecutor, config, queryWatcher, computationBufferPool, queryRunners);
     }
   }
 

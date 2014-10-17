@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
-import io.druid.db.MetadataRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 

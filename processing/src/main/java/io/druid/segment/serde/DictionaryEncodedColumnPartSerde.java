@@ -43,13 +43,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
-  @JsonCreator
-  public static DictionaryEncodedColumnPartSerde createDeserializer(
-      boolean singleValued
-  )
-  {
-    return new DictionaryEncodedColumnPartSerde();
-  }
+  private final boolean isSingleValued;
 
   private final GenericIndexed<String> dictionary;
   private final VSizeIndexedInts singleValuedColumn;
@@ -67,6 +61,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       ImmutableRTree spatialIndex
   )
   {
+    this.isSingleValued = multiValCol == null;
     this.dictionary = dictionary;
     this.singleValuedColumn = singleValCol;
     this.multiValuedColumn = multiValCol;
@@ -89,20 +84,25 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     this.size = size;
   }
 
-  private DictionaryEncodedColumnPartSerde()
+  @JsonCreator
+  public DictionaryEncodedColumnPartSerde(
+      @JsonProperty("isSingleValued") boolean isSingleValued
+  )
   {
-    dictionary = null;
-    singleValuedColumn = null;
-    multiValuedColumn = null;
-    bitmaps = null;
-    spatialIndex = null;
-    size = 0;
+    this.isSingleValued = isSingleValued;
+
+    this.dictionary = null;
+    this.singleValuedColumn = null;
+    this.multiValuedColumn = null;
+    this.bitmaps = null;
+    this.spatialIndex = null;
+    this.size = 0;
   }
 
   @JsonProperty
   private boolean isSingleValued()
   {
-    return singleValuedColumn != null;
+    return isSingleValued;
   }
 
   @Override
@@ -114,14 +114,26 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   @Override
   public void write(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{(byte) (isSingleValued() ? 0x0 : 0x1)}));
-    dictionary.writeToChannel(channel);
-    if (isSingleValued()) {
-      singleValuedColumn.writeToChannel(channel);
-    } else {
-      multiValuedColumn.writeToChannel(channel);
+    channel.write(ByteBuffer.wrap(new byte[]{(byte) (isSingleValued ? 0x0 : 0x1)}));
+
+    if (dictionary != null) {
+      dictionary.writeToChannel(channel);
     }
-    bitmaps.writeToChannel(channel);
+
+    if (isSingleValued()) {
+      if (singleValuedColumn != null) {
+        singleValuedColumn.writeToChannel(channel);
+      }
+    } else {
+      if (multiValuedColumn != null) {
+        multiValuedColumn.writeToChannel(channel);
+      }
+    }
+
+    if (bitmaps != null) {
+      bitmaps.writeToChannel(channel);
+    }
+
     if (spatialIndex != null) {
       ByteBufferSerializer.writeToChannel(spatialIndex, IndexedRTree.objectStrategy, channel);
     }

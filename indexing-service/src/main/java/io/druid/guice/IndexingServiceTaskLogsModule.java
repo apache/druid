@@ -37,13 +37,13 @@ public class IndexingServiceTaskLogsModule implements Module
   public void configure(Binder binder)
   {
     PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
+    JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
     final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
     taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
     taskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
     binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
     binder.bind(FileTaskLogs.class).in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
   }

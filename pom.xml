@@ -326,22 +326,22 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-proxy</artifactId>
-                <version>9.2.2.v20140723</version>
+                <version>9.2.3.v20140905</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -430,6 +430,11 @@
                 <artifactId>hadoop-client</artifactId>
                 <version>2.3.0</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mapdb</groupId>
+                <artifactId>mapdb</artifactId>
+                <version>1.0.6</version>
             </dependency>
 
             <!-- Test Scope -->

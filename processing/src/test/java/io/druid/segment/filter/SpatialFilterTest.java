@@ -22,9 +22,11 @@ package io.druid.segment.filter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
@@ -33,6 +35,7 @@ import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -61,7 +64,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -77,7 +79,7 @@ public class SpatialFilterTest
       new LongSumAggregatorFactory("val", "val")
   };
 
-  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long");
+  private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -106,14 +108,25 @@ public class SpatialFilterTest
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                             .withQueryGranularity(QueryGranularity.DAY)
                                             .withMetrics(METRIC_AGGS)
-                                            .withSpatialDimensions(
-                                                Arrays.asList(
-                                                    new SpatialDimensionSchema(
-                                                        "dim.geo",
-                                                        Arrays.asList("lat", "long")
+                                            .withDimensionsSpec(
+                                                new DimensionsSpec(
+                                                    null,
+                                                    null,
+                                                    Arrays.asList(
+                                                        new SpatialDimensionSchema(
+                                                            "dim.geo",
+                                                            Arrays.asList("lat", "long")
+                                                        ),
+                                                        new SpatialDimensionSchema(
+                                                            "spatialIsRad",
+                                                            Arrays.asList("lat2", "long2")
+                                                        )
+
                                                     )
                                                 )
-                                            ).build()
+                                            ).build(),
+        TestQueryRunners.pool,
+        false
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -205,6 +218,18 @@ public class SpatialFilterTest
             )
         )
     );
+    theIndex.add(
+        new MapBasedInputRow(
+            new DateTime("2013-01-05").getMillis(),
+            DIMS,
+            ImmutableMap.<String, Object>of(
+                "timestamp", new DateTime("2013-01-05").toString(),
+                "lat2", 0.0f,
+                "long2", 0.0f,
+                "val", 13l
+            )
+        )
+    );
 
     // Add a bunch of random points
     Random rand = new Random();
@@ -246,40 +271,73 @@ public class SpatialFilterTest
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Arrays.asList("lat", "long")
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Arrays.asList("lat", "long")
+                                                          ),
+                                                          new SpatialDimensionSchema(
+                                                              "spatialIsRad",
+                                                              Arrays.asList("lat2", "long2")
+                                                          )
+
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool,
+          false
       );
       IncrementalIndex second = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Arrays.asList("lat", "long")
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Arrays.asList("lat", "long")
+                                                          ),
+                                                          new SpatialDimensionSchema(
+                                                              "spatialIsRad",
+                                                              Arrays.asList("lat2", "long2")
+                                                          )
+
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool,
+          false
       );
       IncrementalIndex third = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Arrays.asList("lat", "long")
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Arrays.asList("lat", "long")
+                                                          ),
+                                                          new SpatialDimensionSchema(
+                                                              "spatialIsRad",
+                                                              Arrays.asList("lat2", "long2")
+                                                          )
+
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool,
+          false
       );
 
 
@@ -370,6 +428,18 @@ public class SpatialFilterTest
                   "lat", 8.0f,
                   "long", 6.0f,
                   "val", 47l
+              )
+          )
+      );
+      second.add(
+          new MapBasedInputRow(
+              new DateTime("2013-01-05").getMillis(),
+              DIMS,
+              ImmutableMap.<String, Object>of(
+                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "lat2", 0.0f,
+                  "long2", 0.0f,
+                  "val", 13l
               )
           )
       );
@@ -479,8 +549,60 @@ public class SpatialFilterTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String,Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+
+  @Test
+  public void testSpatialQueryWithOtherSpatialDim()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test")
+                                  .granularity(QueryGranularity.ALL)
+                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .filters(
+                                      new SpatialDimFilter(
+                                          "spatialIsRad",
+                                          new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+                                      )
+                                  )
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          new CountAggregatorFactory("rows"),
+                                          new LongSumAggregatorFactory("val", "val")
+                                      )
+                                  )
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2013-01-01T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                            .put("rows", 1L)
+                            .put("val", 13l)
+                            .build()
+            )
+        )
+    );
+    try {
+      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
+          new TimeseriesQueryQueryToolChest(new QueryConfig()),
+          new TimeseriesQueryEngine(),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+
+      QueryRunner runner = new FinalizeResultsQueryRunner(
+          factory.createRunner(segment),
+          factory.getToolchest()
+      );
+
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -566,8 +688,8 @@ public class SpatialFilterTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String,Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, Maps.newHashMap()));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

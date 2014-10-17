@@ -30,6 +30,7 @@ import java.util.List;
  *
  * Adjust to JsonCreator and final fields when resolved.
  */
+@Deprecated
 public class DataRollupSpec
 {
   @JsonProperty
@@ -38,24 +39,8 @@ public class DataRollupSpec
   @JsonProperty
   public QueryGranularity rollupGranularity = QueryGranularity.NONE;
 
-  @JsonProperty
-  public int rowFlushBoundary = 500000;
-
-  public DataRollupSpec() {}
-
-  public DataRollupSpec(List<AggregatorFactory> aggs, QueryGranularity rollupGranularity)
-  {
-    this.aggs = aggs;
-    this.rollupGranularity = rollupGranularity;
-  }
-
   public List<AggregatorFactory> getAggs()
   {
     return aggs;
-  }
-
-  public QueryGranularity getRollupGranularity()
-  {
-    return rollupGranularity;
   }
 }
