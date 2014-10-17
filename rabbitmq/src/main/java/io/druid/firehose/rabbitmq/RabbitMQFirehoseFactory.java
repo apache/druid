@@ -26,7 +26,6 @@ import com.metamx.common.logger.Logger;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.ConsumerCancelledException;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
@@ -114,10 +113,12 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
       @JsonProperty("connection") JacksonifiedConnectionFactory connectionFactory,
       @JsonProperty("config") RabbitMQFirehoseConfig config,
       @JsonProperty("parser") StringInputRowParser parser
-  )
+  ) throws Exception
   {
-    this.connectionFactory = connectionFactory;
-    this.config = config;
+    this.connectionFactory = connectionFactory == null
+                             ? JacksonifiedConnectionFactory.makeDefaultConnectionFactory()
+                             : connectionFactory;
+    this.config = config == null ? RabbitMQFirehoseConfig.makeDefaultConfig() : config;
     this.parser = parser;
   }
 

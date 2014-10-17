@@ -20,6 +20,7 @@
 package io.druid.examples.rabbitmq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -44,14 +45,40 @@ public class RabbitMQFirehoseFactoryTest
   @Test
   public void testSerde() throws Exception
   {
+    RabbitMQFirehoseConfig config = new RabbitMQFirehoseConfig(
+        "test",
+        "test2",
+        "test3",
+        true,
+        true,
+        true,
+        5,
+        10,
+        20
+    );
+
+    JacksonifiedConnectionFactory connectionFactory = new JacksonifiedConnectionFactory(
+        "foo",
+        9978,
+        "user",
+        "pw",
+        "host",
+        null,
+        5,
+        10,
+        11,
+        12,
+        ImmutableMap.<String, Object>of("hi", "bye")
+    );
+
     RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(
-        new JacksonifiedConnectionFactory(),
-        new RabbitMQFirehoseConfig(),
+        connectionFactory,
+        config,
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("timestamp", "auto"),
                 new DimensionsSpec(
-                    Arrays.<String>asList("dim"),
+                    Arrays.asList("dim"),
                     Lists.<String>newArrayList(),
                     Lists.<SpatialDimensionSchema>newArrayList()
                 )
@@ -65,5 +92,8 @@ public class RabbitMQFirehoseFactoryTest
     byte[] bytes2 = mapper.writeValueAsBytes(factory2);
 
     Assert.assertArrayEquals(bytes, bytes2);
+
+    Assert.assertEquals(factory.getConfig(), factory2.getConfig());
+    Assert.assertEquals(factory.getConnectionFactory(), factory2.getConnectionFactory());
   }
 }
