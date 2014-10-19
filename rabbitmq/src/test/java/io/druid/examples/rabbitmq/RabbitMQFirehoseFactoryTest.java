@@ -22,6 +22,7 @@ package io.druid.examples.rabbitmq;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.rabbitmq.client.ConnectionFactory;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
@@ -95,5 +96,44 @@ public class RabbitMQFirehoseFactoryTest
 
     Assert.assertEquals(factory.getConfig(), factory2.getConfig());
     Assert.assertEquals(factory.getConnectionFactory(), factory2.getConnectionFactory());
+  }
+
+  @Test
+  public void testDefaultSerde() throws Exception
+  {
+    RabbitMQFirehoseConfig config = RabbitMQFirehoseConfig.makeDefaultConfig();
+
+    JacksonifiedConnectionFactory connectionFactory = JacksonifiedConnectionFactory.makeDefaultConnectionFactory();
+
+    RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(
+        connectionFactory,
+        config,
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("timestamp", "auto"),
+                new DimensionsSpec(
+                    Arrays.asList("dim"),
+                    Lists.<String>newArrayList(),
+                    Lists.<SpatialDimensionSchema>newArrayList()
+                )
+            ),
+            null, null, null, null
+        )
+    );
+
+    byte[] bytes = mapper.writeValueAsBytes(factory);
+    RabbitMQFirehoseFactory factory2 = mapper.readValue(bytes, RabbitMQFirehoseFactory.class);
+    byte[] bytes2 = mapper.writeValueAsBytes(factory2);
+
+    Assert.assertArrayEquals(bytes, bytes2);
+
+    Assert.assertEquals(factory.getConfig(), factory2.getConfig());
+    Assert.assertEquals(factory.getConnectionFactory(), factory2.getConnectionFactory());
+
+    Assert.assertEquals(300, factory2.getConfig().getMaxDurationSeconds());
+
+    Assert.assertEquals(ConnectionFactory.DEFAULT_HOST, factory2.getConnectionFactory().getHost());
+    Assert.assertEquals(ConnectionFactory.DEFAULT_USER, factory2.getConnectionFactory().getUsername());
+    Assert.assertEquals(ConnectionFactory.DEFAULT_AMQP_PORT, factory2.getConnectionFactory().getPort());
   }
 }

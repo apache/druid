@@ -65,7 +65,7 @@ public class JacksonifiedConnectionFactory extends ConnectionFactory
   ) throws Exception
   {
     super();
-    
+
     this.host = host == null ? super.getHost() : host;
     this.port = port == 0 ? super.getPort() : port;
     this.username = username == null ? super.getUsername() : username;
@@ -206,7 +206,7 @@ public class JacksonifiedConnectionFactory extends ConnectionFactory
     if (requestedHeartbeat != that.requestedHeartbeat) {
       return false;
     }
-    if (clientProperties != null ? !clientProperties.equals(that.clientProperties) : that.clientProperties != null) {
+    if (clientProperties != null ? Maps.difference(clientProperties, that.clientProperties).areEqual() : that.clientProperties != null) {
       return false;
     }
     if (host != null ? !host.equals(that.host) : that.host != null) {
