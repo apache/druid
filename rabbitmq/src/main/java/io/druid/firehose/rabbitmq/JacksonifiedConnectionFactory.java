@@ -64,6 +64,8 @@ public class JacksonifiedConnectionFactory extends ConnectionFactory
       @JsonProperty("clientProperties") Map<String, Object> clientProperties
   ) throws Exception
   {
+    super();
+    
     this.host = host == null ? super.getHost() : host;
     this.port = port == 0 ? super.getPort() : port;
     this.username = username == null ? super.getUsername() : username;
