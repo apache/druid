@@ -29,7 +29,7 @@ import java.util.List;
 
 /**
  */
-public class RabbitMQDruidModule  implements DruidModule
+public class RabbitMQDruidModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
