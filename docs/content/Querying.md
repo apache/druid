@@ -133,7 +133,7 @@ Properties shared by all query types
 |search|searchDimensions|Dimensions to apply the search query to. If not specified, it will search through all dimensions.|no|
 |search|query|The query portion of the search query. This is essentially a predicate that specifies if something matches.|yes|
 
-Query Context
+<a name="query-context"></a>Query Context 
 -------------
 
 |property      |default              | description          |
