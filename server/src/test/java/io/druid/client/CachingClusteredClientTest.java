@@ -310,6 +310,63 @@ public class CachingClusteredClientTest
   }
 
   @Test
+  public void testTimeseriesMergingOutOfOrderPartitions() throws Exception
+  {
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(client, new TimeseriesQueryQueryToolChest(new QueryConfig()));
+
+    testQueryCaching(
+        runner,
+        builder.build(),
+        new Interval("2011-01-05/2011-01-10"),
+        makeTimeResults(
+            new DateTime("2011-01-05T02"), 80, 100,
+            new DateTime("2011-01-06T02"), 420, 520,
+            new DateTime("2011-01-07T02"), 12, 2194,
+            new DateTime("2011-01-08T02"), 59, 201,
+            new DateTime("2011-01-09T02"), 181, 52
+        ),
+        new Interval("2011-01-05/2011-01-10"),
+        makeTimeResults(
+            new DateTime("2011-01-05T00"), 85, 102,
+            new DateTime("2011-01-06T00"), 412, 521,
+            new DateTime("2011-01-07T00"), 122, 21894,
+            new DateTime("2011-01-08T00"), 5, 20,
+            new DateTime("2011-01-09T00"), 18, 521
+        )
+    );
+
+    TestHelper.assertExpectedResults(
+        makeRenamedTimeResults(
+            new DateTime("2011-01-05T00"), 85, 102,
+            new DateTime("2011-01-05T02"), 80, 100,
+            new DateTime("2011-01-06T00"), 412, 521,
+            new DateTime("2011-01-06T02"), 420, 520,
+            new DateTime("2011-01-07T00"), 122, 21894,
+            new DateTime("2011-01-07T02"), 12, 2194,
+            new DateTime("2011-01-08T00"), 5, 20,
+            new DateTime("2011-01-08T02"), 59, 201,
+            new DateTime("2011-01-09T00"), 18, 521,
+            new DateTime("2011-01-09T02"), 181, 52
+        ),
+        runner.run(
+            builder.intervals("2011-01-05/2011-01-10")
+                   .aggregators(RENAMED_AGGS)
+                   .postAggregators(RENAMED_POST_AGGS)
+                   .build()
+        )
+    );
+  }
+
+  @Test
   @SuppressWarnings("unchecked")
   public void testTimeseriesCachingTimeZone() throws Exception
   {
