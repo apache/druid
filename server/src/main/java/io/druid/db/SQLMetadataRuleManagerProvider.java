@@ -17,29 +17,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-
-package io.druid.metadata;
+package io.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
 import org.skife.jdbi.v2.IDBI;
 
-
-public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManagerProvider
+/**
+ */
+public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvider
 {
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataSegmentManagerConfig> config;
+  private final Supplier<MetadataRuleManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final MetadataStorageConnector dbConnector;
-  private final IDBI dbi;
   private final Lifecycle lifecycle;
+  private final IDBI dbi;
 
   @Inject
-  public SQLMetadataSegmentManagerProvider(
+  public SQLMetadataRuleManagerProvider(
       ObjectMapper jsonMapper,
-      Supplier<MetadataSegmentManagerConfig> config,
+      Supplier<MetadataRuleManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       MetadataStorageConnector dbConnector,
       IDBI dbi,
@@ -55,30 +56,33 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
   }
 
   @Override
-  public MetadataSegmentManager get()
+  public SQLMetadataRuleManager get()
   {
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
+    try {
+      lifecycle.addMaybeStartHandler(
+          new Lifecycle.Handler()
           {
-            dbConnector.createSegmentTable();
+            @Override
+            public void start() throws Exception
+            {
+              dbConnector.createRulesTable();
+              SQLMetadataRuleManager.createDefaultRule(
+                  dbi, dbTables.get().getRulesTable(), config.get().getDefaultRule(), jsonMapper
+              );
+            }
+
+            @Override
+            public void stop()
+            {
+
+            }
           }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
 
-          @Override
-          public void stop()
-          {
-
-          }
-        }
-    );
-
-    return new SQLMetadataSegmentManager(
-        jsonMapper,
-        config,
-        dbTables,
-        dbi
-    );
+    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, dbi);
   }
 }

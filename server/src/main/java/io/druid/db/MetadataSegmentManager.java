@@ -17,20 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import io.druid.client.DruidDataSource;
+
+import java.util.Collection;
 
 /**
  */
-public class MetadataSegmentManagerConfig
-{
-  @JsonProperty
-  private Period pollDuration = new Period("PT1M");
 
-  public Period getPollDuration()
-  {
-    return pollDuration;
-  }
+public interface MetadataSegmentManager
+{
+  public void start();
+
+  public void stop();
+
+  public boolean enableDatasource(final String ds);
+
+  public boolean enableSegment(final String segmentId);
+
+  public boolean removeDatasource(final String ds);
+
+  public boolean removeSegment(String ds, final String segmentID);
+
+  public boolean isStarted();
+
+  public DruidDataSource getInventoryValue(String key);
+
+  public Collection<DruidDataSource> getInventory();
+
+  public Collection<String> getAllDatasourceNames();
+
+  public void poll();
 }

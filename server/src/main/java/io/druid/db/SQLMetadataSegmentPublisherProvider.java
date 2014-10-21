@@ -17,13 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.segment.realtime.SegmentPublisher;
+import org.skife.jdbi.v2.IDBI;
+
+import javax.validation.constraints.NotNull;
 
 /**
  */
-public interface MetadataSegmentPublisherProvider extends SegmentPublisherProvider
+public class SQLMetadataSegmentPublisherProvider implements MetadataSegmentPublisherProvider
 {
-  public SegmentPublisher get();
+  @JacksonInject
+  @NotNull
+  private IDBI idbi = null;
+
+  @JacksonInject
+  @NotNull
+  private MetadataStorageTablesConfig config = null;
+
+  @JacksonInject
+  @NotNull
+  private ObjectMapper jsonMapper = null;
+
+  @Override
+  public SegmentPublisher get()
+  {
+    return new SQLMetadataSegmentPublisher(jsonMapper, config, idbi);
+  }
 }

@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -63,10 +63,6 @@ public class DerbyMetadataSegmentManager extends SQLMetadataSegmentManager
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final IDBI dbi;
-
-  private volatile ScheduledExecutorService exec;
-
-  private volatile boolean started = false;
 
   @Inject
   public DerbyMetadataSegmentManager(
@@ -189,7 +185,7 @@ public class DerbyMetadataSegmentManager extends SQLMetadataSegmentManager
   public void poll()
   {
     try {
-      if (!started) {
+      if (!isStarted()) {
         return;
       }
 
@@ -267,7 +263,7 @@ public class DerbyMetadataSegmentManager extends SQLMetadataSegmentManager
       }
 
       synchronized (lock) {
-        if (started) {
+        if (isStarted()) {
           dataSources.set(newDataSources);
         }
       }

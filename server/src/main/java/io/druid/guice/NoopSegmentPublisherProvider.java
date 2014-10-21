@@ -19,7 +19,7 @@
 
 package io.druid.guice;
 
-import io.druid.metadata.SegmentPublisherProvider;
+import io.druid.db.SegmentPublisherProvider;
 import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.SegmentPublisher;
 

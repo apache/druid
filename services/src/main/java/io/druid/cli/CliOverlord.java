@@ -31,7 +31,7 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
-import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import io.druid.db.IndexerSQLMetadataStorageCoordinator;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;

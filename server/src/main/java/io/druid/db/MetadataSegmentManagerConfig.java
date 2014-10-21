@@ -17,13 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
-import com.google.inject.Provider;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public interface MetadataRuleManagerProvider extends Provider<MetadataRuleManager>
+public class MetadataSegmentManagerConfig
 {
-  public MetadataRuleManager get();
+  @JsonProperty
+  private Period pollDuration = new Period("PT1M");
+
+  public Period getPollDuration()
+  {
+    return pollDuration;
+  }
 }

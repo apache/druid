@@ -21,10 +21,10 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataRuleManagerConfig;
-import io.druid.metadata.MetadataSegmentManagerConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.db.MetadataStorageConnectorConfig;
+import io.druid.db.MetadataRuleManagerConfig;
+import io.druid.db.MetadataSegmentManagerConfig;
+import io.druid.db.MetadataStorageTablesConfig;
 
 public class MetadataDbConfigModule implements Module
 {

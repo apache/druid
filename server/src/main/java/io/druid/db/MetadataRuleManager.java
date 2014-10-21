@@ -17,34 +17,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
+
+import io.druid.server.coordinator.rules.Rule;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  */
-public interface MetadataStorageConnector
+public interface MetadataRuleManager
 {
-  public Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
-  ) throws Exception;
+  public void start();
 
+  public void stop();
 
-  public byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
-  );
+  public void poll();
 
-  public void createSegmentTable();
+  public Map<String, List<Rule>> getAllRules();
 
-  public void createRulesTable();
+  public List<Rule> getRules(final String dataSource);
 
-  public void createConfigTable();
+  public List<Rule> getRulesWithDefault(final String dataSource);
 
-  public void createTaskTables();
-
+  public boolean overrideRule(final String dataSource, final List<Rule> newRules);
 }

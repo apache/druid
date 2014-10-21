@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -28,7 +28,7 @@ import org.skife.jdbi.v2.IDBI;
 
 /**
  */
-public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvider
+public class DerbyMetadataRuleManagerProvider implements MetadataRuleManagerProvider
 {
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataRuleManagerConfig> config;
@@ -38,7 +38,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
   private final IDBI dbi;
 
   @Inject
-  public SQLMetadataRuleManagerProvider(
+  public DerbyMetadataRuleManagerProvider(
       ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
@@ -56,7 +56,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
   }
 
   @Override
-  public SQLMetadataRuleManager get()
+  public DerbyMetadataRuleManager get()
   {
     try {
       lifecycle.addMaybeStartHandler(
@@ -83,6 +83,6 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       throw Throwables.propagate(e);
     }
 
-    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, dbi);
+    return new DerbyMetadataRuleManager(jsonMapper, config, dbTables, dbi);
   }
 }

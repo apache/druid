@@ -21,7 +21,7 @@ package io.druid.indexer.updater;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
-import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.db.MetadataStorageConnectorConfig;
 
 /**
  */

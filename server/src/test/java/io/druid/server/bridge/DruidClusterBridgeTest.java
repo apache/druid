@@ -29,7 +29,7 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
-import io.druid.metadata.MetadataSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.SegmentPublisher;

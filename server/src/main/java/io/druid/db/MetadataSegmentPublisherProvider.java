@@ -17,20 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
-import io.druid.guice.NoopSegmentPublisherProvider;
 import io.druid.segment.realtime.SegmentPublisher;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopSegmentPublisherProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "db", value = MetadataSegmentPublisherProvider.class)
-})
-public interface SegmentPublisherProvider extends Provider<SegmentPublisher>
+public interface MetadataSegmentPublisherProvider extends SegmentPublisherProvider
 {
+  public SegmentPublisher get();
 }

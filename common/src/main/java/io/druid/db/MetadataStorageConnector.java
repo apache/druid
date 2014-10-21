@@ -17,28 +17,34 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+package io.druid.db;
 
 /**
  */
-public class MetadataRuleManagerConfig
+public interface MetadataStorageConnector
 {
-  @JsonProperty
-  private String defaultRule = "_default";
+  public Void insertOrUpdate(
+      final String tableName,
+      final String keyColumn,
+      final String valueColumn,
+      final String key,
+      final byte[] value
+  ) throws Exception;
 
-  @JsonProperty
-  private Period pollDuration = new Period("PT1M");
 
-  public String getDefaultRule()
-  {
-    return defaultRule;
-  }
+  public byte[] lookup(
+      final String tableName,
+      final String keyColumn,
+      final String valueColumn,
+      final String key
+  );
 
-  public Period getPollDuration()
-  {
-    return pollDuration;
-  }
+  public void createSegmentTable();
+
+  public void createRulesTable();
+
+  public void createConfigTable();
+
+  public void createTaskTables();
+
 }

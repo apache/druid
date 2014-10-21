@@ -24,7 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
-import io.druid.metadata.MetadataSegmentManager;
+import io.druid.db.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.GET;

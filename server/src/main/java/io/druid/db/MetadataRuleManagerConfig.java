@@ -17,28 +17,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
-import io.druid.server.coordinator.rules.Rule;
-
-import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
 
 /**
  */
-public interface MetadataRuleManager
+public class MetadataRuleManagerConfig
 {
-  public void start();
+  @JsonProperty
+  private String defaultRule = "_default";
 
-  public void stop();
+  @JsonProperty
+  private Period pollDuration = new Period("PT1M");
 
-  public void poll();
+  public String getDefaultRule()
+  {
+    return defaultRule;
+  }
 
-  public Map<String, List<Rule>> getAllRules();
-
-  public List<Rule> getRules(final String dataSource);
-
-  public List<Rule> getRulesWithDefault(final String dataSource);
-
-  public boolean overrideRule(final String dataSource, final List<Rule> newRules);
+  public Period getPollDuration()
+  {
+    return pollDuration;
+  }
 }

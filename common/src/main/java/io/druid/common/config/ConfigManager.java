@@ -27,8 +27,8 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import io.druid.metadata.MetadataStorageConnector;
-import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.db.MetadataStorageConnector;
+import io.druid.db.MetadataStorageTablesConfig;
 import org.joda.time.Duration;
 
 import java.util.Arrays;

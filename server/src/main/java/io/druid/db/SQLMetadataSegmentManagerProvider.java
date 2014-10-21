@@ -17,30 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+
+package io.druid.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
 import org.skife.jdbi.v2.IDBI;
 
-/**
- */
-public class DerbyMetadataRuleManagerProvider implements MetadataRuleManagerProvider
+
+public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManagerProvider
 {
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataRuleManagerConfig> config;
+  private final Supplier<MetadataSegmentManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final MetadataStorageConnector dbConnector;
-  private final Lifecycle lifecycle;
   private final IDBI dbi;
+  private final Lifecycle lifecycle;
 
   @Inject
-  public DerbyMetadataRuleManagerProvider(
+  public SQLMetadataSegmentManagerProvider(
       ObjectMapper jsonMapper,
-      Supplier<MetadataRuleManagerConfig> config,
+      Supplier<MetadataSegmentManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       MetadataStorageConnector dbConnector,
       IDBI dbi,
@@ -56,33 +55,30 @@ public class DerbyMetadataRuleManagerProvider implements MetadataRuleManagerProv
   }
 
   @Override
-  public DerbyMetadataRuleManager get()
+  public MetadataSegmentManager get()
   {
-    try {
-      lifecycle.addMaybeStartHandler(
-          new Lifecycle.Handler()
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
           {
-            @Override
-            public void start() throws Exception
-            {
-              dbConnector.createRulesTable();
-              SQLMetadataRuleManager.createDefaultRule(
-                  dbi, dbTables.get().getRulesTable(), config.get().getDefaultRule(), jsonMapper
-              );
-            }
-
-            @Override
-            public void stop()
-            {
-
-            }
+            dbConnector.createSegmentTable();
           }
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
 
-    return new DerbyMetadataRuleManager(jsonMapper, config, dbTables, dbi);
+          @Override
+          public void stop()
+          {
+
+          }
+        }
+    );
+
+    return new SQLMetadataSegmentManager(
+        jsonMapper,
+        config,
+        dbTables,
+        dbi
+    );
   }
 }

@@ -17,36 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.db;
 
-import io.druid.client.DruidDataSource;
-
-import java.util.Collection;
+import com.google.inject.Provider;
 
 /**
  */
-
-public interface MetadataSegmentManager
+public interface MetadataRuleManagerProvider extends Provider<MetadataRuleManager>
 {
-  public void start();
-
-  public void stop();
-
-  public boolean enableDatasource(final String ds);
-
-  public boolean enableSegment(final String segmentId);
-
-  public boolean removeDatasource(final String ds);
-
-  public boolean removeSegment(String ds, final String segmentID);
-
-  public boolean isStarted();
-
-  public DruidDataSource getInventoryValue(String key);
-
-  public Collection<DruidDataSource> getInventory();
-
-  public Collection<String> getAllDatasourceNames();
-
-  public void poll();
+  public MetadataRuleManager get();
 }

@@ -22,9 +22,9 @@ package io.druid.storage.mysql;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.metadata.SQLMetadataConnector;
+import io.druid.db.MetadataStorageConnectorConfig;
+import io.druid.db.MetadataStorageTablesConfig;
+import io.druid.db.SQLMetadataConnector;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -43,6 +43,15 @@ public class MySQLConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     this.dbi = new DBI(getDatasource());
+    dbi.withHandle(new HandleCallback<Void>()
+                   {
+                     @Override
+                     public Void withHandle(Handle handle) throws Exception
+                     {
+                       handle.createStatement("SET sql_mode='ANSI_QUOTES'").execute();
+                       return null;
+                     }
+                   });
   }
 
   public void createTable(final IDBI dbi, final String tableName, final String sql)
