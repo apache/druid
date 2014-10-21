@@ -21,13 +21,13 @@ Duration granularities are specified as an exact duration in milliseconds and ti
 
 They also support specifying an optional origin, which defines where to start counting time buckets from (defaults to 1970-01-01T00:00:00Z).
 
-```
+```javascript
 {"type": "duration", "duration": "7200000"}
 ```
 
 This chunks up every 2 hours.
 
-```
+```javascript
 {"type": "duration", "duration": "3600000", "origin": "2012-01-01T00:30:00Z"}
 ```
 
@@ -39,13 +39,13 @@ Period granularities are specified as arbitrary period combinations of years, mo
 
 Time zone is optional (defaults to UTC). Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone).
 
-```
+```javascript
 {"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}
 ```
 
 This will bucket by two-day chunks in the Pacific timezone.
 
-```
+```javascript
 {"type": "period", "period": "P3M", "timeZone": "America/Los_Angeles", "origin": "2012-02-01T00:00:00-08:00"}
 ```
 
