@@ -19,8 +19,10 @@
 
 package io.druid.server.router;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -31,15 +33,29 @@ import org.junit.Test;
 
 import java.util.LinkedHashMap;
 
-public class JavascriptTieredBrokerSelectorStrategyTest
+public class JavaScriptTieredBrokerSelectorStrategyTest
 {
+  final TieredBrokerSelectorStrategy jsStrategy = new JavaScriptTieredBrokerSelectorStrategy(
+      "function (config, query) { if (config.getTierToBrokerMap().values().size() > 0 && query.getAggregatorSpecs && query.getAggregatorSpecs().size() <= 2) { return config.getTierToBrokerMap().values().toArray()[0] } else { return config.getDefaultBrokerServiceName() } }"
+  );
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Assert.assertEquals(
+        jsStrategy,
+        mapper.readValue(
+            mapper.writeValueAsString(jsStrategy),
+            JavaScriptTieredBrokerSelectorStrategy.class
+        )
+    );
+  }
 
   @Test
   public void testGetBrokerServiceName() throws Exception
   {
-    TieredBrokerSelectorStrategy jsStrategy = new JavascriptTieredBrokerSelectorStrategy(
-        "function (config, query) { if (config.getTierToBrokerMap().values().size() > 0 && query.getAggregatorSpecs && query.getAggregatorSpecs().size() <= 2) { return config.getTierToBrokerMap().values().toArray()[0] } else { return config.getDefaultBrokerServiceName() } }"
-    );
+
 
     final LinkedHashMap<String, String> tierBrokerMap = new LinkedHashMap<>();
     tierBrokerMap.put("fast", "druid/fastBroker");

@@ -19,9 +19,11 @@
 
 package io.druid.server.router;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import io.druid.query.Query;
 
 import javax.script.Compilable;
@@ -30,19 +32,29 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-public class JavascriptTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
+public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
 {
-  private final SelectorFunction function;
-
-  public JavascriptTieredBrokerSelectorStrategy(@JsonProperty("function") String function)
+  private static interface SelectorFunction
   {
+    public String apply(TieredBrokerConfig config, Query query);
+  }
+
+  private final SelectorFunction fnSelector;
+  private final String function;
+
+  @JsonCreator
+  public JavaScriptTieredBrokerSelectorStrategy(@JsonProperty("function") String fn)
+  {
+    Preconditions.checkNotNull(fn, "function must not be null");
+
     final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
     try {
-      ((Compilable)engine).compile("var apply = " + function).eval();
+      ((Compilable)engine).compile("var apply = " + fn).eval();
     } catch(ScriptException e) {
       Throwables.propagate(e);
     }
-    this.function = ((Invocable)engine).getInterface(SelectorFunction.class);
+    this.function = fn;
+    this.fnSelector = ((Invocable)engine).getInterface(SelectorFunction.class);
   }
 
   @Override
@@ -50,11 +62,45 @@ public class JavascriptTieredBrokerSelectorStrategy implements TieredBrokerSelec
       TieredBrokerConfig config, Query query
   )
   {
-    return Optional.fromNullable(function.apply(config, query));
+    return Optional.fromNullable(fnSelector.apply(config, query));
   }
 
-  private static interface SelectorFunction
+  @JsonProperty
+  public String getFunction()
   {
-    public String apply(TieredBrokerConfig config, Query query);
+    return function;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    JavaScriptTieredBrokerSelectorStrategy that = (JavaScriptTieredBrokerSelectorStrategy) o;
+
+    if (!function.equals(that.function)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return function.hashCode();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JavascriptTieredBrokerSelectorStrategy{" +
+           "function='" + function + '\'' +
+           '}';
   }
 }
