@@ -34,7 +34,7 @@ import javax.script.ScriptException;
 
 public class JavaScriptTieredBrokerSelectorStrategy implements TieredBrokerSelectorStrategy
 {
-  private static interface SelectorFunction
+  public static interface SelectorFunction
   {
     public String apply(TieredBrokerConfig config, Query query);
   }
