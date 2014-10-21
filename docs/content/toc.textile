@@ -19,7 +19,7 @@ h2. Booting a Druid Cluster
 * "Production Cluster Configuration":Production-Cluster-Configuration.html
 * "Production Hadoop Configuration":Hadoop-Configuration.html
 * "Rolling Cluster Updates":Rolling-Updates.html
-* "Best Practices":Best-Practices.html
+* "Recommendations":Recommendations.html
 
 h2. Configuration
 * "Common Configuration":Configuration.html

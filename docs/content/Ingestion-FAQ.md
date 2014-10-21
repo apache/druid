@@ -1,6 +1,11 @@
 ---
 layout: doc_page
 ---
+
+## What types of data does Druid support?
+
+Druid can ingest JSON, CSV, TSV and other delimited data out of the box. Druid supports single dimension values, or multiple dimension values (an array of strings). Druid supports long and float numeric columns.
+
 ## Where do my Druid segments end up after ingestion?
 
 Depending on what `druid.storage.type` is set to, Druid will upload segments to some [Deep Storage](Deep-Storage.html). Local disk is used as the default deep storage.
@@ -24,7 +29,9 @@ druid.storage.baseKey=sample
 Other common reasons that hand-off fails are as follows:
 
 1) Historical nodes are out of capacity and cannot download any more segments. You'll see exceptions in the coordinator logs if this occurs.
+
 2) Segments are corrupt and cannot download. You'll see exceptions in your historical nodes if this occurs.
+
 3) Deep storage is improperly configured. Make sure that your segment actually exists in deep storage and that the coordinator logs have no errors.
 
 ## How do I get HDFS to work?
@@ -41,7 +48,7 @@ You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>/cluste
 
 ## My queries are returning empty results
 
-You can check `<BROKER_IP>:<PORT>/druid/v2/datasources/<YOUR_DATASOURCE>?interval=0/3000` for the dimensions and metrics that have been created for your datasource. Make sure that the name of the aggregators you use in your query match one of these metrics. Also make sure that the query interval you specify match a valid time range where data exists. Note: the broker endpoint will only return valid results on historical segments.
+You can check `<BROKER_IP>:<PORT>/druid/v2/datasources/<YOUR_DATASOURCE>?interval=0/3000` for the dimensions and metrics that have been created for your datasource. Make sure that the name of the aggregators you use in your query match one of these metrics. Also make sure that the query interval you specify match a valid time range where data exists. Note: the broker endpoint will only return valid results on historical segments and not segments served by real-time nodes.
 
 ## How can I Reindex existing data in Druid with schema changes?
 
