@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -261,14 +260,22 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                 Ordering.natural().onResultOf(Pair.<DateTime, Sequence<T>>lhsFn())
             );
 
-            final Sequence<Sequence<T>> seq = Sequences.simple(
-                Iterables.transform(listOfSequences, Pair.<DateTime, Sequence<T>>rhsFn())
-            );
-            if (strategy == null) {
-              return toolChest.mergeSequences(seq);
-            } else {
-              return strategy.mergeSequences(seq);
+            final List<Sequence<T>> orderedSequences = Lists.newLinkedList();
+            DateTime unorderedStart = null;
+            List<Sequence<T>> unordered = Lists.newLinkedList();
+            for (Pair<DateTime, Sequence<T>> sequencePair : listOfSequences) {
+              if (unorderedStart != null && unorderedStart.getMillis() != sequencePair.lhs.getMillis()) {
+                orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
+                unordered = Lists.newLinkedList();
+              }
+              unorderedStart = sequencePair.lhs;
+              unordered.add(sequencePair.rhs);
             }
+            if(!unordered.isEmpty()) {
+              orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
+            }
+
+            return toolChest.mergeSequences(Sequences.simple(orderedSequences));
           }
 
           private void addSequencesFromCache(ArrayList<Pair<DateTime, Sequence<T>>> listOfSequences)
@@ -332,7 +339,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               if (!server.isAssignable() || !populateCache || isBySegment) {
                 resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec));
               } else {
-                resultSeqToAdd = toolChest.mergeSequences(
+                // this could be more efficient, since we only need to reorder results
+                // for batches of segments with the same segment start time.
+                resultSeqToAdd = toolChest.mergeSequencesUnordered(
                     Sequences.map(
                         clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec)),
                         new Function<Object, Sequence<T>>()
