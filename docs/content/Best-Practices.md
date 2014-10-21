@@ -21,3 +21,8 @@ SSDs are highly recommended for historical and real-time nodes if you are not ru
 
 Although Druid supports schemaless ingestion of dimensions, because of https://github.com/metamx/druid/issues/658, you may sometimes get bigger segments than necessary. To ensure segments are as compact as possible, providing dimension names in lexicographic order is recommended. This may require some ETL processing on your data however. 
  
+# Read FAQs
+
+You should read common problems people have here:
+1) [Ingestion-FAQ](Ingestion-FAQ.html)
+2) [Performance-FAQ](Performance-FAQ.html)
