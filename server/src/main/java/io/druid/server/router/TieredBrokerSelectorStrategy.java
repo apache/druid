@@ -29,7 +29,8 @@ import io.druid.query.Query;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "timeBoundary", value = TimeBoundaryTieredBrokerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "priority", value = PriorityTieredBrokerSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "priority", value = PriorityTieredBrokerSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "javascript", value = JavaScriptTieredBrokerSelectorStrategy.class)
 })
 
 public interface TieredBrokerSelectorStrategy
