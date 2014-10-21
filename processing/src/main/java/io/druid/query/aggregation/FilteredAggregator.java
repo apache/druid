@@ -30,9 +30,9 @@ public class FilteredAggregator implements Aggregator
   private final String name;
   private final DimensionSelector dimSelector;
   private final Aggregator delegate;
-  private final Predicate<String> predicate;
+  private final Predicate<Integer> predicate;
 
-  public FilteredAggregator(String name, DimensionSelector dimSelector, Predicate<String> predicate, Aggregator delegate)
+  public FilteredAggregator(String name, DimensionSelector dimSelector, Predicate<Integer> predicate, Aggregator delegate)
   {
     this.name = name;
     this.dimSelector = dimSelector;
@@ -45,14 +45,7 @@ public class FilteredAggregator implements Aggregator
   {
     if (
         Iterables.any(
-            dimSelector.getRow(), new Predicate<Integer>()
-            {
-              @Override
-              public boolean apply(@Nullable Integer input)
-              {
-                return predicate.apply(dimSelector.lookupName(input));
-              }
-            }
+            dimSelector.getRow(), predicate
         )
         ) {
       delegate.aggregate();

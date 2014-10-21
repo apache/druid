@@ -60,7 +60,7 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   {
     final Aggregator aggregator = delegate.factorize(metricFactory);
     final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter)filter).getDimension());
-    Predicate<String> predicate = Predicates.equalTo(((SelectorDimFilter)filter).getValue());
+    Predicate<Integer> predicate = Predicates.equalTo(dimSelector.lookupId(((SelectorDimFilter)filter).getValue()));
     return new FilteredAggregator(name, dimSelector, predicate, aggregator);
   }
 
@@ -69,7 +69,7 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   {
     final BufferAggregator aggregator = delegate.factorizeBuffered(metricFactory);
     final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter)filter).getDimension());
-    Predicate<String> predicate = Predicates.equalTo(((SelectorDimFilter)filter).getValue());
+    Predicate<Integer> predicate = Predicates.equalTo(dimSelector.lookupId(((SelectorDimFilter)filter).getValue()));
     return new FilteredBufferAggregator(dimSelector, predicate, aggregator);
   }
 

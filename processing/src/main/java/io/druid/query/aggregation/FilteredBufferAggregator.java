@@ -29,10 +29,10 @@ import java.nio.ByteBuffer;
 public class FilteredBufferAggregator implements BufferAggregator
 {
   private final DimensionSelector dimSelector;
-  private final Predicate<String> predicate;
+  private final Predicate<Integer> predicate;
   private final BufferAggregator delegate;
 
-  public FilteredBufferAggregator(DimensionSelector dimSelector, Predicate<String> predicate, BufferAggregator delegate)
+  public FilteredBufferAggregator(DimensionSelector dimSelector, Predicate<Integer> predicate, BufferAggregator delegate)
   {
     this.dimSelector = dimSelector;
     this.predicate = predicate;
@@ -55,7 +55,7 @@ public class FilteredBufferAggregator implements BufferAggregator
               @Override
               public boolean apply(@Nullable Integer input)
               {
-                return predicate.apply(dimSelector.lookupName(input));
+                return predicate.apply(input);
               }
             }
         )
