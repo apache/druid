@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 
@@ -30,9 +31,9 @@ public class FilteredAggregator implements Aggregator
   private final String name;
   private final DimensionSelector dimSelector;
   private final Aggregator delegate;
-  private final Predicate<Integer> predicate;
+  private final IntPredicate predicate;
 
-  public FilteredAggregator(String name, DimensionSelector dimSelector, Predicate<Integer> predicate, Aggregator delegate)
+  public FilteredAggregator(String name, DimensionSelector dimSelector, IntPredicate predicate, Aggregator delegate)
   {
     this.name = name;
     this.dimSelector = dimSelector;
@@ -43,12 +44,13 @@ public class FilteredAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    if (
-        Iterables.any(
-            dimSelector.getRow(), predicate
-        )
-        ) {
-      delegate.aggregate();
+    final IndexedInts row = dimSelector.getRow();
+    final int size = row.size();
+    for (int i = 0; i < size; ++i) {
+      if (predicate.apply(row.get(i))) {
+        delegate.aggregate();
+        break;
+      }
     }
   }
 

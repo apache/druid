@@ -21,8 +21,6 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.ColumnSelectorFactory;
@@ -59,8 +57,16 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     final Aggregator aggregator = delegate.factorize(metricFactory);
-    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter)filter).getDimension());
-    Predicate<Integer> predicate = Predicates.equalTo(dimSelector.lookupId(((SelectorDimFilter)filter).getValue()));
+    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter) filter).getDimension());
+    final int lookupId = dimSelector.lookupId(((SelectorDimFilter) filter).getValue());
+    final IntPredicate predicate = new IntPredicate()
+    {
+      @Override
+      public boolean apply(int value)
+      {
+        return lookupId == value;
+      }
+    };
     return new FilteredAggregator(name, dimSelector, predicate, aggregator);
   }
 
@@ -68,8 +74,16 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     final BufferAggregator aggregator = delegate.factorizeBuffered(metricFactory);
-    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter)filter).getDimension());
-    Predicate<Integer> predicate = Predicates.equalTo(dimSelector.lookupId(((SelectorDimFilter)filter).getValue()));
+    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter) filter).getDimension());
+    final int lookupId = dimSelector.lookupId(((SelectorDimFilter) filter).getValue());
+    final IntPredicate predicate = new IntPredicate()
+    {
+      @Override
+      public boolean apply(int value)
+      {
+        return lookupId == value;
+      }
+    };
     return new FilteredBufferAggregator(dimSelector, predicate, aggregator);
   }
 
@@ -122,10 +136,10 @@ public class FilteredAggregatorFactory implements AggregatorFactory
     byte[] filterCacheKey = filter.getCacheKey();
     byte[] aggregatorCacheKey = delegate.getCacheKey();
     return ByteBuffer.allocate(1 + filterCacheKey.length + aggregatorCacheKey.length)
-        .put(CACHE_TYPE_ID)
-        .put(filterCacheKey)
-        .put(aggregatorCacheKey)
-        .array();
+                     .put(CACHE_TYPE_ID)
+                     .put(filterCacheKey)
+                     .put(aggregatorCacheKey)
+                     .array();
   }
 
   @Override
