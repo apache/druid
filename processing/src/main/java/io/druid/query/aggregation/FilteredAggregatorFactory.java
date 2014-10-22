@@ -52,6 +52,12 @@ public class FilteredAggregatorFactory implements AggregatorFactory
         filter instanceof SelectorDimFilter || filter instanceof NotDimFilter,
         "FilteredAggregator currently only supports filters of type selector and not"
     );
+    if (filter instanceof NotDimFilter) {
+      Preconditions.checkArgument(
+          ((NotDimFilter) filter).getField() instanceof SelectorDimFilter,
+          "FilteredAggregator currently only support not filter with selector filter"
+      );
+    }
 
     this.name = name;
     this.delegate = delegate;
@@ -172,13 +178,27 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   }
 
   private static Pair<DimensionSelector, IntPredicate> makeFilterPredicate(
-      DimFilter dimFilter,
-      ColumnSelectorFactory metricFactory
+      final DimFilter dimFilter,
+      final ColumnSelectorFactory metricFactory
   )
   {
+    final SelectorDimFilter selector;
+    if (dimFilter instanceof NotDimFilter) {
+      // we only support NotDimFilter with Selector filter
+      selector = (SelectorDimFilter) ((NotDimFilter) dimFilter).getField();
+    } else if (dimFilter instanceof SelectorDimFilter) {
+      selector = (SelectorDimFilter) dimFilter;
+    } else {
+      throw new UnsupportedOperationException(
+          "FilteredAggregator does not support DimFilter of type "
+          + dimFilter.getClass()
+      );
+    }
+
+    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(selector.getDimension());
+    final int lookupId = dimSelector.lookupId(selector.getValue());
     if (dimFilter instanceof SelectorDimFilter) {
-      final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter) dimFilter).getDimension());
-      final int lookupId = dimSelector.lookupId(((SelectorDimFilter) dimFilter).getValue());
+
       return Pair.<DimensionSelector, IntPredicate>of(
           dimSelector, new IntPredicate()
           {
@@ -190,17 +210,13 @@ public class FilteredAggregatorFactory implements AggregatorFactory
           }
       );
     } else if (dimFilter instanceof NotDimFilter) {
-      final Pair<DimensionSelector, IntPredicate> selectorPredicatePair = makeFilterPredicate(
-          ((NotDimFilter) dimFilter).getField(),
-          metricFactory
-      );
       return Pair.<DimensionSelector, IntPredicate>of(
-          selectorPredicatePair.lhs, new IntPredicate()
+          dimSelector, new IntPredicate()
           {
             @Override
             public boolean apply(int value)
             {
-              return !selectorPredicatePair.rhs.apply(value);
+              return lookupId != value;
             }
           }
       );
@@ -211,4 +227,5 @@ public class FilteredAggregatorFactory implements AggregatorFactory
       );
     }
   }
+
 }
