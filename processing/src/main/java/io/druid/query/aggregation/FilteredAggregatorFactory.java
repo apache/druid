@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -49,15 +50,10 @@ public class FilteredAggregatorFactory implements AggregatorFactory
     Preconditions.checkNotNull(delegate);
     Preconditions.checkNotNull(filter);
     Preconditions.checkArgument(
-        filter instanceof SelectorDimFilter || filter instanceof NotDimFilter,
-        "FilteredAggregator currently only supports filters of type selector and not"
+        filter instanceof SelectorDimFilter ||
+        (filter instanceof NotDimFilter && ((NotDimFilter) filter).getField() instanceof SelectorDimFilter),
+        "FilteredAggregator currently only supports filters of type 'selector' and their negation"
     );
-    if (filter instanceof NotDimFilter) {
-      Preconditions.checkArgument(
-          ((NotDimFilter) filter).getField() instanceof SelectorDimFilter,
-          "FilteredAggregator currently only support not filter with selector filter"
-      );
-    }
 
     this.name = name;
     this.delegate = delegate;
@@ -189,43 +185,32 @@ public class FilteredAggregatorFactory implements AggregatorFactory
     } else if (dimFilter instanceof SelectorDimFilter) {
       selector = (SelectorDimFilter) dimFilter;
     } else {
-      throw new UnsupportedOperationException(
-          "FilteredAggregator does not support DimFilter of type "
-          + dimFilter.getClass()
-      );
+      throw new ISE("Unsupported DimFilter type [%d]", dimFilter.getClass());
     }
 
     final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(selector.getDimension());
     final int lookupId = dimSelector.lookupId(selector.getValue());
-    if (dimFilter instanceof SelectorDimFilter) {
-
-      return Pair.<DimensionSelector, IntPredicate>of(
-          dimSelector, new IntPredicate()
-          {
-            @Override
-            public boolean apply(int value)
-            {
-              return lookupId == value;
-            }
-          }
-      );
-    } else if (dimFilter instanceof NotDimFilter) {
-      return Pair.<DimensionSelector, IntPredicate>of(
-          dimSelector, new IntPredicate()
-          {
-            @Override
-            public boolean apply(int value)
-            {
-              return lookupId != value;
-            }
-          }
-      );
+    final IntPredicate predicate;
+    if (dimFilter instanceof NotDimFilter) {
+      predicate = new IntPredicate()
+      {
+        @Override
+        public boolean apply(int value)
+        {
+          return lookupId != value;
+        }
+      };
     } else {
-      throw new UnsupportedOperationException(
-          "FilteredAggregator does not support DimFilter of type "
-          + dimFilter.getClass()
-      );
+      predicate = new IntPredicate()
+      {
+        @Override
+        public boolean apply(int value)
+        {
+          return lookupId == value;
+        }
+      };
     }
+    return Pair.of(dimSelector, predicate);
   }
 
 }
