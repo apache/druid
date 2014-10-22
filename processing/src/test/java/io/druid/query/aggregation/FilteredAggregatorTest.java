@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -51,83 +52,7 @@ public class FilteredAggregatorTest
     );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
-        new ColumnSelectorFactory()
-        {
-          @Override
-          public TimestampColumnSelector makeTimestampColumnSelector()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public DimensionSelector makeDimensionSelector(String dimensionName)
-          {
-            if (dimensionName.equals("dim")) {
-              return new DimensionSelector()
-              {
-                @Override
-                public IndexedInts getRow()
-                {
-                  if (selector.getIndex() % 3 == 2) {
-                    return new ArrayBasedIndexedInts(new int[]{1});
-                  } else {
-                    return new ArrayBasedIndexedInts(new int[]{0});
-                  }
-                }
-
-                @Override
-                public int getValueCardinality()
-                {
-                  return 2;
-                }
-
-                @Override
-                public String lookupName(int id)
-                {
-                  switch (id) {
-                    case 0:
-                      return "a";
-                    case 1:
-                      return "b";
-                    default:
-                      throw new IllegalArgumentException();
-                  }
-                }
-
-                @Override
-                public int lookupId(String name)
-                {
-                  switch (name) {
-                    case "a":
-                      return 0;
-                    case "b":
-                      return 1;
-                    default:
-                      throw new IllegalArgumentException();
-                  }
-                }
-              };
-            } else {
-              throw new UnsupportedOperationException();
-            }
-          }
-
-          @Override
-          public FloatColumnSelector makeFloatColumnSelector(String columnName)
-          {
-            if (columnName.equals("value")) {
-              return selector;
-            } else {
-              throw new UnsupportedOperationException();
-            }
-          }
-
-          @Override
-          public ObjectColumnSelector makeObjectColumnSelector(String columnName)
-          {
-            throw new UnsupportedOperationException();
-          }
-        }
+     makeColumnSelector(selector)
     );
 
     Assert.assertEquals("test", agg.getName());
@@ -136,20 +61,124 @@ public class FilteredAggregatorTest
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
     double expectedThird = expectedSecond;
 
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
-    Assert.assertEquals(0.0d, agg.get());
-    aggregate(selector, agg);
-    Assert.assertEquals(expectedFirst, agg.get());
-    Assert.assertEquals(expectedFirst, agg.get());
-    Assert.assertEquals(expectedFirst, agg.get());
-    aggregate(selector, agg);
-    Assert.assertEquals(expectedSecond, agg.get());
-    Assert.assertEquals(expectedSecond, agg.get());
-    Assert.assertEquals(expectedSecond, agg.get());
-    aggregate(selector, agg);
-    Assert.assertEquals(expectedThird, agg.get());
-    Assert.assertEquals(expectedThird, agg.get());
-    Assert.assertEquals(expectedThird, agg.get());
+    assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
   }
+
+  private ColumnSelectorFactory makeColumnSelector(final TestFloatColumnSelector selector){
+
+    return new ColumnSelectorFactory()
+    {
+      @Override
+      public TimestampColumnSelector makeTimestampColumnSelector()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public DimensionSelector makeDimensionSelector(String dimensionName)
+      {
+        if (dimensionName.equals("dim")) {
+          return new DimensionSelector()
+          {
+            @Override
+            public IndexedInts getRow()
+            {
+              if (selector.getIndex() % 3 == 2) {
+                return new ArrayBasedIndexedInts(new int[]{1});
+              } else {
+                return new ArrayBasedIndexedInts(new int[]{0});
+              }
+            }
+
+            @Override
+            public int getValueCardinality()
+            {
+              return 2;
+            }
+
+            @Override
+            public String lookupName(int id)
+            {
+              switch (id) {
+                case 0:
+                  return "a";
+                case 1:
+                  return "b";
+                default:
+                  throw new IllegalArgumentException();
+              }
+            }
+
+            @Override
+            public int lookupId(String name)
+            {
+              switch (name) {
+                case "a":
+                  return 0;
+                case "b":
+                  return 1;
+                default:
+                  throw new IllegalArgumentException();
+              }
+            }
+          };
+        } else {
+          throw new UnsupportedOperationException();
+        }
+      }
+
+      @Override
+      public FloatColumnSelector makeFloatColumnSelector(String columnName)
+      {
+        if (columnName.equals("value")) {
+          return selector;
+        } else {
+          throw new UnsupportedOperationException();
+        }
+      }
+
+      @Override
+      public ObjectColumnSelector makeObjectColumnSelector(String columnName)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  private void assertValues(FilteredAggregator agg,TestFloatColumnSelector selector, double... expectedVals){
+    Assert.assertEquals(0.0d, agg.get());
+    Assert.assertEquals(0.0d, agg.get());
+    Assert.assertEquals(0.0d, agg.get());
+    for(double expectedVal : expectedVals){
+      aggregate(selector, agg);
+      Assert.assertEquals(expectedVal, agg.get());
+      Assert.assertEquals(expectedVal, agg.get());
+      Assert.assertEquals(expectedVal, agg.get());
+    }
+  }
+
+  @Test
+  public void testAggregateWithNotFilter()
+  {
+    final float[] values = {0.15f, 0.27f};
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+
+    FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        "test",
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new NotDimFilter(new SelectorDimFilter("dim", "b"))
+    );
+
+    FilteredAggregator agg = (FilteredAggregator) factory.factorize(
+        makeColumnSelector(selector)
+    );
+
+    Assert.assertEquals("test", agg.getName());
+
+    double expectedFirst = new Float(values[0]).doubleValue();
+    double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
+    double expectedThird = expectedSecond;
+    assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
+  }
+
 }
