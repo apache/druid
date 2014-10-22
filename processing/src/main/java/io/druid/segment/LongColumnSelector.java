@@ -20,12 +20,8 @@
 package io.druid.segment;
 
 /**
- * Factory class for MetricSelectors
  */
-public interface ColumnSelectorFactory
+public interface LongColumnSelector
 {
-  public DimensionSelector makeDimensionSelector(String dimensionName);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  public long get();
 }

@@ -27,6 +27,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
 import junit.framework.Assert;
@@ -51,7 +52,7 @@ public class IndexMakerTest
     try {
       QueryableIndex index = IndexIO.loadIndex(IndexMaker.persist(toPersist, tempDir));
 
-      Assert.assertEquals(2, index.getTimeColumn().getLength());
+      Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
       Assert.assertEquals(2, index.getColumnNames().size());
     }
@@ -90,13 +91,13 @@ public class IndexMakerTest
     try {
       QueryableIndex index1 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1));
 
-      Assert.assertEquals(2, index1.getTimeColumn().getLength());
+      Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
       Assert.assertEquals(2, index1.getColumnNames().size());
 
       QueryableIndex index2 = IndexIO.loadIndex(IndexMaker.persist(toPersist2, tempDir2));
 
-      Assert.assertEquals(2, index2.getTimeColumn().getLength());
+      Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
       Assert.assertEquals(2, index2.getColumnNames().size());
 
@@ -108,7 +109,7 @@ public class IndexMakerTest
           )
       );
 
-      Assert.assertEquals(3, merged.getTimeColumn().getLength());
+      Assert.assertEquals(3, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
       Assert.assertEquals(2, merged.getColumnNames().size());
     }
@@ -151,13 +152,13 @@ public class IndexMakerTest
           IndexMaker.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
       );
 
-      Assert.assertEquals(1, index1.getTimeColumn().getLength());
+      Assert.assertEquals(1, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index1.getAvailableDimensions()));
 
-      Assert.assertEquals(1, index2.getTimeColumn().getLength());
+      Assert.assertEquals(1, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index2.getAvailableDimensions()));
 
-      Assert.assertEquals(1, merged.getTimeColumn().getLength());
+      Assert.assertEquals(1, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
     }
     finally {

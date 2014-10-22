@@ -70,7 +70,7 @@ public class IndexedLongsGenericColumn implements GenericColumn
   @Override
   public float getFloatSingleValueRow(int rowNum)
   {
-    throw new UnsupportedOperationException();
+    return (float) column.get(rowNum);
   }
 
   @Override
