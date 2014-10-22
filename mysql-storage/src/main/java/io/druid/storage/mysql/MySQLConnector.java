@@ -25,13 +25,11 @@ import com.metamx.common.logger.Logger;
 import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.db.SQLMetadataConnector;
-import org.apache.commons.dbcp.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import javax.sql.DataSource;
 import java.util.List;
 import java.util.Map;
 

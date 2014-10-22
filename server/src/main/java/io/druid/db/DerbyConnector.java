@@ -25,19 +25,12 @@ import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import org.apache.derby.drda.NetworkServerControl;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.ConnectionFactory;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.net.InetAddress;
-import java.sql.Connection;
-import java.util.List;
-import java.util.Map;
 
 public class DerbyConnector extends SQLMetadataConnector
 {
-  private static final Logger log = new Logger(DerbyConnector.class);
   private final DBI dbi;
 
   @Inject
