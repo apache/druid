@@ -25,11 +25,13 @@ import com.metamx.common.logger.Logger;
 import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.db.SQLMetadataConnector;
+import org.apache.commons.dbcp.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import javax.sql.DataSource;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +48,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
 
   }
 
+  @Override
   public void createTable(final IDBI dbi, final String tableName, final String sql)
   {
     try {
@@ -72,6 +75,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     }
   }
 
+  @Override
   public void createSegmentTable(final IDBI dbi, final String tableName)
   {
     createTable(
@@ -88,6 +92,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createRulesTable(final IDBI dbi, final String tableName)
   {
     createTable(
@@ -101,6 +106,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createConfigTable(final IDBI dbi, final String tableName)
   {
     createTable(
@@ -113,6 +119,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createTaskTable(final IDBI dbi, final String tableName)
   {
     createTable(
@@ -134,6 +141,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createTaskLogTable(final IDBI dbi, final String tableName)
   {
     createTable(
@@ -152,6 +160,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     );
   }
 
+  @Override
   public void createTaskLockTable(final IDBI dbi, final String tableName)
   {
     createTable(
@@ -170,17 +179,38 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     );
   }
 
-  public String insertOrUpdateStatement(final String tableName, final String keyColumn, final String valueColumn)
+  @Override
+  public Void insertOrUpdate(
+      final String tableName,
+      final String keyColumn,
+      final String valueColumn,
+      final String key,
+      final byte[] value
+  ) throws Exception
   {
-    return String.format(
-      "BEGIN;\n" +
-      "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
-      "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
-      "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
-      "COMMIT;",
-      tableName, keyColumn, valueColumn
+    return getDBI().withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
+          {
+            handle.createStatement(String.format(
+                                       "BEGIN;\n" +
+                                       "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
+                                       "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
+                                       "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
+                                       "COMMIT;",
+                                       tableName, keyColumn, valueColumn
+                                   ))
+                  .bind("key", key)
+                  .bind("value", value)
+                  .execute();
+            return null;
+          }
+        }
     );
   }
 
+  @Override
   public DBI getDBI() { return dbi; }
 }
