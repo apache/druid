@@ -52,18 +52,8 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class ApproximateHistogramQueryTest
+public class ApproximateHistogramTopNQueryTest
 {
-
-  private final QueryRunner runner;
-
-  public ApproximateHistogramQueryTest(
-      QueryRunner runner
-  )
-  {
-    this.runner = runner;
-  }
-
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
@@ -97,6 +87,15 @@ public class ApproximateHistogramQueryTest
     );
 
     return retVal;
+  }
+
+  private final QueryRunner runner;
+
+  public ApproximateHistogramTopNQueryTest(
+      QueryRunner runner
+  )
+  {
+    this.runner = runner;
   }
 
   @Test

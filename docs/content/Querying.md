@@ -66,7 +66,7 @@ The dataSource JSON field shown next identifies where to apply the query. In thi
   "dataSource": "randSeq",
 ```
 
-The granularity JSON field specifies the bucket size for values. It could be a built-in time interval like "second", "minute", "fifteen_minute", "thirty_minute", "hour" or "day". It can also be an expression like `{"type": "period", "period":"PT6m"}` meaning "6 minute buckets". See [Granularities](Granularities.html) for more information on the different options for this field. In this example, it is set to the special value "all" which means [bucket all data points together into the same time bucket]()
+The granularity JSON field specifies the bucket size for values. It could be a built-in time interval like "second", "minute", "fifteen_minute", "thirty_minute", "hour" or "day". It can also be an expression like `{"type": "period", "period":"PT6m"}` meaning "6 minute buckets". See [Granularities](Granularities.html) for more information on the different options for this field. In this example, it is set to the special value "all" which means bucket all data points together into the same time bucket.
 
 ```javascript
   "granularity": "all",
@@ -88,7 +88,7 @@ A groupBy also requires the JSON field "aggregations" (See [Aggregations](Aggreg
   ],
 ```
 
-You can also specify postAggregations, which are applied after data has been aggregated for the current granularity and dimensions bucket. See [Post Aggregations](Post Aggregations.html) for a detailed description. In the rand example, an arithmetic type operation (division, as specified by "fn") is performed with the result "name" of "avg_random". The "fields" field specifies the inputs from the aggregation stage to this expression. Note that identifiers corresponding to "name" JSON field inside the type "fieldAccess" are required but not used outside this expression, so they are prefixed with "dummy" for clarity:
+You can also specify postAggregations, which are applied after data has been aggregated for the current granularity and dimensions bucket. See [Post Aggregations](Post-aggregations.html) for a detailed description. In the rand example, an arithmetic type operation (division, as specified by "fn") is performed with the result "name" of "avg_random". The "fields" field specifies the inputs from the aggregation stage to this expression. Note that identifiers corresponding to "name" JSON field inside the type "fieldAccess" are required but not used outside this expression, so they are prefixed with "dummy" for clarity:
 
 ```javascript
   "postAggregations": [{
@@ -127,13 +127,13 @@ Properties shared by all query types
 |timeseries, topN, groupBy, search|filter|Specifies the filter (the "WHERE" clause in SQL) for the query. See [Filters](Filters.html)|no|
 |timeseries, topN, groupBy, search|granularity|the timestamp granularity to bucket results into (i.e. "hour"). See [Granularities](Granularities.html) for more information.|no|
 |timeseries, topN, groupBy|aggregations|aggregations that combine values in a bucket. See [Aggregations](Aggregations.html).|yes|
-|timeseries, topN, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post Aggregations.html).|yes|
+|timeseries, topN, groupBy|postAggregations|aggregations of aggregations. See [Post Aggregations](Post-aggregations.html).|yes|
 |groupBy|dimensions|constrains the groupings; if empty, then one value per time granularity bucket|yes|
 |search|limit|maximum number of results (default is 1000), a system-level maximum can also be set via `com.metamx.query.search.maxSearchLimit`|no|
 |search|searchDimensions|Dimensions to apply the search query to. If not specified, it will search through all dimensions.|no|
 |search|query|The query portion of the search query. This is essentially a predicate that specifies if something matches.|yes|
 
-Query Context
+<a name="query-context"></a>Query Context 
 -------------
 
 |property      |default              | description          |

@@ -1,6 +1,11 @@
 ---
 layout: doc_page
 ---
+
+Druid vs. Cassandra
+===================
+
+
 We are not experts on Cassandra, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.  We will fix this page.
 
 Druid is highly optimized for scans and aggregations, it supports arbitrarily deep drill downs into data sets without the need to pre-compute, and it can ingest event streams in real-time and allow users to query events as they come in. Cassandra is a great key-value store and it has some features that allow you to use it to do more interesting things than what you can do with a pure key-value store. But, it is not built for the same use cases that Druid handles, namely regularly scanning over billions of entries per query.

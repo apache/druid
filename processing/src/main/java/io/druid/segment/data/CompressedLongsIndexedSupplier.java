@@ -184,7 +184,6 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
   /**
    * For testing.  Do not use unless you like things breaking
-   * @return
    */
   GenericIndexed<ResourceHolder<LongBuffer>> getBaseLongBuffers()
   {
