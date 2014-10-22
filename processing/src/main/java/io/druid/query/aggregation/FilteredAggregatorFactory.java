@@ -36,7 +36,7 @@ public class FilteredAggregatorFactory implements AggregatorFactory
 
   private final String name;
   private final AggregatorFactory delegate;
-  private final DimFilter filter;
+  private final SelectorDimFilter filter;
 
   public FilteredAggregatorFactory(
       @JsonProperty("name") String name,
@@ -46,19 +46,19 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   {
     Preconditions.checkNotNull(delegate);
     Preconditions.checkNotNull(filter);
-    Preconditions.checkArgument(filter instanceof SelectorDimFilter, "Filtered Aggregator only supports ");
+    Preconditions.checkArgument(filter instanceof SelectorDimFilter, "FilteredAggregator currently only supports filters of type selector");
 
     this.name = name;
     this.delegate = delegate;
-    this.filter = filter;
+    this.filter = (SelectorDimFilter)filter;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     final Aggregator aggregator = delegate.factorize(metricFactory);
-    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter) filter).getDimension());
-    final int lookupId = dimSelector.lookupId(((SelectorDimFilter) filter).getValue());
+    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(filter.getDimension());
+    final int lookupId = dimSelector.lookupId(filter.getValue());
     final IntPredicate predicate = new IntPredicate()
     {
       @Override
@@ -74,8 +74,8 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     final BufferAggregator aggregator = delegate.factorizeBuffered(metricFactory);
-    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(((SelectorDimFilter) filter).getDimension());
-    final int lookupId = dimSelector.lookupId(((SelectorDimFilter) filter).getValue());
+    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(filter.getDimension());
+    final int lookupId = dimSelector.lookupId(filter.getValue());
     final IntPredicate predicate = new IntPredicate()
     {
       @Override
@@ -170,5 +170,11 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   public DimFilter getFilter()
   {
     return filter;
+  }
+
+  @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return delegate.getRequiredColumns();
   }
 }
