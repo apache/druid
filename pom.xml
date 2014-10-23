@@ -23,7 +23,7 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.159-SNAPSHOT</version>
+    <version>0.6.160-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
@@ -89,7 +89,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>bytebuffer-collections</artifactId>
-                <version>0.0.2</version>
+                <version>0.0.4</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -194,7 +194,7 @@
             <dependency>
                 <groupId>it.uniroma3.mat</groupId>
                 <artifactId>extendedset</artifactId>
-                <version>1.3.4</version>
+                <version>1.3.7</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
