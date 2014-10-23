@@ -28,6 +28,7 @@ import com.metamx.common.guava.CloseQuietly;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
+import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.Indexed;
@@ -96,6 +97,16 @@ public class MetricHolder
     ByteStreams.write(version, outSupplier);
     serializerUtils.writeString(outSupplier, name);
     serializerUtils.writeString(outSupplier, "float");
+    column.closeAndConsolidate(outSupplier);
+  }
+
+  public static void writeLongMetric(
+      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedLongsSupplierSerializer column
+  ) throws IOException
+  {
+    ByteStreams.write(version, outSupplier);
+    serializerUtils.writeString(outSupplier, name);
+    serializerUtils.writeString(outSupplier, "long");
     column.closeAndConsolidate(outSupplier);
   }
 
