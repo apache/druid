@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,23 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.server.router;
-
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Optional;
-import io.druid.query.Query;
+package io.druid.query.aggregation;
 
 /**
+ *  can be replaced with http://docs.oracle.com/javase/8/docs/api/java/util/function/IntPredicate.html
+ *  when druid moves to java 8.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "timeBoundary", value = TimeBoundaryTieredBrokerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "priority", value = PriorityTieredBrokerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "javascript", value = JavaScriptTieredBrokerSelectorStrategy.class)
-})
-
-public interface TieredBrokerSelectorStrategy
+public interface IntPredicate
 {
-  public Optional<String> getBrokerServiceName(TieredBrokerConfig config, Query query);
+  boolean apply(int value);
 }

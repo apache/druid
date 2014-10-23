@@ -51,7 +51,7 @@ druid.service=druid/prod/router
 
 druid.extensions.remoteRepositories=[]
 druid.extensions.localRepository=lib
-druid.extensions.coordinates=["io.druid.extensions:druid-histogram:0.6.159"]
+druid.extensions.coordinates=["io.druid.extensions:druid-histogram:0.6.160"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -118,3 +118,16 @@ Including this strategy means all timeBoundary queries are always routed to the 
 ```
 
 Queries with a priority set to less than minPriority are routed to the lowest priority broker. Queries with priority set to greater than maxPriority are routed to the highest priority broker. By default, minPriority is 0 and maxPriority is 1. Using these default values, if a query with priority 0 (the default query priority is 0) is sent, the query skips the priority selection logic. 
+
+### javascript
+
+Allows defining arbitrary routing rules using a JavaScript function. The function is passed the configuration and the query to be executed, and returns the tier it should be routed to, or null for the default tier.
+
+*Example*: a function that return the highest priority broker unless the given query has more than two aggregators.
+
+```json
+{
+  "type" : "javascript",
+  "function" : "function (config, query) { if (config.getTierToBrokerMap().values().size() > 0 && query.getAggregatorSpecs && query.getAggregatorSpecs().size() <= 2) { return config.getTierToBrokerMap().values().toArray()[0] } else { return config.getDefaultBrokerServiceName() } }"
+}
+```

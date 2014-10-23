@@ -407,14 +407,14 @@ public class IndexTask extends AbstractFixedIntervalTask
     final int myRowFlushBoundary = rowFlushBoundary > 0
                                    ? rowFlushBoundary
                                    : toolbox.getConfig().getDefaultRowFlushBoundary();
-
+    final QueryGranularity rollupGran = ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity();
     try {
       plumber.startJob();
 
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
 
-        if (shouldIndex(shardSpec, interval, inputRow)) {
+        if (shouldIndex(shardSpec, interval, inputRow, rollupGran)) {
           int numRows = plumber.add(inputRow);
           if (numRows == -1) {
             throw new ISE(
@@ -469,13 +469,15 @@ public class IndexTask extends AbstractFixedIntervalTask
    *
    * @return true or false
    */
-  private boolean shouldIndex(
+  private static boolean shouldIndex(
       final ShardSpec shardSpec,
       final Interval interval,
-      final InputRow inputRow
+      final InputRow inputRow,
+      final QueryGranularity rollupGran
   )
   {
-    return interval.contains(inputRow.getTimestampFromEpoch()) && shardSpec.isInChunk(inputRow);
+    return interval.contains(inputRow.getTimestampFromEpoch())
+           && shardSpec.isInChunk(rollupGran.truncate(inputRow.getTimestampFromEpoch()), inputRow);
   }
 
   public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>

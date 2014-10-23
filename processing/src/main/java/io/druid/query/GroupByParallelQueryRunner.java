@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -81,9 +82,6 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
     final boolean bySegment = query.getContextBySegment(false);
     final int priority = query.getContextPriority(0);
 
-    if (Iterables.isEmpty(queryables)) {
-      log.warn("No queryables found.");
-    }
     ListenableFuture<List<Void>> futures = Futures.allAsList(
         Lists.newArrayList(
             Iterables.transform(
@@ -93,6 +91,10 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                   @Override
                   public ListenableFuture<Void> apply(final QueryRunner<T> input)
                   {
+                    if (input == null) {
+                      throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
+                    }
+
                     return exec.submit(
                         new AbstractPrioritizedCallable<Void>(priority)
                         {

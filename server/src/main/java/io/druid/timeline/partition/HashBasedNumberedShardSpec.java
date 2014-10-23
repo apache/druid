@@ -49,14 +49,14 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
-  public boolean isInChunk(InputRow inputRow)
+  public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return (((long) hash(inputRow)) - getPartitionNum()) % getPartitions() == 0;
+    return (((long) hash(timestamp, inputRow)) - getPartitionNum()) % getPartitions() == 0;
   }
 
-  protected int hash(InputRow inputRow)
+  protected int hash(long timestamp, InputRow inputRow)
   {
-    final List<Object> groupKey = Rows.toGroupKey(inputRow.getTimestampFromEpoch(), inputRow);
+    final List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
     try {
       return hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asInt();
     }
@@ -80,9 +80,9 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return new ShardSpecLookup()
     {
       @Override
-      public ShardSpec getShardSpec(InputRow row)
+      public ShardSpec getShardSpec(long timestamp, InputRow row)
       {
-        int index = Math.abs(hash(row) % getPartitions());
+        int index = Math.abs(hash(timestamp, row) % getPartitions());
         return shardSpecs.get(index);
       }
     };
