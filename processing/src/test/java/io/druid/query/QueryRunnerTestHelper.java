@@ -194,9 +194,10 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
     return Arrays.asList(
         new Object[][]{
             {
@@ -207,6 +208,9 @@ public class QueryRunnerTestHelper
             },
             {
                 makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            },
+            {
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
             }
         }
     );
@@ -218,9 +222,11 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
+
     return Arrays.asList(
         new Object[][]{
             {
@@ -231,6 +237,9 @@ public class QueryRunnerTestHelper
             },
             {
                 makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            },
+            {
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
             }
         }
     );

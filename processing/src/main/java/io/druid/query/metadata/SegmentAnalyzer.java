@@ -84,7 +84,7 @@ public class SegmentAnalyzer
       columns.put(columnName, analysis);
     }
 
-    columns.put("__time", lengthBasedAnalysis(index.getTimeColumn(), NUM_BYTES_IN_TIMESTAMP));
+    columns.put(Column.TIME_COLUMN_NAME, lengthBasedAnalysis(index.getColumn(Column.TIME_COLUMN_NAME), NUM_BYTES_IN_TIMESTAMP));
 
     return columns;
   }

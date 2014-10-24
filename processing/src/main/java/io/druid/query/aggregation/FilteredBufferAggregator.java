@@ -19,12 +19,9 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class FilteredBufferAggregator implements BufferAggregator
@@ -63,6 +60,12 @@ public class FilteredBufferAggregator implements BufferAggregator
   public Object get(ByteBuffer buf, int position)
   {
     return delegate.get(buf, position);
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return delegate.getLong(buf, position);
   }
 
   @Override

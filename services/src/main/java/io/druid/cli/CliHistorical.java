@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.cache.Cache;
@@ -69,6 +70,9 @@ public class CliHistorical extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
+
             // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
             LifecycleModule.register(binder, Server.class);
             binder.bind(ServerManager.class).in(LazySingleton.class);

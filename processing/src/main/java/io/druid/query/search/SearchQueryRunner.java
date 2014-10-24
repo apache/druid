@@ -68,7 +68,10 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   }
 
   @Override
-  public Sequence<Result<SearchResultValue>> run(final Query<Result<SearchResultValue>> input)
+  public Sequence<Result<SearchResultValue>> run(
+      final Query<Result<SearchResultValue>> input,
+      Map<String, Object> context
+  )
   {
     if (!(input instanceof SearchQuery)) {
       throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SearchQuery.class);

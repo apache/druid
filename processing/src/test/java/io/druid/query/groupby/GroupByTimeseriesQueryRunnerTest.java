@@ -33,6 +33,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  */
@@ -75,7 +77,8 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, new DefaultObjectMapper(), engine)
+        new GroupByQueryQueryToolChest(configSupplier, new DefaultObjectMapper(), engine, TestQueryRunners.pool),
+        TestQueryRunners.pool
     );
 
     final Collection<?> objects = QueryRunnerTestHelper.makeQueryRunners(factory);
@@ -92,20 +95,21 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         QueryRunner timeseriesRunner = new QueryRunner()
         {
           @Override
-          public Sequence run(Query query)
+          public Sequence run(Query query, Map metadata)
           {
             TimeseriesQuery tsQuery = (TimeseriesQuery) query;
 
             return Sequences.map(
                 groupByRunner.run(
                     GroupByQuery.builder()
-                                .setDataSource(tsQuery.getDataSource())
-                                .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                                .setGranularity(tsQuery.getGranularity())
-                                .setDimFilter(tsQuery.getDimensionsFilter())
-                                .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                                .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                                .build()
+                        .setDataSource(tsQuery.getDataSource())
+                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                        .setGranularity(tsQuery.getGranularity())
+                        .setDimFilter(tsQuery.getDimensionsFilter())
+                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                        .build(),
+                    metadata
                 ),
                 new Function<Row, Result<TimeseriesResultValue>>()
                 {

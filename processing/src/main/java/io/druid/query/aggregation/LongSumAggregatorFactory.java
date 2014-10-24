@@ -58,14 +58,14 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   {
     return new LongSumAggregator(
         name,
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeLongColumnSelector(fieldName)
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+    return new LongSumBufferAggregator(metricFactory.makeLongColumnSelector(fieldName));
   }
 
   @Override
@@ -134,7 +134,7 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "long";
   }
 
   @Override

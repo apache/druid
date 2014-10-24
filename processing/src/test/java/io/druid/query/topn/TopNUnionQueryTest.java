@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -173,8 +174,8 @@ public class TopNUnionQueryTest
             )
         )
     );
-
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
 

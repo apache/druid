@@ -63,6 +63,13 @@ public class JavaScriptBufferAggregator implements BufferAggregator
     return (float)buf.getDouble(position);
   }
 
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return (long) buf.getDouble(position);
+  }
+
   @Override
   public void close() {
     script.close();

@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.druid.jackson.JacksonModule;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -37,7 +38,7 @@ public class GuiceInjectors
     return Guice.createInjector(
         new DruidGuiceExtensions(),
         new JacksonModule(),
-        new PropertiesModule("runtime.properties"),
+        new PropertiesModule(Arrays.asList("global.runtime.properties", "runtime.properties")),
         new ConfigModule(),
         new Module()
         {
@@ -56,7 +57,7 @@ public class GuiceInjectors
     List<Module> theModules = Lists.newArrayList();
     theModules.add(new DruidGuiceExtensions());
     theModules.add(new JacksonModule());
-    theModules.add(new PropertiesModule("runtime.properties"));
+    theModules.add(new PropertiesModule(Arrays.asList("global.runtime.properties", "runtime.properties")));
     theModules.add(new ConfigModule());
     theModules.add(
         new Module()

@@ -91,6 +91,12 @@ public class HistogramBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getLong()");
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

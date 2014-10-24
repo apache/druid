@@ -40,21 +40,25 @@ import java.util.Iterator;
  */
 public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 {
-  public static final byte version = 0x1;
+  public static final byte LZF_VERSION = 0x1;
+  public static final byte version = 0x2;
 
   private final int totalSize;
   private final int sizePer;
   private final GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   CompressedLongsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers
+      GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseLongBuffers = baseLongBuffers;
+    this.compression = compression;
   }
 
   public int size()
@@ -162,7 +166,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
   public long getSerializedSize()
   {
-    return baseLongBuffers.getSerializedSize() + 1 + 4 + 4;
+    return baseLongBuffers.getSerializedSize() + 1 + 4 + 4 + 1;
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -170,6 +174,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     channel.write(ByteBuffer.wrap(new byte[]{version}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
+    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
     baseLongBuffers.writeToChannel(channel);
   }
 
@@ -178,7 +183,8 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     return new CompressedLongsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseLongBuffers, CompressedLongBufferObjectStrategy.getBufferForOrder(order))
+        GenericIndexed.fromIterable(baseLongBuffers, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        compression
     );
   }
 
@@ -195,23 +201,37 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == version) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
       return new CompressedLongsIndexedSupplier(
-        buffer.getInt(),
-        buffer.getInt(),
-        GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order))
+          totalSize,
+          sizePer,
+        GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        compression
+      );
+    } else if (versionFromBuffer == LZF_VERSION) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      return new CompressedLongsIndexedSupplier(
+          totalSize,
+          sizePer,
+          GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          compression
       );
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedLongsIndexedSupplier fromLongBuffer(LongBuffer buffer, final ByteOrder byteOrder)
+  public static CompressedLongsIndexedSupplier fromLongBuffer(LongBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
   {
-    return fromLongBuffer(buffer, 0xFFFF / Longs.BYTES, byteOrder);
+    return fromLongBuffer(buffer, 0xFFFF / Longs.BYTES, byteOrder, compression);
   }
 
   public static CompressedLongsIndexedSupplier fromLongBuffer(
-      final LongBuffer buffer, final int chunkFactor, final ByteOrder byteOrder
+      final LongBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
@@ -258,8 +278,9 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
                 };
               }
             },
-            CompressedLongBufferObjectStrategy.getBufferForOrder(byteOrder)
-        )
+            CompressedLongBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+        ),
+        compression
     );
   }
 

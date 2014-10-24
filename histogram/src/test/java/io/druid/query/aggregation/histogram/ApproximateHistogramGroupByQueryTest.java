@@ -86,7 +86,8 @@ public class ApproximateHistogramGroupByQueryTest
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, mapper, engine)
+        new GroupByQueryQueryToolChest(configSupplier, mapper, engine, pool),
+        pool
     );
 
     GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
@@ -106,7 +107,8 @@ public class ApproximateHistogramGroupByQueryTest
         singleThreadEngine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         singleThreadedConfigSupplier,
-        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine)
+        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine, pool),
+        pool
     );
 
 

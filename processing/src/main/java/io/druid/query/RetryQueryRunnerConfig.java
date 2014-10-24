@@ -17,11 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment;
+package io.druid.query;
 
-/**
- */
-public interface TimestampColumnSelector
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class RetryQueryRunnerConfig
 {
-  public long getTimestamp();
+  @JsonProperty
+  private int numTries = 0;
+  @JsonProperty
+  private boolean returnPartialResults = false;
+
+  public int numTries() { return numTries; }
+  public boolean returnPartialResults() { return returnPartialResults; }
 }

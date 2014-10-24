@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
@@ -51,15 +52,15 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getAvailableDimensions()
+  public Indexed<String> getDimensionNames()
   {
-    return baseAdapter.getAvailableDimensions();
+    return baseAdapter.getDimensionNames();
   }
 
   @Override
-  public Indexed<String> getAvailableMetrics()
+  public Indexed<String> getMetricNames()
   {
-    return baseAdapter.getAvailableMetrics();
+    return baseAdapter.getMetricNames();
   }
 
   @Override
@@ -84,5 +85,11 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   public String getMetricType(String metric)
   {
     return baseAdapter.getMetricType(metric);
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return baseAdapter.getCapabilities(column);
   }
 }

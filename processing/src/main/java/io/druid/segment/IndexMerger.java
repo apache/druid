@@ -50,8 +50,12 @@ import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
@@ -113,11 +117,12 @@ public class IndexMerger
    * @param outDir       the directory to persist the data to
    *
    * @return the index output directory
+   *
    * @throws java.io.IOException if an IO error occurs persisting the index
    */
   public static File persist(final IncrementalIndex index, final Interval dataInterval, File outDir) throws IOException
   {
-    return persist(index, dataInterval, outDir, new NoopProgressIndicator());
+    return persist(index, dataInterval, outDir, new BaseProgressIndicator());
   }
 
   public static File persist(
@@ -159,7 +164,7 @@ public class IndexMerger
       List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return mergeQueryableIndex(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return mergeQueryableIndex(indexes, metricAggs, outDir, new BaseProgressIndicator());
   }
 
   public static File mergeQueryableIndex(
@@ -188,7 +193,7 @@ public class IndexMerger
       List<IndexableAdapter> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return merge(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return merge(indexes, metricAggs, outDir, new BaseProgressIndicator());
   }
 
   public static File merge(
@@ -214,7 +219,7 @@ public class IndexMerger
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
                 return Iterables.transform(
-                    input.getAvailableDimensions(),
+                    input.getDimensionNames(),
                     new Function<String, String>()
                     {
                       @Override
@@ -240,7 +245,7 @@ public class IndexMerger
                           public Iterable<String> apply(@Nullable IndexableAdapter input)
                           {
                             return Iterables.transform(
-                                input.getAvailableMetrics(),
+                                input.getMetricNames(),
                                 new Function<String, String>()
                                 {
                                   @Override
@@ -311,7 +316,7 @@ public class IndexMerger
       List<IndexableAdapter> indexes, File outDir
   ) throws IOException
   {
-    return append(indexes, outDir, new NoopProgressIndicator());
+    return append(indexes, outDir, new BaseProgressIndicator());
   }
 
   public static File append(
@@ -332,7 +337,7 @@ public class IndexMerger
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
                 return Iterables.transform(
-                    input.getAvailableDimensions(),
+                    input.getDimensionNames(),
                     new Function<String, String>()
                     {
                       @Override
@@ -355,7 +360,7 @@ public class IndexMerger
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
                 return Iterables.transform(
-                    input.getAvailableMetrics(),
+                    input.getMetricNames(),
                     new Function<String, String>()
                     {
                       @Override
@@ -396,12 +401,34 @@ public class IndexMerger
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
   ) throws IOException
   {
-    Map<String, String> metricTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+    final Map<String, ValueType> valueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+    final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+    final Map<String, ColumnCapabilitiesImpl> columnCapabilities = Maps.newHashMap();
+
     for (IndexableAdapter adapter : indexes) {
-      for (String metric : adapter.getAvailableMetrics()) {
-        metricTypes.put(metric, adapter.getMetricType(metric));
+      for (String dimension : adapter.getDimensionNames()) {
+        ColumnCapabilitiesImpl mergedCapabilities = columnCapabilities.get(dimension);
+        ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
+        if (mergedCapabilities == null) {
+          mergedCapabilities = new ColumnCapabilitiesImpl();
+          mergedCapabilities.setType(ValueType.STRING);
+        }
+        columnCapabilities.put(dimension, mergedCapabilities.merge(capabilities));
+      }
+      for (String metric : adapter.getMetricNames()) {
+        ColumnCapabilitiesImpl mergedCapabilities = columnCapabilities.get(metric);
+        ColumnCapabilities capabilities = adapter.getCapabilities(metric);
+        if (mergedCapabilities == null) {
+          mergedCapabilities = new ColumnCapabilitiesImpl();
+        }
+        columnCapabilities.put(metric, mergedCapabilities.merge(capabilities));
+
+        valueTypes.put(metric, capabilities.getType());
+        metricTypeNames.put(metric, adapter.getMetricType(metric));
       }
     }
+
+
     final Interval dataInterval;
     File v8OutDir = new File(outDir, "v8-tmp");
     v8OutDir.mkdirs();
@@ -540,14 +567,14 @@ public class IndexMerger
 
       final int[] dimLookup = new int[mergedDimensions.size()];
       int count = 0;
-      for (String dim : adapter.getAvailableDimensions()) {
+      for (String dim : adapter.getDimensionNames()) {
         dimLookup[count] = mergedDimensions.indexOf(dim.toLowerCase());
         count++;
       }
 
       final int[] metricLookup = new int[mergedMetrics.size()];
       count = 0;
-      for (String metric : adapter.getAvailableMetrics()) {
+      for (String metric : adapter.getMetricNames()) {
         metricLookup[count] = mergedMetrics.indexOf(metric);
         count++;
       }
@@ -579,8 +606,7 @@ public class IndexMerger
                           input.getTimestamp(),
                           newDims,
                           newMetrics,
-                          input.getRowNum(),
-                          input.getDescriptions()
+                          input.getRowNum()
                       );
                     }
                   }
@@ -593,7 +619,7 @@ public class IndexMerger
     Iterable<Rowboat> theRows = rowMergerFn.apply(boats);
 
     CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
-        ioPeon, "little_end_time", IndexIO.BYTE_ORDER
+        ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
     );
 
     timeWriter.open();
@@ -606,21 +632,30 @@ public class IndexMerger
     }
 
     ArrayList<MetricColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    for (Map.Entry<String, String> entry : metricTypes.entrySet()) {
-      String metric = entry.getKey();
-      String typeName = entry.getValue();
-      if ("float".equals(typeName)) {
-        metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
-      } else {
-        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+    for (String metric : mergedMetrics) {
+      ValueType type = valueTypes.get(metric);
+      switch (type) {
+        case LONG:
+          metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case FLOAT:
+          metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case COMPLEX:
+          final String typeName = metricTypeNames.get(metric);
+          ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
 
-        if (serde == null) {
-          throw new ISE("Unknown type[%s]", typeName);
-        }
+          if (serde == null) {
+            throw new ISE("Unknown type[%s]", typeName);
+          }
 
-        metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+          metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+          break;
+        default:
+          throw new ISE("Unknown type[%s]", type);
       }
     }
+
     for (MetricColumnSerializer metWriter : metWriters) {
       metWriter.open();
     }
@@ -634,7 +669,6 @@ public class IndexMerger
       rowNumConversions.add(IntBuffer.wrap(arr));
     }
 
-    final Map<String, String> descriptions = Maps.newHashMap();
     for (Rowboat theRow : theRows) {
       progress.progress();
       timeWriter.add(theRow.getTimestamp());
@@ -669,8 +703,6 @@ public class IndexMerger
         );
         time = System.currentTimeMillis();
       }
-
-      descriptions.putAll(theRow.getDescriptions());
     }
 
     for (IntBuffer rowNumConversion : rowNumConversions) {
@@ -729,7 +761,7 @@ public class IndexMerger
       );
       writer.open();
 
-      boolean isSpatialDim = "spatial".equals(descriptions.get(dimension));
+      boolean isSpatialDim = columnCapabilities.get(dimension).hasSpatialIndexes();
       ByteBufferWriter<ImmutableRTree> spatialWriter = null;
       RTree tree = null;
       IOPeon spatialIoPeon = new TmpFileIOPeon();
@@ -1067,8 +1099,7 @@ public class IndexMerger
                   input.getTimestamp(),
                   newDims,
                   input.getMetrics(),
-                  input.getRowNum(),
-                  input.getDescriptions()
+                  input.getRowNum()
               );
 
               retVal.addRow(indexNumber, input.getRowNum());
@@ -1148,8 +1179,7 @@ public class IndexMerger
           lhs.getTimestamp(),
           lhs.getDims(),
           metrics,
-          lhs.getRowNum(),
-          lhs.getDescriptions()
+          lhs.getRowNum()
       );
 
       for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
@@ -1162,16 +1192,5 @@ public class IndexMerger
 
       return retVal;
     }
-  }
-
-  public static interface ProgressIndicator
-  {
-    public void progress();
-  }
-
-  private static class NoopProgressIndicator implements ProgressIndicator
-  {
-    @Override
-    public void progress() {}
   }
 }

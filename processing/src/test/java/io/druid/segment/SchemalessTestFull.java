@@ -1175,6 +1175,15 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
+                                .put("market", "")
+                                .put("rows", 6L)
+                                .put("index", 400.0D)
+                                .put("addRowsIndexConstant", 407.0D)
+                                .put("uniques", 0.0)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 0.0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
                                 .put("market", "spot")
                                 .put("rows", 4L)
                                 .put("index", 400.0D)
@@ -1182,15 +1191,6 @@ public class SchemalessTestFull
                                 .put("uniques", 0.0D)
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
-                                .build(),
-                    ImmutableMap.<String, Object>builder()
-                                .put("market", "")
-                                .put("rows", 3L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 204.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 0.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
                                 .put("market", "total_market")
@@ -1386,8 +1386,9 @@ public class SchemalessTestFull
                                   .build();
 
     failMsg += " timeseries ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1419,8 +1420,9 @@ public class SchemalessTestFull
                                   .build();
 
     failMsg += " filtered timeseries ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1451,8 +1453,9 @@ public class SchemalessTestFull
         .build();
 
     failMsg += " topN ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
 
@@ -1484,8 +1487,9 @@ public class SchemalessTestFull
         .build();
 
     failMsg += " filtered topN ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1501,8 +1505,9 @@ public class SchemalessTestFull
                               .build();
 
     failMsg += " search ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1519,8 +1524,9 @@ public class SchemalessTestFull
                               .build();
 
     failMsg += " filtered search ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1537,8 +1543,9 @@ public class SchemalessTestFull
                                     .build();
 
     failMsg += " timeBoundary ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
