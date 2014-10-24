@@ -637,6 +637,7 @@ public class IndexMerger
       switch (type) {
         case LONG:
           metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
         case FLOAT:
           metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
           break;

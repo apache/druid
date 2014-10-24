@@ -178,7 +178,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     baseLongBuffers.writeToChannel(channel);
   }
 
-  public CompressedLongsIndexedSupplier convertByteOrder(ByteOrder order, CompressedObjectStrategy.CompressionStrategy compression)
+  public CompressedLongsIndexedSupplier convertByteOrder(ByteOrder order)
   {
     return new CompressedLongsIndexedSupplier(
         totalSize,
@@ -190,7 +190,6 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
   /**
    * For testing.  Do not use unless you like things breaking
-   * @return
    */
   GenericIndexed<ResourceHolder<LongBuffer>> getBaseLongBuffers()
   {

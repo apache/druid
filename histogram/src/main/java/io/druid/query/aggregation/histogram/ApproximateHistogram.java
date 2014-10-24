@@ -1019,8 +1019,6 @@ public class ApproximateHistogram
    * @param count        current size of the heap
    * @param heapIndex    index of the item to be deleted
    * @param values       values stored in the heap
-   *
-   * @return
    */
   private static int heapDelete(int[] heap, int[] reverseIndex, int count, int heapIndex, float[] values)
   {

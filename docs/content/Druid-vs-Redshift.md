@@ -1,6 +1,10 @@
 ---
 layout: doc_page
 ---
+Druid vs Redshift
+=================
+
+
 ###How does Druid compare to Redshift?
 
 In terms of drawing a differentiation, Redshift is essentially ParAccel (Actian) which Amazon is licensing.

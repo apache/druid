@@ -91,7 +91,7 @@ public class TimeseriesQueryRunnerTest
     QueryGranularity gran = QueryGranularity.DAY;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .granularity(gran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.asList(
@@ -197,7 +197,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "upfront")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "upfront")
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -209,7 +209,7 @@ public class TimeseriesQueryRunnerTest
 
     Assert.assertEquals(
         Druids.newSelectorDimFilterBuilder()
-              .dimension(QueryRunnerTestHelper.providerDimension)
+              .dimension(QueryRunnerTestHelper.marketDimension)
               .value("upfront")
               .build(),
         query.getDimensionsFilter()
@@ -422,7 +422,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(
                                        new PeriodGranularity(
                                            new Period("P7D"),
@@ -475,7 +475,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(QueryGranularity.HOUR)
                                    .intervals(
                                        Arrays.asList(
@@ -543,7 +543,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(
                                        new PeriodGranularity(
                                            new Period("PT1H"),
@@ -590,7 +590,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(new PeriodGranularity(new Period("P1M"), null, null))
                                    .intervals(
                                        Arrays.asList(
@@ -627,7 +627,7 @@ public class TimeseriesQueryRunnerTest
 
     TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity("DAY")
                                    .intervals(
                                        Arrays.asList(
@@ -705,7 +705,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -755,7 +755,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-        .filters(new RegexDimFilter(QueryRunnerTestHelper.providerDimension, "^.p.*$")) // spot and upfront
+        .filters(new RegexDimFilter(QueryRunnerTestHelper.marketDimension, "^.p.*$")) // spot and upfront
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(
             Arrays.<AggregatorFactory>asList(
@@ -805,7 +805,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "spot")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "spot")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -855,7 +855,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "upfront")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "upfront")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -905,7 +905,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "total_market")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "total_market")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -957,7 +957,7 @@ public class TimeseriesQueryRunnerTest
         .fields(
             Arrays.<DimFilter>asList(
                 Druids.newSelectorDimFilterBuilder()
-                      .dimension(QueryRunnerTestHelper.providerDimension)
+                      .dimension(QueryRunnerTestHelper.marketDimension)
                       .value("spot")
                       .build(),
                 Druids.newOrDimFilterBuilder()
@@ -1014,7 +1014,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1072,7 +1072,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1130,7 +1130,7 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(
-                                      QueryRunnerTestHelper.providerDimension,
+                                      QueryRunnerTestHelper.marketDimension,
                                       "spot",
                                       "upfront",
                                       "total_market",
@@ -1186,7 +1186,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newOrDimFilterBuilder()
@@ -1291,7 +1291,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "billy")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "billy")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -1336,7 +1336,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("billy")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1540,7 +1540,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1563,7 +1563,7 @@ public class TimeseriesQueryRunnerTest
                                        .fields(
                                            Arrays.<DimFilter>asList(
                                                Druids.newSelectorDimFilterBuilder()
-                                                     .dimension(QueryRunnerTestHelper.providerDimension)
+                                                     .dimension(QueryRunnerTestHelper.marketDimension)
                                                      .value("spot")
                                                      .build(),
                                                Druids.newSelectorDimFilterBuilder()
@@ -1602,7 +1602,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newOrDimFilterBuilder()
@@ -1624,7 +1624,7 @@ public class TimeseriesQueryRunnerTest
                                        .fields(
                                            Arrays.<DimFilter>asList(
                                                Druids.newSelectorDimFilterBuilder()
-                                                     .dimension(QueryRunnerTestHelper.providerDimension)
+                                                     .dimension(QueryRunnerTestHelper.marketDimension)
                                                      .value("spot")
                                                      .build(),
                                                Druids.newOrDimFilterBuilder()

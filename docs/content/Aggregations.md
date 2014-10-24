@@ -160,3 +160,28 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
 ```json
 { "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
+
+## Miscellaneous Aggregations
+
+### Filtered Aggregator
+
+A filtered aggregator wraps any given aggregator, but only aggregates the values for which the given dimension filter matches.
+
+This makes it possible to compute the results of a filtered and an unfiltered aggregation simultaneously, without having to issue multiple queries, and use both results as part of post-aggregations.
+
+*Limitations:* The filtered aggregator currently only supports selector and not filter with a single selector, i.e. matching a dimension against a single value.
+
+*Note:* If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
+
+```json
+{
+  "type" : "filtered",
+  "name" : "aggMatching",
+  "filter" : {
+    "type" : "selector",
+    "dimension" : <dimension>,
+    "value" : <dimension value>
+  }
+  "aggregator" : <aggregation>
+}
+```

@@ -19,16 +19,20 @@
 
 package io.druid.query.aggregation.cardinality;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -376,6 +380,17 @@ public class CardinalityAggregatorTest
             )
         ),
         0.05
+    );
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory("billy", ImmutableList.of("b", "a", "c"), true);
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    Assert.assertEquals(
+        factory,
+        objectMapper.readValue(objectMapper.writeValueAsString(factory), AggregatorFactory.class)
     );
   }
 }
