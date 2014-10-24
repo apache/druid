@@ -48,14 +48,14 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * A QueryRunner that combines a list of other QueryRunners and executes them in parallel on an executor.
- *
+ * <p/>
  * When using this, it is important to make sure that the list of QueryRunners provided is fully flattened.
  * If, for example, you were to pass a list of a Chained QueryRunner (A) and a non-chained QueryRunner (B).  Imagine
  * A has 2 QueryRunner chained together (Aa and Ab), the fact that the Queryables are run in parallel on an
  * executor would mean that the Queryables are actually processed in the order
- *
+ * <p/>
  * <pre>A -&gt; B -&gt; Aa -&gt; Ab</pre>
- *
+ * <p/>
  * That is, the two sub queryables for A would run *after* B is run, effectively meaning that the results for B
  * must be fully cached in memory before the results for Aa and Ab are computed.
  */
@@ -114,6 +114,10 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                           @Override
                           public ListenableFuture<Iterable<T>> apply(final QueryRunner<T> input)
                           {
+                            if (input == null) {
+                              throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
+                            }
+
                             return exec.submit(
                                 new AbstractPrioritizedCallable<Iterable<T>>(priority)
                                 {
@@ -156,7 +160,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQuery(query, futures);
 
             try {
-              final Number timeout = query.getContextValue("timeout", (Number)null);
+              final Number timeout = query.getContextValue("timeout", (Number) null);
               return new MergeIterable<>(
                   ordering.nullsFirst(),
                   timeout == null ?
@@ -169,10 +173,10 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               futures.cancel(true);
               throw new QueryInterruptedException("Query interrupted");
             }
-            catch(CancellationException e) {
+            catch (CancellationException e) {
               throw new QueryInterruptedException("Query cancelled");
             }
-            catch(TimeoutException e) {
+            catch (TimeoutException e) {
               log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException("Query timeout");

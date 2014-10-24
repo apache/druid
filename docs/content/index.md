@@ -37,17 +37,6 @@ When Druid?
 * You want to do your analysis on data as it’s happening (in real-time)
 * You need a data store that is always available, 24x7x365, and years into the future.
 
-
-Not Druid?
-----------
-
-* The amount of data you have can easily be handled by MySQL
-* You're querying for individual entries or doing lookups (not analytics)
-* Batch ingestion is good enough
-* Canned queries are good enough
-* Downtime is no big deal
-
-
 Druid vs…
 ----------
 
@@ -60,7 +49,7 @@ Druid vs…
 
 About This Page
 ----------
-The data store world is vast, confusing and constantly in flux. This page is meant to help potential evaluators decide whether Druid is a good fit for the problem one needs to solve. If anything about it is incorrect please provide that feedback on the mailing list or via some other means so we can fix it.
+The data infrastructure world is vast, confusing and constantly in flux. This page is meant to help potential evaluators decide whether Druid is a good fit for the problem one needs to solve. If anything about it is incorrect please provide that feedback on the mailing list or via some other means so we can fix it.
 
 
 

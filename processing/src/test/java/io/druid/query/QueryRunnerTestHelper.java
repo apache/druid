@@ -82,7 +82,7 @@ public class QueryRunnerTestHelper
   );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
-  public static final String providerDimension = "proVider";
+  public static final String marketDimension = "marKet";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";

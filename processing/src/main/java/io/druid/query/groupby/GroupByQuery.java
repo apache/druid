@@ -50,6 +50,7 @@ import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
@@ -344,7 +345,22 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder setInterval(Object interval)
+    public Builder setInterval(QuerySegmentSpec interval)
+    {
+      return setQuerySegmentSpec(interval);
+    }
+
+    public Builder setInterval(List<Interval> intervals)
+    {
+      return setQuerySegmentSpec(new LegacySegmentSpec(intervals));
+    }
+
+    public Builder setInterval(Interval interval)
+    {
+      return setQuerySegmentSpec(new LegacySegmentSpec(interval));
+    }
+
+    public Builder setInterval(String interval)
     {
       return setQuerySegmentSpec(new LegacySegmentSpec(interval));
     }

@@ -537,6 +537,10 @@ public class IndexIO
           final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
 
           switch (holder.getType()) {
+            case LONG:
+              builder.setValueType(ValueType.LONG);
+              builder.addSerde(new LongGenericColumnPartSerde(holder.longType, BYTE_ORDER));
+              break;
             case FLOAT:
               builder.setValueType(ValueType.FLOAT);
               builder.addSerde(new FloatGenericColumnPartSerde(holder.floatType, BYTE_ORDER));

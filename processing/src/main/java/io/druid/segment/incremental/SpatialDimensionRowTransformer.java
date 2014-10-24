@@ -142,10 +142,10 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public long getLongMetric(String metric)
       {
         try {
-          return row.getFloatMetric(metric);
+          return row.getLongMetric(metric);
         }
         catch (ParseException e) {
           throw Throwables.propagate(e);
@@ -153,10 +153,10 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
-      public long getLongMetric(String metric)
+      public float getFloatMetric(String metric)
       {
         try {
-          return row.getLongMetric(metric);
+          return row.getFloatMetric(metric);
         }
         catch (ParseException e) {
           throw Throwables.propagate(e);
