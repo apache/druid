@@ -84,8 +84,8 @@ public class CliHistorical extends ServerRunnable
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
             LifecycleModule.register(binder, QueryResource.class);
-            LifecycleModule.register(binder, HistoricalResource.class);
-            LifecycleModule.register(binder, ZkCoordinator.class);
+
+            LifecycleModule.register(binder, ZkCoordinator.class);            
 
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheProvider.class);
