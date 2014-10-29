@@ -53,10 +53,28 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     this.dbTables = dbTables;
   }
 
+  /**
+   * SQL type to use for payload data (e.g. JSON blobs).
+   * Must be a binary type, which values can be accessed using ResultSet.getBytes()
+   *
+   * The resulting string will be interpolated into the table creation statement, e.g.
+   * <code>CREATE TABLE druid_table ( payload <type> NOT NULL, ... )</code>
+   *
+   * @return String representing the SQL type
+   */
   protected String getPayloadType() {
     return PAYLOAD_TYPE;
   }
 
+  /**
+   * Auto-incrementing SQL type to use for IDs
+   * Must be an integer type, which values will be automatically set by the database
+   *
+   * The resulting string will be interpolated into the table creation statement, e.g.
+   * <code>CREATE TABLE druid_table ( id <type> NOT NULL, ... )</code>
+   *
+   * @return String representing the SQL type and auto-increment statement
+   */
   protected abstract String getSerialType();
 
   public void createTable(final IDBI dbi, final String tableName, final String sql)
