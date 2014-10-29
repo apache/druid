@@ -37,7 +37,7 @@ import java.util.Map;
  */
 public class MetadataSegmentManagerTest
 {
-  private DerbyMetadataSegmentManager manager;
+  private SQLMetadataSegmentManager manager;
   private IDBI dbi;
   private List<Map<String, Object>> testRows;
 
@@ -45,7 +45,7 @@ public class MetadataSegmentManagerTest
   public void setUp() throws Exception
   {
     dbi = EasyMock.createMock(IDBI.class);
-    manager = new DerbyMetadataSegmentManager(
+    manager = new SQLMetadataSegmentManager(
         new DefaultObjectMapper(),
         Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
         Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("test")),

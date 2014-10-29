@@ -23,9 +23,9 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import io.druid.db.DerbyMetadataRuleManager;
-import io.druid.db.DerbyMetadataRuleManagerProvider;
-import io.druid.db.DerbyMetadataSegmentManager;
+import io.druid.db.SQLMetadataRuleManager;
+import io.druid.db.SQLMetadataRuleManagerProvider;
+import io.druid.db.SQLMetadataSegmentManager;
 import io.druid.db.SQLMetadataSegmentManagerProvider;
 import io.druid.db.IndexerSQLMetadataStorageCoordinator;
 import io.druid.db.MetadataRuleManager;
@@ -56,16 +56,16 @@ public class DerbyMetadataStorageDruidModule implements Module
         binder, "druid.db.type", Key.get(MetadataStorageConnector.class), Key.get(DerbyConnector.class)
     );
     PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentManager.class), Key.get(DerbyMetadataSegmentManager.class)
+        binder, "druid.db.type", Key.get(MetadataSegmentManager.class), Key.get(SQLMetadataSegmentManager.class)
     );
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(MetadataSegmentManagerProvider.class), Key.get(SQLMetadataSegmentManagerProvider.class)
     );
     PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManager.class), Key.get(DerbyMetadataRuleManager.class)
+        binder, "druid.db.type", Key.get(MetadataRuleManager.class), Key.get(SQLMetadataRuleManager.class)
     );
     PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(DerbyMetadataRuleManagerProvider.class)
+        binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(SQLMetadataRuleManagerProvider.class)
     );
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
@@ -94,7 +94,7 @@ public class DerbyMetadataStorageDruidModule implements Module
 
     PolyBind.optionBinder(binder, Key.get(MetadataSegmentManager.class))
             .addBinding("derby")
-            .to(DerbyMetadataSegmentManager.class)
+            .to(SQLMetadataSegmentManager.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataSegmentManagerProvider.class))
@@ -104,12 +104,12 @@ public class DerbyMetadataStorageDruidModule implements Module
 
     PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))
             .addBinding("derby")
-            .to(DerbyMetadataRuleManager.class)
+            .to(SQLMetadataRuleManager.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
             .addBinding("derby")
-            .to(DerbyMetadataRuleManagerProvider.class)
+            .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))

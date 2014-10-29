@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.common.MapUtils;
+import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -47,7 +47,10 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
+import java.io.IOException;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -215,30 +218,52 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                           + "ON r.datasource = ds.datasource and r.version = ds.version",
                           getRulesTable()
                       )
-                  ).fold(
-                      Maps.<String, List<Rule>>newHashMap(),
-                      new Folder3<Map<String, List<Rule>>, Map<String, Object>>()
+                  ).map(
+                      new ResultSetMapper<Pair<String, List<Rule>>>()
                       {
                         @Override
-                        public Map<String, List<Rule>> fold(
-                            Map<String, List<Rule>> retVal,
-                            Map<String, Object> stringObjectMap,
-                            FoldController foldController,
-                            StatementContext statementContext
-                        ) throws SQLException
+                        public Pair<String, List<Rule>> map(int index, ResultSet r, StatementContext ctx)
+                            throws SQLException
                         {
                           try {
-                            String dataSource = MapUtils.getString(stringObjectMap, "dataSource");
-                            List<Rule> rules = getRules(stringObjectMap);
-                            retVal.put(dataSource, rules);
-                            return retVal;
+                            return Pair.of(
+                                r.getString("dataSource"),
+                                jsonMapper.<List<Rule>>readValue(
+                                    r.getBytes("payload"), new TypeReference<List<Rule>>()
+                                    {
+                                    }
+                                )
+                            );
                           }
-                          catch (Exception e) {
+                          catch (IOException e) {
                             throw Throwables.propagate(e);
                           }
                         }
                       }
-                  );
+                  )
+                   .fold(
+                       Maps.<String, List<Rule>>newHashMap(),
+                       new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
+                       {
+                         @Override
+                         public Map<String, List<Rule>> fold(
+                             Map<String, List<Rule>> retVal,
+                             Pair<String, List<Rule>> stringObjectMap,
+                             FoldController foldController,
+                             StatementContext statementContext
+                         ) throws SQLException
+                         {
+                           try {
+                             String dataSource = stringObjectMap.lhs;
+                             retVal.put(dataSource, stringObjectMap.rhs);
+                             return retVal;
+                           }
+                           catch (Exception e) {
+                             throw Throwables.propagate(e);
+                           }
+                         }
+                       }
+                   );
                 }
               }
           )
@@ -314,17 +339,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     return true;
   }
 
-  private String getRulesTable() {return dbTables.get().getRulesTable();}
-
-  protected List<Rule> getRules(Map<String, Object> stringObjectMap) {
-    try {
-      return jsonMapper.readValue(
-          MapUtils.getString(stringObjectMap, "payload"), new TypeReference<List<Rule>>()
-          {
-          }
-      );
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+  private String getRulesTable()
+  {
+    return dbTables.get().getRulesTable();
   }
 }

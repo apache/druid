@@ -29,6 +29,7 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
+import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -313,17 +314,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           {
             List<byte[]> matched = handle.createQuery(selectStatement)
                                          .bind("key", key)
-                                         .map(
-                                             new ResultSetMapper<byte[]>()
-                                             {
-                                               @Override
-                                               public byte[] map(int index, ResultSet r, StatementContext ctx)
-                                                   throws SQLException
-                                               {
-                                                 return r.getBytes(valueColumn);
-                                               }
-                                             }
-                                         ).list();
+                                         .map(ByteArrayMapper.FIRST)
+                                         .list();
 
             if (matched.isEmpty()) {
               return null;
