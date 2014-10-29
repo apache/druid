@@ -22,7 +22,6 @@ package io.druid.db;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import org.apache.derby.drda.NetworkServerControl;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.tweak.ConnectionFactory;
@@ -31,6 +30,7 @@ import java.net.InetAddress;
 
 public class DerbyConnector extends SQLMetadataConnector
 {
+  private static final String SERIAL_TYPE = "BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)";
   private final DBI dbi;
 
   @Inject
@@ -38,6 +38,12 @@ public class DerbyConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     this.dbi = new DBI(getConnectionFactory("druidDerbyDb"));
+  }
+
+  @Override
+  protected String getSerialType()
+  {
+    return SERIAL_TYPE;
   }
 
   @Override

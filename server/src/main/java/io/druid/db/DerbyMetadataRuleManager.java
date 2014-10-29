@@ -28,6 +28,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.server.coordinator.rules.Rule;
 import org.skife.jdbi.v2.IDBI;
 
+import java.sql.Blob;
 import java.util.List;
 import java.util.Map;
 
@@ -48,17 +49,14 @@ public class DerbyMetadataRuleManager extends SQLMetadataRuleManager
 
   @Override
   protected List<Rule> getRules(Map<String, Object> stringObjectMap) {
-    List<Rule> rules = null;
     try {
-      java.sql.Clob payload = (java.sql.Clob)stringObjectMap.get("payload");
-      rules = jsonMapper.readValue(
-          payload.getSubString(1, (int)payload.length()), new TypeReference<List<Rule>>()
-          {
-          }
+      Blob payload = (Blob)stringObjectMap.get("payload");
+      List<Rule> rules = jsonMapper.readValue(
+          payload.getBinaryStream(), new TypeReference<List<Rule>>() {}
       );
+      return rules;
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }
-    return rules;
   }
 }

@@ -36,6 +36,9 @@ import java.util.Map;
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
   private static final Logger log = new Logger(PostgreSQLConnector.class);
+  private static final String PAYLOAD_TYPE = "BYTEA";
+  private static final String SERIAL_TYPE = "BIGSERIAL";
+
   private final DBI dbi;
 
   @Inject
@@ -44,6 +47,17 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     super(config, dbTables);
     this.dbi = new DBI(getDatasource());
 
+  }
+
+  @Override
+  protected String getPayloadType() {
+    return PAYLOAD_TYPE;
+  }
+
+  @Override
+  protected String getSerialType()
+  {
+    return SERIAL_TYPE;
   }
 
   @Override
@@ -74,110 +88,6 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public void createSegmentTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-        dbi,
-        tableName,
-        String.format(
-            "CREATE TABLE %1$s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TEXT NOT NULL, "
-            + "start TEXT NOT NULL, \"end\" TEXT NOT NULL, partitioned SMALLINT NOT NULL, version TEXT NOT NULL, "
-            + "used BOOLEAN NOT NULL, payload bytea NOT NULL, PRIMARY KEY (id));" +
-            "CREATE INDEX ON %1$s(dataSource);"+
-            "CREATE INDEX ON %1$s(used);",
-          tableName
-        )
-    );
-  }
-
-  @Override
-  public void createRulesTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-        dbi,
-        tableName,
-        String.format(
-            "CREATE TABLE %1$s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version TEXT NOT NULL, payload bytea NOT NULL, PRIMARY KEY (id));"+
-            "CREATE INDEX ON %1$s(dataSource);",
-            tableName
-        )
-    );
-  }
-
-  @Override
-  public void createConfigTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-        dbi,
-        tableName,
-        String.format(
-            "CREATE TABLE %s (name VARCHAR(255) NOT NULL, payload bytea NOT NULL, PRIMARY KEY(name))",
-            tableName
-        )
-    );
-  }
-
-  @Override
-  public void createTaskTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-        dbi,
-        tableName,
-        String.format(
-          "CREATE TABLE %1$s (\n"
-          + "  id varchar(255) NOT NULL,\n"
-          + "  created_date TEXT NOT NULL,\n"
-          + "  datasource varchar(255) NOT NULL,\n"
-          + "  payload bytea NOT NULL,\n"
-          + "  status_payload bytea NOT NULL,\n"
-          + "  active SMALLINT NOT NULL DEFAULT '0',\n"
-          + "  PRIMARY KEY (id)\n"
-          + ");\n" +
-          "CREATE INDEX ON %1$s(active, created_date);",
-          tableName
-        )
-    );
-  }
-
-  @Override
-  public void createTaskLogTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-        dbi,
-        tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id bigserial NOT NULL,\n"
-            + "  task_id varchar(255) DEFAULT NULL,\n"
-            + "  log_payload bytea,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"+
-            "CREATE INDEX ON %1$s(task_id);",
-            tableName
-        )
-    );
-  }
-
-  @Override
-  public void createTaskLockTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-        dbi,
-        tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id bigserial NOT NULL,\n"
-            + "  task_id varchar(255) DEFAULT NULL,\n"
-            + "  lock_payload bytea,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"+
-            "CREATE INDEX ON %1$s(task_id);",
-            tableName
-        )
-    );
-  }
-
-  @Override
   public Void insertOrUpdate(
       final String tableName,
       final String keyColumn,
@@ -192,14 +102,18 @@ public class PostgreSQLConnector extends SQLMetadataConnector
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format(
-                                       "BEGIN;\n" +
-                                       "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
-                                       "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
-                                       "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
-                                       "COMMIT;",
-                                       tableName, keyColumn, valueColumn
-                                   ))
+            handle.createStatement(
+                String.format(
+                    "BEGIN;\n" +
+                    "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
+                    "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
+                    "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
+                    "COMMIT;",
+                    tableName,
+                    keyColumn,
+                    valueColumn
+                )
+            )
                   .bind("key", key)
                   .bind("value", value)
                   .execute();

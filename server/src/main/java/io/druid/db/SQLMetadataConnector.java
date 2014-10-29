@@ -37,9 +37,11 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-public class SQLMetadataConnector implements MetadataStorageConnector
+public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
   private static final Logger log = new Logger(SQLMetadataConnector.class);
+  private static final String PAYLOAD_TYPE = "BLOB";
+
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
 
@@ -49,6 +51,12 @@ public class SQLMetadataConnector implements MetadataStorageConnector
     this.config = config;
     this.dbTables = dbTables;
   }
+
+  protected String getPayloadType() {
+    return PAYLOAD_TYPE;
+  }
+
+  protected abstract String getSerialType();
 
   public void createTable(final IDBI dbi, final String tableName, final String sql)
   {
@@ -99,25 +107,40 @@ public class SQLMetadataConnector implements MetadataStorageConnector
         dbi,
         tableName,
         String.format(
-            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date VARCHAR(255) NOT NULL, "
-            + "start VARCHAR(255) NOT NULL, \"end\" VARCHAR(255) NOT NULL, partitioned SMALLINT NOT NULL, version VARCHAR(255) NOT NULL, "
-            + "used BOOLEAN NOT NULL, payload CLOB NOT NULL, PRIMARY KEY (id))",
-            tableName
+            "CREATE TABLE %1$s (\n"
+            + "  id VARCHAR(255) NOT NULL,\n"
+            + "  dataSource VARCHAR(255) NOT NULL,\n"
+            + "  created_date VARCHAR(255) NOT NULL,\n"
+            + "  start VARCHAR(255) NOT NULL,\n"
+            + "  \"end\" VARCHAR(255) NOT NULL,\n"
+            + "  partitioned BOOLEAN NOT NULL,\n"
+            + "  version VARCHAR(255) NOT NULL,\n"
+            + "  used BOOLEAN NOT NULL,\n"
+            + "  payload %2$s NOT NULL,\n"
+            + "  PRIMARY KEY (id)\n"
+            + ");\n"
+            + "CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);\n"
+            + "CREATE INDEX idx_%1$s_used ON %1$s(used);",
+            tableName, getPayloadType()
         )
     );
-    createIndex(dbi, tableName, "segment_dataSource", "dataSource");
-    createIndex(dbi, tableName, "segment_used", "used");
   }
 
   public void createRulesTable(final IDBI dbi, final String tableName)
   {
-    System.out.println("creating rule table");
     createTable(
         dbi,
         tableName,
         String.format(
-            "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version VARCHAR(255) NOT NULL, payload CLOB NOT NULL, PRIMARY KEY (id))",
-            tableName
+            "CREATE TABLE %1$s (\n"
+            + "  id VARCHAR(255) NOT NULL,\n"
+            + "  dataSource VARCHAR(255) NOT NULL,\n"
+            + "  version VARCHAR(255) NOT NULL,\n"
+            + "  payload %2$s NOT NULL,\n"
+            + "  PRIMARY KEY (id)\n"
+            + ");\n"
+            + "CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);",
+            tableName, getPayloadType()
         )
     );
     createIndex(dbi, tableName, "rules_dataSource", "dataSource");
@@ -129,8 +152,12 @@ public class SQLMetadataConnector implements MetadataStorageConnector
         dbi,
         tableName,
         String.format(
-            "CREATE table %s (name VARCHAR(255) NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(name))",
-            tableName
+            "CREATE TABLE %1$s (\n"
+            + "  name VARCHAR(255) NOT NULL,\n"
+            + "  payload %2$s NOT NULL,\n"
+            + "  PRIMARY KEY(name)\n"
+            + ");",
+            tableName, getPayloadType()
         )
     );
   }
@@ -140,13 +167,20 @@ public class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         dbi,
         tableName,
-        String.format("CREATE TABLE %s (id VARCHAR(255) NOT NULL, created_date VARCHAR(255) NOT NULL, "
-                      + "datasource VARCHAR(255) NOT NULL, payload CLOB NOT NULL, status_payload CLOB NOT NULL, "
-                      + "active SMALLINT NOT NULL DEFAULT 0, PRIMARY KEY (id))",
-                      tableName
+        String.format(
+            "CREATE TABLE %1$s (\n"
+            + "  id VARCHAR(255) NOT NULL,\n"
+            + "  created_date VARCHAR(255) NOT NULL,\n"
+            + "  datasource VARCHAR(255) NOT NULL,\n"
+            + "  payload %2$s NOT NULL,\n"
+            + "  status_payload %2$s NOT NULL,\n"
+            + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
+            + "  PRIMARY KEY (id)\n"
+            + ");\n"
+            + "CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date);",
+            tableName, getPayloadType()
         )
     );
-    createIndex(dbi, tableName, "task_active_created_date", "active, created_date");
   }
 
   public void createTaskLogTable(final IDBI dbi, final String tableName)
@@ -155,13 +189,16 @@ public class SQLMetadataConnector implements MetadataStorageConnector
         dbi,
         tableName,
         String.format(
-            "CREATE TABLE %s (id BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1), "
-            + "task_id VARCHAR(255) DEFAULT NULL, log_payload CLOB, PRIMARY KEY (id)); "
-            + "CREATE INDEX task_log_task_id ON %1$s(task_id)",
-            tableName
+            "CREATE TABLE %1$s (\n"
+            + "  id %2$s NOT NULL,\n"
+            + "  task_id VARCHAR(255) DEFAULT NULL,\n"
+            + "  log_payload %3$s,\n"
+            + "  PRIMARY KEY (id)\n"
+            + ");\n"
+            + "CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);",
+            tableName, getSerialType(), getPayloadType()
         )
     );
-    createIndex(dbi, tableName, "task_log_task_id", "task_id");
   }
 
   public void createTaskLockTable(final IDBI dbi, final String tableName)
@@ -170,12 +207,16 @@ public class SQLMetadataConnector implements MetadataStorageConnector
         dbi,
         tableName,
         String.format(
-            "CREATE TABLE %s (id BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1), "
-            + "task_id VARCHAR(255) DEFAULT NULL, lock_payload CLOB, PRIMARY KEY (id))",
-            tableName
+            "CREATE TABLE %1$s (\n"
+            + "  id %2$s NOT NULL,\n"
+            + "  task_id VARCHAR(255) DEFAULT NULL,\n"
+            + "  lock_payload %3$s,\n"
+            + "  PRIMARY KEY (id)\n"
+            + ");\n"
+            + "CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);",
+            tableName, getSerialType(), getPayloadType()
         )
     );
-    createIndex(dbi, tableName, "task_lock_task_id", "task_id");
   }
 
   @Override
@@ -220,8 +261,7 @@ public class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  /* this method should be overwritten for each type of connector */
-  public DBI getDBI() { return null; }
+  public abstract DBI getDBI();
 
   @Override
   public void createSegmentTable() {

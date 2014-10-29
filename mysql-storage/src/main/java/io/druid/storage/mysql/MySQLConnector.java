@@ -36,6 +36,9 @@ import java.util.Map;
 public class MySQLConnector extends SQLMetadataConnector
 {
   private static final Logger log = new Logger(MySQLConnector.class);
+  private static final String PAYLOAD_TYPE = "LONGBLOB";
+  private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
+
   private final DBI dbi;
 
   @Inject
@@ -52,6 +55,18 @@ public class MySQLConnector extends SQLMetadataConnector
                        return null;
                      }
                    });
+  }
+
+  @Override
+  protected String getPayloadType()
+  {
+    return PAYLOAD_TYPE;
+  }
+
+  @Override
+  protected String getSerialType()
+  {
+    return SERIAL_TYPE;
   }
 
   @Override
@@ -82,107 +97,6 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public void createSegmentTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-      dbi,
-      tableName,
-      String.format(
-        "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, created_date TINYTEXT NOT NULL, "
-        + "start TINYTEXT NOT NULL, end TINYTEXT NOT NULL, partitioned BOOLEAN NOT NULL, version TINYTEXT NOT NULL, "
-        + "used BOOLEAN NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), INDEX(used), PRIMARY KEY (id))",
-        tableName
-      )
-    );
-  }
-
-  @Override
-  public void createRulesTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-      dbi,
-      tableName,
-      String.format(
-        "CREATE table %s (id VARCHAR(255) NOT NULL, dataSource VARCHAR(255) NOT NULL, version TINYTEXT NOT NULL, payload LONGTEXT NOT NULL, INDEX(dataSource), PRIMARY KEY (id))",
-        tableName
-      )
-    );
-  }
-
-  @Override
-  public void createConfigTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-      dbi,
-      tableName,
-      String.format(
-        "CREATE table %s (name VARCHAR(255) NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(name))",
-        tableName
-      )
-    );
-  }
-
-  @Override
-  public void createTaskTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-      dbi,
-      tableName,
-      String.format(
-        "CREATE TABLE `%s` (\n"
-        + "  `id` varchar(255) NOT NULL,\n"
-        + "  `created_date` tinytext NOT NULL,\n"
-        + "  `datasource` varchar(255) NOT NULL,\n"
-        + "  `payload` longblob NOT NULL,\n"
-        + "  `status_payload` longblob NOT NULL,\n"
-        + "  `active` tinyint(1) NOT NULL DEFAULT '0',\n"
-        + "  PRIMARY KEY (`id`),\n"
-        + "  KEY (active, created_date(100))\n"
-        + ")",
-        tableName
-      )
-    );
-  }
-
-  @Override
-  public void createTaskLogTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-      dbi,
-      tableName,
-      String.format(
-        "CREATE TABLE `%s` (\n"
-        + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
-        + "  `task_id` varchar(255) DEFAULT NULL,\n"
-        + "  `log_payload` longblob,\n"
-        + "  PRIMARY KEY (`id`),\n"
-        + "  KEY `task_id` (`task_id`)\n"
-        + ")",
-        tableName
-      )
-    );
-  }
-
-  @Override
-  public void createTaskLockTable(final IDBI dbi, final String tableName)
-  {
-    createTable(
-      dbi,
-      tableName,
-      String.format(
-        "CREATE TABLE `%s` (\n"
-        + "  `id` bigint(20) NOT NULL AUTO_INCREMENT,\n"
-        + "  `task_id` varchar(255) DEFAULT NULL,\n"
-        + "  `lock_payload` longblob,\n"
-        + "  PRIMARY KEY (`id`),\n"
-        + "  KEY `task_id` (`task_id`)\n"
-        + ")",
-        tableName
-      )
-    );
-  }
-
-  @Override
   public Void insertOrUpdate(
       final String tableName,
       final String keyColumn,
@@ -197,10 +111,14 @@ public class MySQLConnector extends SQLMetadataConnector
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            handle.createStatement(String.format(
-                                       "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
-                                       tableName, keyColumn, valueColumn
-                                   ))
+            handle.createStatement(
+                String.format(
+                    "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON DUPLICATE KEY UPDATE %3$s = :value",
+                    tableName,
+                    keyColumn,
+                    valueColumn
+                )
+            )
                   .bind("key", key)
                   .bind("value", value)
                   .execute();
