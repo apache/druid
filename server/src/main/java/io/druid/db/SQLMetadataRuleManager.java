@@ -229,9 +229,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                             return Pair.of(
                                 r.getString("dataSource"),
                                 jsonMapper.<List<Rule>>readValue(
-                                    r.getBytes("payload"), new TypeReference<List<Rule>>()
-                                    {
-                                    }
+                                    r.getBytes("payload"), new TypeReference<List<Rule>>(){}
                                 )
                             );
                           }
