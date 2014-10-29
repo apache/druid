@@ -20,9 +20,11 @@
 package io.druid.db;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import org.apache.commons.dbcp.BasicDataSource;
+import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -75,7 +77,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   protected abstract boolean tableExists(Handle handle, final String tableName);
 
-  public void createTable(final IDBI dbi, final String tableName, final String sql)
+  public void createTable(final IDBI dbi, final String tableName, final List<String> sql)
   {
     try {
       dbi.withHandle(
@@ -86,7 +88,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             {
               if (!tableExists(handle, tableName)) {
                 log.info("Creating table[%s]", tableName);
-                handle.createStatement(sql).execute();
+                final Batch batch = handle.createBatch();
+                for(String s : sql) {
+                  batch.add(s);
+                }
+                batch.execute();
               } else {
                 log.info("Table[%s] already exists", tableName);
               }
@@ -100,44 +106,29 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  public void createIndex(final IDBI dbi, final String tableName, final String indexName, final String columnName) {
-    dbi.withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle) throws Exception
-          {
-            List<Map<String, Object>> table = handle.select(String.format("select * from SYS.SYSTABLES where tablename = \'%s\'", tableName.toUpperCase()));
-            if (table.isEmpty()) {
-              handle.createStatement(String.format("CREATE INDEX %1$s ON %2$s(%3$s)", indexName, tableName, columnName)).execute();
-            }
-            return null;
-          }
-        }
-    );
-  }
-
   public void createSegmentTable(final IDBI dbi, final String tableName)
   {
     createTable(
         dbi,
         tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id VARCHAR(255) NOT NULL,\n"
-            + "  dataSource VARCHAR(255) NOT NULL,\n"
-            + "  created_date VARCHAR(255) NOT NULL,\n"
-            + "  start VARCHAR(255) NOT NULL,\n"
-            + "  \"end\" VARCHAR(255) NOT NULL,\n"
-            + "  partitioned BOOLEAN NOT NULL,\n"
-            + "  version VARCHAR(255) NOT NULL,\n"
-            + "  used BOOLEAN NOT NULL,\n"
-            + "  payload %2$s NOT NULL,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"
-            + "CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);\n"
-            + "CREATE INDEX idx_%1$s_used ON %1$s(used);",
-            tableName, getPayloadType()
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  start VARCHAR(255) NOT NULL,\n"
+                + "  \"end\" VARCHAR(255) NOT NULL,\n"
+                + "  partitioned BOOLEAN NOT NULL,\n"
+                + "  version VARCHAR(255) NOT NULL,\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);", tableName),
+            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used);", tableName)
         )
     );
   }
@@ -147,19 +138,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         dbi,
         tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id VARCHAR(255) NOT NULL,\n"
-            + "  dataSource VARCHAR(255) NOT NULL,\n"
-            + "  version VARCHAR(255) NOT NULL,\n"
-            + "  payload %2$s NOT NULL,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"
-            + "CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);",
-            tableName, getPayloadType()
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  version VARCHAR(255) NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);", tableName)
         )
     );
-    createIndex(dbi, tableName, "rules_dataSource", "dataSource");
   }
 
   public void createConfigTable(final IDBI dbi, final String tableName)
@@ -167,13 +159,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         dbi,
         tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  name VARCHAR(255) NOT NULL,\n"
-            + "  payload %2$s NOT NULL,\n"
-            + "  PRIMARY KEY(name)\n"
-            + ");",
-            tableName, getPayloadType()
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  name VARCHAR(255) NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  PRIMARY KEY(name)\n"
+                + ")",
+                tableName, getPayloadType()
+            )
         )
     );
   }
@@ -183,18 +177,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         dbi,
         tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id VARCHAR(255) NOT NULL,\n"
-            + "  created_date VARCHAR(255) NOT NULL,\n"
-            + "  datasource VARCHAR(255) NOT NULL,\n"
-            + "  payload %2$s NOT NULL,\n"
-            + "  status_payload %2$s NOT NULL,\n"
-            + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"
-            + "CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date);",
-            tableName, getPayloadType()
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  datasource VARCHAR(255) NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  status_payload %2$s NOT NULL,\n"
+                + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date);", tableName)
         )
     );
   }
@@ -204,15 +200,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         dbi,
         tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id %2$s NOT NULL,\n"
-            + "  task_id VARCHAR(255) DEFAULT NULL,\n"
-            + "  log_payload %3$s,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"
-            + "CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);",
-            tableName, getSerialType(), getPayloadType()
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  task_id VARCHAR(255) DEFAULT NULL,\n"
+                + "  log_payload %3$s,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getSerialType(), getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);", tableName)
         )
     );
   }
@@ -222,15 +220,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createTable(
         dbi,
         tableName,
-        String.format(
-            "CREATE TABLE %1$s (\n"
-            + "  id %2$s NOT NULL,\n"
-            + "  task_id VARCHAR(255) DEFAULT NULL,\n"
-            + "  lock_payload %3$s,\n"
-            + "  PRIMARY KEY (id)\n"
-            + ");\n"
-            + "CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);",
-            tableName, getSerialType(), getPayloadType()
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  task_id VARCHAR(255) DEFAULT NULL,\n"
+                + "  lock_payload %3$s,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getSerialType(), getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);", tableName)
         )
     );
   }

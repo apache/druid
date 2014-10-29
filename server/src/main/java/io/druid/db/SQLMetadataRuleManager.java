@@ -109,7 +109,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                     .bind("id", String.format("%s_%s", defaultDatasourceName, version))
                     .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
-                    .bind("payload", jsonMapper.writeValueAsString(defaultRules))
+                    .bind("payload", jsonMapper.writeValueAsBytes(defaultRules))
                     .execute();
 
               return null;
@@ -320,7 +320,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       .bind("id", String.format("%s_%s", dataSource, version))
                       .bind("dataSource", dataSource)
                       .bind("version", version)
-                      .bind("payload", jsonMapper.writeValueAsString(newRules))
+                      .bind("payload", jsonMapper.writeValueAsBytes(newRules))
                       .execute();
 
                 return null;

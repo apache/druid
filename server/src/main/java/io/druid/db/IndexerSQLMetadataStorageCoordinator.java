@@ -191,7 +191,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
               .bind("version", segment.getVersion())
               .bind("used", true)
-              .bind("payload", jsonMapper.writeValueAsString(segment))
+              .bind("payload", jsonMapper.writeValueAsBytes(segment))
               .execute();
 
         log.info("Published segment [%s] to DB", segment.getIdentifier());
@@ -277,7 +277,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           String.format("UPDATE %s SET payload = :payload WHERE id = :id", dbTables.getSegmentsTable())
       )
             .bind("id", segment.getIdentifier())
-            .bind("payload", jsonMapper.writeValueAsString(segment))
+            .bind("payload", jsonMapper.writeValueAsBytes(segment))
             .execute();
     }
     catch (IOException e) {
