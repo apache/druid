@@ -24,9 +24,12 @@ import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.derby.drda.NetworkServerControl;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.ConnectionFactory;
 
 import java.net.InetAddress;
+import java.util.List;
+import java.util.Map;
 
 public class DerbyConnector extends SQLMetadataConnector
 {
@@ -38,6 +41,15 @@ public class DerbyConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     this.dbi = new DBI(getConnectionFactory("druidDerbyDb"));
+  }
+
+  @Override
+  protected boolean tableExists(Handle handle, String tableName)
+  {
+    return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
+                  .bind("tableName", tableName.toUpperCase())
+                  .list()
+                  .isEmpty();
   }
 
   @Override

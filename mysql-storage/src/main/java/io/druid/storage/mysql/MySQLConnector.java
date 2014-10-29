@@ -70,30 +70,12 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public void createTable(final IDBI dbi, final String tableName, final String sql)
+  protected boolean tableExists(Handle handle, String tableName)
   {
-    try {
-      dbi.withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle) throws Exception
-          {
-            List<Map<String, Object>> table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
-            if (table.isEmpty()) {
-              log.info("Creating table[%s]", tableName);
-              handle.createStatement(sql).execute();
-            } else {
-              log.info("Table[%s] existed: [%s]", tableName, table);
-            }
-            return null;
-          }
-        }
-      );
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception creating table");
-    }
+    return !handle.createQuery("SHOW tables LIKE :tableName")
+                  .bind("tableName", tableName)
+                  .list()
+                  .isEmpty();
   }
 
   @Override

@@ -29,9 +29,7 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-
-import java.util.List;
-import java.util.Map;
+import org.skife.jdbi.v2.util.StringMapper;
 
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
@@ -61,30 +59,15 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  public void createTable(final IDBI dbi, final String tableName, final String sql)
+  protected boolean tableExists(final Handle handle, final String tableName)
   {
-    try {
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              List<Map<String, Object>> table = handle.select(String.format("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE '%s'", tableName));
-              if (table.isEmpty()) {
-                log.info("Creating table[%s]", tableName);
-                handle.createStatement(sql).execute();
-              } else {
-                log.info("Table[%s] existed: [%s]", tableName, table);
-              }
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception creating table");
-    }
+    return !handle.createQuery(
+        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE :tableName"
+    )
+                 .bind("tableName", tableName)
+                 .map(StringMapper.FIRST)
+                 .list()
+                 .isEmpty();
   }
 
   @Override

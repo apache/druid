@@ -77,6 +77,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   protected abstract String getSerialType();
 
+  protected abstract boolean tableExists(Handle handle, final String tableName);
+
   public void createTable(final IDBI dbi, final String tableName, final String sql)
   {
     try {
@@ -86,12 +88,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             @Override
             public Void withHandle(Handle handle) throws Exception
             {
-              List<Map<String, Object>> table = handle.select(String.format("select * from SYS.SYSTABLES where tablename = \'%s\'", tableName.toUpperCase()));
-              if (table.isEmpty()) {
+              if (!tableExists(handle, tableName)) {
                 log.info("Creating table[%s]", tableName);
                 handle.createStatement(sql).execute();
               } else {
-                log.info("Table[%s] existed: [%s]", tableName, table);
+                log.info("Table[%s] already exists", tableName);
               }
               return null;
             }
