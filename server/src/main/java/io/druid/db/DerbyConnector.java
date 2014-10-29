@@ -28,8 +28,6 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.ConnectionFactory;
 
 import java.net.InetAddress;
-import java.util.List;
-import java.util.Map;
 
 public class DerbyConnector extends SQLMetadataConnector
 {
