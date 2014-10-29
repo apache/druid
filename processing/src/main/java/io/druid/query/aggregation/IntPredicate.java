@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,34 +19,11 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
-
 /**
+ *  can be replaced with http://docs.oracle.com/javase/8/docs/api/java/util/function/IntPredicate.html
+ *  when druid moves to java 8.
  */
-public class TestFloatColumnSelector implements FloatColumnSelector
+public interface IntPredicate
 {
-  private final float[] floats;
-
-  private int index = 0;
-
-  public TestFloatColumnSelector(float[] floats)
-  {
-    this.floats = floats;
-  }
-
-  @Override
-  public float get()
-  {
-    return floats[index];
-  }
-
-  public void increment()
-  {
-    ++index;
-  }
-
-  public int getIndex()
-  {
-    return index;
-  }
+  boolean apply(int value);
 }
