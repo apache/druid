@@ -305,8 +305,6 @@ public class SQLMetadataStorageActionHandler implements MetadataStorageActionHan
     );
   }
 
-  //public abstract SQLMetadataConnector getConnector(Supplier<MetadataDbConnectorConfig> config, Supplier<MetadataTablesConfig> dbTables);
-
   private <T> T retryingHandle(final HandleCallback<T> callback)
   {
     final Callable<T> call = new Callable<T>()
