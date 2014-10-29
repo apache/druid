@@ -77,7 +77,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   protected abstract boolean tableExists(Handle handle, final String tableName);
 
-  public void createTable(final IDBI dbi, final String tableName, final List<String> sql)
+  public void createTable(final IDBI dbi, final String tableName, final Iterable<String> sql)
   {
     try {
       dbi.withHandle(
