@@ -94,6 +94,29 @@ public class SearchQueryRunnerTest
   }
 
   @Test
+  public void testSearchSameValueInMultiDims()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .dimensions(
+                                        Arrays.asList(
+                                            QueryRunnerTestHelper.placementDimension,
+                                            QueryRunnerTestHelper.placementishDimension
+                                        )
+                                    )
+                                    .query("e")
+                                    .build();
+
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put(QueryRunnerTestHelper.placementDimension.toLowerCase(), Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("e", "preferred"));
+
+    checkSearchQuery(searchQuery, expectedResults);
+  }
+
+  @Test
   public void testFragmentSearch()
   {
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
