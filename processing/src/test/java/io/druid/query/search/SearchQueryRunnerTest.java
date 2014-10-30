@@ -87,7 +87,7 @@ public class SearchQueryRunnerTest
         QueryRunnerTestHelper.qualityDimension,
         Sets.newHashSet("automotive", "mezzanine", "travel", "health", "entertainment")
     );
-    expectedResults.put(QueryRunnerTestHelper.providerDimension.toLowerCase(), Sets.newHashSet("total_market"));
+    expectedResults.put(QueryRunnerTestHelper.providerDimension, Sets.newHashSet("total_market"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("a"));
 
     checkSearchQuery(searchQuery, expectedResults);
@@ -110,7 +110,7 @@ public class SearchQueryRunnerTest
                                     .build();
 
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    expectedResults.put(QueryRunnerTestHelper.placementDimension.toLowerCase(), Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.placementDimension, Sets.newHashSet("preferred"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("e", "preferred"));
 
     checkSearchQuery(searchQuery, expectedResults);
