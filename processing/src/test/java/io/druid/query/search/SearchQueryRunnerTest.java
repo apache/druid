@@ -87,8 +87,31 @@ public class SearchQueryRunnerTest
         QueryRunnerTestHelper.qualityDimension,
         Sets.newHashSet("automotive", "mezzanine", "travel", "health", "entertainment")
     );
-    expectedResults.put(QueryRunnerTestHelper.providerDimension.toLowerCase(), Sets.newHashSet("total_market"));
+    expectedResults.put(QueryRunnerTestHelper.providerDimension, Sets.newHashSet("total_market"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("a"));
+
+    checkSearchQuery(searchQuery, expectedResults);
+  }
+
+  @Test
+  public void testSearchSameValueInMultiDims()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .dimensions(
+                                        Arrays.asList(
+                                            QueryRunnerTestHelper.placementDimension,
+                                            QueryRunnerTestHelper.placementishDimension
+                                        )
+                                    )
+                                    .query("e")
+                                    .build();
+
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put(QueryRunnerTestHelper.placementDimension, Sets.newHashSet("preferred"));
+    expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("e", "preferred"));
 
     checkSearchQuery(searchQuery, expectedResults);
   }
