@@ -23,7 +23,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.RetryUtils;
-import com.mysql.jdbc.exceptions.MySQLTransientException;
 import io.druid.indexing.overlord.MetadataStorageActionHandler;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -41,11 +40,16 @@ import java.util.concurrent.Callable;
 public class SQLMetadataStorageActionHandler implements MetadataStorageActionHandler
 {
   private final IDBI dbi;
+  private final SQLMetadataConnector connector;
 
   @Inject
-  public SQLMetadataStorageActionHandler(final IDBI dbi)
+  public SQLMetadataStorageActionHandler(
+      final IDBI dbi,
+      final SQLMetadataConnector connector
+      )
   {
     this.dbi = dbi;
+    this.connector = connector;
   }
 
   /* Insert stuff. @returns number of entries inserted on success */
@@ -332,13 +336,12 @@ public class SQLMetadataStorageActionHandler implements MetadataStorageActionHan
     }
   }
 
-  private static boolean shouldRetryException(final Throwable e)
+  protected boolean shouldRetryException(final Throwable e)
   {
     return e != null && (e instanceof SQLTransientException
-                         || e instanceof MySQLTransientException
+                         || connector.isTransientException(e)
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
-                         || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317)
                          || (e instanceof SQLException && shouldRetryException(e.getCause()))
                          || (e instanceof DBIException && shouldRetryException(e.getCause())));
   }

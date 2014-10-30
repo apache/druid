@@ -22,16 +22,16 @@ package io.druid.storage.mysql;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import com.mysql.jdbc.exceptions.MySQLTransientException;
 import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.db.SQLMetadataConnector;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.util.List;
-import java.util.Map;
+import java.sql.SQLException;
 
 public class MySQLConnector extends SQLMetadataConnector
 {
@@ -45,7 +45,15 @@ public class MySQLConnector extends SQLMetadataConnector
   public MySQLConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
   {
     super(config, dbTables);
-    this.dbi = new DBI(getDatasource());
+
+    final BasicDataSource datasource = getDatasource();
+    // MySQL driver is classloader isolated as part of the extension
+    // so we need to help JDBC find the driver
+    datasource.setDriverClassLoader(getClass().getClassLoader());
+    datasource.setDriverClassName("com.mysql.jdbc.Driver");
+
+    this.dbi = new DBI(datasource);
+
     dbi.withHandle(new HandleCallback<Void>()
                    {
                      @Override
@@ -76,6 +84,14 @@ public class MySQLConnector extends SQLMetadataConnector
                   .bind("tableName", tableName)
                   .list()
                   .isEmpty();
+  }
+
+  @Override
+  protected boolean isTransientException(Throwable e)
+  {
+    return e instanceof MySQLTransientException
+           || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317)
+        ;
   }
 
   @Override

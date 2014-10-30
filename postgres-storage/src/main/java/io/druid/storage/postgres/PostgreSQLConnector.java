@@ -25,6 +25,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.db.SQLMetadataConnector;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
@@ -43,8 +44,14 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public PostgreSQLConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
   {
     super(config, dbTables);
-    this.dbi = new DBI(getDatasource());
 
+    final BasicDataSource datasource = getDatasource();
+    // PostgreSQL driver is classloader isolated as part of the extension
+    // so we need to help JDBC find the driver
+    datasource.setDriverClassLoader(getClass().getClassLoader());
+    datasource.setDriverClassName("org.postgresql.Driver");
+
+    this.dbi = new DBI(datasource);
   }
 
   @Override

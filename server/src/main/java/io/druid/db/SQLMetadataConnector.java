@@ -23,7 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -31,7 +31,6 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +75,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected abstract String getSerialType();
 
   protected abstract boolean tableExists(Handle handle, final String tableName);
+
+  protected boolean isTransientException(Throwable e) {
+    return false;
+  }
 
   public void createTable(final IDBI dbi, final String tableName, final Iterable<String> sql)
   {
@@ -348,7 +351,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public MetadataStorageConnectorConfig getConfig() { return config.get(); }
 
-  protected DataSource getDatasource()
+  protected BasicDataSource getDatasource()
   {
     MetadataStorageConnectorConfig connectorConfig = getConfig();
 

@@ -23,6 +23,7 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.druid.db.SQLMetadataConnector;
 import io.druid.db.SQLMetadataRuleManager;
 import io.druid.db.SQLMetadataRuleManagerProvider;
 import io.druid.db.SQLMetadataSegmentManager;
@@ -54,6 +55,9 @@ public class DerbyMetadataStorageDruidModule implements Module
     bindDataBaseDerby(binder);
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(MetadataStorageConnector.class), Key.get(DerbyConnector.class)
+    );
+    PolyBind.createChoice(
+        binder, "druid.db.type", Key.get(SQLMetadataConnector.class), Key.get(DerbyConnector.class)
     );
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(MetadataSegmentManager.class), Key.get(SQLMetadataSegmentManager.class)
@@ -88,6 +92,11 @@ public class DerbyMetadataStorageDruidModule implements Module
   private static void bindDataBaseDerby(Binder binder)
   {
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
+            .addBinding("derby")
+            .to(DerbyConnector.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(SQLMetadataConnector.class))
             .addBinding("derby")
             .to(DerbyConnector.class)
             .in(LazySingleton.class);

@@ -151,11 +151,6 @@
             <artifactId>geoip2</artifactId>
         </dependency>
         <dependency>
-          <groupId>mysql</groupId>
-          <artifactId>mysql-connector-java</artifactId>
-          <version>5.1.18</version>
-        </dependency>
-        <dependency>
           <groupId>org.apache.derby</groupId>
           <artifactId>derby</artifactId>
           <version>10.11.1.1</version>
