@@ -29,7 +29,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.client.DruidServer;
-import io.druid.db.MetadataRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.IntervalDropRule;

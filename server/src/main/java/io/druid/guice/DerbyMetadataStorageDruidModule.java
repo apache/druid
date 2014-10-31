@@ -21,131 +21,36 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.Provides;
-import io.druid.db.SQLMetadataConnector;
-import io.druid.db.SQLMetadataRuleManager;
-import io.druid.db.SQLMetadataRuleManagerProvider;
-import io.druid.db.SQLMetadataSegmentManager;
-import io.druid.db.SQLMetadataSegmentManagerProvider;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerProvider;
-import io.druid.db.MetadataStorageConnector;
-import io.druid.db.MetadataSegmentPublisherProvider;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.DerbyConnector;
-import io.druid.db.SQLMetadataStorageActionHandler;
-import io.druid.db.SQLMetadataSegmentPublisher;
-import io.druid.db.SQLMetadataSegmentPublisherProvider;
-import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
-import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandler;
-import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.metadata.DerbyConnector;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.IDBI;
 
-public class DerbyMetadataStorageDruidModule implements Module
+public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModule
 {
+  public DerbyMetadataStorageDruidModule()
+  {
+    super(TYPE);
+  }
+
+  public static final String TYPE = "derby";
 
   @Override
   public void configure(Binder binder)
   {
-    bindDataBaseDerby(binder);
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageConnector.class), Key.get(DerbyConnector.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(SQLMetadataConnector.class), Key.get(DerbyConnector.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentManager.class), Key.get(SQLMetadataSegmentManager.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentManagerProvider.class), Key.get(SQLMetadataSegmentManagerProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManager.class), Key.get(SQLMetadataRuleManager.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(SQLMetadataRuleManagerProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentPublisherProvider.class), Key.get(SQLMetadataSegmentPublisherProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(IndexerMetadataStorageCoordinator.class), Key.get(IndexerSQLMetadataStorageCoordinator.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageActionHandler.class), Key.get(SQLMetadataStorageActionHandler.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageUpdaterJobHandler.class), Key.get(SQLMetadataStorageUpdaterJobHandler.class)
-    );
+    createBindingChoices(binder);
+    super.configure(binder);
 
-  }
-
-  private static void bindDataBaseDerby(Binder binder)
-  {
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
-            .addBinding("derby")
+            .addBinding(TYPE)
             .to(DerbyConnector.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SQLMetadataConnector.class))
-            .addBinding("derby")
+            .addBinding(TYPE)
             .to(DerbyConnector.class)
             .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentManager.class))
-            .addBinding("derby")
-            .to(SQLMetadataSegmentManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentManagerProvider.class))
-            .addBinding("derby")
-            .to(SQLMetadataSegmentManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))
-            .addBinding("derby")
-            .to(SQLMetadataRuleManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
-            .addBinding("derby")
-            .to(SQLMetadataRuleManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))
-            .addBinding("derby")
-            .to(SQLMetadataSegmentPublisher.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentPublisherProvider.class))
-            .addBinding("derby")
-            .to(SQLMetadataSegmentPublisherProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))
-            .addBinding("derby")
-            .to(IndexerSQLMetadataStorageCoordinator.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandler.class))
-            .addBinding("derby")
-            .to(SQLMetadataStorageActionHandler.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageUpdaterJobHandler.class))
-            .addBinding("derby")
-            .to(SQLMetadataStorageUpdaterJobHandler.class)
-            .in(LazySingleton.class);
-
   }
 
   @Provides

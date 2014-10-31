@@ -21,18 +21,18 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import io.druid.db.MetadataStorageConnectorConfig;
-import io.druid.db.MetadataRuleManagerConfig;
-import io.druid.db.MetadataSegmentManagerConfig;
-import io.druid.db.MetadataStorageTablesConfig;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataRuleManagerConfig;
+import io.druid.metadata.MetadataSegmentManagerConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
 
 public class MetadataDbConfigModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.db.tables", MetadataStorageTablesConfig.class);
-    JsonConfigProvider.bind(binder, "druid.db.connector", MetadataStorageConnectorConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", MetadataStorageConnectorConfig.class);
 
     JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);

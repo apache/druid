@@ -27,8 +27,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.common.config.ConfigManager;
 import io.druid.common.config.ConfigManagerConfig;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.db.MetadataStorageConnector;
-import io.druid.db.MetadataStorageTablesConfig;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.MetadataStorageTablesConfig;
 
 /**
  */

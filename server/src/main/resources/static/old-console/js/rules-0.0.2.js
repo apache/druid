@@ -268,7 +268,7 @@ $(document).ready(function() {
       tiers = theTiers;
   });
 
-  $.getJSON("/druid/coordinator/v1/db/datasources", function(data) {
+  $.getJSON("/druid/coordinator/v1/metadata/datasources", function(data) {
     $.each(data, function(index, datasource) {
       $('#datasources').append($('<option></option>').val(datasource).text(datasource));
     });

@@ -27,7 +27,7 @@ import io.druid.client.ImmutableDruidServer;
 import io.druid.client.SingleServerInventoryView;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.curator.inventory.InventoryManagerConfig;
-import io.druid.db.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;

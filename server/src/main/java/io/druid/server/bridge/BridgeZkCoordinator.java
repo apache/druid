@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.client.ServerView;
 import io.druid.concurrent.Execs;
-import io.druid.db.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.BaseZkCoordinator;

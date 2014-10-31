@@ -61,8 +61,8 @@
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>histogram</module>
-        <module>mysql-storage</module>
-        <module>postgres-storage</module>
+        <module>mysql-metadata-storage</module>
+        <module>postgresql-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
