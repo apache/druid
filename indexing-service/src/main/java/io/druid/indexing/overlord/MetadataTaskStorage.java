@@ -33,7 +33,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.db.MetadataStorageConnector;
+import io.druid.metadata.MetadataStorageConnector;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;

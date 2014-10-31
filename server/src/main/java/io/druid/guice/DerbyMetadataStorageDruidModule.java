@@ -21,29 +21,10 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.Provides;
-import io.druid.db.DerbyConnector;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerProvider;
-import io.druid.db.MetadataSegmentPublisherProvider;
-import io.druid.db.MetadataStorageConnector;
-import io.druid.db.SQLMetadataConnector;
-import io.druid.db.SQLMetadataRuleManager;
-import io.druid.db.SQLMetadataRuleManagerProvider;
-import io.druid.db.SQLMetadataSegmentManager;
-import io.druid.db.SQLMetadataSegmentManagerProvider;
-import io.druid.db.SQLMetadataSegmentPublisher;
-import io.druid.db.SQLMetadataSegmentPublisherProvider;
-import io.druid.db.SQLMetadataStorageActionHandlerFactory;
-import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
-import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.metadata.DerbyConnector;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.IDBI;
 
 public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModule

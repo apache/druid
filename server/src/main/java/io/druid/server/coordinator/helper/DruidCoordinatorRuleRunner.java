@@ -20,7 +20,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.metamx.emitter.EmittingLogger;
-import io.druid.db.MetadataRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;

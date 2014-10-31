@@ -20,7 +20,7 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import io.druid.db.MetadataRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.rules.Rule;
 
 import javax.ws.rs.Consumes;

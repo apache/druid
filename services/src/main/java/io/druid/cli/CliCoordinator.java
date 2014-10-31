@@ -29,12 +29,12 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataRuleManagerConfig;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerConfig;
-import io.druid.db.MetadataSegmentManagerProvider;
+import io.druid.metadata.MetadataRuleManager;
+import io.druid.metadata.MetadataRuleManagerConfig;
+import io.druid.metadata.MetadataRuleManagerProvider;
+import io.druid.metadata.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManagerConfig;
+import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -49,7 +49,7 @@ import io.druid.server.http.BackwardsCompatibleInfoResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
-import io.druid.server.http.DBResource;
+import io.druid.server.http.MetadataResource;
 import io.druid.server.http.DatasourcesResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.RedirectFilter;
@@ -125,7 +125,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, RulesResource.class);
             Jerseys.addResource(binder, ServersResource.class);
             Jerseys.addResource(binder, DatasourcesResource.class);
-            Jerseys.addResource(binder, DBResource.class);
+            Jerseys.addResource(binder, MetadataResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }
