@@ -23,38 +23,29 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Provides;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerProvider;
-import io.druid.db.MetadataSegmentPublisherProvider;
 import io.druid.db.MetadataStorageConnector;
 import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.db.SQLMetadataConnector;
-import io.druid.db.SQLMetadataRuleManager;
-import io.druid.db.SQLMetadataRuleManagerProvider;
-import io.druid.db.SQLMetadataSegmentManager;
-import io.druid.db.SQLMetadataSegmentManagerProvider;
-import io.druid.db.SQLMetadataSegmentPublisher;
-import io.druid.db.SQLMetadataSegmentPublisherProvider;
-import io.druid.db.SQLMetadataStorageActionHandlerFactory;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
-import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
+import io.druid.guice.SQLMetadataStorageDruidModule;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.SegmentPublisher;
 import org.skife.jdbi.v2.IDBI;
 
 import java.util.List;
 
-public class MySQLMetadataStorageModule implements DruidModule
+public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule
 {
+
+  public static final String TYPE = "mysql";
+
+  public MySQLMetadataStorageModule()
+  {
+    super(TYPE);
+  }
+
   @Override
   public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
   {
@@ -64,6 +55,7 @@ public class MySQLMetadataStorageModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    super.configure(binder);
     bindMySQL(binder);
     JsonConfigProvider.bind(binder, "druid.db.tables", MetadataStorageTablesConfig.class);
     JsonConfigProvider.bind(binder, "druid.db.connector", MetadataStorageConnectorConfig.class);
@@ -71,58 +63,13 @@ public class MySQLMetadataStorageModule implements DruidModule
 
   private void bindMySQL(Binder binder) {
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
-            .addBinding("mysql")
+            .addBinding(TYPE)
             .to(MySQLConnector.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SQLMetadataConnector.class))
-            .addBinding("mysql")
+            .addBinding(TYPE)
             .to(MySQLConnector.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentManager.class))
-            .addBinding("mysql")
-            .to(SQLMetadataSegmentManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentManagerProvider.class))
-            .addBinding("mysql")
-            .to(SQLMetadataSegmentManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))
-            .addBinding("mysql")
-            .to(SQLMetadataRuleManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
-            .addBinding("mysql")
-            .to(SQLMetadataRuleManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))
-            .addBinding("mysql")
-            .to(SQLMetadataSegmentPublisher.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentPublisherProvider.class))
-            .addBinding("mysql")
-            .to(SQLMetadataSegmentPublisherProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
-            .addBinding("mysql")
-            .to(SQLMetadataStorageActionHandlerFactory.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))
-            .addBinding("mysql")
-            .to(IndexerSQLMetadataStorageCoordinator.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageUpdaterJobHandler.class))
-            .addBinding("mysql")
-            .to(SQLMetadataStorageUpdaterJobHandler.class)
             .in(LazySingleton.class);
   }
 

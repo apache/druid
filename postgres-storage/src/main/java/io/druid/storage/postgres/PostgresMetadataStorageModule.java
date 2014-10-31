@@ -23,40 +23,29 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Provides;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerProvider;
-import io.druid.db.MetadataSegmentPublisherProvider;
 import io.druid.db.MetadataStorageConnector;
 import io.druid.db.MetadataStorageConnectorConfig;
 import io.druid.db.MetadataStorageTablesConfig;
 import io.druid.db.SQLMetadataConnector;
-import io.druid.db.SQLMetadataRuleManager;
-import io.druid.db.SQLMetadataRuleManagerProvider;
-import io.druid.db.SQLMetadataSegmentManager;
-import io.druid.db.SQLMetadataSegmentManagerProvider;
-import io.druid.db.SQLMetadataSegmentPublisher;
-import io.druid.db.SQLMetadataSegmentPublisherProvider;
-import io.druid.db.SQLMetadataStorageActionHandler;
-import io.druid.db.SQLMetadataStorageActionHandlerFactory;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
-import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandler;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
+import io.druid.guice.SQLMetadataStorageDruidModule;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.SegmentPublisher;
 import org.skife.jdbi.v2.IDBI;
 
 import java.util.List;
 
-public class PostgresMetadataStorageModule implements DruidModule
+public class PostgresMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule
 {
+
+  public static final String TYPE = "postgresql";
+
+  public PostgresMetadataStorageModule()
+  {
+    super(TYPE);
+  }
+
   @Override
   public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
   {
@@ -73,58 +62,13 @@ public class PostgresMetadataStorageModule implements DruidModule
 
   private void bindPostgres(Binder binder) {
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
-            .addBinding("postgresql")
+            .addBinding(TYPE)
             .to(PostgreSQLConnector.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SQLMetadataConnector.class))
-            .addBinding("postgresql")
+            .addBinding(TYPE)
             .to(PostgreSQLConnector.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentManager.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataSegmentManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentManagerProvider.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataSegmentManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataRuleManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataRuleManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataSegmentPublisher.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataStorageActionHandlerFactory.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentPublisherProvider.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataSegmentPublisherProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageUpdaterJobHandler.class))
-            .addBinding("postgresql")
-            .to(SQLMetadataStorageUpdaterJobHandler.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))
-            .addBinding("postgresql")
-            .to(IndexerSQLMetadataStorageCoordinator.class)
             .in(LazySingleton.class);
   }
 
