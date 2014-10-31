@@ -38,7 +38,7 @@ import java.util.List;
 
 /**
  */
-@Path("/druid/coordinator/v1/db")
+@Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
   private final MetadataSegmentManager metadataSegmentManager;
