@@ -22,8 +22,6 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.druid.db.DefaultSQLMetadataConnector;
-import io.druid.db.DerbyConnector;
 import io.druid.db.IndexerSQLMetadataStorageCoordinator;
 import io.druid.db.MetadataRuleManager;
 import io.druid.db.MetadataRuleManagerProvider;
