@@ -39,12 +39,9 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
   @Override
   public void configure(Binder binder)
   {
+    createBindingChoices(binder);
     super.configure(binder);
-    bindDataBaseDerby(binder);
-  }
 
-  private static void bindDataBaseDerby(Binder binder)
-  {
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
             .addBinding(TYPE)
             .to(DerbyConnector.class)

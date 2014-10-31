@@ -23,6 +23,6 @@ import org.skife.config.Config;
 
 public abstract class DbSegmentPublisherConfig
 {
-  @Config("druid.db.tables.segmentTable")
+  @Config("druid.metadata.storage.tables.segmentTable")
   public abstract String getSegmentTable();
 }

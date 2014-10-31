@@ -22,6 +22,10 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import io.druid.indexer.MetadataStorageUpdaterJobHandler;
+import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
+import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -37,14 +41,11 @@ import io.druid.metadata.SQLMetadataSegmentManagerProvider;
 import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
-import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
 import io.druid.segment.realtime.SegmentPublisher;
 
 public class SQLMetadataStorageDruidModule implements Module
 {
+  public static final String PROPERTY = "druid.metadata.storage.type";
   final String type;
 
   public SQLMetadataStorageDruidModule(String type)
@@ -52,43 +53,54 @@ public class SQLMetadataStorageDruidModule implements Module
     this.type = type;
   }
 
+  /**
+   * This function only needs to be called by the default SQL metadata storage module
+   * Other modules should default to calling super.configure(...) alone
+   */
+  public void createBindingChoices(Binder binder) {
+    PolyBind.createChoice(
+        binder, PROPERTY, Key.get(MetadataStorageConnector.class), null
+    );
+    PolyBind.createChoice(
+        binder, PROPERTY, Key.get(SQLMetadataConnector.class), null
+    );
+    PolyBind.createChoice(
+        binder, PROPERTY, Key.get(MetadataSegmentManager.class), Key.get(SQLMetadataSegmentManager.class)
+    );
+    PolyBind.createChoice(
+        binder,
+        PROPERTY, Key.get(MetadataSegmentManagerProvider.class), Key.get(SQLMetadataSegmentManagerProvider.class)
+    );
+    PolyBind.createChoice(
+        binder, PROPERTY, Key.get(MetadataRuleManager.class), Key.get(SQLMetadataRuleManager.class)
+    );
+    PolyBind.createChoice(
+        binder, PROPERTY, Key.get(MetadataRuleManagerProvider.class), Key.get(SQLMetadataRuleManagerProvider.class)
+    );
+    PolyBind.createChoice(
+        binder, PROPERTY, Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
+    );
+    PolyBind.createChoice(
+        binder,
+        PROPERTY, Key.get(MetadataSegmentPublisherProvider.class), Key.get(SQLMetadataSegmentPublisherProvider.class)
+    );
+    PolyBind.createChoice(
+        binder,
+        PROPERTY, Key.get(IndexerMetadataStorageCoordinator.class), Key.get(IndexerSQLMetadataStorageCoordinator.class)
+    );
+    PolyBind.createChoice(
+        binder,
+        PROPERTY, Key.get(MetadataStorageActionHandlerFactory.class), Key.get(SQLMetadataStorageActionHandlerFactory.class)
+    );
+    PolyBind.createChoice(
+        binder,
+        PROPERTY, Key.get(MetadataStorageUpdaterJobHandler.class), Key.get(SQLMetadataStorageUpdaterJobHandler.class)
+    );
+  }
+
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageConnector.class), null
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(SQLMetadataConnector.class), null
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentManager.class), Key.get(SQLMetadataSegmentManager.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentManagerProvider.class), Key.get(SQLMetadataSegmentManagerProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManager.class), Key.get(SQLMetadataRuleManager.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataRuleManagerProvider.class), Key.get(SQLMetadataRuleManagerProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataSegmentPublisherProvider.class), Key.get(SQLMetadataSegmentPublisherProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(IndexerMetadataStorageCoordinator.class), Key.get(IndexerSQLMetadataStorageCoordinator.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageActionHandlerFactory.class), Key.get(SQLMetadataStorageActionHandlerFactory.class)
-    );
-    PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageUpdaterJobHandler.class), Key.get(SQLMetadataStorageUpdaterJobHandler.class)
-    );
-
     PolyBind.optionBinder(binder, Key.get(MetadataSegmentManager.class))
             .addBinding(type)
             .to(SQLMetadataSegmentManager.class)

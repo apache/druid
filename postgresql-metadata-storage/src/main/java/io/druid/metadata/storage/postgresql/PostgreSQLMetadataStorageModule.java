@@ -22,17 +22,12 @@ package io.druid.metadata.storage.postgresql;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import com.google.inject.Provides;
-import io.druid.metadata.MetadataStorageConnector;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.metadata.SQLMetadataConnector;
-import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.guice.SQLMetadataStorageDruidModule;
 import io.druid.initialization.DruidModule;
-import org.skife.jdbi.v2.IDBI;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.SQLMetadataConnector;
 
 import java.util.List;
 
@@ -55,12 +50,8 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
   @Override
   public void configure(Binder binder)
   {
-    bindPostgres(binder);
-    JsonConfigProvider.bind(binder, "druid.db.tables", MetadataStorageTablesConfig.class);
-    JsonConfigProvider.bind(binder, "druid.db.connector", MetadataStorageConnectorConfig.class);
-  }
+    super.configure(binder);
 
-  private void bindPostgres(Binder binder) {
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
             .addBinding(TYPE)
             .to(PostgreSQLConnector.class)
@@ -70,12 +61,5 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
             .addBinding(TYPE)
             .to(PostgreSQLConnector.class)
             .in(LazySingleton.class);
-  }
-
-  @Provides
-  @LazySingleton
-  public IDBI getDbi(final PostgreSQLConnector dbConnector)
-  {
-    return dbConnector.getDBI();
   }
 }

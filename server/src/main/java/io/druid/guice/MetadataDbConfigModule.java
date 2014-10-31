@@ -31,8 +31,8 @@ public class MetadataDbConfigModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.db.tables", MetadataStorageTablesConfig.class);
-    JsonConfigProvider.bind(binder, "druid.db.connector", MetadataStorageConnectorConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", MetadataStorageConnectorConfig.class);
 
     JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
     JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
