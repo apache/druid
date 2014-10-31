@@ -22,6 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.metadata.DerbyConnector;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,7 +83,7 @@ public class SQLMetadataConnectorTest
             public Void withHandle(Handle handle) throws Exception
             {
               for(String table : tables) {
-                Assert.assertTrue(String.format("table $s was not created!", table), connector.tableExists(handle, table));
+                Assert.assertTrue(String.format("table $s was not created!", table), tableExists(handle, table));
               }
 
               return null;
@@ -167,4 +170,11 @@ public class SQLMetadataConnectorTest
     }
   }
 
+  private boolean tableExists(Handle handle, String tableName)
+  {
+    return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
+                  .bind("tableName", tableName.toUpperCase())
+                  .list()
+                  .isEmpty();
+  }
 }
