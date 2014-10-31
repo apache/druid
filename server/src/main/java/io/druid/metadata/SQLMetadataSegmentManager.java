@@ -85,16 +85,16 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       ObjectMapper jsonMapper,
       Supplier<MetadataSegmentManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      IDBI dbi
+      SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
-    this.dataSources = new AtomicReference<ConcurrentHashMap<String, DruidDataSource>>(
+    this.dataSources = new AtomicReference<>(
         new ConcurrentHashMap<String, DruidDataSource>()
     );
-    this.dbi = dbi;
+    this.dbi = connector.getDBI();
   }
 
   @LifecycleStart

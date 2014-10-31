@@ -33,7 +33,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataRuleManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
-  private final MetadataStorageConnector dbConnector;
+  private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
   private final IDBI dbi;
 
@@ -42,16 +42,15 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      MetadataStorageConnector dbConnector,
-      IDBI dbi,
+      SQLMetadataConnector connector,
       Lifecycle lifecycle
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
-    this.dbConnector = dbConnector;
-    this.dbi = dbi;
+    this.connector = connector;
+    this.dbi = connector.getDBI();
     this.lifecycle = lifecycle;
   }
 
@@ -65,7 +64,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
             @Override
             public void start() throws Exception
             {
-              dbConnector.createRulesTable();
+              connector.createRulesTable();
               SQLMetadataRuleManager.createDefaultRule(
                   dbi, dbTables.get().getRulesTable(), config.get().getDefaultRule(), jsonMapper
               );
@@ -83,6 +82,6 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       throw Throwables.propagate(e);
     }
 
-    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, dbi);
+    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, connector);
   }
 }

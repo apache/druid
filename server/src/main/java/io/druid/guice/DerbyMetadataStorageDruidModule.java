@@ -39,7 +39,7 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
   @Override
   public void configure(Binder binder)
   {
-    createBindingChoices(binder);
+    createBindingChoices(binder, TYPE);
     super.configure(binder);
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
@@ -51,12 +51,5 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
             .addBinding(TYPE)
             .to(DerbyConnector.class)
             .in(LazySingleton.class);
-  }
-
-  @Provides
-  @LazySingleton
-  public IDBI getDbi(final DerbyConnector dbConnector)
-  {
-    return dbConnector.getDBI();
   }
 }

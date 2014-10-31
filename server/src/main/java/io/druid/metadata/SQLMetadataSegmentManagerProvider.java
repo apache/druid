@@ -31,8 +31,8 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
 {
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
-  private final Supplier<MetadataStorageTablesConfig> dbTables;
-  private final MetadataStorageConnector dbConnector;
+  private final Supplier<MetadataStorageTablesConfig> storageConfig;
+  private final SQLMetadataConnector connector;
   private final IDBI dbi;
   private final Lifecycle lifecycle;
 
@@ -40,17 +40,16 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
   public SQLMetadataSegmentManagerProvider(
       ObjectMapper jsonMapper,
       Supplier<MetadataSegmentManagerConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables,
-      MetadataStorageConnector dbConnector,
-      IDBI dbi,
+      Supplier<MetadataStorageTablesConfig> storageConfig,
+      SQLMetadataConnector connector,
       Lifecycle lifecycle
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.dbTables = dbTables;
-    this.dbConnector = dbConnector;
-    this.dbi = dbi;
+    this.storageConfig = storageConfig;
+    this.connector = connector;
+    this.dbi = this.connector.getDBI();
     this.lifecycle = lifecycle;
   }
 
@@ -63,7 +62,7 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
           @Override
           public void start() throws Exception
           {
-            dbConnector.createSegmentTable();
+            connector.createSegmentTable();
           }
 
           @Override
@@ -77,8 +76,8 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
     return new SQLMetadataSegmentManager(
         jsonMapper,
         config,
-        dbTables,
-        dbi
+        storageConfig,
+        connector
     );
   }
 }

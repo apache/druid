@@ -19,14 +19,18 @@
 
 package io.druid.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.util.Arrays;
@@ -38,63 +42,68 @@ import java.util.Map;
 public class MetadataSegmentManagerTest
 {
   private SQLMetadataSegmentManager manager;
-  private IDBI dbi;
-  private List<Map<String, Object>> testRows;
+  private DBI dbi;
+  private List<DataSegment> testRows;
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Before
   public void setUp() throws Exception
   {
-    dbi = EasyMock.createMock(IDBI.class);
+    dbi = EasyMock.createMock(DBI.class);
+    final Supplier<MetadataStorageTablesConfig> dbTables = Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("test"));
     manager = new SQLMetadataSegmentManager(
         new DefaultObjectMapper(),
         Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
-        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("test")),
-        dbi
+        dbTables,
+        new SQLMetadataConnector(Suppliers.ofInstance(new MetadataStorageConnectorConfig()), dbTables)
+        {
+          @Override
+          protected String getSerialType()
+          {
+            return null;
+          }
+
+          @Override
+          protected boolean tableExists(Handle handle, String tableName)
+          {
+            return false;
+          }
+
+          @Override
+          public DBI getDBI()
+          {
+            return dbi;
+          }
+        }
     );
 
-    Map<String, Object> map1 = Maps.newHashMap();
-    map1.put("id", "wikipedia_editstream_2012-03-15T00:00:00.000Z_2012-03-16T00:00:00.000Z_2012-03-16T00:36:30.848Z");
-    map1.put("dataSource", "wikipedia_editstream");
-    map1.put("created_date", "2012-03-23T22:27:21.957Z");
-    map1.put("start", "2012-03-15T00:00:00.000Z");
-    map1.put("end", "2012-03-16T00:00:00.000Z");
-    map1.put("partitioned", 0);
-    map1.put("version", "2012-03-16T00:36:30.848Z");
-    map1.put("used", 1);
-    map1.put(
-        "payload", "{\"dataSource\":\"wikipedia_editstream\",\"interval\":"
-                   + "\"2012-03-15T00:00:00.000/2012-03-16T00:00:00.000\",\"version\":\"2012-03-16T00:36:30.848Z\""
-                   + ",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":\"metamx-kafka-data\",\"key\":"
-                   + "\"wikipedia-editstream/v3/beta-index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index"
-                   + ".zip\"},\"dimensions\":\"page,namespace,language,user,anonymous,robot,newPage,unpatrolled,"
-                   + "geo,continent_code,country_name,city,region_lookup,dma_code,area_code,network,postal_code\""
-                   + ",\"metrics\":\"count,delta,variation,added,deleted\",\"shardSpec\":{\"type\":\"none\"},"
-                   + "\"size\":26355195,\"identifier\":\"wikipedia_editstream_2012-03-15T00:00:00.000Z_2012-03-16"
-                   + "T00:00:00.000Z_2012-03-16T00:36:30.848Z\"}"
+    DataSegment segment1 = jsonMapper.readValue(
+        "{\"dataSource\":\"wikipedia_editstream\",\"interval\":"
+        + "\"2012-03-15T00:00:00.000/2012-03-16T00:00:00.000\",\"version\":\"2012-03-16T00:36:30.848Z\""
+        + ",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":\"metamx-kafka-data\",\"key\":"
+        + "\"wikipedia-editstream/v3/beta-index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index"
+        + ".zip\"},\"dimensions\":\"page,namespace,language,user,anonymous,robot,newPage,unpatrolled,"
+        + "geo,continent_code,country_name,city,region_lookup,dma_code,area_code,network,postal_code\""
+        + ",\"metrics\":\"count,delta,variation,added,deleted\",\"shardSpec\":{\"type\":\"none\"},"
+        + "\"size\":26355195,\"identifier\":\"wikipedia_editstream_2012-03-15T00:00:00.000Z_2012-03-16"
+        + "T00:00:00.000Z_2012-03-16T00:36:30.848Z\"}",
+        DataSegment.class
     );
 
-    Map<String, Object> map2 = Maps.newHashMap();
-    map2.put("id", "twitterstream_2012-01-05T00:00:00.000Z_2012-01-06T00:00:00.000Z_2012-01-06T22:19:12.565Z");
-    map2.put("dataSource", "twitterstream");
-    map2.put("created_date", "2012-03-23T22:27:21.988Z");
-    map2.put("start", "2012-01-05T00:00:00.000Z");
-    map2.put("end", "2012-01-06T00:00:00.000Z");
-    map2.put("partitioned", 0);
-    map2.put("version", "2012-01-06T22:19:12.565Z");
-    map2.put("used", 1);
-    map2.put(
-        "payload", "{\"dataSource\":\"twitterstream\",\"interval\":\"2012-01-05T00:00:00.000/2012-01-06T00:00:00.000\","
-                   + "\"version\":\"2012-01-06T22:19:12.565Z\",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":"
-                   + "\"metamx-twitterstream\",\"key\":\"index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip\"}"
-                   + ",\"dimensions\":\"user_name,user_lang,user_time_zone,user_location,"
-                   + "user_mention_name,has_mention,reply_to_name,first_hashtag,rt_name,url_domain,has_links,"
-                   + "has_geo,is_retweet,is_viral\",\"metrics\":\"count,tweet_length,num_followers,num_links,"
-                   + "num_mentions,num_hashtags,num_favorites,user_total_tweets\",\"shardSpec\":{\"type\":\"none\"},"
-                   + "\"size\":511804455,\"identifier\":"
-                   + "\"twitterstream_2012-01-05T00:00:00.000Z_2012-01-06T00:00:00.000Z_2012-01-06T22:19:12.565Z\"}"
+    DataSegment segment2 = jsonMapper.readValue(
+        "{\"dataSource\":\"twitterstream\",\"interval\":\"2012-01-05T00:00:00.000/2012-01-06T00:00:00.000\","
+        + "\"version\":\"2012-01-06T22:19:12.565Z\",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":"
+        + "\"metamx-twitterstream\",\"key\":\"index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip\"}"
+        + ",\"dimensions\":\"user_name,user_lang,user_time_zone,user_location,"
+        + "user_mention_name,has_mention,reply_to_name,first_hashtag,rt_name,url_domain,has_links,"
+        + "has_geo,is_retweet,is_viral\",\"metrics\":\"count,tweet_length,num_followers,num_links,"
+        + "num_mentions,num_hashtags,num_favorites,user_total_tweets\",\"shardSpec\":{\"type\":\"none\"},"
+        + "\"size\":511804455,\"identifier\":"
+        + "\"twitterstream_2012-01-05T00:00:00.000Z_2012-01-06T00:00:00.000Z_2012-01-06T22:19:12.565Z\"}",
+        DataSegment.class
     );
 
-    testRows = Arrays.<Map<String, Object>>asList(map1, map2);
+    testRows = Arrays.<DataSegment>asList(segment1, segment2);
   }
 
   @After

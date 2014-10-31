@@ -64,12 +64,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public IndexerSQLMetadataStorageCoordinator(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig dbTables,
-      IDBI dbi
+      SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
-    this.dbi = dbi;
+    this.dbi = connector.getDBI();
   }
 
   public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)

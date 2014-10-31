@@ -32,7 +32,7 @@ public class SQLMetadataSegmentPublisherProvider implements MetadataSegmentPubli
 {
   @JacksonInject
   @NotNull
-  private IDBI idbi = null;
+  private SQLMetadataConnector connector = null;
 
   @JacksonInject
   @NotNull
@@ -45,6 +45,6 @@ public class SQLMetadataSegmentPublisherProvider implements MetadataSegmentPubli
   @Override
   public SegmentPublisher get()
   {
-    return new SQLMetadataSegmentPublisher(jsonMapper, config, idbi);
+    return new SQLMetadataSegmentPublisher(jsonMapper, config, connector);
   }
 }

@@ -35,13 +35,12 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
 
   @Inject
   public SQLMetadataStorageActionHandlerFactory(
-      IDBI dbi,
       SQLMetadataConnector connector,
       MetadataStorageTablesConfig config,
       ObjectMapper jsonMapper
   )
   {
-    this.dbi = dbi;
+    this.dbi = connector.getDBI();
     this.connector = connector;
     this.config = config;
     this.jsonMapper = jsonMapper;

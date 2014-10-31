@@ -21,6 +21,8 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.SQLMetadataConnector;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -39,9 +41,9 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
   private final IDBI dbi;
 
   @Inject
-  public SQLMetadataStorageUpdaterJobHandler(IDBI dbi)
+  public SQLMetadataStorageUpdaterJobHandler(SQLMetadataConnector connector)
   {
-    this.dbi = dbi;
+    this.dbi = connector.getDBI();
   }
 
   public void publishSegments(final String tableName, final List<DataSegment> segments, final ObjectMapper mapper)

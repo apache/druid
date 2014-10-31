@@ -57,44 +57,76 @@ public class SQLMetadataStorageDruidModule implements Module
    * This function only needs to be called by the default SQL metadata storage module
    * Other modules should default to calling super.configure(...) alone
    */
-  public void createBindingChoices(Binder binder) {
-    PolyBind.createChoice(
-        binder, PROPERTY, Key.get(MetadataStorageConnector.class), null
+  public void createBindingChoices(Binder binder, String defaultPropertyValue)
+  {
+    PolyBind.createChoiceWithDefault(
+        binder, PROPERTY, Key.get(MetadataStorageConnector.class), null, defaultPropertyValue
     );
-    PolyBind.createChoice(
-        binder, PROPERTY, Key.get(SQLMetadataConnector.class), null
+    PolyBind.createChoiceWithDefault(
+        binder, PROPERTY, Key.get(SQLMetadataConnector.class), null, defaultPropertyValue
     );
-    PolyBind.createChoice(
-        binder, PROPERTY, Key.get(MetadataSegmentManager.class), Key.get(SQLMetadataSegmentManager.class)
-    );
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
-        PROPERTY, Key.get(MetadataSegmentManagerProvider.class), Key.get(SQLMetadataSegmentManagerProvider.class)
+        PROPERTY,
+        Key.get(MetadataSegmentManager.class),
+        Key.get(SQLMetadataSegmentManager.class),
+        defaultPropertyValue
     );
-    PolyBind.createChoice(
-        binder, PROPERTY, Key.get(MetadataRuleManager.class), Key.get(SQLMetadataRuleManager.class)
-    );
-    PolyBind.createChoice(
-        binder, PROPERTY, Key.get(MetadataRuleManagerProvider.class), Key.get(SQLMetadataRuleManagerProvider.class)
-    );
-    PolyBind.createChoice(
-        binder, PROPERTY, Key.get(SegmentPublisher.class), Key.get(SQLMetadataSegmentPublisher.class)
-    );
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
-        PROPERTY, Key.get(MetadataSegmentPublisherProvider.class), Key.get(SQLMetadataSegmentPublisherProvider.class)
+        PROPERTY,
+        Key.get(MetadataSegmentManagerProvider.class),
+        Key.get(SQLMetadataSegmentManagerProvider.class),
+        defaultPropertyValue
     );
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
-        PROPERTY, Key.get(IndexerMetadataStorageCoordinator.class), Key.get(IndexerSQLMetadataStorageCoordinator.class)
+        PROPERTY,
+        Key.get(MetadataRuleManager.class),
+        Key.get(SQLMetadataRuleManager.class),
+        defaultPropertyValue
     );
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
-        PROPERTY, Key.get(MetadataStorageActionHandlerFactory.class), Key.get(SQLMetadataStorageActionHandlerFactory.class)
+        PROPERTY,
+        Key.get(MetadataRuleManagerProvider.class),
+        Key.get(SQLMetadataRuleManagerProvider.class),
+        defaultPropertyValue
     );
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
-        PROPERTY, Key.get(MetadataStorageUpdaterJobHandler.class), Key.get(SQLMetadataStorageUpdaterJobHandler.class)
+        PROPERTY,
+        Key.get(SegmentPublisher.class),
+        Key.get(SQLMetadataSegmentPublisher.class),
+        defaultPropertyValue
+    );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY,
+        Key.get(MetadataSegmentPublisherProvider.class),
+        Key.get(SQLMetadataSegmentPublisherProvider.class),
+        defaultPropertyValue
+    );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY,
+        Key.get(IndexerMetadataStorageCoordinator.class),
+        Key.get(IndexerSQLMetadataStorageCoordinator.class),
+        defaultPropertyValue
+    );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY,
+        Key.get(MetadataStorageActionHandlerFactory.class),
+        Key.get(SQLMetadataStorageActionHandlerFactory.class),
+        defaultPropertyValue
+    );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY,
+        Key.get(MetadataStorageUpdaterJobHandler.class),
+        Key.get(SQLMetadataStorageUpdaterJobHandler.class),
+        defaultPropertyValue
     );
   }
 

@@ -141,13 +141,13 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       @Json ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      IDBI dbi
+      SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
-    this.dbi = dbi;
+    this.dbi = connector.getDBI();
 
     this.rules = new AtomicReference<>(
         ImmutableMap.<String, List<Rule>>of()

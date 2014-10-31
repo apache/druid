@@ -49,12 +49,12 @@ public class SQLMetadataSegmentPublisher implements SegmentPublisher
   public SQLMetadataSegmentPublisher(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig config,
-      IDBI dbi
+      SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.dbi = dbi;
+    this.dbi = connector.getDBI();
     this.statement = String.format(
         "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
         + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
