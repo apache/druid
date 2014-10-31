@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -31,6 +32,7 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.db.IndexerSQLMetadataStorageCoordinator;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
@@ -43,17 +45,20 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
+import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
-import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
@@ -180,6 +185,24 @@ public class CliOverlord extends ServerRunnable
 
             storageBinder.addBinding("db").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
             binder.bind(MetadataTaskStorage.class).in(LazySingleton.class);
+
+            // gotta love type erasure
+            binder.bind(TypeReference.class).annotatedWith(Names.named("taskType")).toInstance(
+                new TypeReference<Task>()
+                {
+                }
+            );
+            binder.bind(TypeReference.class).annotatedWith(Names.named("taskStatusType")).toInstance(new TypeReference<TaskStatus>(){});
+            binder.bind(TypeReference.class).annotatedWith(Names.named("taskActionType")).toInstance(
+                new TypeReference<TaskAction>()
+                {
+                }
+            );
+            binder.bind(TypeReference.class).annotatedWith(Names.named("taskLockType")).toInstance(
+                new TypeReference<TaskLock>()
+                {
+                }
+            );
           }
 
           private void configureRunners(Binder binder)

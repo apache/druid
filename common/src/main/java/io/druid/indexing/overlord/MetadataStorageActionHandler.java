@@ -19,48 +19,51 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.common.base.Optional;
+import com.metamx.common.Pair;
+import org.joda.time.DateTime;
+
 import java.util.List;
 import java.util.Map;
 
-public interface MetadataStorageActionHandler
+public interface MetadataStorageActionHandler<TaskType, TaskStatusType, TaskActionType, TaskLockType>
 {
   /* Insert stuff on the table */
   public void insert(
-      String tableName,
       String id,
-      String createdDate,
+      DateTime createdDate,
       String dataSource,
-      byte[] payload,
-      int active,
-      byte[] statusPayload
-  ) throws Exception;
+      TaskType task,
+      boolean active,
+      TaskStatusType status
+  ) throws TaskExistsException;
 
   /* Insert stuff. @returns 1 if status of the task with the given id has been updated successfully */
-  public int setStatus(String tableName, String Id, int active, byte[] statusPayload);
+  public boolean setStatus(String taskId, boolean active, TaskStatusType statusPayload);
 
   /* Retrieve a task with the given ID */
-  public List<Map<String, Object>> getTask(String tableName, String Id);
+  public Optional<TaskType> getTask(String taskId);
 
   /* Retrieve a task status with the given ID */
-  public List<Map<String, Object>> getTaskStatus(String tableName, String Id);
+  public Optional<TaskStatusType> getTaskStatus(String taskId);
 
   /* Retrieve active tasks */
-  public List<Map<String, Object>> getActiveTasks(String tableName);
+  public List<Pair<TaskType, TaskStatusType>> getActiveTasksWithStatus();
 
   /* Retrieve task statuses that have been created sooner than the given time */
-  public List<Map<String, Object>> getRecentlyFinishedTaskStatuses(String tableName, String recent);
+  public List<TaskStatusType> getRecentlyFinishedTaskStatuses(DateTime start);
 
   /* Add lock to the task with given ID */
-  public int addLock(String tableName, String Id, byte[] lock);
+  public int addLock(String taskId, TaskLockType lock);
 
   /* Remove taskLock with given ID */
-  public int removeLock(String tableName, long lockId);
+  public int removeLock(long lockId);
 
-  public int addAuditLog(String tableName, String Id, byte[] taskAction);
+  public int addAuditLog(String taskId, TaskActionType taskAction);
 
   /* Get logs for task with given ID */
-  public List<Map<String, Object>> getTaskLogs(String tableName, String Id);
+  public List<TaskActionType> getTaskLogs(String taskId);
 
   /* Get locks for task with given ID */
-  public List<Map<String, Object>> getTaskLocks(String tableName, String Id);
+  public Map<Long, TaskLockType> getTaskLocks(String taskId);
 }

@@ -19,57 +19,49 @@
 
 package io.druid.indexing.overlord;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.db.MetadataStorageConnector;
-import io.druid.db.MetadataStorageTablesConfig;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.db.MetadataStorageConnector;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.exceptions.CallbackFailedException;
-import org.skife.jdbi.v2.exceptions.StatementException;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
 public class MetadataTaskStorage implements TaskStorage
 {
-  private final ObjectMapper jsonMapper;
   private final MetadataStorageConnector metadataStorageConnector;
-  private final MetadataStorageTablesConfig dbTables;
   private final TaskStorageConfig config;
-  private final MetadataStorageActionHandler handler;
+  private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
 
   private static final EmittingLogger log = new EmittingLogger(MetadataTaskStorage.class);
 
   @Inject
   public MetadataTaskStorage(
-      final ObjectMapper jsonMapper,
       final MetadataStorageConnector metadataStorageConnector,
-      final MetadataStorageTablesConfig dbTables,
       final TaskStorageConfig config,
       final MetadataStorageActionHandler handler
   )
   {
-    this.jsonMapper = jsonMapper;
     this.metadataStorageConnector = metadataStorageConnector;
-    this.dbTables = dbTables;
     this.config = config;
-    this.handler = handler;
+    // this is a little janky but haven't figured out how to get Guice to do this yet.
+    this.handler = (MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock>) handler;
   }
 
   @LifecycleStart
@@ -100,23 +92,19 @@ public class MetadataTaskStorage implements TaskStorage
 
     try {
       handler.insert(
-          dbTables.getTasksTable(),
           task.getId(),
-          new DateTime().toString(),
+          new DateTime(),
           task.getDataSource(),
-          jsonMapper.writeValueAsBytes(task),
-          status.isRunnable() ? 1 : 0,
-          jsonMapper.writeValueAsBytes(status)
+          task,
+          status.isRunnable(),
+          status
       );
     }
     catch (Exception e) {
-      final boolean isStatementException =  e instanceof StatementException ||
-                                            (e instanceof CallbackFailedException
-                                             && e.getCause() instanceof StatementException);
-      if (isStatementException && getTask(task.getId()).isPresent()) {
-        throw new TaskExistsException(task.getId(), e);
+      if(e instanceof TaskExistsException) {
+        throw (TaskExistsException) e;
       } else {
-        throw Throwables.propagate(e);
+        Throwables.propagate(e);
       }
     }
   }
@@ -128,103 +116,77 @@ public class MetadataTaskStorage implements TaskStorage
 
     log.info("Updating task %s to status: %s", status.getId(), status);
 
-    try {
-      int updated = handler.setStatus(
-          dbTables.getTasksTable(),
-          status.getId(),
-          status.isRunnable() ? 1 : 0,
-          jsonMapper.writeValueAsBytes(status)
-      );
-      if (updated != 1) {
-        throw new IllegalStateException(String.format("Active task not found: %s", status.getId()));
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+    final boolean set = handler.setStatus(
+        status.getId(),
+        status.isRunnable(),
+        status
+    );
+    if (!set) {
+      throw new IllegalStateException(String.format("Active task not found: %s", status.getId()));
     }
   }
 
   @Override
-  public Optional<Task> getTask(final String taskid)
+  public Optional<Task> getTask(final String taskId)
   {
-    try {
-      final List<Map<String, Object>> dbTasks = handler.getTask(dbTables.getTasksTable(), taskid);
-      if (dbTasks.size() == 0) {
-        return Optional.absent();
-      } else {
-        final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbTasks);
-        return Optional.of(jsonMapper.readValue((byte[]) dbStatus.get("payload"), Task.class));
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+      return handler.getTask(taskId);
   }
 
   @Override
-  public Optional<TaskStatus> getStatus(final String taskid)
+  public Optional<TaskStatus> getStatus(final String taskId)
   {
-    try {
-      final List<Map<String, Object>> dbStatuses = handler.getTaskStatus(dbTables.getTasksTable(), taskid);
-      if (dbStatuses.size() == 0) {
-        return Optional.absent();
-      } else {
-        final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbStatuses);
-        return Optional.of(jsonMapper.readValue((byte[]) dbStatus.get("status_payload"), TaskStatus.class));
-      }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    return handler.getTaskStatus(taskId);
   }
 
   @Override
   public List<Task> getActiveTasks()
   {
-    final List<Map<String, Object>> dbTasks = handler.getActiveTasks(dbTables.getTasksTable());
-
-    final ImmutableList.Builder<Task> tasks = ImmutableList.builder();
-    for (final Map<String, Object> row : dbTasks) {
-     final String id = row.get("id").toString();
-
-     try {
-       final Task task = jsonMapper.readValue((byte[]) row.get("payload"), Task.class);
-       final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
-
-       if (status.isRunnable()) {
-         tasks.add(task);
-       }
-     }
-     catch (Exception e) {
-       log.makeAlert(e, "Failed to parse task payload").addData("task", id).emit();
-     }
-    }
-
-    return tasks.build();
+    return ImmutableList.copyOf(
+        Iterables.transform(
+            Iterables.filter(
+                handler.getActiveTasksWithStatus(),
+                new Predicate<Pair<Task, TaskStatus>>()
+                {
+                  @Override
+                  public boolean apply(
+                      @Nullable Pair<Task, TaskStatus> input
+                  )
+                  {
+                    return input.rhs.isRunnable();
+                  }
+                }
+            ),
+            new Function<Pair<Task, TaskStatus>, Task>()
+            {
+              @Nullable
+              @Override
+              public Task apply(@Nullable Pair<Task, TaskStatus> input)
+              {
+                return input.lhs;
+              }
+            }
+        )
+    );
   }
 
   @Override
   public List<TaskStatus> getRecentlyFinishedTaskStatuses()
   {
-    final DateTime recent = new DateTime().minus(config.getRecentlyFinishedThreshold());
+    final DateTime start = new DateTime().minus(config.getRecentlyFinishedThreshold());
 
-    final List<Map<String, Object>> dbTasks = handler.getRecentlyFinishedTaskStatuses(dbTables.getTasksTable(), recent.toString());
-    final ImmutableList.Builder<TaskStatus> statuses = ImmutableList.builder();
-    for (final Map<String, Object> row : dbTasks) {
-      final String id = row.get("id").toString();
-
-      try {
-        final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
-        if (status.isComplete()) {
-          statuses.add(status);
-        }
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to parse status payload").addData("task", id).emit();
-      }
-    }
-
-    return statuses.build();
+    return ImmutableList.copyOf(
+        Iterables.filter(
+            handler.getRecentlyFinishedTaskStatuses(start),
+            new Predicate<TaskStatus>()
+            {
+              @Override
+              public boolean apply(TaskStatus status)
+              {
+                return status.isComplete();
+              }
+            }
+        )
+    );
   }
 
   @Override
@@ -240,14 +202,7 @@ public class MetadataTaskStorage implements TaskStorage
         taskid
     );
 
-    try {
-      handler.addLock(dbTables.getTaskLockTable(), taskid, jsonMapper.writeValueAsBytes(taskLock));
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-
+    handler.addLock(taskid, taskLock);
   }
 
   @Override
@@ -264,7 +219,7 @@ public class MetadataTaskStorage implements TaskStorage
 
       if (taskLock.equals(taskLockToRemove)) {
         log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
-        handler.removeLock(dbTables.getTaskLockTable(), id);
+        handler.removeLock(id);
       }
     }
   }
@@ -293,52 +248,17 @@ public class MetadataTaskStorage implements TaskStorage
 
     log.info("Logging action for task[%s]: %s", task.getId(), taskAction);
 
-    try {
-      handler.addAuditLog(dbTables.getTaskLogTable(), task.getId(), jsonMapper.writeValueAsBytes(taskAction));
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+    handler.addAuditLog(task.getId(), taskAction);
   }
 
   @Override
-  public List<TaskAction> getAuditLogs(final String taskid)
+  public List<TaskAction> getAuditLogs(final String taskId)
   {
-    final List<Map<String, Object>> dbTaskLogs = handler.getTaskLogs(dbTables.getTaskLogTable(), taskid);
-    final List<TaskAction> retList = Lists.newArrayList();
-    for (final Map<String, Object> dbTaskLog : dbTaskLogs) {
-      try {
-        retList.add(jsonMapper.readValue((byte[]) dbTaskLog.get("log_payload"), TaskAction.class));
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to deserialize TaskLog")
-           .addData("task", taskid)
-           .addData("logPayload", dbTaskLog)
-           .emit();
-      }
-    }
-    return retList;
+    return handler.getTaskLogs(taskId);
   }
 
   private Map<Long, TaskLock> getLocksWithIds(final String taskid)
   {
-    final List<Map<String, Object>> dbTaskLocks = handler.getTaskLocks(dbTables.getTaskLockTable(), taskid);
-
-    final Map<Long, TaskLock> retMap = Maps.newHashMap();
-    for (final Map<String, Object> row : dbTaskLocks) {
-      try {
-        retMap.put(
-            (Long) row.get("id"),
-            jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class)
-        );
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to deserialize TaskLock")
-           .addData("task", taskid)
-           .addData("lockPayload", row)
-           .emit();
-      }
-    }
-    return retMap;
+    return handler.getTaskLocks(taskid);
   }
 }
