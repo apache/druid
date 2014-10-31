@@ -23,27 +23,25 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.druid.db.DerbyConnector;
+import io.druid.db.IndexerSQLMetadataStorageCoordinator;
+import io.druid.db.MetadataRuleManager;
+import io.druid.db.MetadataRuleManagerProvider;
+import io.druid.db.MetadataSegmentManager;
+import io.druid.db.MetadataSegmentManagerProvider;
+import io.druid.db.MetadataSegmentPublisherProvider;
+import io.druid.db.MetadataStorageConnector;
 import io.druid.db.SQLMetadataConnector;
 import io.druid.db.SQLMetadataRuleManager;
 import io.druid.db.SQLMetadataRuleManagerProvider;
 import io.druid.db.SQLMetadataSegmentManager;
 import io.druid.db.SQLMetadataSegmentManagerProvider;
-import io.druid.db.IndexerSQLMetadataStorageCoordinator;
-import io.druid.db.MetadataRuleManager;
-import io.druid.db.MetadataSegmentManager;
-import io.druid.db.MetadataSegmentManagerProvider;
-import io.druid.db.MetadataStorageConnector;
-import io.druid.db.MetadataSegmentPublisherProvider;
-import io.druid.db.MetadataRuleManagerProvider;
-import io.druid.db.DerbyConnector;
-import io.druid.db.SQLMetadataStorageActionHandler;
 import io.druid.db.SQLMetadataSegmentPublisher;
 import io.druid.db.SQLMetadataSegmentPublisherProvider;
 import io.druid.db.SQLMetadataStorageActionHandlerFactory;
-import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
+import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandler;
 import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
 import io.druid.segment.realtime.SegmentPublisher;
 import org.skife.jdbi.v2.IDBI;
@@ -83,7 +81,7 @@ public class DerbyMetadataStorageDruidModule implements Module
         binder, "druid.db.type", Key.get(IndexerMetadataStorageCoordinator.class), Key.get(IndexerSQLMetadataStorageCoordinator.class)
     );
     PolyBind.createChoice(
-        binder, "druid.db.type", Key.get(MetadataStorageActionHandler.class), Key.get(SQLMetadataStorageActionHandler.class)
+        binder, "druid.db.type", Key.get(MetadataStorageActionHandlerFactory.class), Key.get(SQLMetadataStorageActionHandlerFactory.class)
     );
     PolyBind.createChoice(
         binder, "druid.db.type", Key.get(MetadataStorageUpdaterJobHandler.class), Key.get(SQLMetadataStorageUpdaterJobHandler.class)
