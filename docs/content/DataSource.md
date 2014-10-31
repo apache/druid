@@ -17,12 +17,12 @@ The table data source is the most common type. It's represented by a string, or 
 ```
 
 ### Union Data Source
-This data source unions two table data sources.
+This data source unions two or more table data sources.
 
 ```json
 {
        "type": "union",
-       "dataSources": ["<string_value1>", "string_value2>"]
+       "dataSources": ["<string_value1>", "<string_value2>", "<string_value3>", ... ]]
 }
 ```
 
