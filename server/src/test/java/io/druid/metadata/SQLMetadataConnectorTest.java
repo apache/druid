@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import io.druid.jackson.DefaultObjectMapper;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.skife.jdbi.v2.Batch;
@@ -52,8 +52,10 @@ public class SQLMetadataConnectorTest
         MetadataStorageConnectorConfig.class
     );
 
-    connector = new DerbyConnector(Suppliers.ofInstance(config),
-                                  Suppliers.ofInstance(tablesConfig));
+    connector = new DerbyConnector(
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(tablesConfig)
+    );
     dbi = connector.getDBI();
   }
 
@@ -80,7 +82,10 @@ public class SQLMetadataConnectorTest
             public Void withHandle(Handle handle) throws Exception
             {
               for(String table : tables) {
-                Assert.assertTrue(String.format("table $s was not created!", table), tableExists(handle, table));
+                Assert.assertTrue(
+                    String.format("table $s was not created!", table),
+                    connector.tableExists(handle, table)
+                );
               }
 
               return null;
@@ -165,13 +170,5 @@ public class SQLMetadataConnectorTest
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  private boolean tableExists(Handle handle, String tableName)
-  {
-    return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
-                  .bind("tableName", tableName.toUpperCase())
-                  .list()
-                  .isEmpty();
   }
 }
