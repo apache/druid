@@ -19,8 +19,9 @@
 
 package io.druid.query.topn;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
+import com.apple.concurrent.Dispatch;
+import com.google.common.base.Function;
+import com.google.common.collect.*;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
@@ -28,22 +29,24 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
+ * Created by charlesallen on 10/29/14.
  */
-public class TopNNumericResultBuilder implements TopNResultBuilder
-{
+public class TopNNumericResultBuilder implements TopNResultBuilder{
+
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String metricName;
   private final List<AggregatorFactory> aggFactories;
   private final List<PostAggregator> postAggs;
-  private MinMaxPriorityQueue<DimValHolder> pQueue = null;
+  private final PriorityQueue<DimValHolder> pQueue;
+  private final Comparator<DimValHolder> dimValComparator;
+  private final Comparator<String> dimNameComparator;
+  private final int threshold;
+  private final Comparator metricComparator;
 
   public TopNNumericResultBuilder(
       DateTime timestamp,
@@ -60,18 +63,46 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.metricName = metricName;
     this.aggFactories = aggFactories;
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
+    this.threshold = threshold;
+    this.metricComparator = comparator;
+    this.dimNameComparator = new Comparator<String>(){
+      @Override
+      public int compare(String o1, String o2) {
+        int retval;
+        if(o1 == null){
+          retval =  -1;
+        }else if (o2 == null){
+          retval = 1;
+        } else {
+          retval = o1.compareTo(o2);
+        }
+        return retval;
+      }
+    };
+    this.dimValComparator = new Comparator<DimValHolder>() {
+      @Override
+      public int compare(DimValHolder d1, DimValHolder d2) {
+        int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
-    instantiatePQueue(threshold, comparator);
+        if (retVal == 0) {
+          retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
+        }
+
+        return retVal;
+      }
+    };
+
+    pQueue = new PriorityQueue<>(this.threshold + 1, this.dimValComparator);
   }
 
   @Override
-  public TopNResultBuilder addEntry(
+  public TopNNumericResultBuilder addEntry(
       String dimName,
       Object dimValIndex,
       Object[] metricVals
   )
   {
-    Map<String, Object> metricValues = Maps.newLinkedHashMap();
+    final Map<String, Object> metricValues = Maps.newLinkedHashMap();
 
     metricValues.put(dimSpec.getOutputName(), dimName);
 
@@ -85,27 +116,45 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     }
 
     Object topNMetricVal = metricValues.get(metricName);
-    pQueue.add(
-        new DimValHolder.Builder().withTopNMetricVal(topNMetricVal)
-                                  .withDirName(dimName)
-                                  .withDimValIndex(dimValIndex)
-                                  .withMetricValues(metricValues)
-                                  .build()
-    );
+
+    if(shouldAdd(topNMetricVal)){
+      DimValHolder dimValHolder = new DimValHolder.Builder()
+          .withTopNMetricVal(topNMetricVal)
+          .withDirName(dimName)
+          .withDimValIndex(dimValIndex)
+          .withMetricValues(metricValues)
+          .build();
+      pQueue.add(dimValHolder);
+    }
+    if(this.pQueue.size() > this.threshold){
+      pQueue.poll();
+    }
 
     return this;
+  }
+
+  private boolean shouldAdd(Object topNMetricVal){
+    final boolean belowThreshold = pQueue.size()<this.threshold;
+    final boolean belowMax =  belowThreshold || this.metricComparator.compare(pQueue.peek().getTopNMetricVal(), topNMetricVal)<0;
+    return belowMax;
   }
 
   @Override
   public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
   {
-    pQueue.add(
-        new DimValHolder.Builder().withTopNMetricVal(dimensionAndMetricValueExtractor.getDimensionValue(metricName))
-                                  .withDirName(dimSpec.getOutputName())
-                                  .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
-                                  .build()
-    );
+    final Object dimValue = dimensionAndMetricValueExtractor.getDimensionValue(metricName);
 
+    if(shouldAdd(dimValue)){
+      final DimValHolder valHolder = new DimValHolder.Builder()
+          .withTopNMetricVal(dimValue)
+          .withDirName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
+          .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
+          .build();
+      pQueue.add(valHolder);
+    }
+    if(pQueue.size() > this.threshold){
+      pQueue.poll(); // throw away
+    }
     return this;
   }
 
@@ -116,43 +165,35 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   }
 
   @Override
-  public Result<TopNResultValue> build()
-  {
-    // Pull out top aggregated values
-    List<Map<String, Object>> values = new ArrayList<Map<String, Object>>(pQueue.size());
-    while (!pQueue.isEmpty()) {
-      values.add(pQueue.remove().getMetricValues());
-    }
+  public Result<TopNResultValue> build() {
+    final DimValHolder [] holderValueArray = pQueue.toArray(new DimValHolder[0]);
+    Arrays.sort(holderValueArray,  new Comparator<DimValHolder>() {
+      @Override
+      public int compare(DimValHolder d1, DimValHolder d2) {
+        int retVal = -metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
+        if (retVal == 0) {
+          retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
+        }
+
+        return retVal;
+      }
+    });
+    List<DimValHolder> holderValues = Arrays.asList(holderValueArray);
+
+    // Pull out top aggregated values
+    final List<Map<String, Object>> values = Lists.transform(
+        holderValues,
+        new Function<DimValHolder, Map<String, Object>>() {
+          @Override
+          public Map<String, Object> apply(DimValHolder valHolder) {
+            return valHolder.getMetricValues();
+          }
+        }
+    );
     return new Result<TopNResultValue>(
         timestamp,
         new TopNResultValue(values)
     );
-  }
-
-  private void instantiatePQueue(int threshold, final Comparator comparator)
-  {
-    this.pQueue = MinMaxPriorityQueue.orderedBy(
-        new Comparator<DimValHolder>()
-        {
-          @Override
-          public int compare(DimValHolder d1, DimValHolder d2)
-          {
-            int retVal = comparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
-
-            if (retVal == 0) {
-              if (d1.getDimName() == null) {
-                retVal = -1;
-              } else if (d2.getDimName() == null) {
-                retVal = 1;
-              } else {
-                retVal = d1.getDimName().compareTo(d2.getDimName());
-              }
-            }
-
-            return retVal;
-          }
-        }
-    ).maximumSize(threshold).create();
   }
 }
