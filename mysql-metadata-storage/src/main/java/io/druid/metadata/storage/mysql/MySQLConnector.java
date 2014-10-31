@@ -20,6 +20,7 @@
 package io.druid.metadata.storage.mysql;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
@@ -51,18 +52,9 @@ public class MySQLConnector extends SQLMetadataConnector
     // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
     datasource.setDriverClassName("com.mysql.jdbc.Driver");
+    datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
 
     this.dbi = new DBI(datasource);
-
-    dbi.withHandle(new HandleCallback<Void>()
-                   {
-                     @Override
-                     public Void withHandle(Handle handle) throws Exception
-                     {
-                       handle.createStatement("SET sql_mode='ANSI_QUOTES'").execute();
-                       return null;
-                     }
-                   });
   }
 
   @Override
