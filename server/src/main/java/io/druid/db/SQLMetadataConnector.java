@@ -130,8 +130,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);", tableName),
-            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used);", tableName)
+            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName),
+            String.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName)
         )
     );
   }
@@ -152,7 +152,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource);", tableName)
+            String.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName)
         )
     );
   }
@@ -193,7 +193,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date);", tableName)
+            String.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
         )
     );
   }
@@ -213,7 +213,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);", tableName)
+            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id)", tableName)
         )
     );
   }
@@ -233,7 +233,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id);", tableName)
+            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id)", tableName)
         )
     );
   }
