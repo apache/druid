@@ -40,6 +40,7 @@ import io.druid.db.SQLMetadataSegmentManagerProvider;
 import io.druid.db.SQLMetadataSegmentPublisher;
 import io.druid.db.SQLMetadataSegmentPublisherProvider;
 import io.druid.db.SQLMetadataStorageActionHandler;
+import io.druid.db.SQLMetadataStorageActionHandlerFactory;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
@@ -47,6 +48,7 @@ import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.MetadataStorageActionHandler;
+import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.SegmentPublisher;
 import org.skife.jdbi.v2.IDBI;
@@ -110,9 +112,9 @@ public class MySQLMetadataStorageModule implements DruidModule
             .to(SQLMetadataSegmentPublisherProvider.class)
             .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandler.class))
+    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
             .addBinding("mysql")
-            .to(SQLMetadataStorageActionHandler.class)
+            .to(SQLMetadataStorageActionHandlerFactory.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))

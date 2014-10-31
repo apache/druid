@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -45,6 +46,40 @@ import java.util.Map;
 
 public class MetadataTaskStorage implements TaskStorage
 {
+  private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock>()
+  {
+    @Override
+    public TypeReference<Task> getTaskType()
+    {
+      return new TypeReference<Task>()
+      {
+      };
+    }
+
+    @Override
+    public TypeReference<TaskStatus> getTaskStatusType()
+    {
+      return new TypeReference<TaskStatus>()
+      {
+      };
+    }
+
+    @Override
+    public TypeReference<TaskAction> getTaskActionType()
+    {
+      return new TypeReference<TaskAction>()
+      {
+      };
+    }
+
+    @Override
+    public TypeReference<TaskLock> getTaskLockType()
+    {
+      return new TypeReference<TaskLock>()
+      {
+      };
+    }
+  };
   private final MetadataStorageConnector metadataStorageConnector;
   private final TaskStorageConfig config;
   private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
@@ -55,13 +90,12 @@ public class MetadataTaskStorage implements TaskStorage
   public MetadataTaskStorage(
       final MetadataStorageConnector metadataStorageConnector,
       final TaskStorageConfig config,
-      final MetadataStorageActionHandler handler
+      final MetadataStorageActionHandlerFactory factory
   )
   {
     this.metadataStorageConnector = metadataStorageConnector;
     this.config = config;
-    // this is a little janky but haven't figured out how to get Guice to do this yet.
-    this.handler = (MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock>) handler;
+    this.handler = factory.create(TASK_TYPES);
   }
 
   @LifecycleStart

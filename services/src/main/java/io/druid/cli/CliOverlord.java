@@ -25,6 +25,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
@@ -58,6 +59,7 @@ import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.MetadataStorageActionHandlerTypes;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -185,24 +187,6 @@ public class CliOverlord extends ServerRunnable
 
             storageBinder.addBinding("db").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
             binder.bind(MetadataTaskStorage.class).in(LazySingleton.class);
-
-            // gotta love type erasure
-            binder.bind(TypeReference.class).annotatedWith(Names.named("taskType")).toInstance(
-                new TypeReference<Task>()
-                {
-                }
-            );
-            binder.bind(TypeReference.class).annotatedWith(Names.named("taskStatusType")).toInstance(new TypeReference<TaskStatus>(){});
-            binder.bind(TypeReference.class).annotatedWith(Names.named("taskActionType")).toInstance(
-                new TypeReference<TaskAction>()
-                {
-                }
-            );
-            binder.bind(TypeReference.class).annotatedWith(Names.named("taskLockType")).toInstance(
-                new TypeReference<TaskLock>()
-                {
-                }
-            );
           }
 
           private void configureRunners(Binder binder)

@@ -28,11 +28,12 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
+import com.google.inject.Provider;
 import com.metamx.common.Pair;
 import com.metamx.common.RetryUtils;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.MetadataStorageActionHandler;
+import io.druid.indexing.overlord.MetadataStorageActionHandlerTypes;
 import io.druid.indexing.overlord.TaskExistsException;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
@@ -71,28 +72,22 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
   private final TypeReference taskActionType;
   private final TypeReference taskLockType;
 
-
-  @Inject
   public SQLMetadataStorageActionHandler(
       final IDBI dbi,
       final SQLMetadataConnector connector,
       final MetadataStorageTablesConfig config,
       final ObjectMapper jsonMapper,
-      // we all love type erasure
-      final @Named("taskType") TypeReference taskType,
-      final @Named("taskStatusType") TypeReference taskStatusType,
-      final @Named("taskActionType") TypeReference taskActionType,
-      final @Named("taskLockType") TypeReference taskLockType
+      final MetadataStorageActionHandlerTypes<TaskType, TaskStatusType, TaskActionType, TaskLockType> types
   )
   {
     this.dbi = dbi;
     this.connector = connector;
     this.config = config;
     this.jsonMapper = jsonMapper;
-    this.taskType = taskType;
-    this.taskStatusType = taskStatusType;
-    this.taskActionType = taskActionType;
-    this.taskLockType = taskLockType;
+    this.taskType = types.getTaskType();
+    this.taskStatusType = types.getTaskStatusType();
+    this.taskActionType = types.getTaskActionType();
+    this.taskLockType = types.getTaskLockType();
   }
 
   /**
