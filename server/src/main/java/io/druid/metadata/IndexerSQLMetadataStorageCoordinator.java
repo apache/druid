@@ -58,7 +58,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
-  private final IDBI dbi;
+  private final SQLMetadataConnector connector;
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
@@ -69,13 +69,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
-    this.dbi = connector.getDBI();
+    this.connector = connector;
   }
 
   public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
       throws IOException
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = dbi.withHandle(
+    final VersionedIntervalTimeline<String, DataSegment> timeline = connector.getDBI().withHandle(
         new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
         {
           @Override
@@ -140,7 +140,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    return dbi.inTransaction(
+    return connector.getDBI().inTransaction(
         new TransactionCallback<Set<DataSegment>>()
         {
           @Override
@@ -227,7 +227,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
   {
-    dbi.inTransaction(
+    connector.getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
@@ -245,7 +245,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   public void deleteSegments(final Set<DataSegment> segments) throws IOException
   {
-    dbi.inTransaction(
+    connector.getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
@@ -288,7 +288,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = dbi.withHandle(
+    List<DataSegment> matchingSegments = connector.getDBI().withHandle(
         new HandleCallback<List<DataSegment>>()
         {
           @Override

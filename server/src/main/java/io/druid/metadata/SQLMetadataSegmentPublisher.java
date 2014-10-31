@@ -28,6 +28,7 @@ import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -42,7 +43,7 @@ public class SQLMetadataSegmentPublisher implements SegmentPublisher
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig config;
-  private final IDBI dbi;
+  private final SQLMetadataConnector connector;
   private final String statement;
 
   @Inject
@@ -54,7 +55,7 @@ public class SQLMetadataSegmentPublisher implements SegmentPublisher
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.dbi = connector.getDBI();
+    this.connector = connector;
     this.statement = String.format(
         "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
         + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
@@ -66,6 +67,7 @@ public class SQLMetadataSegmentPublisher implements SegmentPublisher
   public void publishSegment(final DataSegment segment) throws IOException
   {
     try {
+      final DBI dbi = connector.getDBI();
       List<Map<String, Object>> exists = dbi.withHandle(
           new HandleCallback<List<Map<String, Object>>>()
           {
