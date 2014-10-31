@@ -37,8 +37,13 @@ public class DerbyConnector extends SQLMetadataConnector
   @Inject
   public DerbyConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
   {
+    this(config, dbTables, new DBI(getConnectionFactory("druidDerbyDb")));
+  }
+
+  public DerbyConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables, DBI dbi)
+  {
     super(config, dbTables);
-    this.dbi = new DBI(getConnectionFactory("druidDerbyDb"));
+    this.dbi = dbi;
   }
 
   @Override
@@ -59,7 +64,7 @@ public class DerbyConnector extends SQLMetadataConnector
   @Override
   public DBI getDBI() { return dbi; }
 
-  private ConnectionFactory getConnectionFactory(String dbName)
+  private static ConnectionFactory getConnectionFactory(String dbName)
   {
     try {
       NetworkServerControl server = new NetworkServerControl(InetAddress.getByName("localhost"),1527);

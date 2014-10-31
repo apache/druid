@@ -30,6 +30,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
+import org.skife.jdbi.v2.util.IntegerMapper;
 
 import java.sql.Connection;
 import java.util.List;
@@ -256,10 +257,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             Connection conn = getDBI().open().getConnection();
             handle.begin();
             conn.setAutoCommit(false);
-            List<Map<String, Object>> entry = handle.createQuery(
-                String.format("SELECT * FROM %1$s WHERE %2$s=:key", tableName, keyColumn)
-            ).list();
-            if (entry == null || entry.isEmpty()) {
+            int count = handle
+                .createQuery(
+                    String.format("SELECT COUNT(*) FROM %1$s WHERE %2$s=:key", tableName, keyColumn, valueColumn)
+                )
+                .bind("key", key)
+                .map(IntegerMapper.FIRST)
+                .first();
+            if (count == 0) {
               handle.createStatement(String.format("INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
                                                    tableName, keyColumn, valueColumn))
                     .bind("key", key)

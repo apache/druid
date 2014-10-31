@@ -20,47 +20,41 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.skife.jdbi.v2.Batch;
-import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.lang.Exception;
 import java.util.LinkedList;
 
 
 public class SQLMetadataConnectorTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private DerbyConnector connector;
-  private DBI dbi;
+  private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
-  private String TABLE_NAME = tablesConfig.getSegmentsTable();
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     MetadataStorageConnectorConfig config = jsonReadWriteRead(
-        "{"
+          "{"
         + "\"type\" : \"db\",\n"
         + "\"segmentTable\" : \"segments\"\n"
         + "}",
         MetadataStorageConnectorConfig.class
     );
 
-    connector = new DerbyConnector(
+    connector = new TestDerbyConnector(
         Suppliers.ofInstance(config),
         Suppliers.ofInstance(tablesConfig)
     );
-    dbi = connector.getDBI();
   }
 
   @Test
-  public void testCreateTables()
+  public void testCreateTables() throws Exception
   {
     final LinkedList<String> tables = new LinkedList<String>();
     tables.add(tablesConfig.getConfigTable());
@@ -69,106 +63,77 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getTaskLockTable());
     tables.add(tablesConfig.getTaskLogTable());
     tables.add(tablesConfig.getTasksTable());
-    try {
-      connector.createSegmentTable();
-      connector.createConfigTable();
-      connector.createRulesTable();
-      connector.createTaskTables();
 
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              for(String table : tables) {
-                Assert.assertTrue(
-                    String.format("table $s was not created!", table),
-                    connector.tableExists(handle, table)
-                );
-              }
+    connector.createSegmentTable();
+    connector.createConfigTable();
+    connector.createRulesTable();
+    connector.createTaskTables();
 
-              return null;
-            }
-          }
-      );
-    }
-    finally {
-      dbi.withHandle(
-          new HandleCallback<Void>()
+    connector.getDBI().withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
           {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              final Batch batch = handle.createBatch();
-              for (String table : tables) {
-                batch.add(String.format("DROP TABLE %s", table));
-              }
-              batch.execute();
-              return null;
+            for (String table : tables) {
+              Assert.assertTrue(
+                  String.format("table $s was not created!", table),
+                  connector.tableExists(handle, table)
+              );
             }
+
+            return null;
           }
-      );
+        }
+    );
+
+    for (String table : tables) {
+      dropTable(table);
     }
   }
 
   @Test
-  public void testInsertOrUpdate() {
-    try {
-      connector.createSegmentTable(dbi, TABLE_NAME);
-      connector.insertOrUpdate(TABLE_NAME, "dummy1", "dummy2", "emperor", "penguin".getBytes());
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              Assert.assertEquals(connector.lookup(TABLE_NAME, "dummy1", "dummy2", "emperor"),
-                                  "penguin".getBytes());
-              return null;
-            }
-          }
-      );
+  public void testInsertOrUpdate() throws Exception
+  {
+    final String tableName = "test";
+    connector.createConfigTable(connector.getDBI(), tableName);
 
-      connector.insertOrUpdate(TABLE_NAME, "dummy1", "dummy2", "emperor", "penguin chick".getBytes());
+    Assert.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
 
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              Assert.assertEquals(connector.lookup(TABLE_NAME, "dummy1", "dummy2", "emperor"),
-                                  "penguin chick".getBytes());
-              return null;
-            }
-          }
-      );
+    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin".getBytes());
+    Assert.assertArrayEquals(
+        "penguin".getBytes(),
+        connector.lookup(tableName, "name", "payload", "emperor")
+    );
 
-    } catch (Exception e) {
-    } finally {
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(String.format("DROP TABLE %s", TABLE_NAME))
-                    .execute();
-              return null;
-            }
-          }
-      );
-    }
+    connector.insertOrUpdate(tableName, "name", "payload", "emperor", "penguin chick".getBytes());
+
+    Assert.assertArrayEquals(
+        "penguin chick".getBytes(),
+        connector.lookup(tableName, "name", "payload", "emperor")
+    );
+
+    dropTable(tableName);
   }
 
-  private <T> T jsonReadWriteRead(String s, Class<T> klass)
+  private void dropTable(final String tableName)
   {
-    try {
+    connector.getDBI().withHandle(
+        new HandleCallback<Void>()
+        {
+          @Override
+          public Void withHandle(Handle handle) throws Exception
+          {
+            handle.createStatement(String.format("DROP TABLE %s", tableName))
+                  .execute();
+            return null;
+          }
+        }
+    );
+  }
+
+  private <T> T jsonReadWriteRead(String s, Class<T> klass) throws Exception
+  {
       return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
   }
 }
