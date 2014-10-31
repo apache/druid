@@ -68,7 +68,8 @@ public class MetadataStorageConnectorConfig
     return useValidationQuery;
   }
 
-  public String getValidationQuery() {
+  public String getValidationQuery()
+  {
     return validationQuery;
   }
 
