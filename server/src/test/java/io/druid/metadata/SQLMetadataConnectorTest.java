@@ -16,15 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package io.druid.db;
+package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.metadata.DerbyConnector;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
