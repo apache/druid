@@ -52,6 +52,8 @@ public class MySQLConnector extends SQLMetadataConnector
     // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
     datasource.setDriverClassName("com.mysql.jdbc.Driver");
+
+    // use double-quotes for quoting columns, so we can write SQL that works with most databases
     datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
 
     this.dbi = new DBI(datasource);
