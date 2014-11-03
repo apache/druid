@@ -73,7 +73,7 @@ public class CliInternalHadoopIndexer implements Runnable
         String argumentSpecScheme = argumentSpecUri.getScheme();
 
         if ((argumentSpecScheme == null) || argumentSpecScheme.equals("file")) {
-          return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
+          return HadoopDruidIndexerConfig.fromFile(new File(argumentSpecUri.getPath()));
         } else {
           return HadoopDruidIndexerConfig.fromDistributedFileSystem(argumentSpec);
         }

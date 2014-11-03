@@ -172,7 +172,7 @@ public class HadoopDruidIndexerConfig
     try
     {
       Path pt = new Path(path);
-      FileSystem fs = FileSystem.get(new URI(path), new Configuration());
+      FileSystem fs = FileSystem.get(pt.toUri(), new Configuration());
       Reader reader = new InputStreamReader(fs.open(pt));
 
       return fromMap(
