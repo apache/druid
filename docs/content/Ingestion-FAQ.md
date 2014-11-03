@@ -17,9 +17,9 @@ Make sure that the `druid.publish.type` on your real-time nodes is set to "db". 
 ```
 druid.publish.type=db
 
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
+druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.metadata.storage.connector.user=druid
+druid.metadata.storage.connector.password=diurd
 
 druid.storage.type=s3
 druid.storage.bucket=druid
