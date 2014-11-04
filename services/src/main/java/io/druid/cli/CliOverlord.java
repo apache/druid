@@ -175,7 +175,7 @@ public class CliOverlord extends ServerRunnable
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);
 
-            storageBinder.addBinding("db").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
+            storageBinder.addBinding("metadata").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
             binder.bind(MetadataTaskStorage.class).in(LazySingleton.class);
           }
 

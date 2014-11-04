@@ -15,7 +15,7 @@ Depending on what `druid.storage.type` is set to, Druid will upload segments to 
 Make sure that the `druid.publish.type` on your real-time nodes is set to "db". Also make sure that `druid.storage.type` is set to a deep storage that makes sense. Some example configs:
 
 ```
-druid.publish.type=db
+druid.publish.type=metadata
 
 druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.metadata.storage.connector.user=druid

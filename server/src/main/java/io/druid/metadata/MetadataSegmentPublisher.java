@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,32 +19,8 @@
 
 package io.druid.metadata;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.segment.realtime.SegmentPublisher;
-import org.skife.jdbi.v2.IDBI;
 
-import javax.validation.constraints.NotNull;
-
-/**
- */
-public class SQLMetadataSegmentPublisherProvider implements MetadataSegmentPublisherProvider
+public interface MetadataSegmentPublisher extends SegmentPublisher
 {
-  @JacksonInject
-  @NotNull
-  private SQLMetadataConnector connector = null;
-
-  @JacksonInject
-  @NotNull
-  private MetadataStorageTablesConfig config = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public MetadataSegmentPublisher get()
-  {
-    return new SQLMetadataSegmentPublisher(jsonMapper, config, connector);
-  }
 }

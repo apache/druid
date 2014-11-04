@@ -25,6 +25,8 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.cli.QueryJettyServerInitializer;
+import io.druid.metadata.MetadataSegmentPublisher;
+import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.FireDepartment;
@@ -47,18 +49,19 @@ public class RealtimeModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
         "druid.publish.type",
         Key.get(SegmentPublisher.class),
-        Key.get(SegmentPublisher.class)
+        null,
+        "metadata"
     );
     final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(
         binder,
         Key.get(SegmentPublisher.class)
     );
-    publisherBinder.addBinding("noop").to(NoopSegmentPublisher.class);
-    binder.bind(SegmentPublisher.class).in(LazySingleton.class);
+    publisherBinder.addBinding("noop").to(NoopSegmentPublisher.class).in(LazySingleton.class);
+    publisherBinder.addBinding("metadata").to(MetadataSegmentPublisher.class).in(LazySingleton.class);
 
     PolyBind.createChoice(
         binder,

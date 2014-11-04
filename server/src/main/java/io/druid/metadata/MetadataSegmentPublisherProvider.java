@@ -19,11 +19,7 @@
 
 package io.druid.metadata;
 
-import io.druid.segment.realtime.SegmentPublisher;
-
-/**
- */
 public interface MetadataSegmentPublisherProvider extends SegmentPublisherProvider
 {
-  public SegmentPublisher get();
+  public MetadataSegmentPublisher get();
 }

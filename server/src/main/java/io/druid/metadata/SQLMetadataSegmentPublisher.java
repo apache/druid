@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-public class SQLMetadataSegmentPublisher implements SegmentPublisher
+public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
 {
   private static final Logger log = new Logger(SQLMetadataSegmentPublisher.class);
 

@@ -29,7 +29,7 @@ import io.druid.segment.realtime.SegmentPublisher;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopSegmentPublisherProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "db", value = MetadataSegmentPublisherProvider.class)
+    @JsonSubTypes.Type(name = "metadata", value = MetadataSegmentPublisherProvider.class)
 })
 public interface SegmentPublisherProvider extends Provider<SegmentPublisher>
 {

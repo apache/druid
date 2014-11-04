@@ -91,7 +91,7 @@ druid.indexer.runner.compressZnodes=true
 druid.indexer.runner.minWorkerVersion=#{WORKER_VERSION}
 
 # Store all task state in MySQL
-druid.indexer.storage.type=db
+druid.indexer.storage.type=metadata
 
 druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
 

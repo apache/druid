@@ -31,6 +31,7 @@ import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerProvider;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.metadata.MetadataSegmentManagerProvider;
+import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.metadata.MetadataSegmentPublisherProvider;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.SQLMetadataConnector;
@@ -96,7 +97,7 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(
         binder,
         PROPERTY,
-        Key.get(SegmentPublisher.class),
+        Key.get(MetadataSegmentPublisher.class),
         Key.get(SQLMetadataSegmentPublisher.class),
         defaultPropertyValue
     );
@@ -153,7 +154,7 @@ public class SQLMetadataStorageDruidModule implements Module
             .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(SegmentPublisher.class))
+    PolyBind.optionBinder(binder, Key.get(MetadataSegmentPublisher.class))
             .addBinding(type)
             .to(SQLMetadataSegmentPublisher.class)
             .in(LazySingleton.class);

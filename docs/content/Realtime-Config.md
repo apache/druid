@@ -35,8 +35,8 @@ druid.zk.service.host=localhost
 # The realtime config file.
 druid.realtime.specFile=/path/to/specFile
 
-# Choices: db (hand off segments), noop (do not hand off segments).
-druid.publish.type=db
+# Choices: metadata (hand off segments), noop (do not hand off segments).
+druid.publish.type=metadata
 
 druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.metadata.storage.connector.user=druid
@@ -90,7 +90,7 @@ druid.metadata.storage.connector.password=#{MYSQL_PW}
 druid.metadata.storage.connector.useValidationQuery=true
 druid.metadata.storage.tables.base=prod
 
-druid.publish.type=db
+druid.publish.type=metadata
 
 druid.processing.numThreads=3
 
