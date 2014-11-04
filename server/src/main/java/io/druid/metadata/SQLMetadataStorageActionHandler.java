@@ -115,7 +115,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
                   )
               )
                     .bind("id", id)
-                    .bind("created_date", createdDate)
+                    .bind("created_date", createdDate.toString())
                     .bind("datasource", dataSource)
                     .bind("payload", jsonMapper.writeValueAsBytes(task))
                     .bind("active", active)
