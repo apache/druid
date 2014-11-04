@@ -328,4 +328,9 @@ public class HadoopIndexTask extends AbstractTask
       return null;
     }
   }
+
+  @Override
+  public int getPriority(){
+    return Thread.MIN_PRIORITY;
+  }
 }

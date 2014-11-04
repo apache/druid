@@ -123,6 +123,13 @@ public abstract class AbstractTask implements Task
                   .toString();
   }
 
+  @JsonIgnore
+  int priority = Thread.NORM_PRIORITY;
+  @JsonProperty
+  @Override
+  public int getPriority(){
+    return this.priority;
+  }
   /**
    * Start helper methods
    *

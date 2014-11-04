@@ -136,4 +136,10 @@ public interface Task
    * @throws Exception if this task failed
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
+
+  /**
+   * Returns the priority to be hinted when executing the thread
+   * @return an integer representing the thread priority, see {@link java.lang.Thread#setPriority(int) setPriority} for {@link java.lang.Thread}
+   */
+  public int getPriority();
 }

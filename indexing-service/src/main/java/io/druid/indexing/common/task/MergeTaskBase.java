@@ -319,4 +319,8 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
                       .metrics(Lists.newArrayList(mergedMetrics))
                       .build();
   }
+  @Override
+  public int getPriority(){
+    return Thread.MIN_PRIORITY;
+  }
 }

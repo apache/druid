@@ -107,4 +107,9 @@ public class ArchiveTask extends AbstractFixedIntervalTask
 
     return TaskStatus.success(getId());
   }
+
+  @Override
+  public int getPriority(){
+    return Thread.MIN_PRIORITY;
+  }
 }

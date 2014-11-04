@@ -83,6 +83,11 @@ public class MergeTask extends MergeTaskBase
   }
 
   @Override
+  public int getPriority(){
+    return Thread.MIN_PRIORITY;
+  }
+
+  @Override
   public String getType()
   {
     return "merge";
