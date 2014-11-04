@@ -37,7 +37,6 @@ import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.DBIException;
@@ -61,7 +60,6 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
 {
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataStorageActionHandler.class);
 
-  private final IDBI dbi;
   private final SQLMetadataConnector connector;
   private final MetadataStorageTablesConfig config;
   private final ObjectMapper jsonMapper;
@@ -71,14 +69,12 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
   private final TypeReference taskLockType;
 
   public SQLMetadataStorageActionHandler(
-      final IDBI dbi,
       final SQLMetadataConnector connector,
       final MetadataStorageTablesConfig config,
       final ObjectMapper jsonMapper,
       final MetadataStorageActionHandlerTypes<TaskType, TaskStatusType, TaskActionType, TaskLockType> types
   )
   {
-    this.dbi = dbi;
     this.connector = connector;
     this.config = config;
     this.jsonMapper = jsonMapper;
@@ -152,7 +148,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
               {
                 return handle.createStatement(
                             String.format(
-                                "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = 1",
+                                "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
                                 config.getTasksTable()
                             )
                         )
@@ -503,7 +499,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
       @Override
       public T call() throws Exception
       {
-        return dbi.withHandle(callback);
+        return connector.getDBI().withHandle(callback);
       }
     };
     final Predicate<Throwable> shouldRetry = new Predicate<Throwable>()

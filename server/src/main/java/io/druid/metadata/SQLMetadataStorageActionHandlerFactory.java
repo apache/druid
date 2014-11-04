@@ -28,7 +28,6 @@ import org.skife.jdbi.v2.IDBI;
 
 public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageActionHandlerFactory
 {
-  private final IDBI dbi;
   private final SQLMetadataConnector connector;
   private final MetadataStorageTablesConfig config;
   private final ObjectMapper jsonMapper;
@@ -40,7 +39,6 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
       ObjectMapper jsonMapper
   )
   {
-    this.dbi = connector.getDBI();
     this.connector = connector;
     this.config = config;
     this.jsonMapper = jsonMapper;
@@ -48,6 +46,6 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
 
   public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(MetadataStorageActionHandlerTypes<A,B,C,D> types)
   {
-    return new SQLMetadataStorageActionHandler<>(dbi, connector, config, jsonMapper, types);
+    return new SQLMetadataStorageActionHandler<>(connector, config, jsonMapper, types);
   }
 }
