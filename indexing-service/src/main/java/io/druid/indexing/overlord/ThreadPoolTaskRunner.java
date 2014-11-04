@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -47,6 +48,8 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -57,7 +60,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 {
   private final TaskToolboxFactory toolboxFactory;
-  private final ListeningExecutorService exec;
+  private final Map<Task.Priority, ListeningExecutorService> exec = Maps.newHashMap();
   private final Set<ThreadPoolTaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<>();
 
   private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
@@ -68,37 +71,51 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   )
   {
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
-    this.exec = MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d"));
+    for (Task.Priority priority : Task.Priority.values()) {
+      this.exec.put(
+          priority,
+          MoreExecutors.listeningDecorator(
+              Execs.singleThreaded(
+                  "task-runner-%d-priority-" + priority.toString(),
+                  priority.getPriority()
+              )
+          )
+      );
+    }
+
   }
 
   @LifecycleStop
   public void stop()
   {
-    exec.shutdownNow();
+    for (Map.Entry<Task.Priority, ListeningExecutorService> entry : exec.entrySet()) {
+      entry.getValue().shutdownNow();
+    }
   }
 
   @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
-    final ListenableFuture<TaskStatus> statusFuture = exec.submit(new ThreadPoolTaskRunnerCallable(task, toolbox));
+    final ListenableFuture<TaskStatus> statusFuture = exec.get(task.getPriority())
+                                                          .submit(new ThreadPoolTaskRunnerCallable(task, toolbox));
     final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem = new ThreadPoolTaskRunnerWorkItem(task, statusFuture);
     runningItems.add(taskRunnerWorkItem);
     Futures.addCallback(
         statusFuture, new FutureCallback<TaskStatus>()
-    {
-      @Override
-      public void onSuccess(TaskStatus result)
-      {
-        runningItems.remove(taskRunnerWorkItem);
-      }
+        {
+          @Override
+          public void onSuccess(TaskStatus result)
+          {
+            runningItems.remove(taskRunnerWorkItem);
+          }
 
-      @Override
-      public void onFailure(Throwable t)
-      {
-        runningItems.remove(taskRunnerWorkItem);
-      }
-    }
+          @Override
+          public void onFailure(Throwable t)
+          {
+            runningItems.remove(taskRunnerWorkItem);
+          }
+        }
     );
 
     return statusFuture;
