@@ -310,13 +310,13 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
   }
 
   /* Add lock to the task with given ID */
-  public int addLock(final String taskId, final TaskLockType lock)
+  public boolean addLock(final String taskId, final TaskLockType lock)
   {
     return retryingHandle(
-      new HandleCallback<Integer>()
+      new HandleCallback<Boolean>()
       {
         @Override
-        public Integer withHandle(Handle handle) throws Exception
+        public Boolean withHandle(Handle handle) throws Exception
         {
           return handle.createStatement(
                       String.format(
@@ -326,20 +326,20 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
                   )
                        .bind("task_id", taskId)
                        .bind("lock_payload", jsonMapper.writeValueAsBytes(lock))
-                       .execute();
+                       .execute() == 1;
         }
       }
     );
   }
 
   /* Remove taskLock with given ID */
-  public int removeLock(final long lockId)
+  public boolean removeLock(final long lockId)
   {
     return retryingHandle(
-      new HandleCallback<Integer>()
+      new HandleCallback<Boolean>()
       {
         @Override
-        public Integer withHandle(Handle handle) throws Exception
+        public Boolean withHandle(Handle handle) throws Exception
         {
           return handle.createStatement(
                       String.format(
@@ -348,19 +348,19 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
                       )
                   )
                        .bind("id", lockId)
-                       .execute();
+                       .execute() == 1;
         }
       }
     );
   }
 
-  public int addAuditLog(final String taskId, final TaskActionType taskAction)
+  public boolean addAuditLog(final String taskId, final TaskActionType taskAction)
   {
     return retryingHandle(
-      new HandleCallback<Integer>()
+      new HandleCallback<Boolean>()
       {
         @Override
-        public Integer withHandle(Handle handle) throws Exception
+        public Boolean withHandle(Handle handle) throws Exception
         {
           return handle.createStatement(
                       String.format(
@@ -370,7 +370,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
                   )
                        .bind("task_id", taskId)
                        .bind("log_payload", jsonMapper.writeValueAsBytes(taskAction))
-                       .execute();
+                       .execute() == 1;
         }
       }
     );

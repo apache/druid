@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.metamx.common.Pair;
 import io.druid.indexing.overlord.MetadataStorageActionHandlerTypes;
 import io.druid.jackson.DefaultObjectMapper;
@@ -33,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashSet;
 import java.util.Map;
 
 public class SQLMetadataStorageActionHandlerTest
@@ -40,6 +42,7 @@ public class SQLMetadataStorageActionHandlerTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
+  private SQLMetadataStorageActionHandler<Map<String, Integer>,Map<String, Integer>,Map<String, String>,Map<String, Integer>> handler;
 
   @Before
   public void setUp() throws Exception {
@@ -55,12 +58,9 @@ public class SQLMetadataStorageActionHandlerTest
         Suppliers.ofInstance(config),
         Suppliers.ofInstance(tablesConfig)
     );
-  }
+    connector.createTaskTables();
 
-  @Test
-  public void testTaskAndTaskStatus() throws Exception
-  {
-    SQLMetadataStorageActionHandler<Map<String, Integer>,Map<String, Integer>,Map<String, Integer>,Map<String, Integer>> handler = new SQLMetadataStorageActionHandler(connector, tablesConfig, jsonMapper, new MetadataStorageActionHandlerTypes()
+    handler = new SQLMetadataStorageActionHandler(connector, tablesConfig, jsonMapper, new MetadataStorageActionHandlerTypes()
     {
       @Override
       public TypeReference getTaskType()
@@ -77,7 +77,7 @@ public class SQLMetadataStorageActionHandlerTest
       @Override
       public TypeReference getTaskActionType()
       {
-        return new TypeReference<Map<String, Integer>>() {};
+        return new TypeReference<Map<String, String>>() {};
       }
 
       @Override
@@ -86,21 +86,27 @@ public class SQLMetadataStorageActionHandlerTest
         return new TypeReference<Map<String, Integer>>() {};
       }
     });
+  }
 
-    Map<String, Integer> task = ImmutableMap.of("taskId", 1);
+  @Test
+  public void testTaskAndTaskStatus() throws Exception
+  {
+    Map<String, Integer> task = ImmutableMap.of("taskId", 1234);
     Map<String, Integer> taskStatus = ImmutableMap.of("count", 42);
     Map<String, Integer> taskStatus2 = ImmutableMap.of("count", 42, "temp", 1);
 
-    connector.createTaskTables();
-
     final String taskId = "1234";
 
-    handler.insert(taskId, new DateTime("2014-01-02T00:00:00.123"), "testDataSource", task, true, taskStatus);
+    handler.insert(taskId, new DateTime("2014-01-02T00:00:00.123"), "testDataSource", task, true, null);
 
     Assert.assertEquals(
         Optional.of(task),
         handler.getTask(taskId)
     );
+
+    Assert.assertEquals(Optional.absent(), handler.getTaskStatus(taskId));
+
+    Assert.assertTrue(handler.setStatus(taskId, true, taskStatus));
 
     Assert.assertEquals(
         ImmutableList.of(Pair.of(task, taskStatus)),
@@ -148,5 +154,72 @@ public class SQLMetadataStorageActionHandlerTest
         ImmutableList.of(taskStatus),
         handler.getRecentlyFinishedTaskStatuses(new DateTime("2014-01-01"))
     );
+  }
+
+  @Test
+  public void testTaskLogs() throws Exception
+  {
+    final String taskId = "abcd";
+    Map<String, Integer> task = ImmutableMap.of("a", 1);
+    Map<String, Integer> taskStatus = ImmutableMap.of("count", 42);
+
+    handler.insert(taskId, new DateTime("2014-01-01"), "test", task, true, taskStatus);
+
+    Assert.assertEquals(
+        ImmutableMap.of(),
+        handler.getTaskLocks(taskId)
+    );
+
+    final ImmutableMap<String, String> log1 = ImmutableMap.of("logentry", "created");
+    final ImmutableMap<String, String> log2 = ImmutableMap.of("logentry", "updated");
+
+    Assert.assertTrue(handler.addAuditLog(taskId, log1));
+    Assert.assertTrue(handler.addAuditLog(taskId, log2));
+
+    Assert.assertEquals(
+        ImmutableList.of(log1, log2),
+        handler.getTaskLogs(taskId)
+    );
+  }
+
+
+  @Test
+  public void testTaskLocks() throws Exception
+  {
+    final String taskId = "ABC123";
+    Map<String, Integer> task = ImmutableMap.of("a", 1);
+    Map<String, Integer> taskStatus = ImmutableMap.of("count", 42);
+
+    handler.insert(taskId, new DateTime("2014-01-01"), "test", task, true, taskStatus);
+
+    Assert.assertEquals(
+        ImmutableMap.of(),
+        handler.getTaskLocks(taskId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(taskId, lock1));
+    Assert.assertTrue(handler.addLock(taskId, lock2));
+
+    final Map<Long, Map<String, Integer>> locks = handler.getTaskLocks(taskId);
+    Assert.assertEquals(2, locks.size());
+
+    Assert.assertEquals(
+        ImmutableSet.of(lock1, lock2),
+        new HashSet<>(locks.values())
+    );
+
+    long lockId = locks.keySet().iterator().next();
+    Assert.assertTrue(handler.removeLock(lockId));
+    locks.remove(lockId);
+
+    final Map<Long, Map<String, Integer>> locksUpdated = handler.getTaskLocks(taskId);
+    Assert.assertEquals(
+        new HashSet<>(locks.values()),
+        new HashSet<>(locksUpdated.values())
+    );
+    Assert.assertEquals(locksUpdated.keySet(), locks.keySet());
   }
 }

@@ -54,12 +54,12 @@ public interface MetadataStorageActionHandler<TaskType, TaskStatusType, TaskActi
   public List<TaskStatusType> getRecentlyFinishedTaskStatuses(DateTime start);
 
   /* Add lock to the task with given ID */
-  public int addLock(String taskId, TaskLockType lock);
+  public boolean addLock(String taskId, TaskLockType lock);
 
   /* Remove taskLock with given ID */
-  public int removeLock(long lockId);
+  public boolean removeLock(long lockId);
 
-  public int addAuditLog(String taskId, TaskActionType taskAction);
+  public boolean addAuditLog(String taskId, TaskActionType taskAction);
 
   /* Get logs for task with given ID */
   public List<TaskActionType> getTaskLogs(String taskId);
