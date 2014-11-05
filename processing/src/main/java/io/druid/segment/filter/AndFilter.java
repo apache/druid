@@ -20,6 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.collect.Lists;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -42,18 +43,18 @@ public class AndFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(BitmapIndexSelector selector)
+  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
     if (filters.size() == 1) {
-      return filters.get(0).goConcise(selector);
+      return filters.get(0).getBitmapIndex(selector);
     }
 
-    List<ImmutableConciseSet> conciseSets = Lists.newArrayList();
+    List<ImmutableBitmap> bitmaps = Lists.newArrayList();
     for (int i = 0; i < filters.size(); i++) {
-      conciseSets.add(filters.get(i).goConcise(selector));
+      bitmaps.add(filters.get(i).getBitmapIndex(selector));
     }
 
-    return ImmutableConciseSet.intersection(conciseSets);
+    return selector.getBitmapFactory().intersection(bitmaps);
   }
 
   @Override

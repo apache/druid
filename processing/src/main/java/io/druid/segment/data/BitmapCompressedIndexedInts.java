@@ -21,22 +21,15 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
-import com.metamx.common.ISE;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import it.uniroma3.mat.extendedset.intset.IntSet;
+import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 /**
  */
-public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<ImmutableBitmap>
+public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<ImmutableBitmap>
 {
-  public static ObjectStrategy<ImmutableBitmap> objectStrategy =
-      new ImmutableConciseSetObjectStrategy();
-
   private static Ordering<ImmutableBitmap> comparator = new Ordering<ImmutableBitmap>()
   {
     @Override
@@ -57,28 +50,23 @@ public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<Imm
     }
   }.nullsFirst();
 
-  private final ImmutableConciseSet immutableConciseSet;
+  private final ImmutableBitmap immutableBitmap;
 
-  public ConciseCompressedIndexedInts(ImmutableConciseSet conciseSet)
+  public BitmapCompressedIndexedInts(ImmutableBitmap immutableBitmap)
   {
-    this.immutableConciseSet = conciseSet;
+    this.immutableBitmap = immutableBitmap;
   }
 
   @Override
-  public int compareTo(@Nullable ImmutableBitmap conciseCompressedIndexedInts)
+  public int compareTo(@Nullable ImmutableBitmap otherBitmap)
   {
-    // TODO
-    if (!(conciseCompressedIndexedInts instanceof WrappedImmutableConciseBitmap)) {
-      throw new ISE("WTF bro! No, bad.");
-    }
-
-    return immutableConciseSet.compareTo(((WrappedImmutableConciseBitmap) conciseCompressedIndexedInts).getBitmap());
+    return comparator.compare(immutableBitmap, otherBitmap);
   }
 
   @Override
   public int size()
   {
-    return immutableConciseSet.size();
+    return immutableBitmap.size();
   }
 
   @Override
@@ -87,9 +75,9 @@ public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<Imm
     throw new UnsupportedOperationException("This is really slow, so it's just not supported.");
   }
 
-  public ImmutableConciseSet getImmutableConciseSet()
+  public ImmutableBitmap getImmutableBitmap()
   {
-    return immutableConciseSet;
+    return immutableBitmap;
   }
 
   @Override
@@ -97,7 +85,7 @@ public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<Imm
   {
     return new Iterator<Integer>()
     {
-      IntSet.IntIterator baseIterator = immutableConciseSet.iterator();
+      IntIterator baseIterator = immutableBitmap.iterator();
 
       @Override
       public boolean hasNext()
@@ -117,38 +105,5 @@ public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<Imm
         throw new UnsupportedOperationException();
       }
     };
-  }
-
-  private static class ImmutableConciseSetObjectStrategy
-      implements ObjectStrategy<ImmutableBitmap>
-  {
-    @Override
-    public Class<? extends ImmutableBitmap> getClazz()
-    {
-      return WrappedImmutableConciseBitmap.class;
-    }
-
-    @Override
-    public WrappedImmutableConciseBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
-    {
-      final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-      readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new WrappedImmutableConciseBitmap(new ImmutableConciseSet(readOnlyBuffer));
-    }
-
-    @Override
-    public byte[] toBytes(ImmutableBitmap val)
-    {
-      if (val == null || val.size() == 0) {
-        return new byte[]{};
-      }
-      return val.toBytes();
-    }
-
-    @Override
-    public int compare(ImmutableBitmap o1, ImmutableBitmap o2)
-    {
-      return comparator.compare(o1, o2);
-    }
   }
 }

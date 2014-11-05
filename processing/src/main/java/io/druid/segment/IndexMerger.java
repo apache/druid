@@ -32,6 +32,10 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.metamx.collections.bitmap.ConciseBitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.WrappedConciseBitmap;
+import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -756,7 +760,7 @@ public class IndexMerger
       Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
       log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
-      GenericIndexedWriter<ImmutableConciseSet> writer = new GenericIndexedWriter<ImmutableConciseSet>(
+      GenericIndexedWriter<ImmutableBitmap> writer = new GenericIndexedWriter<>(
           ioPeon, dimension, ConciseCompressedIndexedInts.objectStrategy
       );
       writer.open();
@@ -766,11 +770,12 @@ public class IndexMerger
       RTree tree = null;
       IOPeon spatialIoPeon = new TmpFileIOPeon();
       if (isSpatialDim) {
+        ConciseBitmapFactory bitmapFactory = new ConciseBitmapFactory();
         spatialWriter = new ByteBufferWriter<ImmutableRTree>(
-            spatialIoPeon, dimension, IndexedRTree.objectStrategy
+            spatialIoPeon, dimension, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory)
         );
         spatialWriter.open();
-        tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
+        tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
       }
 
       for (String dimVal : IndexedIterable.create(dimVals)) {
@@ -779,7 +784,7 @@ public class IndexMerger
         for (int j = 0; j < indexes.size(); ++j) {
           convertedInverteds.add(
               new ConvertingIndexedInts(
-                  indexes.get(j).getInverteds(dimension, dimVal), rowNumConversions.get(j)
+                  indexes.get(j).getBitmapIndex(dimension, dimVal), rowNumConversions.get(j)
               )
           );
         }
@@ -794,7 +799,7 @@ public class IndexMerger
           }
         }
 
-        writer.write(ImmutableConciseSet.newImmutableFromMutable(bitset));
+        writer.write(new WrappedImmutableConciseBitmap(ImmutableConciseSet.newImmutableFromMutable(bitset)));
 
         if (isSpatialDim && dimVal != null) {
           List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
@@ -802,7 +807,7 @@ public class IndexMerger
           for (int j = 0; j < coords.length; j++) {
             coords[j] = Float.valueOf(stringCoords.get(j));
           }
-          tree.insert(coords, bitset);
+          tree.insert(coords, new WrappedConciseBitmap(bitset));
         }
       }
       writer.close();

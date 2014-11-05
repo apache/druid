@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -35,9 +36,13 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.metamx.collections.bitmap.ConciseBitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
@@ -47,7 +52,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.GuiceInjectors;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
@@ -55,8 +60,10 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedIterable;
@@ -73,9 +80,8 @@ import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
+import org.roaringbitmap.IntIterator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -121,6 +127,7 @@ public class IndexIO
 
   private static final ObjectMapper mapper;
   protected static final ColumnConfig columnConfig;
+  private static final BitmapSerdeFactory bitmapSerdeFactory;
 
   static {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
@@ -136,12 +143,15 @@ public class IndexIO
                     ImmutableMap.of("base_path", "druid.processing")
                 );
                 binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
+
+                JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
               }
             }
         )
     );
     mapper = injector.getInstance(ObjectMapper.class);
     columnConfig = injector.getInstance(ColumnConfig.class);
+    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
   }
 
   private static volatile IndexIOHandler handler = null;
@@ -298,7 +308,7 @@ public class IndexIO
 
       Map<String, GenericIndexed<String>> dimValueLookups = Maps.newHashMap();
       Map<String, VSizeIndexed> dimColumns = Maps.newHashMap();
-      Map<String, GenericIndexed<ImmutableConciseSet>> invertedIndexed = Maps.newHashMap();
+      Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = Maps.newHashMap();
 
       for (String dimension : IndexedIterable.create(availableDimensions)) {
         ByteBuffer dimBuffer = smooshedFiles.mapFile(makeDimFile(inDir, dimension).getName());
@@ -316,7 +326,7 @@ public class IndexIO
 
       ByteBuffer invertedBuffer = smooshedFiles.mapFile("inverted.drd");
       for (int i = 0; i < availableDimensions.size(); ++i) {
-        invertedIndexed.put(
+        bitmaps.put(
             serializerUtils.readString(invertedBuffer),
             GenericIndexed.read(invertedBuffer, ConciseCompressedIndexedInts.objectStrategy)
         );
@@ -327,7 +337,10 @@ public class IndexIO
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexed.put(
             serializerUtils.readString(spatialBuffer),
-            ByteBufferSerializer.read(spatialBuffer, IndexedRTree.objectStrategy)
+            ByteBufferSerializer.read(
+                spatialBuffer,
+                new IndexedRTree.ImmutableRTreeObjectStrategy(new ConciseBitmapFactory())
+            )
         );
       }
 
@@ -339,7 +352,7 @@ public class IndexIO
           metrics,
           dimValueLookups,
           dimColumns,
-          invertedIndexed,
+          bitmaps,
           spatialIndexed,
           smooshedFiles
       );
@@ -371,12 +384,13 @@ public class IndexIO
       final FileSmoosher v9Smoosher = new FileSmoosher(v9Dir);
 
       ByteStreams.write(Ints.toByteArray(9), Files.newOutputStreamSupplier(new File(v9Dir, "version.bin")));
-      Map<String, GenericIndexed<ImmutableConciseSet>> bitmapIndexes = Maps.newHashMap();
 
+      Map<String, GenericIndexed<ImmutableBitmap>> bitmapIndexes = Maps.newHashMap();
       final ByteBuffer invertedBuffer = v8SmooshedFiles.mapFile("inverted.drd");
       while (invertedBuffer.hasRemaining()) {
+        final String dimName = serializerUtils.readString(invertedBuffer);
         bitmapIndexes.put(
-            serializerUtils.readString(invertedBuffer),
+            dimName,
             GenericIndexed.read(invertedBuffer, ConciseCompressedIndexedInts.objectStrategy)
         );
       }
@@ -386,7 +400,11 @@ public class IndexIO
       while (spatialBuffer != null && spatialBuffer.hasRemaining()) {
         spatialIndexes.put(
             serializerUtils.readString(spatialBuffer),
-            ByteBufferSerializer.read(spatialBuffer, IndexedRTree.objectStrategy)
+            ByteBufferSerializer.read(
+                spatialBuffer, new IndexedRTree.ImmutableRTreeObjectStrategy(
+                    new ConciseBitmapFactory()
+                )
+            )
         );
       }
 
@@ -422,11 +440,41 @@ public class IndexIO
 
           VSizeIndexedInts singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
-          GenericIndexed<ImmutableConciseSet> bitmaps = bitmapIndexes.get(dimension);
+          GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
+
+          // All V8 segments use concise sets for bitmap indexes. Starting in V9, we can optionally choose other
+          // methods to store and compress these bitmap methods.
+          if (!(bitmapSerdeFactory instanceof ConciseBitmapSerdeFactory)) {
+            bitmaps = GenericIndexed.fromIterable(
+                FunctionalIterable.create(
+                    bitmaps
+                ).transform(
+                    new Function<ImmutableBitmap, ImmutableBitmap>()
+                    {
+
+                      @Override
+                      public ImmutableBitmap apply(
+                          ImmutableBitmap bitmap
+                      )
+                      {
+                        IntIterator intIter = bitmap.iterator();
+                        MutableBitmap mutableBitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
+                        // TODO: is there a faster way to do this? I don't think so
+                        while (intIter.hasNext()) {
+                          mutableBitmap.add(intIter.next());
+                        }
+                        return bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(mutableBitmap);
+                      }
+                    }
+                ),
+                bitmapSerdeFactory.getObjectStrategy()
+            );
+          }
+
           ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
 
           boolean onlyOneValue = true;
-          ConciseSet nullsSet = null;
+          MutableBitmap nullsSet = null;
           for (int i = 0; i < multiValCol.size(); ++i) {
             VSizeIndexedInts rowValue = multiValCol.get(i);
             if (!onlyOneValue) {
@@ -437,7 +485,7 @@ public class IndexIO
             }
             if (rowValue.size() == 0) {
               if (nullsSet == null) {
-                nullsSet = new ConciseSet();
+                nullsSet = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
               }
               nullsSet.add(i);
             }
@@ -448,7 +496,7 @@ public class IndexIO
             final boolean bumpedDictionary;
             if (nullsSet != null) {
               log.info("Dimension[%s] has null rows.", dimension);
-              final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullsSet);
+              final ImmutableBitmap theNullSet = bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(nullsSet);
 
               if (dictionary.get(0) != null) {
                 log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
@@ -463,16 +511,19 @@ public class IndexIO
 
                 bitmaps = GenericIndexed.fromIterable(
                     Iterables.concat(Arrays.asList(theNullSet), bitmaps),
-                    ConciseCompressedIndexedInts.objectStrategy
+                    bitmapSerdeFactory.getObjectStrategy()
                 );
               } else {
                 bumpedDictionary = false;
                 bitmaps = GenericIndexed.fromIterable(
                     Iterables.concat(
-                        Arrays.asList(ImmutableConciseSet.union(theNullSet, bitmaps.get(0))),
+                        Arrays.asList(
+                            bitmapSerdeFactory.getBitmapFactory()
+                                              .union(Arrays.asList(theNullSet, bitmaps.get(0)))
+                        ),
                         Iterables.skip(bitmaps, 1)
                     ),
-                    ConciseCompressedIndexedInts.objectStrategy
+                    bitmapSerdeFactory.getObjectStrategy()
                 );
               }
             } else {
@@ -508,6 +559,7 @@ public class IndexIO
                   dictionary,
                   singleValCol,
                   multiValCol,
+                  bitmapSerdeFactory,
                   bitmaps,
                   spatialIndex
               )
@@ -606,13 +658,13 @@ public class IndexIO
       final GenericIndexed<String> dims9 = GenericIndexed.fromIterable(
           Iterables.filter(
               dims8, new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String s)
-            {
-              return !skippedDimensions.contains(s);
-            }
-          }
+              {
+                @Override
+                public boolean apply(String s)
+                {
+                  return !skippedDimensions.contains(s);
+                }
+              }
           ),
           GenericIndexed.stringStrategy
       );
@@ -669,7 +721,9 @@ public class IndexIO
             )
             .setBitmapIndex(
                 new BitmapIndexColumnPartSupplier(
-                    index.getInvertedIndexes().get(dimension), index.getDimValueLookup(dimension)
+                    bitmapSerdeFactory.getBitmapFactory(),
+                    index.getBitmapIndexes().get(dimension),
+                    index.getDimValueLookup(dimension)
                 )
             );
         if (index.getSpatialIndexes().get(dimension) != null) {
@@ -719,14 +773,17 @@ public class IndexIO
       }
 
       String[] cols = colSet.toArray(new String[colSet.size()]);
-      columns.put(Column.TIME_COLUMN_NAME, new ColumnBuilder()
-          .setType(ValueType.LONG)
-          .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
-          .build());
+      columns.put(
+          Column.TIME_COLUMN_NAME, new ColumnBuilder()
+              .setType(ValueType.LONG)
+              .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
+              .build()
+      );
       return new SimpleQueryableIndex(
           index.getDataInterval(),
           new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
+          bitmapSerdeFactory.getBitmapFactory(),
           columns,
           index.getFileMapper()
       );
@@ -762,7 +819,7 @@ public class IndexIO
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time")));
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, columns, smooshedFiles
+          dataInterval, cols, dims, bitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);

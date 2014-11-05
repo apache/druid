@@ -220,7 +220,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getInverteds(String dimension, String value)
+  public IndexedInts getBitmapIndex(String dimension, String value)
   {
     Map<String, ConciseSet> dimInverted = invertedIndexes.get(dimension);
 

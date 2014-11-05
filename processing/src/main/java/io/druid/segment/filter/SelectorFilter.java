@@ -19,6 +19,7 @@
 
 package io.druid.segment.filter;
 
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -42,9 +43,9 @@ public class SelectorFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(BitmapIndexSelector selector)
+  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    return selector.getConciseInvertedIndex(dimension, value);
+    return selector.getBitmapIndex(dimension, value);
   }
 
   @Override

@@ -18,12 +18,12 @@
  */
 package io.druid.segment.filter;
 
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
  */
@@ -42,9 +42,9 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
+  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    return ImmutableConciseSet.union(selector.getSpatialIndex(dimension).search(bound));
+    return selector.getBitmapFactory().union(selector.getSpatialIndex(dimension).search(bound));
   }
 
   @Override

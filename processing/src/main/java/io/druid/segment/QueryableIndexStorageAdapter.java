@@ -158,7 +158,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     if (filter == null) {
       sequence = new NoFilterCursorSequenceBuilder(index, actualInterval, gran).build();
     } else {
-      Offset offset = new ConciseOffset(filter.goConcise(new ColumnSelectorBitmapIndexSelector(index)));
+      final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
+          index.getBitmapFactoryForDimensions(),
+          index
+      );
+      final Offset offset = new BitmapOffset(selector.getBitmapFactory(), filter.getBitmapIndex(selector));
 
       sequence = new CursorSequenceBuilder(index, actualInterval, gran, offset).build();
     }
@@ -267,8 +271,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final Column columnDesc = index.getColumn(dimensionName);
 
                       if (cachedColumn == null && columnDesc != null) {
-                          cachedColumn = columnDesc.getDictionaryEncoding();
-                          dictionaryColumnCache.put(dimensionName, cachedColumn);
+                        cachedColumn = columnDesc.getDictionaryEncoding();
+                        dictionaryColumnCache.put(dimensionName, cachedColumn);
                       }
 
                       final DictionaryEncodedColumn column = cachedColumn;
@@ -539,7 +543,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                 return columnVals.lookupName(multiValueRow.get(0));
                               } else {
                                 final String[] strings = new String[multiValueRow.size()];
-                                for (int i = 0 ; i < multiValueRow.size() ; i++) {
+                                for (int i = 0; i < multiValueRow.size(); i++) {
                                   strings[i] = columnVals.lookupName(multiValueRow.get(i));
                                 }
                                 return strings;
@@ -600,7 +604,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                 CloseQuietly.close(complexColumn);
               }
               for (Object column : objectColumnCache.values()) {
-                if(column instanceof Closeable) {
+                if (column instanceof Closeable) {
                   CloseQuietly.close((Closeable) column);
                 }
               }
@@ -1019,7 +1023,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                 return columnVals.lookupName(multiValueRow.get(0));
                               } else {
                                 final String[] strings = new String[multiValueRow.size()];
-                                for (int i = 0 ; i < multiValueRow.size() ; i++) {
+                                for (int i = 0; i < multiValueRow.size(); i++) {
                                   strings[i] = columnVals.lookupName(multiValueRow.get(i));
                                 }
                                 return strings;

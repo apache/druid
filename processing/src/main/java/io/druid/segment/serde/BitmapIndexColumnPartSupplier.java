@@ -20,23 +20,26 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.GenericIndexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
-*/
+ */
 public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
 {
-  private static final ImmutableConciseSet EMPTY_SET = new ImmutableConciseSet();
-
-  private final GenericIndexed<ImmutableConciseSet> bitmaps;
+  private final BitmapFactory bitmapFactory;
+  private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final GenericIndexed<String> dictionary;
 
   public BitmapIndexColumnPartSupplier(
-      GenericIndexed<ImmutableConciseSet> bitmaps,
+      BitmapFactory bitmapFactory,
+      GenericIndexed<ImmutableBitmap> bitmaps,
       GenericIndexed<String> dictionary
-  ) {
+  )
+  {
+    this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
     this.dictionary = dictionary;
   }
@@ -65,22 +68,28 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       }
 
       @Override
-      public ImmutableConciseSet getConciseSet(String value)
+      public BitmapFactory getBitmapFactory()
       {
-        final int index = dictionary.indexOf(value);
-
-        return getConciseSet(index);
+        return bitmapFactory;
       }
 
       @Override
-      public ImmutableConciseSet getConciseSet(int idx)
+      public ImmutableBitmap getBitmap(String value)
+      {
+        final int index = dictionary.indexOf(value);
+
+        return getBitmap(index);
+      }
+
+      @Override
+      public ImmutableBitmap getBitmap(int idx)
       {
         if (idx < 0) {
-          return EMPTY_SET;
+          return bitmapFactory.makeEmptyImmutableBitmap();
         }
 
-        final ImmutableConciseSet bitmap = bitmaps.get(idx);
-        return bitmap == null ? EMPTY_SET : bitmap;
+        final ImmutableBitmap bitmap = bitmaps.get(idx);
+        return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
       }
     };
   }
