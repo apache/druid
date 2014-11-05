@@ -35,7 +35,7 @@ import java.util.*;
 /**
  * Created by charlesallen on 10/29/14.
  */
-public class TopNNumericResultBuilder implements TopNResultBuilder{
+public class TopNNumericResultBuilder implements TopNResultBuilder {
 
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
@@ -56,8 +56,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder{
       final Comparator comparator,
       List<AggregatorFactory> aggFactories,
       List<PostAggregator> postAggs
-  )
-  {
+  ) {
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.metricName = metricName;
@@ -65,13 +64,13 @@ public class TopNNumericResultBuilder implements TopNResultBuilder{
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
     this.metricComparator = comparator;
-    this.dimNameComparator = new Comparator<String>(){
+    this.dimNameComparator = new Comparator<String>() {
       @Override
       public int compare(String o1, String o2) {
         int retval;
-        if(o1 == null){
-          retval =  -1;
-        }else if (o2 == null){
+        if (o1 == null) {
+          retval = -1;
+        } else if (o2 == null) {
           retval = 1;
         } else {
           retval = o1.compareTo(o2);
@@ -100,8 +99,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder{
       String dimName,
       Object dimValIndex,
       Object[] metricVals
-  )
-  {
+  ) {
     final Map<String, Object> metricValues = Maps.newLinkedHashMap();
 
     metricValues.put(dimSpec.getOutputName(), dimName);
@@ -117,7 +115,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder{
 
     Object topNMetricVal = metricValues.get(metricName);
 
-    if(shouldAdd(topNMetricVal)){
+    if (shouldAdd(topNMetricVal)) {
       DimValHolder dimValHolder = new DimValHolder.Builder()
           .withTopNMetricVal(topNMetricVal)
           .withDirName(dimName)
@@ -126,25 +124,24 @@ public class TopNNumericResultBuilder implements TopNResultBuilder{
           .build();
       pQueue.add(dimValHolder);
     }
-    if(this.pQueue.size() > this.threshold){
+    if (this.pQueue.size() > this.threshold) {
       pQueue.poll();
     }
 
     return this;
   }
 
-  private boolean shouldAdd(Object topNMetricVal){
-    final boolean belowThreshold = pQueue.size()<this.threshold;
-    final boolean belowMax =  belowThreshold || this.metricComparator.compare(pQueue.peek().getTopNMetricVal(), topNMetricVal)<0;
+  private boolean shouldAdd(Object topNMetricVal) {
+    final boolean belowThreshold = pQueue.size() < this.threshold;
+    final boolean belowMax = belowThreshold || this.metricComparator.compare(pQueue.peek().getTopNMetricVal(), topNMetricVal) < 0;
     return belowMax;
   }
 
   @Override
-  public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
-  {
+  public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor) {
     final Object dimValue = dimensionAndMetricValueExtractor.getDimensionValue(metricName);
 
-    if(shouldAdd(dimValue)){
+    if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
           .withDirName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
@@ -152,22 +149,21 @@ public class TopNNumericResultBuilder implements TopNResultBuilder{
           .build();
       pQueue.add(valHolder);
     }
-    if(pQueue.size() > this.threshold){
+    if (pQueue.size() > this.threshold) {
       pQueue.poll(); // throw away
     }
     return this;
   }
 
   @Override
-  public Iterator<DimValHolder> getTopNIterator()
-  {
+  public Iterator<DimValHolder> getTopNIterator() {
     return pQueue.iterator();
   }
 
   @Override
   public Result<TopNResultValue> build() {
-    final DimValHolder [] holderValueArray = pQueue.toArray(new DimValHolder[0]);
-    Arrays.sort(holderValueArray,  new Comparator<DimValHolder>() {
+    final DimValHolder[] holderValueArray = pQueue.toArray(new DimValHolder[0]);
+    Arrays.sort(holderValueArray, new Comparator<DimValHolder>() {
       @Override
       public int compare(DimValHolder d1, DimValHolder d2) {
         int retVal = -metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
