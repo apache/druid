@@ -26,8 +26,8 @@ There are several main parts to a select query:
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |filter|See [Filters](Filters.html)|no|
-|dimensions|The list of dimensions to select. If left empty, all dimensions are returned.|no|
-|metrics|The list of metrics to select. If left empty, all metrics are returned.|no|
+|dimensions|A String array of dimensions to select. If left empty, all dimensions are returned.|no|
+|metrics|A String array of metrics to select. If left empty, all metrics are returned.|no|
 |pagingSpec|A JSON object indicating offsets into different scanned segments. Query results will return a `pagingIdentifiers` value that can be reused in the next query for pagination.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
