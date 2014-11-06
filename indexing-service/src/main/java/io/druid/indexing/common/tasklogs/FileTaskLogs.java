@@ -20,6 +20,7 @@
 package io.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
@@ -57,15 +58,15 @@ public class FileTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final File file = fileForTask(taskid);
     if (file.exists()) {
-      return Optional.<InputSupplier<InputStream>>of(
-          new InputSupplier<InputStream>()
+      return Optional.<ByteSource>of(
+          new ByteSource()
           {
             @Override
-            public InputStream getInput() throws IOException
+            public InputStream openStream() throws IOException
             {
               return LogUtils.streamFile(file, offset);
             }

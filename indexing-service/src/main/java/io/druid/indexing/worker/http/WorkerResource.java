@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -163,11 +164,11 @@ public class WorkerResource
       @QueryParam("offset") @DefaultValue("0") long offset
   )
   {
-    final Optional<InputSupplier<InputStream>> stream = taskRunner.streamTaskLog(taskid, offset);
+    final Optional<ByteSource> stream = taskRunner.streamTaskLog(taskid, offset);
 
     if (stream.isPresent()) {
-      try {
-        return Response.ok(stream.get().getInput()).build();
+      try (InputStream logStream = stream.get().openStream()) {
+        return Response.ok(logStream).build();
       }
       catch (Exception e) {
         log.warn(e, "Failed to read log for task: %s", taskid);
