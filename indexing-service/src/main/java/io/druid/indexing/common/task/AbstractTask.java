@@ -124,7 +124,6 @@ public abstract class AbstractTask implements Task
                   .toString();
   }
 
-  @JsonIgnore
   Priority priority = Priority.NORMAL;
 
   @JsonProperty
