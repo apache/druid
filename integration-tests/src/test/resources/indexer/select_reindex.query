@@ -1,0 +1,19 @@
+{
+        "queryType": "select",
+        "intervals": ["2013-08-31/2013-09-01"],
+        "dataSource": "wikipedia_reindex_test",
+        "granularity": "all",
+        "filter": {
+            "type": "selector",
+            "dimension": "language",
+            "value": "en"
+        },
+        "pagingSpec": {
+            "threshold": 10
+        },
+        "context": {
+            "useCache": "false",
+            "populateCache": "false",
+            "timeout": 60000
+        }
+    }
