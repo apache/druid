@@ -107,6 +107,7 @@ public class HadoopIndexTask extends AbstractTask
         getTheDataSource(spec, config)
     );
 
+    this.priority = Priority.LOW;
 
     this.spec = spec == null ? config : spec;
 
@@ -327,10 +328,5 @@ public class HadoopIndexTask extends AbstractTask
 
       return null;
     }
-  }
-
-  @Override
-  public int getPriority(){
-    return Thread.MIN_PRIORITY;
   }
 }

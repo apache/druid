@@ -60,7 +60,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 {
   private final TaskToolboxFactory toolboxFactory;
-  private final Map<Integer, ListeningExecutorService> exec = Maps.newHashMap();
+  private final Map<Task.Priority, ListeningExecutorService> exec = Maps.newHashMap();
   private final Set<ThreadPoolTaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<>();
 
   private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
@@ -71,24 +71,25 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   )
   {
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
-    this.exec.put(Thread.NORM_PRIORITY,MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d", Thread.NORM_PRIORITY)));
+    for(Task.Priority priority : Task.Priority.values()) {
+      this.exec.put(
+          priority,
+          MoreExecutors.listeningDecorator(
+              Execs.singleThreaded(
+                  "task-runner-%d-priority-" + priority.toString(),
+                  priority.getPriority()
+              )
+          )
+      );
+    }
+
   }
 
   @LifecycleStop
   public void stop()
   {
-    for(Map.Entry<Integer, ListeningExecutorService> entry : exec.entrySet()){
+    for(Map.Entry<Task.Priority, ListeningExecutorService> entry : exec.entrySet()){
       entry.getValue().shutdownNow();
-    }
-  }
-
-  /**
-   * Makes sure the priority of desire is present
-   * @param priority The priority as per {@link Thread#setPriority(int)} for the task is set per executor Executor
-   */
-  private final void ensurePriorityExists(Integer priority){
-    if(!exec.containsKey(priority)){
-      exec.put(priority,MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d", priority)));
     }
   }
 
@@ -96,7 +97,6 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   public ListenableFuture<TaskStatus> run(final Task task)
   {
     final TaskToolbox toolbox = toolboxFactory.build(task);
-    ensurePriorityExists(task.getPriority());
     final ListenableFuture<TaskStatus> statusFuture = exec.get(task.getPriority()).submit(new ThreadPoolTaskRunnerCallable(task, toolbox));
     final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem = new ThreadPoolTaskRunnerWorkItem(task, statusFuture);
     runningItems.add(taskRunnerWorkItem);

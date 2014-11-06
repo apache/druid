@@ -53,6 +53,7 @@ public class MergeTask extends MergeTaskBase
   )
   {
     super(id, dataSource, segments);
+    this.priority = Priority.LOW;
     this.aggregators = aggregators;
   }
 
@@ -80,11 +81,6 @@ public class MergeTask extends MergeTaskBase
         aggregators.toArray(new AggregatorFactory[aggregators.size()]),
         outDir
     );
-  }
-
-  @Override
-  public int getPriority(){
-    return Thread.MIN_PRIORITY;
   }
 
   @Override
