@@ -19,7 +19,7 @@ The metric field can also be given as a JSON object. The grammar for dimension v
 ```json
 "metric": {
     "type": "numeric",
-    "metric": "<metric_value>"
+    "metric": "<metric_name>"
 }
 ```
 
