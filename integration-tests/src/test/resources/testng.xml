@@ -1,0 +1,10 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+
+
+<suite name="IntegrationTestSuite">
+<test name="AllTests">
+<packages>
+  <package name="io.druid.tests.*"/>
+</packages>
+</test>
+</suite>

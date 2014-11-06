@@ -1,0 +1,32 @@
+{
+    "type" : "index",
+    "dataSource" : "wikipedia_reindex_test",
+    "granularitySpec" : {
+        "type" : "uniform",
+        "gran" : "DAY",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
+    },
+    "aggregators" : [{
+                         "type" : "count",
+                         "name" : "count"
+                     }, {
+                         "type" : "doubleSum",
+                         "name" : "added",
+                         "fieldName" : "added"
+                     }, {
+                         "type" : "doubleSum",
+                         "name" : "deleted",
+                         "fieldName" : "deleted"
+                     }, {
+                         "type" : "doubleSum",
+                         "name" : "delta",
+                         "fieldName" : "delta"
+                     }],
+    "firehose" : {
+        "type" : "ingestSegment",
+        "dataSource" : "wikipedia_index_test",
+        "dimensions" : ["user","nonexist"], 
+	"metrics"  : ["added", "added2"],
+        "interval" :"2013-08-31/2013-09-01"
+    }
+}

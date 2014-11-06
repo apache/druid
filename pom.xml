@@ -61,6 +61,7 @@
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>histogram</module>
+        <module>integration-tests</module>
     </modules>
 
     <dependencyManagement>

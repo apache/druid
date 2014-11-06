@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
@@ -107,6 +108,10 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
+            // this should not be necessary ???
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to("9700");
+
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.task.chathandler.type",
