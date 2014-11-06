@@ -33,6 +33,10 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.metadata.EntryExistsException;
+import io.druid.metadata.MetadataStorageActionHandler;
+import io.druid.metadata.MetadataStorageActionHandlerFactory;
+import io.druid.metadata.MetadataStorageActionHandlerTypes;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
@@ -49,7 +53,7 @@ public class MetadataTaskStorage implements TaskStorage
   private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock>()
   {
     @Override
-    public TypeReference<Task> getTaskType()
+    public TypeReference<Task> getEntryType()
     {
       return new TypeReference<Task>()
       {
@@ -57,7 +61,7 @@ public class MetadataTaskStorage implements TaskStorage
     }
 
     @Override
-    public TypeReference<TaskStatus> getTaskStatusType()
+    public TypeReference<TaskStatus> getStatusType()
     {
       return new TypeReference<TaskStatus>()
       {
@@ -65,7 +69,7 @@ public class MetadataTaskStorage implements TaskStorage
     }
 
     @Override
-    public TypeReference<TaskAction> getTaskActionType()
+    public TypeReference<TaskAction> getLogType()
     {
       return new TypeReference<TaskAction>()
       {
@@ -73,13 +77,14 @@ public class MetadataTaskStorage implements TaskStorage
     }
 
     @Override
-    public TypeReference<TaskLock> getTaskLockType()
+    public TypeReference<TaskLock> getLockType()
     {
       return new TypeReference<TaskLock>()
       {
       };
     }
   };
+  public static final String TASK_ENTRY_TYPE = "task";
   private final MetadataStorageConnector metadataStorageConnector;
   private final TaskStorageConfig config;
   private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
@@ -95,7 +100,7 @@ public class MetadataTaskStorage implements TaskStorage
   {
     this.metadataStorageConnector = metadataStorageConnector;
     this.config = config;
-    this.handler = factory.create(TASK_TYPES);
+    this.handler = factory.create(TASK_ENTRY_TYPE, TASK_TYPES);
   }
 
   @LifecycleStart
@@ -111,7 +116,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(final Task task, final TaskStatus status) throws TaskExistsException
+  public void insert(final Task task, final TaskStatus status) throws EntryExistsException
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -135,8 +140,8 @@ public class MetadataTaskStorage implements TaskStorage
       );
     }
     catch (Exception e) {
-      if(e instanceof TaskExistsException) {
-        throw (TaskExistsException) e;
+      if(e instanceof EntryExistsException) {
+        throw (EntryExistsException) e;
       } else {
         Throwables.propagate(e);
       }
@@ -163,13 +168,13 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public Optional<Task> getTask(final String taskId)
   {
-      return handler.getTask(taskId);
+      return handler.getEntry(taskId);
   }
 
   @Override
   public Optional<TaskStatus> getStatus(final String taskId)
   {
-    return handler.getTaskStatus(taskId);
+    return handler.getStatus(taskId);
   }
 
   @Override
@@ -178,7 +183,7 @@ public class MetadataTaskStorage implements TaskStorage
     return ImmutableList.copyOf(
         Iterables.transform(
             Iterables.filter(
-                handler.getActiveTasksWithStatus(),
+                handler.getActiveEntriesWithStatus(),
                 new Predicate<Pair<Task, TaskStatus>>()
                 {
                   @Override
@@ -210,7 +215,7 @@ public class MetadataTaskStorage implements TaskStorage
 
     return ImmutableList.copyOf(
         Iterables.filter(
-            handler.getRecentlyFinishedTaskStatuses(start),
+            handler.getInactiveStatusesSince(start),
             new Predicate<TaskStatus>()
             {
               @Override
@@ -282,17 +287,17 @@ public class MetadataTaskStorage implements TaskStorage
 
     log.info("Logging action for task[%s]: %s", task.getId(), taskAction);
 
-    handler.addAuditLog(task.getId(), taskAction);
+    handler.addLog(task.getId(), taskAction);
   }
 
   @Override
   public List<TaskAction> getAuditLogs(final String taskId)
   {
-    return handler.getTaskLogs(taskId);
+    return handler.getLogs(taskId);
   }
 
   private Map<Long, TaskLock> getLocksWithIds(final String taskid)
   {
-    return handler.getTaskLocks(taskid);
+    return handler.getLocks(taskid);
   }
 }

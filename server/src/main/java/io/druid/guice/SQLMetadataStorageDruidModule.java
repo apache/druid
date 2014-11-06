@@ -25,7 +25,7 @@ import com.google.inject.Module;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
+import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -42,7 +42,6 @@ import io.druid.metadata.SQLMetadataSegmentManagerProvider;
 import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
-import io.druid.segment.realtime.SegmentPublisher;
 
 public class SQLMetadataStorageDruidModule implements Module
 {

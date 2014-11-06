@@ -21,10 +21,6 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import io.druid.indexing.overlord.MetadataStorageActionHandler;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerFactory;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerTypes;
-import org.skife.jdbi.v2.IDBI;
 
 public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageActionHandlerFactory
 {
@@ -44,8 +40,19 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
     this.jsonMapper = jsonMapper;
   }
 
-  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(MetadataStorageActionHandlerTypes<A,B,C,D> types)
+  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(
+      final String entryType,
+      MetadataStorageActionHandlerTypes<A,B,C,D> payloadTypes
+  )
   {
-    return new SQLMetadataStorageActionHandler<>(connector, config, jsonMapper, types);
+    return new SQLMetadataStorageActionHandler<>(
+        connector,
+        jsonMapper,
+        payloadTypes,
+        entryType,
+        config.getEntryTable(entryType),
+        config.getLogTable(entryType),
+        config.getLockTable(entryType)
+    );
   }
 }

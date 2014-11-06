@@ -21,6 +21,7 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.api.client.util.Maps;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
@@ -30,9 +31,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
 import com.metamx.common.RetryUtils;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.indexing.overlord.MetadataStorageActionHandler;
-import io.druid.indexing.overlord.MetadataStorageActionHandlerTypes;
-import io.druid.indexing.overlord.TaskExistsException;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -55,47 +53,53 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActionType, TaskLockType>
-    implements MetadataStorageActionHandler<TaskType, TaskStatusType, TaskActionType, TaskLockType>
+public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+    implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataStorageActionHandler.class);
 
   private final SQLMetadataConnector connector;
-  private final MetadataStorageTablesConfig config;
   private final ObjectMapper jsonMapper;
-  private final TypeReference taskType;
-  private final TypeReference taskStatusType;
-  private final TypeReference taskActionType;
-  private final TypeReference taskLockType;
+  private final TypeReference entryType;
+  private final TypeReference statusType;
+  private final TypeReference logType;
+  private final TypeReference lockType;
+
+  private final String entryTypeName;
+  private final String entryTable;
+  private final String logTable;
+  private final String lockTable;
 
   public SQLMetadataStorageActionHandler(
       final SQLMetadataConnector connector,
-      final MetadataStorageTablesConfig config,
       final ObjectMapper jsonMapper,
-      final MetadataStorageActionHandlerTypes<TaskType, TaskStatusType, TaskActionType, TaskLockType> types
+      final MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
+      final String entryTypeName,
+      final String entryTable,
+      final String logTable,
+      final String lockTable
   )
   {
     this.connector = connector;
-    this.config = config;
     this.jsonMapper = jsonMapper;
-    this.taskType = types.getTaskType();
-    this.taskStatusType = types.getTaskStatusType();
-    this.taskActionType = types.getTaskActionType();
-    this.taskLockType = types.getTaskLockType();
+    this.entryType = types.getEntryType();
+    this.statusType = types.getStatusType();
+    this.logType = types.getLogType();
+    this.lockType = types.getLockType();
+    this.entryTypeName = entryTypeName;
+    this.entryTable = entryTable;
+    this.logTable = logTable;
+    this.lockTable = lockTable;
   }
 
-  /**
-   * Insert stuff
-   *
-   */
   public void insert(
       final String id,
-      final DateTime createdDate,
+      final DateTime timestamp,
       final String dataSource,
-      final TaskType task,
+      final EntryType entry,
       final boolean active,
-      final TaskStatusType status
-  ) throws TaskExistsException
+      final StatusType status
+  ) throws EntryExistsException
   {
     try {
       retryingHandle(
@@ -107,13 +111,13 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
               handle.createStatement(
                   String.format(
                       "INSERT INTO %s (id, created_date, datasource, payload, active, status_payload) VALUES (:id, :created_date, :datasource, :payload, :active, :status_payload)",
-                      config.getTasksTable()
+                      entryTable
                   )
               )
                     .bind("id", id)
-                    .bind("created_date", createdDate.toString())
+                    .bind("created_date", timestamp.toString())
                     .bind("datasource", dataSource)
-                    .bind("payload", jsonMapper.writeValueAsBytes(task))
+                    .bind("payload", jsonMapper.writeValueAsBytes(entry))
                     .bind("active", active)
                     .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                     .execute();
@@ -125,20 +129,15 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
       final boolean isStatementException = e instanceof StatementException ||
                                            (e instanceof CallbackFailedException
                                             && e.getCause() instanceof StatementException);
-      if (isStatementException && getTask(id).isPresent()) {
-        throw new TaskExistsException(id, e);
+      if (isStatementException && getEntry(id).isPresent()) {
+        throw new EntryExistsException(id, e);
       } else {
         throw Throwables.propagate(e);
       }
     }
   }
 
-  /**
-   * Update task status.
-   *
-   * @return true if status of the task with the given id has been updated successfully
-   */
-  public boolean setStatus(final String taskId, final boolean active, final TaskStatusType status)
+  public boolean setStatus(final String entryId, final boolean active, final StatusType status)
   {
     return retryingHandle(
             new HandleCallback<Boolean>()
@@ -149,10 +148,10 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
                 return handle.createStatement(
                             String.format(
                                 "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
-                                config.getTasksTable()
+                                entryTable
                             )
                         )
-                             .bind("id", taskId)
+                             .bind("id", entryId)
                              .bind("active", active)
                              .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                              .execute() == 1;
@@ -161,31 +160,23 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
         );
   }
 
-  /*  */
-
-  /**
-   * Retrieve a task with the given ID
-   *
-   * @param taskId task ID
-   * @return task if it exists
-   */
-  public Optional<TaskType> getTask(final String taskId)
+  public Optional<EntryType> getEntry(final String entryId)
   {
     return retryingHandle(
-        new HandleCallback<Optional<TaskType>>()
+        new HandleCallback<Optional<EntryType>>()
         {
           @Override
-          public Optional<TaskType> withHandle(Handle handle) throws Exception
+          public Optional<EntryType> withHandle(Handle handle) throws Exception
           {
             return Optional.fromNullable(
-                jsonMapper.<TaskType>readValue(
+                jsonMapper.<EntryType>readValue(
                     handle.createQuery(
-                        String.format("SELECT payload FROM %s WHERE id = :id", config.getTasksTable())
+                        String.format("SELECT payload FROM %s WHERE id = :id", entryTable)
                     )
-                          .bind("id", taskId)
+                          .bind("id", entryId)
                           .map(ByteArrayMapper.FIRST)
                           .first(),
-                    taskType
+                    entryType
                 )
             );
           }
@@ -194,24 +185,23 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
 
   }
 
-  /* Retrieve a task status with the given ID */
-  public Optional<TaskStatusType> getTaskStatus(final String taskId)
+  public Optional<StatusType> getStatus(final String entryId)
   {
     return retryingHandle(
-        new HandleCallback<Optional<TaskStatusType>>()
+        new HandleCallback<Optional<StatusType>>()
         {
           @Override
-          public Optional<TaskStatusType> withHandle(Handle handle) throws Exception
+          public Optional<StatusType> withHandle(Handle handle) throws Exception
           {
             return Optional.fromNullable(
-                jsonMapper.<TaskStatusType>readValue(
+                jsonMapper.<StatusType>readValue(
                     handle.createQuery(
-                        String.format("SELECT status_payload FROM %s WHERE id = :id", config.getTasksTable())
+                        String.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
                     )
-                          .bind("id", taskId)
+                          .bind("id", entryId)
                           .map(ByteArrayMapper.FIRST)
                           .first(),
-                    taskStatusType
+                    statusType
                 )
             );
           }
@@ -219,43 +209,42 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
     );
   }
 
-  /* Retrieve active tasks */
-  public List<Pair<TaskType, TaskStatusType>> getActiveTasksWithStatus()
+  public List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus()
   {
     return retryingHandle(
-      new HandleCallback<List<Pair<TaskType, TaskStatusType>>>()
+      new HandleCallback<List<Pair<EntryType, StatusType>>>()
       {
         @Override
-        public List<Pair<TaskType, TaskStatusType>> withHandle(Handle handle) throws Exception
+        public List<Pair<EntryType, StatusType>> withHandle(Handle handle) throws Exception
         {
           return handle
               .createQuery(
                   String.format(
                       "SELECT id, payload, status_payload FROM %s WHERE active = TRUE ORDER BY created_date",
-                      config.getTasksTable()
+                      entryTable
                   )
               )
               .map(
-                  new ResultSetMapper<Pair<TaskType, TaskStatusType>>()
+                  new ResultSetMapper<Pair<EntryType, StatusType>>()
                   {
                     @Override
-                    public Pair<TaskType, TaskStatusType> map(int index, ResultSet r, StatementContext ctx)
+                    public Pair<EntryType, StatusType> map(int index, ResultSet r, StatementContext ctx)
                         throws SQLException
                     {
                       try {
                         return Pair.of(
-                            jsonMapper.<TaskType>readValue(
+                            jsonMapper.<EntryType>readValue(
                                 r.getBytes("payload"),
-                                taskType
+                                entryType
                             ),
-                            jsonMapper.<TaskStatusType>readValue(
+                            jsonMapper.<StatusType>readValue(
                                 r.getBytes("status_payload"),
-                                taskStatusType
+                                statusType
                             )
                         );
                       }
                       catch (IOException e) {
-                        log.makeAlert(e, "Failed to parse task payload").addData("task", r.getString("id")).emit();
+                        log.makeAlert(e, "Failed to parse entry payload").addData("entry", r.getString("id")).emit();
                         throw new SQLException(e);
                       }
                     }
@@ -267,37 +256,36 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
 
   }
 
-  /* Retrieve task statuses that have been created sooner than the given time */
-  public List<TaskStatusType> getRecentlyFinishedTaskStatuses(final DateTime start)
+  public List<StatusType> getInactiveStatusesSince(final DateTime timestamp)
   {
     return retryingHandle(
-      new HandleCallback<List<TaskStatusType>>()
+      new HandleCallback<List<StatusType>>()
       {
         @Override
-        public List<TaskStatusType> withHandle(Handle handle) throws Exception
+        public List<StatusType> withHandle(Handle handle) throws Exception
         {
           return handle
               .createQuery(
                   String.format(
                       "SELECT id, status_payload FROM %s WHERE active = FALSE AND created_date >= :start ORDER BY created_date DESC",
-                      config.getTasksTable()
+                      entryTable
                   )
-              ).bind("start", start.toString())
+              ).bind("start", timestamp.toString())
               .map(
-                  new ResultSetMapper<TaskStatusType>()
+                  new ResultSetMapper<StatusType>()
                   {
                     @Override
-                    public TaskStatusType map(int index, ResultSet r, StatementContext ctx) throws SQLException
+                    public StatusType map(int index, ResultSet r, StatementContext ctx) throws SQLException
                     {
                       try {
                         return jsonMapper.readValue(
                             r.getBytes("status_payload"),
-                            taskStatusType
+                            statusType
                         );
                       }
                       catch (IOException e) {
                         log.makeAlert(e, "Failed to parse status payload")
-                           .addData("task", r.getString("id"))
+                           .addData("entry", r.getString("id"))
                            .emit();
                         throw new SQLException(e);
                       }
@@ -309,8 +297,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
     );
   }
 
-  /* Add lock to the task with given ID */
-  public boolean addLock(final String taskId, final TaskLockType lock)
+  public boolean addLock(final String entryId, final LockType lock)
   {
     return retryingHandle(
       new HandleCallback<Boolean>()
@@ -320,19 +307,18 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
         {
           return handle.createStatement(
                       String.format(
-                          "INSERT INTO %s (task_id, lock_payload) VALUES (:task_id, :lock_payload)",
-                          config.getTaskLockTable()
+                          "INSERT INTO %1$s (%2$s_id, lock_payload) VALUES (:entryId, :payload)",
+                          lockTable, entryTypeName
                       )
                   )
-                       .bind("task_id", taskId)
-                       .bind("lock_payload", jsonMapper.writeValueAsBytes(lock))
+                       .bind("entryId", entryId)
+                       .bind("payload", jsonMapper.writeValueAsBytes(lock))
                        .execute() == 1;
         }
       }
     );
   }
 
-  /* Remove taskLock with given ID */
   public boolean removeLock(final long lockId)
   {
     return retryingHandle(
@@ -344,7 +330,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
           return handle.createStatement(
                       String.format(
                           "DELETE FROM %s WHERE id = :id",
-                          config.getTaskLockTable()
+                          lockTable
                       )
                   )
                        .bind("id", lockId)
@@ -354,7 +340,7 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
     );
   }
 
-  public boolean addAuditLog(final String taskId, final TaskActionType taskAction)
+  public boolean addLog(final String entryId, final LogType log)
   {
     return retryingHandle(
       new HandleCallback<Boolean>()
@@ -364,57 +350,56 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
         {
           return handle.createStatement(
                       String.format(
-                          "INSERT INTO %s (task_id, log_payload) VALUES (:task_id, :log_payload)",
-                          config.getTaskLogTable()
+                          "INSERT INTO %1$s (%2$s_id, log_payload) VALUES (:entryId, :payload)",
+                          logTable, entryTypeName
                       )
                   )
-                       .bind("task_id", taskId)
-                       .bind("log_payload", jsonMapper.writeValueAsBytes(taskAction))
+                       .bind("entryId", entryId)
+                       .bind("payload", jsonMapper.writeValueAsBytes(log))
                        .execute() == 1;
         }
       }
     );
   }
 
-  /* Get logs for task with given ID */
-  public List<TaskActionType> getTaskLogs(final String taskId)
+  public List<LogType> getLogs(final String entryId)
   {
     return retryingHandle(
-      new HandleCallback<List<TaskActionType>>()
+      new HandleCallback<List<LogType>>()
       {
         @Override
-        public List<TaskActionType> withHandle(Handle handle) throws Exception
+        public List<LogType> withHandle(Handle handle) throws Exception
         {
           return handle
               .createQuery(
                   String.format(
-                      "SELECT log_payload FROM %s WHERE task_id = :task_id",
-                      config.getTaskLogTable()
+                      "SELECT log_payload FROM %1$s WHERE %2$s_id = :entryId",
+                      logTable, entryTypeName
                   )
               )
-              .bind("task_id", taskId)
+              .bind("entryId", entryId)
               .map(ByteArrayMapper.FIRST)
               .fold(
-                  Lists.<TaskActionType>newLinkedList(),
-                  new Folder3<List<TaskActionType>, byte[]>()
+                  Lists.<LogType>newLinkedList(),
+                  new Folder3<List<LogType>, byte[]>()
                   {
                     @Override
-                    public List<TaskActionType> fold(
-                        List<TaskActionType> list, byte[] bytes, FoldController control, StatementContext ctx
+                    public List<LogType> fold(
+                        List<LogType> list, byte[] bytes, FoldController control, StatementContext ctx
                     ) throws SQLException
                     {
                       try {
                         list.add(
-                            jsonMapper.<TaskActionType>readValue(
-                                bytes, taskActionType
+                            jsonMapper.<LogType>readValue(
+                                bytes, logType
                             )
                         );
                         return list;
                       }
                       catch (IOException e) {
-                        log.makeAlert(e, "Failed to deserialize TaskLog")
-                           .addData("task", taskId)
-                           .addData("logPayload", new String(bytes, Charsets.UTF_8))
+                        log.makeAlert(e, "Failed to deserialize log")
+                           .addData("entryId", entryId)
+                           .addData("payload", new String(bytes, Charsets.UTF_8))
                            .emit();
                         throw new SQLException(e);
                       }
@@ -426,41 +411,40 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
     );
   }
 
-  /* Get locks for task with given ID */
-  public Map<Long, TaskLockType> getTaskLocks(final String taskId)
+  public Map<Long, LockType> getLocks(final String entryId)
   {
     return retryingHandle(
-      new HandleCallback<Map<Long, TaskLockType>>()
+      new HandleCallback<Map<Long, LockType>>()
       {
         @Override
-        public Map<Long, TaskLockType> withHandle(Handle handle) throws Exception
+        public Map<Long, LockType> withHandle(Handle handle) throws Exception
         {
           return handle.createQuery(
                       String.format(
-                          "SELECT id, lock_payload FROM %s WHERE task_id = :task_id",
-                          config.getTaskLockTable()
+                          "SELECT id, lock_payload FROM %1$s WHERE %2$s_id = :entryId",
+                          lockTable, entryTypeName
                       )
                   )
-                       .bind("task_id", taskId)
+                       .bind("entryId", entryId)
               .map(
-                  new ResultSetMapper<Pair<Long, TaskLockType>>()
+                  new ResultSetMapper<Pair<Long, LockType>>()
                   {
                     @Override
-                    public Pair<Long, TaskLockType> map(int index, ResultSet r, StatementContext ctx)
+                    public Pair<Long, LockType> map(int index, ResultSet r, StatementContext ctx)
                         throws SQLException
                     {
                       try {
                         return Pair.of(
                             r.getLong("id"),
-                            jsonMapper.<TaskLockType>readValue(
+                            jsonMapper.<LockType>readValue(
                                 r.getBytes("lock_payload"),
-                                taskLockType
+                                lockType
                             )
                         );
                       }
                       catch (IOException e) {
-                        log.makeAlert(e, "Failed to deserialize TaskLock")
-                           .addData("task", r.getLong("id"))
+                        log.makeAlert(e, "Failed to deserialize " + lockType.getType())
+                           .addData("id", r.getLong("id"))
                            .addData(
                                "lockPayload", new String(r.getBytes("lock_payload"), Charsets.UTF_8)
                            )
@@ -471,13 +455,13 @@ public class SQLMetadataStorageActionHandler<TaskType, TaskStatusType, TaskActio
                   }
               )
               .fold(
-                  Maps.<Long, TaskLockType>newLinkedHashMap(),
-                  new Folder3<Map<Long, TaskLockType>, Pair<Long, TaskLockType>>()
+                  Maps.<Long, LockType>newLinkedHashMap(),
+                  new Folder3<Map<Long, LockType>, Pair<Long, LockType>>()
                   {
                     @Override
-                    public Map<Long, TaskLockType> fold(
-                        Map<Long, TaskLockType> accumulator,
-                        Pair<Long, TaskLockType> lock,
+                    public Map<Long, LockType> fold(
+                        Map<Long, LockType> accumulator,
+                        Pair<Long, LockType> lock,
                         FoldController control,
                         StatementContext ctx
                     ) throws SQLException

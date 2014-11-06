@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2014  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,14 +17,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord;
+package io.druid.metadata;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-
-public interface MetadataStorageActionHandlerTypes<A,B,C,D>
+public class EntryExistsException extends Exception
 {
-  public TypeReference<A> getTaskType();
-  public TypeReference<B> getTaskStatusType();
-  public TypeReference<C> getTaskActionType();
-  public TypeReference<D> getTaskLockType();
+  private final String entryId;
+
+  public EntryExistsException(String entryId, Throwable t)
+  {
+    super(String.format("Entry already exists: %s", entryId), t);
+    this.entryId = entryId;
+  }
+
+  public EntryExistsException(String entryId)
+  {
+    this(entryId, null);
+  }
+
+  public String getEntryId()
+  {
+    return entryId;
+  }
 }

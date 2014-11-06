@@ -21,6 +21,9 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Maps;
+
+import java.util.Map;
 
 /**
  */
@@ -32,6 +35,11 @@ public class MetadataStorageTablesConfig
   }
 
   private static String defaultBase = "druid";
+  private static final String TASK_ENTRY_TYPE = "task";
+
+  private final Map<String, String> entryTables = Maps.newHashMap();
+  private final Map<String, String> logTables = Maps.newHashMap();
+  private final Map<String, String> lockTables = Maps.newHashMap();
 
   @JsonProperty("base")
   private final String base;
@@ -69,9 +77,14 @@ public class MetadataStorageTablesConfig
     this.segmentsTable = makeTableName(segmentsTable, "segments");
     this.rulesTable = makeTableName(rulesTable, "rules");
     this.configTable = makeTableName(configTable, "config");
+
     this.tasksTable = makeTableName(tasksTable, "tasks");
     this.taskLogTable = makeTableName(taskLogTable, "tasklogs");
     this.taskLockTable = makeTableName(taskLockTable, "tasklocks");
+    entryTables.put(TASK_ENTRY_TYPE, this.tasksTable);
+    logTables.put(TASK_ENTRY_TYPE, this.taskLogTable);
+    lockTables.put(TASK_ENTRY_TYPE, this.taskLockTable);
+
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -106,18 +119,23 @@ public class MetadataStorageTablesConfig
     return configTable;
   }
 
-  public String getTasksTable()
+  public String getEntryTable(final String entryType)
   {
-    return tasksTable;
+    return entryTables.get(entryType);
   }
 
-  public String getTaskLogTable()
+  public String getLogTable(final String entryType)
   {
-    return taskLogTable;
+    return logTables.get(entryType);
   }
 
-  public String getTaskLockTable()
+  public String getLockTable(final String entryType)
   {
-    return taskLockTable;
+    return lockTables.get(entryType);
+  }
+
+  public String getTaskEntryType()
+  {
+    return TASK_ENTRY_TYPE;
   }
 }

@@ -34,7 +34,6 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 
 import java.sql.Connection;
 import java.util.List;
-import java.util.Map;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -42,13 +41,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final String PAYLOAD_TYPE = "BLOB";
 
   private final Supplier<MetadataStorageConnectorConfig> config;
-  private final Supplier<MetadataStorageTablesConfig> dbTables;
+  private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
 
   public SQLMetadataConnector(Supplier<MetadataStorageConnectorConfig> config,
-                              Supplier<MetadataStorageTablesConfig> dbTables)
+                              Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+  )
   {
     this.config = config;
-    this.dbTables = dbTables;
+    this.tablesConfigSupplier = tablesConfigSupplier;
   }
 
   /**
@@ -176,7 +176,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createTaskTable(final IDBI dbi, final String tableName)
+  public void createEntryTable(final IDBI dbi, final String tableName)
   {
     createTable(
         dbi,
@@ -199,7 +199,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createTaskLogTable(final IDBI dbi, final String tableName)
+  public void createLogTable(final IDBI dbi, final String tableName, final String entryTypeName)
   {
     createTable(
         dbi,
@@ -208,18 +208,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             String.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
-                + "  task_id VARCHAR(255) DEFAULT NULL,\n"
+                + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
                 + "  log_payload %3$s,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getSerialType(), getPayloadType()
+                tableName, getSerialType(), getPayloadType(), entryTypeName
             ),
-            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id)", tableName)
+            String.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
         )
     );
   }
 
-  public void createTaskLockTable(final IDBI dbi, final String tableName)
+  public void createLockTable(final IDBI dbi, final String tableName, final String entryTypeName)
   {
     createTable(
         dbi,
@@ -228,13 +228,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             String.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
-                + "  task_id VARCHAR(255) DEFAULT NULL,\n"
+                + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
                 + "  lock_payload %3$s,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getSerialType(), getPayloadType()
+                tableName, getSerialType(), getPayloadType(), entryTypeName
             ),
-            String.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id)", tableName)
+            String.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
         )
     );
   }
@@ -259,7 +259,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             conn.setAutoCommit(false);
             int count = handle
                 .createQuery(
-                    String.format("SELECT COUNT(*) FROM %1$s WHERE %2$s=:key", tableName, keyColumn, valueColumn)
+                    String.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", tableName, keyColumn)
                 )
                 .bind("key", key)
                 .map(IntegerMapper.FIRST)
@@ -290,31 +290,32 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   @Override
   public void createSegmentTable() {
     if (config.get().isCreateTables()) {
-      createSegmentTable(getDBI(), dbTables.get().getSegmentsTable());
+      createSegmentTable(getDBI(), tablesConfigSupplier.get().getSegmentsTable());
     }
   }
 
   @Override
   public void createRulesTable() {
     if (config.get().isCreateTables()) {
-      createRulesTable(getDBI(), dbTables.get().getRulesTable());
+      createRulesTable(getDBI(), tablesConfigSupplier.get().getRulesTable());
     }
   }
 
   @Override
   public void createConfigTable() {
     if (config.get().isCreateTables()) {
-      createConfigTable(getDBI(), dbTables.get().getConfigTable());
+      createConfigTable(getDBI(), tablesConfigSupplier.get().getConfigTable());
     }
   }
 
   @Override
   public void createTaskTables() {
     if (config.get().isCreateTables()) {
-      final MetadataStorageTablesConfig metadataStorageTablesConfig = dbTables.get();
-      createTaskTable(getDBI(), metadataStorageTablesConfig.getTasksTable());
-      createTaskLogTable(getDBI(), metadataStorageTablesConfig.getTaskLogTable());
-      createTaskLockTable(getDBI(), metadataStorageTablesConfig.getTaskLockTable());
+      final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
+      final String entryType = tablesConfig.getTaskEntryType();
+      createEntryTable(getDBI(), tablesConfig.getEntryTable(entryType));
+      createLogTable(getDBI(), tablesConfig.getLogTable(entryType), entryType);
+      createLockTable(getDBI(), tablesConfig.getLockTable(entryType), entryType);
     }
   }
 

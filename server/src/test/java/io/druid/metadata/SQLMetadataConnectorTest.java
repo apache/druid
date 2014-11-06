@@ -56,12 +56,13 @@ public class SQLMetadataConnectorTest
   public void testCreateTables() throws Exception
   {
     final LinkedList<String> tables = new LinkedList<String>();
+    final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
-    tables.add(tablesConfig.getTaskLockTable());
-    tables.add(tablesConfig.getTaskLogTable());
-    tables.add(tablesConfig.getTasksTable());
+    tables.add(tablesConfig.getLockTable(entryType));
+    tables.add(tablesConfig.getLogTable(entryType));
+    tables.add(tablesConfig.getEntryTable(entryType));
 
     connector.createSegmentTable();
     connector.createConfigTable();

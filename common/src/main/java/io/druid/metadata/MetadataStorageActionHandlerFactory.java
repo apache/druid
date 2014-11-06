@@ -17,9 +17,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord;
+package io.druid.metadata;
 
 public interface MetadataStorageActionHandlerFactory
 {
-  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(MetadataStorageActionHandlerTypes<A,B,C,D> types);
+  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(
+      final String entryType,
+      MetadataStorageActionHandlerTypes<A, B, C, D> payloadTypes
+  );
 }

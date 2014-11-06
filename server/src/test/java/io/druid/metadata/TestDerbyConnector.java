@@ -20,7 +20,11 @@
 package io.druid.metadata;
 
 import com.google.common.base.Supplier;
+import org.junit.Assert;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
+
+import java.sql.SQLException;
 
 public class TestDerbyConnector extends DerbyConnector
 {
@@ -30,5 +34,16 @@ public class TestDerbyConnector extends DerbyConnector
   )
   {
     super(config, dbTables, new DBI("jdbc:derby:memory:druidTest;create=true"));
+  }
+
+  public void tearDown()
+  {
+    try {
+      new DBI("jdbc:derby:memory:druidTest;drop=true").open().close();
+    } catch(UnableToObtainConnectionException e) {
+      SQLException cause = (SQLException) e.getCause();
+      // error code "08006" indicates proper shutdown
+      Assert.assertEquals("08006", cause.getSQLState());
+    }
   }
 }
