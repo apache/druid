@@ -12,7 +12,7 @@ Depending on what `druid.storage.type` is set to, Druid will upload segments to 
 
 ## My realtime node is not handing segments off
 
-Make sure that the `druid.publish.type` on your real-time nodes is set to "db". Also make sure that `druid.storage.type` is set to a deep storage that makes sense. Some example configs:
+Make sure that the `druid.publish.type` on your real-time nodes is set to `metadata`. Also make sure that `druid.storage.type` is set to a deep storage that makes sense. Some example configs:
 
 ```
 druid.publish.type=metadata
