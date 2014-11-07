@@ -42,6 +42,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -84,7 +85,7 @@ public class MetadataTaskStorage implements TaskStorage
       };
     }
   };
-  public static final String TASK_ENTRY_TYPE = "task";
+
   private final MetadataStorageConnector metadataStorageConnector;
   private final TaskStorageConfig config;
   private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
@@ -100,7 +101,7 @@ public class MetadataTaskStorage implements TaskStorage
   {
     this.metadataStorageConnector = metadataStorageConnector;
     this.config = config;
-    this.handler = factory.create(TASK_ENTRY_TYPE, TASK_TYPES);
+    this.handler = factory.create(MetadataStorageTablesConfig.TASK_ENTRY_TYPE, TASK_TYPES);
   }
 
   @LifecycleStart

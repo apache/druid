@@ -34,8 +34,9 @@ public class MetadataStorageTablesConfig
     return new MetadataStorageTablesConfig(base, null, null, null, null, null, null);
   }
 
-  private static String defaultBase = "druid";
-  private static final String TASK_ENTRY_TYPE = "task";
+  public static final String TASK_ENTRY_TYPE = "task";
+
+  private static final String DEFAULT_BASE = "druid";
 
   private final Map<String, String> entryTables = Maps.newHashMap();
   private final Map<String, String> logTables = Maps.newHashMap();
@@ -73,7 +74,7 @@ public class MetadataStorageTablesConfig
       @JsonProperty("taskLock") String taskLockTable
   )
   {
-    this.base = (base == null) ? defaultBase : base;
+    this.base = (base == null) ? DEFAULT_BASE : base;
     this.segmentsTable = makeTableName(segmentsTable, "segments");
     this.rulesTable = makeTableName(rulesTable, "rules");
     this.configTable = makeTableName(configTable, "config");
