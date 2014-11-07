@@ -38,13 +38,14 @@ import java.nio.ByteOrder;
 import java.util.Map;
 
 /**
-*/
+ */
 public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrategy<ResourceHolder<T>>
 {
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
 
-  public static enum CompressionStrategy {
-    LZF ((byte)0x0)
+  public static enum CompressionStrategy
+  {
+    LZF((byte) 0x0)
         {
           @Override
           public Decompressor getDecompressor()
@@ -59,34 +60,39 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
           }
         },
 
-    LZ4 ((byte)0x1) {
-      @Override
-      public Decompressor getDecompressor()
-      {
-        return LZ4Decompressor.defaultDecompressor;
-      }
+    LZ4((byte) 0x1)
+        {
+          @Override
+          public Decompressor getDecompressor()
+          {
+            return LZ4Decompressor.defaultDecompressor;
+          }
 
-      @Override
-      public Compressor getCompressor()
-      {
-        return LZ4Compressor.defaultCompressor;
-      }
-    },
-    UNCOMPRESSED((byte)0x2){
-      @Override
-      public Decompressor getDecompressor(){
-        return UncompressedDecompressor.defaultDecompressor;
-      }
-      @Override
-      public Compressor getCompressor(){
-        return UncompressedCompressor.defaultCompressor;
-      }
-    }
-    ;
+          @Override
+          public Compressor getCompressor()
+          {
+            return LZ4Compressor.defaultCompressor;
+          }
+        },
+    UNCOMPRESSED((byte) 0x2)
+        {
+          @Override
+          public Decompressor getDecompressor()
+          {
+            return UncompressedDecompressor.defaultDecompressor;
+          }
+
+          @Override
+          public Compressor getCompressor()
+          {
+            return UncompressedCompressor.defaultCompressor;
+          }
+        };
 
     final byte id;
 
-    CompressionStrategy(byte id) {
+    CompressionStrategy(byte id)
+    {
       this.id = id;
     }
 
@@ -94,12 +100,17 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     {
       return id;
     }
+
     public abstract Compressor getCompressor();
+
     public abstract Decompressor getDecompressor();
 
     static final Map<Byte, CompressionStrategy> idMap = Maps.newHashMap();
+
     static {
-      for(CompressionStrategy strategy : CompressionStrategy.values()) idMap.put(strategy.getId(), strategy);
+      for (CompressionStrategy strategy : CompressionStrategy.values()) {
+        idMap.put(strategy.getId(), strategy);
+      }
     }
 
     public static CompressionStrategy forId(byte id)
@@ -118,6 +129,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
      * @param out
      */
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out);
+
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize);
   }
 
@@ -127,21 +139,30 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
      * Currently assumes buf is an array backed ByteBuffer
      *
      * @param bytes
+     *
      * @return
      */
     public byte[] compress(byte[] bytes);
   }
-  public static class UncompressedCompressor implements Compressor{
+
+  public static class UncompressedCompressor implements Compressor
+  {
     private static final UncompressedCompressor defaultCompressor = new UncompressedCompressor();
+
     @Override
-    public byte[] compress(byte[] bytes) {
+    public byte[] compress(byte[] bytes)
+    {
       return bytes;
     }
   }
-  public static class UncompressedDecompressor implements Decompressor{
+
+  public static class UncompressedDecompressor implements Decompressor
+  {
     private static final UncompressedDecompressor defaultDecompressor = new UncompressedDecompressor();
+
     @Override
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out) {
+    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
+    {
       final int maxCopy = Math.min(numBytes, out.remaining());
       final ByteBuffer copyBuffer = in.duplicate();
       copyBuffer.limit(copyBuffer.position() + maxCopy);
@@ -151,8 +172,10 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       out.flip();
       in.position(in.position() + maxCopy);
     }
+
     @Override
-    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize) {
+    public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize)
+    {
       decompress(in, numBytes, out);
     }
   }
@@ -160,6 +183,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static class LZFDecompressor implements Decompressor
   {
     private static final LZFDecompressor defaultDecompressor = new LZFDecompressor();
+
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
@@ -187,6 +211,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static class LZFCompressor implements Compressor
   {
     private static final LZFCompressor defaultCompressor = new LZFCompressor();
+
     @Override
     public byte[] compress(byte[] bytes)
     {
@@ -203,6 +228,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestJavaInstance().safeDecompressor();
     private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestJavaInstance().fastDecompressor();
     private static final LZ4Decompressor defaultDecompressor = new LZ4Decompressor();
+
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
@@ -334,8 +360,11 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static interface BufferConverter<T>
   {
     public T convert(ByteBuffer buf);
+
     public int compare(T lhs, T rhs);
+
     public int sizeOf(int count);
+
     public T combine(ByteBuffer into, T from);
   }
 }
