@@ -105,6 +105,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       }
     };
 
+    // The logic in addEntry first adds, then removes if needed. So it can at any point have up to threshold + 1 entries.
     pQueue = new PriorityQueue<>(this.threshold + 1, this.dimValComparator);
   }
 
