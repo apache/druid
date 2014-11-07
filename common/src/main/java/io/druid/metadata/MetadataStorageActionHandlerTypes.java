@@ -21,10 +21,10 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-public interface MetadataStorageActionHandlerTypes<A,B,C,D>
+public interface MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType>
 {
-  public TypeReference<A> getEntryType();
-  public TypeReference<B> getStatusType();
-  public TypeReference<C> getLogType();
-  public TypeReference<D> getLockType();
+  public TypeReference<EntryType> getEntryType();
+  public TypeReference<StatusType> getStatusType();
+  public TypeReference<LogType> getLogType();
+  public TypeReference<LockType> getLockType();
 }
