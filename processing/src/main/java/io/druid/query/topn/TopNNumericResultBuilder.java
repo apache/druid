@@ -19,9 +19,9 @@
 
 package io.druid.query.topn;
 
-import com.apple.concurrent.Dispatch;
 import com.google.common.base.Function;
-import com.google.common.collect.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
@@ -29,8 +29,13 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+
 
 /**
  *
@@ -182,7 +187,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           public int compare(DimValHolder d1, DimValHolder d2)
           {
             // Values flipped compared to earlier
-            int retVal = metricComparator.compare(d2.getTopNMetricVal(),d1.getTopNMetricVal());
+            int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
             if (retVal == 0) {
               retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
