@@ -21,15 +21,18 @@ package io.druid.cli;
 
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.api.client.util.Lists;
+import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
+import io.druid.guice.GuiceInjectors;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
+import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 
 import java.io.File;
 import java.util.List;
@@ -46,6 +49,8 @@ public class CliInternalHadoopIndexer implements Runnable
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
+  private final Injector injector = GuiceInjectors.makeStartupInjector();
+
   @Override
   public void run()
   {
@@ -53,7 +58,7 @@ public class CliInternalHadoopIndexer implements Runnable
       HadoopDruidIndexerConfig config = getHadoopDruidIndexerConfig();
       List<Jobby> jobs = Lists.newArrayList();
       jobs.add(new HadoopDruidDetermineConfigurationJob(config));
-      jobs.add(new HadoopDruidIndexerJob(config));
+      jobs.add(new HadoopDruidIndexerJob(config, injector.getInstance(MetadataStorageUpdaterJobHandler.class)));
       JobHelper.runJobs(jobs, config);
 
     }
@@ -65,7 +70,6 @@ public class CliInternalHadoopIndexer implements Runnable
   public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
   {
     try {
-      HadoopIngestionSpec spec;
       if (argumentSpec.startsWith("{")) {
         return HadoopDruidIndexerConfig.fromString(argumentSpec);
       } else {
