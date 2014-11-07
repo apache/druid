@@ -34,7 +34,9 @@ public class ServerDiscoveryFactory
   private final ServiceDiscovery<Void> serviceDiscovery;
 
   @Inject
-  public ServerDiscoveryFactory(ServiceDiscovery<Void> serviceDiscovery)
+  public ServerDiscoveryFactory(
+      ServiceDiscovery<Void> serviceDiscovery
+  )
   {
     this.serviceDiscovery = serviceDiscovery;
   }
@@ -45,7 +47,10 @@ public class ServerDiscoveryFactory
       return new ServerDiscoverySelector(new NoopServiceProvider());
     }
 
-    final ServiceProvider serviceProvider = serviceDiscovery.serviceProviderBuilder().serviceName(serviceName).build();
+    final ServiceProvider serviceProvider = serviceDiscovery
+        .serviceProviderBuilder()
+        .serviceName(CuratorServiceUtils.makeCanonicalServiceName(serviceName))
+        .build();
     return new ServerDiscoverySelector(serviceProvider);
   }
 
