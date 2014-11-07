@@ -166,4 +166,4 @@ This can be used with the next query's pagingSpec:
       
  }
 
-Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 with each new query. When an empty results set is recieved, the very last page has been returned.
+Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 with each new query. When an empty results set is received, the very last page has been returned.
