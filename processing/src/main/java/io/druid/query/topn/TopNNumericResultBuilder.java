@@ -50,7 +50,26 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
   private final Comparator<DimValHolder> dimValComparator;
-  private final Comparator<String> dimNameComparator;
+  private static final Comparator<String> dimNameComparator = new Comparator<String>()
+  {
+    @Override
+    public int compare(String o1, String o2)
+    {
+      int retval;
+      if (null == o1) {
+        if(null == o2){
+          retval = 0;
+        }else {
+          retval = -1;
+        }
+      } else if (null == o2) {
+        retval = 1;
+      } else {
+        retval = o1.compareTo(o2);
+      }
+      return retval;
+    }
+  };
   private final int threshold;
   private final Comparator metricComparator;
 
@@ -71,22 +90,6 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
     this.metricComparator = comparator;
-    this.dimNameComparator = new Comparator<String>()
-    {
-      @Override
-      public int compare(String o1, String o2)
-      {
-        int retval;
-        if (o1 == null) {
-          retval = -1;
-        } else if (o2 == null) {
-          retval = 1;
-        } else {
-          retval = o1.compareTo(o2);
-        }
-        return retval;
-      }
-    };
     this.dimValComparator = new Comparator<DimValHolder>()
     {
       @Override
