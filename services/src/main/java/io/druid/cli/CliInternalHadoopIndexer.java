@@ -22,10 +22,12 @@ package io.druid.cli;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.api.client.util.Lists;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
@@ -79,7 +81,9 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
             MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema()
                                                                                       .getIOConfig()
                                                                                       .getMetadataUpdateSpec();
-            binder.bind(MetadataStorageConnectorConfig.class).toInstance(metadataSpec.get());
+
+            binder.bind(new TypeLiteral<Supplier<MetadataStorageConnectorConfig>>() {})
+                  .toInstance(metadataSpec);
           }
         }
     );
