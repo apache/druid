@@ -22,104 +22,105 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Maps;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
-import org.easymock.EasyMock;
+import io.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
-/**
- */
 public class MetadataSegmentManagerTest
 {
   private SQLMetadataSegmentManager manager;
-  private DBI dbi;
-  private List<DataSegment> testRows;
+  private TestDerbyConnector connector;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
+  private final DataSegment segment1 = new DataSegment(
+      "wikipedia",
+      new Interval("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000"),
+      "2012-03-16T00:36:30.848Z",
+      ImmutableMap.<String, Object>of(
+          "type", "s3_zip",
+          "bucket", "test",
+          "key", "wikipedia/index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index.zip"
+      ),
+      ImmutableList.of("dim1", "dim2", "dim3"),
+      ImmutableList.of("count", "value"),
+      new NoneShardSpec(),
+      0,
+      1234L
+  );
+
+  private final DataSegment segment2 = new DataSegment(
+      "wikipedia",
+      new Interval("2012-01-05T00:00:00.000/2012-01-06T00:00:00.000"),
+      "2012-01-06T22:19:12.565Z",
+      ImmutableMap.<String, Object>of(
+          "type", "s3_zip",
+          "bucket", "test",
+          "key", "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip"
+      ),
+      ImmutableList.of("dim1", "dim2", "dim3"),
+      ImmutableList.of("count", "value"),
+      new NoneShardSpec(),
+      0,
+      1234L
+  );
 
   @Before
   public void setUp() throws Exception
   {
-    dbi = EasyMock.createMock(DBI.class);
     final Supplier<MetadataStorageTablesConfig> dbTables = Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("test"));
+
+    connector = new TestDerbyConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        dbTables
+    );
+
     manager = new SQLMetadataSegmentManager(
-        new DefaultObjectMapper(),
+        jsonMapper,
         Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
         dbTables,
-        new SQLMetadataConnector(Suppliers.ofInstance(new MetadataStorageConnectorConfig()), dbTables)
-        {
-          @Override
-          protected String getSerialType()
-          {
-            return null;
-          }
-
-          @Override
-          protected boolean tableExists(Handle handle, String tableName)
-          {
-            return false;
-          }
-
-          @Override
-          public DBI getDBI()
-          {
-            return dbi;
-          }
-        }
+        connector
     );
 
-    DataSegment segment1 = jsonMapper.readValue(
-        "{\"dataSource\":\"wikipedia_editstream\",\"interval\":"
-        + "\"2012-03-15T00:00:00.000/2012-03-16T00:00:00.000\",\"version\":\"2012-03-16T00:36:30.848Z\""
-        + ",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":\"metamx-kafka-data\",\"key\":"
-        + "\"wikipedia-editstream/v3/beta-index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index"
-        + ".zip\"},\"dimensions\":\"page,namespace,language,user,anonymous,robot,newPage,unpatrolled,"
-        + "geo,continent_code,country_name,city,region_lookup,dma_code,area_code,network,postal_code\""
-        + ",\"metrics\":\"count,delta,variation,added,deleted\",\"shardSpec\":{\"type\":\"none\"},"
-        + "\"size\":26355195,\"identifier\":\"wikipedia_editstream_2012-03-15T00:00:00.000Z_2012-03-16"
-        + "T00:00:00.000Z_2012-03-16T00:36:30.848Z\"}",
-        DataSegment.class
+    SQLMetadataSegmentPublisher publisher = new SQLMetadataSegmentPublisher(
+        jsonMapper,
+        dbTables.get(),
+        connector
     );
 
-    DataSegment segment2 = jsonMapper.readValue(
-        "{\"dataSource\":\"twitterstream\",\"interval\":\"2012-01-05T00:00:00.000/2012-01-06T00:00:00.000\","
-        + "\"version\":\"2012-01-06T22:19:12.565Z\",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":"
-        + "\"metamx-twitterstream\",\"key\":\"index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip\"}"
-        + ",\"dimensions\":\"user_name,user_lang,user_time_zone,user_location,"
-        + "user_mention_name,has_mention,reply_to_name,first_hashtag,rt_name,url_domain,has_links,"
-        + "has_geo,is_retweet,is_viral\",\"metrics\":\"count,tweet_length,num_followers,num_links,"
-        + "num_mentions,num_hashtags,num_favorites,user_total_tweets\",\"shardSpec\":{\"type\":\"none\"},"
-        + "\"size\":511804455,\"identifier\":"
-        + "\"twitterstream_2012-01-05T00:00:00.000Z_2012-01-06T00:00:00.000Z_2012-01-06T22:19:12.565Z\"}",
-        DataSegment.class
-    );
+    connector.createSegmentTable();
 
-    testRows = Arrays.<DataSegment>asList(segment1, segment2);
+    publisher.publishSegment(segment1);
+    publisher.publishSegment(segment2);
   }
 
   @After
   public void tearDown() throws Exception
   {
-    EasyMock.verify(dbi);
+    connector.tearDown();
   }
 
   @Test
   public void testPoll()
   {
-    EasyMock.expect(dbi.withHandle(EasyMock.<HandleCallback>anyObject())).andReturn(testRows).times(2);
-    EasyMock.replay(dbi);
-
     manager.start();
     manager.poll();
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        manager.getAllDatasourceNames()
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        manager.getInventoryValue("wikipedia").getSegments()
+    );
     manager.stop();
   }
 }
