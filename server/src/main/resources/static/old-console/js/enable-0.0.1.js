@@ -70,12 +70,12 @@ $(document).ready(function() {
     }
   });
 
-  $.getJSON("/druid/coordinator/v1/db/datasources", function(enabled_datasources) {
+  $.getJSON("/druid/coordinator/v1/metadata/datasources", function(enabled_datasources) {
     $.each(enabled_datasources, function(index, datasource) {
       $('#enabled_datasources').append($('<li>' + datasource + '</li>'));
     });
 
-    $.getJSON("/druid/coordinator/v1/db/datasources?includeDisabled", function(db_datasources) {
+    $.getJSON("/druid/coordinator/v1/metadata/datasources?includeDisabled", function(db_datasources) {
       var disabled_datasources = _.difference(db_datasources, enabled_datasources);
       $.each(disabled_datasources, function(index, datasource) {
         $('#disabled_datasources').append($('<li>' + datasource + '</li>'));

@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
@@ -39,7 +39,7 @@ public class DruidCoordinatorRuntimeParams
 {
   private final long startTime;
   private final DruidCluster druidCluster;
-  private final DatabaseRuleManager databaseRuleManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
@@ -54,7 +54,7 @@ public class DruidCoordinatorRuntimeParams
   public DruidCoordinatorRuntimeParams(
       long startTime,
       DruidCluster druidCluster,
-      DatabaseRuleManager databaseRuleManager,
+      MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
@@ -92,7 +92,7 @@ public class DruidCoordinatorRuntimeParams
     return druidCluster;
   }
 
-  public DatabaseRuleManager getDatabaseRuleManager()
+  public MetadataRuleManager getDatabaseRuleManager()
   {
     return databaseRuleManager;
   }
@@ -180,7 +180,7 @@ public class DruidCoordinatorRuntimeParams
   {
     private long startTime;
     private DruidCluster druidCluster;
-    private DatabaseRuleManager databaseRuleManager;
+    private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
@@ -212,7 +212,7 @@ public class DruidCoordinatorRuntimeParams
     Builder(
         long startTime,
         DruidCluster cluster,
-        DatabaseRuleManager databaseRuleManager,
+        MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
@@ -271,7 +271,7 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withDatabaseRuleManager(DatabaseRuleManager databaseRuleManager)
+    public Builder withDatabaseRuleManager(MetadataRuleManager databaseRuleManager)
     {
       this.databaseRuleManager = databaseRuleManager;
       return this;

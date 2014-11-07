@@ -29,12 +29,12 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseRuleManager;
-import io.druid.db.DatabaseRuleManagerConfig;
-import io.druid.db.DatabaseRuleManagerProvider;
-import io.druid.db.DatabaseSegmentManager;
-import io.druid.db.DatabaseSegmentManagerConfig;
-import io.druid.db.DatabaseSegmentManagerProvider;
+import io.druid.metadata.MetadataRuleManager;
+import io.druid.metadata.MetadataRuleManagerConfig;
+import io.druid.metadata.MetadataRuleManagerProvider;
+import io.druid.metadata.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManagerConfig;
+import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -49,7 +49,7 @@ import io.druid.server.http.BackwardsCompatibleInfoResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
-import io.druid.server.http.DBResource;
+import io.druid.server.http.MetadataResource;
 import io.druid.server.http.DatasourcesResource;
 import io.druid.server.http.InfoResource;
 import io.druid.server.http.RedirectFilter;
@@ -93,18 +93,18 @@ public class CliCoordinator extends ServerRunnable
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
-            JsonConfigProvider.bind(binder, "druid.manager.segments", DatabaseSegmentManagerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.manager.rules", DatabaseRuleManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
 
-            binder.bind(DatabaseSegmentManager.class)
-                  .toProvider(DatabaseSegmentManagerProvider.class)
+            binder.bind(MetadataSegmentManager.class)
+                  .toProvider(MetadataSegmentManagerProvider.class)
                   .in(ManageLifecycle.class);
 
-            binder.bind(DatabaseRuleManager.class)
-                  .toProvider(DatabaseRuleManagerProvider.class)
+            binder.bind(MetadataRuleManager.class)
+                  .toProvider(MetadataRuleManagerProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
@@ -125,7 +125,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, RulesResource.class);
             Jerseys.addResource(binder, ServersResource.class);
             Jerseys.addResource(binder, DatasourcesResource.class);
-            Jerseys.addResource(binder, DBResource.class);
+            Jerseys.addResource(binder, MetadataResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

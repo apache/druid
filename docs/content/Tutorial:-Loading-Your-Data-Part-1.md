@@ -93,9 +93,9 @@ druid.zk.service.host=localhost
 
 druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.160"]
 
-druid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
+druid.metadata.storage.connector.connectURI=jdbc:mysql://localhost:3306/druid
+druid.metadata.storage.connector.user=druid
+druid.metadata.storage.connector.password=diurd
 
 druid.selectors.indexing.serviceName=overlord
 druid.indexer.queue.startDelay=PT0M

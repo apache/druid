@@ -24,6 +24,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
+import io.druid.metadata.EntryExistsException;
 
 import java.util.List;
 
@@ -34,9 +35,9 @@ public interface TaskStorage
    *
    * @param task task to add
    * @param status task status
-   * @throws io.druid.indexing.overlord.TaskExistsException if the task ID already exists
+   * @throws io.druid.metadata.EntryExistsException if the task ID already exists
    */
-  public void insert(Task task, TaskStatus status) throws TaskExistsException;
+  public void insert(Task task, TaskStatus status) throws EntryExistsException;
 
   /**
    * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle

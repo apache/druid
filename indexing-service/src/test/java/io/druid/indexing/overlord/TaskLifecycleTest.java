@@ -42,6 +42,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
@@ -63,6 +64,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.metadata.SQLMetadataConnector;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -85,6 +87,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
 
 import java.io.File;
 import java.io.IOException;
@@ -100,7 +104,7 @@ public class TaskLifecycleTest
   private TaskLockbox tl = null;
   private TaskQueue tq = null;
   private TaskRunner tr = null;
-  private MockIndexerDBCoordinator mdc = null;
+  private MockIndexerMetadataStorageCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   TaskStorageQueryAdapter tsqa = null;
@@ -509,12 +513,12 @@ public class TaskLifecycleTest
     return retVal;
   }
 
-  private static class MockIndexerDBCoordinator extends IndexerDBCoordinator
+  private static class MockIndexerMetadataStorageCoordinator extends IndexerSQLMetadataStorageCoordinator
   {
     final private Set<DataSegment> published = Sets.newHashSet();
     final private Set<DataSegment> nuked = Sets.newHashSet();
 
-    private MockIndexerDBCoordinator()
+    private MockIndexerMetadataStorageCoordinator()
     {
       super(null, null, null);
     }
@@ -561,9 +565,9 @@ public class TaskLifecycleTest
     }
   }
 
-  private static MockIndexerDBCoordinator newMockMDC()
+  private static MockIndexerMetadataStorageCoordinator newMockMDC()
   {
-    return new MockIndexerDBCoordinator();
+    return new MockIndexerMetadataStorageCoordinator();
   }
 
   private static ServiceEmitter newMockEmitter()
