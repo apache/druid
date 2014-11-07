@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,41 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.config;
+package io.druid.curator.discovery;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
-
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-
-/**
- */
-public class RemoteTaskRunnerConfig
+public class CuratorServiceUtils
 {
-  @JsonProperty
-  @NotNull
-  private Period taskAssignmentTimeout = new Period("PT5M");
-
-  @JsonProperty
-  private String minWorkerVersion = "0";
-
-  @JsonProperty
-  @Min(10 * 1024)
-  private long maxZnodeBytes = 512 * 1024;
-
-  public Period getTaskAssignmentTimeout()
-  {
-    return taskAssignmentTimeout;
-  }
-
-  public String getMinWorkerVersion()
-  {
-    return minWorkerVersion;
-  }
-
-  public long getMaxZnodeBytes()
-  {
-    return maxZnodeBytes;
+  public static String makeCanonicalServiceName(String serviceName) {
+    return serviceName.replaceAll("/", ":");
   }
 }

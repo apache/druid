@@ -31,6 +31,7 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
+import io.druid.client.indexing.IndexingServiceSelectorConfig;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
@@ -117,7 +118,7 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/overlord");
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
 
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);

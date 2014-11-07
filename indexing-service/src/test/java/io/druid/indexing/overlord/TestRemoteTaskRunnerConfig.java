@@ -27,12 +27,6 @@ import org.joda.time.Period;
 public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
 {
   @Override
-  public boolean isCompressZnodes()
-  {
-    return false;
-  }
-
-  @Override
   public Period getTaskAssignmentTimeout()
   {
     return new Period("PT1S");
