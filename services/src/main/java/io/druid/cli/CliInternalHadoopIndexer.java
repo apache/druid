@@ -21,15 +21,17 @@ package io.druid.cli;
 
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.api.client.util.Lists;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
-import io.druid.guice.GuiceInjectors;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
-import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
@@ -43,17 +45,38 @@ import java.util.List;
     name = "hadoop-indexer",
     description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/latest/Batch-ingestion.html for a description."
 )
-public class CliInternalHadoopIndexer implements Runnable
+public class CliInternalHadoopIndexer extends GuiceRunnable
 {
   private static final Logger log = new Logger(CliHadoopIndexer.class);
   @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
   private String argumentSpec;
 
-  private final Injector injector = GuiceInjectors.makeStartupInjector();
+  public CliInternalHadoopIndexer()
+  {
+    super(log);
+  }
+
+  @Override
+  protected List<Object> getModules()
+  {
+    return ImmutableList.<Object>of(
+        new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/hadoop-indexer");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+          }
+        }
+    );
+  }
 
   @Override
   public void run()
   {
+    Injector injector = makeInjector();
+
     try {
       HadoopDruidIndexerConfig config = getHadoopDruidIndexerConfig();
       List<Jobby> jobs = Lists.newArrayList();
