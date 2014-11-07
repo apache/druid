@@ -18,9 +18,7 @@
  */
 package io.druid.metadata;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,22 +30,13 @@ import java.util.LinkedList;
 
 public class SQLMetadataConnectorTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
 
   @Before
   public void setUp() throws Exception {
-    MetadataStorageConnectorConfig config = jsonReadWriteRead(
-          "{"
-        + "\"type\" : \"db\",\n"
-        + "\"segmentTable\" : \"segments\"\n"
-        + "}",
-        MetadataStorageConnectorConfig.class
-    );
-
     connector = new TestDerbyConnector(
-        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(tablesConfig)
     );
   }
@@ -130,10 +119,5 @@ public class SQLMetadataConnectorTest
           }
         }
     );
-  }
-
-  private <T> T jsonReadWriteRead(String s, Class<T> klass) throws Exception
-  {
-      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
   }
 }
