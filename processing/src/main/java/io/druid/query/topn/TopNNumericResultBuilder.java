@@ -181,7 +181,8 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           @Override
           public int compare(DimValHolder d1, DimValHolder d2)
           {
-            int retVal = -metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
+            // Values flipped compared to earlier
+            int retVal = metricComparator.compare(d2.getTopNMetricVal(),d1.getTopNMetricVal());
 
             if (retVal == 0) {
               retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
