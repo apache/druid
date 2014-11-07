@@ -361,7 +361,6 @@ public class HadoopIngestionSpecTest
     Assert.assertEquals("jdbc:mysql://localhost/druid", connectorConfig.getConnectURI());
     Assert.assertEquals("rofl", connectorConfig.getUser());
     Assert.assertEquals("p4ssw0rd", connectorConfig.getPassword());
-    Assert.assertEquals(false, connectorConfig.isUseValidationQuery());
   }
 
   @Test
