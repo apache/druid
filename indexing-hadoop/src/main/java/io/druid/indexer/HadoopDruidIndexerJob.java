@@ -38,14 +38,18 @@ public class HadoopDruidIndexerJob implements Jobby
 
   @Inject
   public HadoopDruidIndexerJob(
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      MetadataStorageUpdaterJobHandler handler
   )
   {
     config.verify();
     this.config = config;
 
     if (config.isUpdaterJobSpecSet()) {
-      metadataStorageUpdaterJob = new MetadataStorageUpdaterJob(config);
+      metadataStorageUpdaterJob = new MetadataStorageUpdaterJob(
+          config,
+          handler
+      );
     } else {
       metadataStorageUpdaterJob = null;
     }
