@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,21 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client.indexing;
+package io.druid.curator.discovery;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-/**
- */
-public class IndexingServiceSelectorConfig
+public class CuratorServiceUtils
 {
-  public static final String DEFAULT_SERVICE_NAME = "druid/overlord";
-
-  @JsonProperty
-  private String serviceName = DEFAULT_SERVICE_NAME;
-
-  public String getServiceName()
-  {
-    return serviceName;
+  public static String makeCanonicalServiceName(String serviceName) {
+    return serviceName.replaceAll("/", ":");
   }
 }
