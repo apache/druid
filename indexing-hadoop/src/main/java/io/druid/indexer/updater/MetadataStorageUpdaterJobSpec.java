@@ -23,10 +23,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 
+import javax.validation.constraints.NotNull;
+
 /**
  */
 public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageConnectorConfig>
 {
+  @JsonProperty("type")
+  @NotNull
+  public String type;
+
   @JsonProperty("connectURI")
   public String connectURI;
 
@@ -42,6 +48,11 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
   public String getSegmentTable()
   {
     return segmentTable;
+  }
+
+  public String getType()
+  {
+    return type;
   }
 
   @Override

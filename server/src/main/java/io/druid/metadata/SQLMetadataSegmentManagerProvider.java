@@ -33,7 +33,6 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
   private final Supplier<MetadataSegmentManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> storageConfig;
   private final SQLMetadataConnector connector;
-  private final IDBI dbi;
   private final Lifecycle lifecycle;
 
   @Inject
@@ -49,7 +48,6 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
     this.config = config;
     this.storageConfig = storageConfig;
     this.connector = connector;
-    this.dbi = this.connector.getDBI();
     this.lifecycle = lifecycle;
   }
 
