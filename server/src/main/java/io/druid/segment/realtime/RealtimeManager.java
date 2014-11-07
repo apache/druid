@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -40,6 +41,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.UnionQueryRunner;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
@@ -47,6 +49,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -117,11 +120,28 @@ public class RealtimeManager implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    final FireChief chief = chiefs.get(getDataSourceName(query));
-
-    return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
+    final List<String> names = query.getDataSource().getNames();
+    if (names.size() == 1) {
+      final FireChief chief = chiefs.get(names.get(0));
+      return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
+    } else {
+      return new UnionQueryRunner<>(
+          Iterables.transform(
+              names, new Function<String, QueryRunner<T>>()
+              {
+                @Nullable
+                @Override
+                public QueryRunner<T> apply(@Nullable String input)
+                {
+                  final FireChief chief = chiefs.get(input);
+                  return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
+                }
+              }
+          ), conglomerate.findFactory(query).getToolchest()
+      );
+    }
   }
 
   private <T> String getDataSourceName(Query<T> query)

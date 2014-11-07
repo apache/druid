@@ -67,7 +67,8 @@ public class TopNUnionQueryTest
                 TestQueryRunners.getPool(),
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            QueryRunnerTestHelper.unionDataSource
         )
     );
     retVal.addAll(
@@ -85,7 +86,8 @@ public class TopNUnionQueryTest
                 ),
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            QueryRunnerTestHelper.unionDataSource
         )
     );
 

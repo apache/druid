@@ -56,6 +56,7 @@ import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -149,7 +150,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 
 
-    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+    TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
     if (timeline == null) {
       return Sequences.empty();
     }

@@ -19,7 +19,9 @@
 
 package io.druid.query.timeseries;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -41,9 +43,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -66,7 +70,8 @@ public class TimeSeriesUnionQueryRunnerTest
             new TimeseriesQueryQueryToolChest(new QueryConfig()),
             new TimeseriesQueryEngine(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        ),
+        QueryRunnerTestHelper.unionDataSource
     );
   }
 
@@ -139,79 +144,86 @@ public class TimeSeriesUnionQueryRunnerTest
     QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(new QueryConfig());
     QueryRunner mergingrunner = toolChest.mergeResults(
         new UnionQueryRunner<Result<TimeseriesResultValue>>(
-            new QueryRunner<Result<TimeseriesResultValue>>()
-            {
-              @Override
-              public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
-              {
-                if (query.getDataSource().equals(new TableDataSource("ds1"))) {
-                  return Sequences.simple(
-                      Lists.newArrayList(
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-02"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      1L,
-                                      "idx",
-                                      2L
+            (Iterable)Arrays.asList(
+                new QueryRunner<Result<TimeseriesResultValue>>()
+                                    {
+                                      @Override
+                                      public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+                                      {
+                                          return Sequences.simple(
+                                              Lists.newArrayList(
+                                                  new Result<TimeseriesResultValue>(
+                                                      new DateTime("2011-04-02"),
+                                                      new TimeseriesResultValue(
+                                                          ImmutableMap.<String, Object>of(
+                                                              "rows",
+                                                              1L,
+                                                              "idx",
+                                                              2L
+                                                          )
+                                                      )
+                                                  ),
+                                                  new Result<TimeseriesResultValue>(
+                                                      new DateTime("2011-04-03"),
+                                                      new TimeseriesResultValue(
+                                                          ImmutableMap.<String, Object>of(
+                                                              "rows",
+                                                              3L,
+                                                              "idx",
+                                                              4L
+                                                          )
+                                                      )
+                                                  )
+                                              )
+                                          );
+                                      }
+                                    },
+                new QueryRunner<Result<TimeseriesResultValue>>(){
+
+                  @Override
+                  public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+                  {
+                    {
+                      return Sequences.simple(
+                          Lists.newArrayList(
+                              new Result<TimeseriesResultValue>(
+                                  new DateTime("2011-04-01"),
+                                  new TimeseriesResultValue(
+                                      ImmutableMap.<String, Object>of(
+                                          "rows",
+                                          5L,
+                                          "idx",
+                                          6L
+                                      )
                                   )
-                              )
-                          ),
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-03"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      3L,
-                                      "idx",
-                                      4L
+                              ),
+                              new Result<TimeseriesResultValue>(
+                                  new DateTime("2011-04-02"),
+                                  new TimeseriesResultValue(
+                                      ImmutableMap.<String, Object>of(
+                                          "rows",
+                                          7L,
+                                          "idx",
+                                          8L
+                                      )
+                                  )
+                              ),
+                              new Result<TimeseriesResultValue>(
+                                  new DateTime("2011-04-04"),
+                                  new TimeseriesResultValue(
+                                      ImmutableMap.<String, Object>of(
+                                          "rows",
+                                          9L,
+                                          "idx",
+                                          10L
+                                      )
                                   )
                               )
                           )
-                      )
-                  );
-                } else {
-                  return Sequences.simple(
-                      Lists.newArrayList(
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-01"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      5L,
-                                      "idx",
-                                      6L
-                                  )
-                              )
-                          ),
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-02"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      7L,
-                                      "idx",
-                                      8L
-                                  )
-                              )
-                          ),
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-04"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      9L,
-                                      "idx",
-                                      10L
-                                  )
-                              )
-                          )
-                      )
-                  );
-                }
-              }
-            },
+                      );
+                    }
+                  }
+                }),
             toolChest
         )
     );
