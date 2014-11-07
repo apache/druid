@@ -38,9 +38,6 @@ public class MetadataStorageConnectorConfig
   private String password = null;
 
   @JsonProperty
-  private boolean useValidationQuery = false;
-
-  @JsonProperty
   private String validationQuery = "SELECT 1";
 
   public boolean isCreateTables()
@@ -63,11 +60,6 @@ public class MetadataStorageConnectorConfig
     return password;
   }
 
-  public boolean isUseValidationQuery()
-  {
-    return useValidationQuery;
-  }
-
   public String getValidationQuery()
   {
     return validationQuery;
@@ -81,7 +73,6 @@ public class MetadataStorageConnectorConfig
            ", connectURI='" + connectURI + '\'' +
            ", user='" + user + '\'' +
            ", password=****" +
-           ", useValidationQuery=" + useValidationQuery +
            ", validationQuery='" + validationQuery + '\'' +
            '}';
   }

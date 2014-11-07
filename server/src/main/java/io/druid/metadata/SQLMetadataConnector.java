@@ -367,10 +367,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     String uri = connectorConfig.getConnectURI();
     dataSource.setUrl(uri);
 
-    if (connectorConfig.isUseValidationQuery()) {
-      dataSource.setValidationQuery(connectorConfig.getValidationQuery());
-      dataSource.setTestOnBorrow(true);
-    }
+    dataSource.setValidationQuery(connectorConfig.getValidationQuery());
+    dataSource.setTestOnBorrow(true);
 
     return dataSource;
   }
