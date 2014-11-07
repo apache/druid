@@ -125,18 +125,18 @@ public class RealtimeManager implements QuerySegmentWalker
     final List<String> names = query.getDataSource().getNames();
     if (names.size() == 1) {
       final FireChief chief = chiefs.get(names.get(0));
-      return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
+      return chief == null ? new NoopQueryRunner() : chief.getQueryRunner(query);
     } else {
       return new UnionQueryRunner<>(
           Iterables.transform(
-              names, new Function<String, QueryRunner<T>>()
+              names, new Function<String, QueryRunner>()
               {
                 @Nullable
                 @Override
                 public QueryRunner<T> apply(@Nullable String input)
                 {
                   final FireChief chief = chiefs.get(input);
-                  return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
+                  return chief == null ? new NoopQueryRunner() : chief.getQueryRunner(query);
                 }
               }
           ), conglomerate.findFactory(query).getToolchest()

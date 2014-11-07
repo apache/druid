@@ -208,7 +208,7 @@ public class TaskLifecycleTest
         ),
         new DefaultObjectMapper()
     );
-    tr = new ThreadPoolTaskRunner(tb);
+    tr = new ThreadPoolTaskRunner(tb, null);
     tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
     tq.start();
   }

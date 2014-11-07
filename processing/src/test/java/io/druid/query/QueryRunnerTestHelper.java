@@ -267,11 +267,11 @@ public class QueryRunnerTestHelper
             factory.getToolchest().mergeResults(
                 new UnionQueryRunner<T>(
                     Iterables.transform(
-                        unionDataSource.getNames(), new Function<String, QueryRunner<T>>()
+                        unionDataSource.getNames(), new Function<String, QueryRunner>()
                         {
                           @Nullable
                           @Override
-                          public QueryRunner<T> apply(@Nullable String input)
+                          public QueryRunner apply(@Nullable String input)
                           {
                             return new BySegmentQueryRunner<T>(
                                 segmentId, adapter.getDataInterval().getStart(),

@@ -40,13 +40,16 @@ import io.druid.indexing.common.task.Task;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.UnionQueryRunner;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -59,16 +62,18 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private final TaskToolboxFactory toolboxFactory;
   private final ListeningExecutorService exec;
   private final Set<ThreadPoolTaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<>();
-
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
 
   @Inject
   public ThreadPoolTaskRunner(
-      TaskToolboxFactory toolboxFactory
+      TaskToolboxFactory toolboxFactory,
+      QueryRunnerFactoryConglomerate conglomerate
   )
   {
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.exec = MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d"));
+    this.conglomerate = conglomerate;
   }
 
   @LifecycleStop
@@ -152,8 +157,10 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 
   private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
   {
-    QueryRunner<T> queryRunner = null;
-    final String queryDataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    final List<String> dataSources = query.getDataSource().getNames();
+    List<QueryRunner> runners = Lists.newArrayList();
+    for(String queryDataSource : dataSources) {
+      QueryRunner<T> queryRunner = null;
 
     for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
       final Task task = taskRunnerWorkItem.getTask();
@@ -170,9 +177,18 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
           }
         }
       }
+      }
+      if(queryRunner!= null) {
+        runners.add(queryRunner);
+      }
     }
-
-    return queryRunner == null ? new NoopQueryRunner<T>() : queryRunner;
+    if(runners.size() == 0){
+      return new NoopQueryRunner();
+    } else if (runners.size() == 1){
+      return runners.get(0);
+    } else {
+      return new UnionQueryRunner<>(runners, conglomerate.findFactory(query).getToolchest());
+    }
   }
 
   private static class ThreadPoolTaskRunnerWorkItem extends TaskRunnerWorkItem

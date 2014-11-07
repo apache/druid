@@ -31,11 +31,11 @@ import java.util.List;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
-  private final Iterable<QueryRunner<T>> baseRunners;
+  private final Iterable<QueryRunner> baseRunners;
   private final QueryToolChest<T, Query<T>> toolChest;
 
   public UnionQueryRunner(
-      Iterable<QueryRunner<T>> baseRunners,
+      Iterable<QueryRunner> baseRunners,
       QueryToolChest<T, Query<T>> toolChest
   )
   {
@@ -50,10 +50,10 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
           Sequences.simple(
               Iterables.transform(
                   baseRunners,
-                  new Function<QueryRunner<T>, Sequence<T>>()
+                  new Function<QueryRunner, Sequence<T>>()
                   {
                     @Override
-                    public Sequence<T> apply(QueryRunner<T> singleRunner)
+                    public Sequence<T> apply(QueryRunner singleRunner)
                     {
                       return singleRunner.run(
                           query
