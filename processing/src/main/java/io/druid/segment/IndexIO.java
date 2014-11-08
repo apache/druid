@@ -36,10 +36,15 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
+import com.metamx.collections.spatial.ImmutablePoint;
 import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.collections.spatial.RTree;
+import com.metamx.collections.spatial.RTreeUtils;
+import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
@@ -441,10 +446,25 @@ public class IndexIO
           VSizeIndexedInts singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
+          ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
 
+          // TODO: this is some UGLY shizzle
           // All V8 segments use concise sets for bitmap indexes. Starting in V9, we can optionally choose other
           // methods to store and compress these bitmap methods.
+          final BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
           if (!(bitmapSerdeFactory instanceof ConciseBitmapSerdeFactory)) {
+            if (spatialIndex != null) {
+              RTree convertedTree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
+
+              for (ImmutablePoint point : RTreeUtils.getBitmaps(spatialIndex)) {
+                IntIterator iterator = point.getImmutableBitmap().iterator();
+                while (iterator.hasNext()) {
+                  convertedTree.insert(point.getCoords(), iterator.next());
+                }
+              }
+              spatialIndex = ImmutableRTree.newImmutableFromMutable(convertedTree);
+            }
+
             bitmaps = GenericIndexed.fromIterable(
                 FunctionalIterable.create(
                     bitmaps
@@ -457,21 +477,22 @@ public class IndexIO
                           ImmutableBitmap bitmap
                       )
                       {
+                        if (bitmap == null) {
+                          return bitmapFactory.makeEmptyImmutableBitmap();
+                        }
                         IntIterator intIter = bitmap.iterator();
-                        MutableBitmap mutableBitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
+                        MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
                         // TODO: is there a faster way to do this? I don't think so
                         while (intIter.hasNext()) {
                           mutableBitmap.add(intIter.next());
                         }
-                        return bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(mutableBitmap);
+                        return bitmapFactory.makeImmutableBitmap(mutableBitmap);
                       }
                     }
                 ),
                 bitmapSerdeFactory.getObjectStrategy()
             );
           }
-
-          ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
 
           boolean onlyOneValue = true;
           MutableBitmap nullsSet = null;
@@ -485,7 +506,7 @@ public class IndexIO
             }
             if (rowValue.size() == 0) {
               if (nullsSet == null) {
-                nullsSet = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
+                nullsSet = bitmapFactory.makeEmptyMutableBitmap();
               }
               nullsSet.add(i);
             }
@@ -496,7 +517,7 @@ public class IndexIO
             final boolean bumpedDictionary;
             if (nullsSet != null) {
               log.info("Dimension[%s] has null rows.", dimension);
-              final ImmutableBitmap theNullSet = bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(nullsSet);
+              final ImmutableBitmap theNullSet = bitmapFactory.makeImmutableBitmap(nullsSet);
 
               if (dictionary.get(0) != null) {
                 log.info("Dimension[%s] has no null value in the dictionary, expanding...", dimension);
@@ -518,8 +539,8 @@ public class IndexIO
                 bitmaps = GenericIndexed.fromIterable(
                     Iterables.concat(
                         Arrays.asList(
-                            bitmapSerdeFactory.getBitmapFactory()
-                                              .union(Arrays.asList(theNullSet, bitmaps.get(0)))
+                            bitmapFactory
+                                .union(Arrays.asList(theNullSet, bitmaps.get(0)))
                         ),
                         Iterables.skip(bitmaps, 1)
                     ),

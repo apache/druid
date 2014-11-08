@@ -50,6 +50,10 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     this.queryGranularity = queryGranularity;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
 
+    if (inputIntervals == null) {
+      inputIntervals = Lists.newArrayList();
+    }
+
     // Insert all intervals
     for (final Interval inputInterval : inputIntervals) {
       intervals.add(inputInterval);

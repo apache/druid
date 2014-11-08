@@ -26,7 +26,7 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ConciseBitmapSerdeFactory.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RoaringBitmapSerdeFactory.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "concise", value = ConciseBitmapSerdeFactory.class),
     @JsonSubTypes.Type(name = "roaring", value = RoaringBitmapSerdeFactory.class)
