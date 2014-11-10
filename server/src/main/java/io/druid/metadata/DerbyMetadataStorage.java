@@ -20,6 +20,7 @@
 package io.druid.metadata;
 
 import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import org.apache.derby.drda.NetworkServerControl;
@@ -32,10 +33,11 @@ public class DerbyMetadataStorage extends MetadataStorage
 {
   private final NetworkServerControl server;
 
-  public DerbyMetadataStorage()
+  @Inject
+  public DerbyMetadataStorage(MetadataStorageConnectorConfig config)
   {
     try {
-      this.server = new NetworkServerControl(InetAddress.getByName("localhost"), 1527);
+      this.server = new NetworkServerControl(InetAddress.getByName(config.getHost()), config.getPort());
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

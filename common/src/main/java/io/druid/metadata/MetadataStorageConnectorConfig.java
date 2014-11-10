@@ -29,7 +29,13 @@ public class MetadataStorageConnectorConfig
   private boolean createTables = true;
 
   @JsonProperty
-  private String connectURI = "jdbc:derby://localhost:1527/druid;create=true";
+  private String host = "localhost";
+
+  @JsonProperty
+  private int port = 1527;
+
+  @JsonProperty
+  private String connectURI;
 
   @JsonProperty
   private String user = null;
@@ -45,8 +51,22 @@ public class MetadataStorageConnectorConfig
     return createTables;
   }
 
+  public String getHost()
+  {
+    return host;
+  }
+
+  public int getPort()
+  {
+    return port;
+  }
+
   public String getConnectURI()
   {
+    if (connectURI == null) {
+      return String.format("jdbc:derby://%s:%s/druid;create=true", host, port);
+    }
+
     return connectURI;
   }
 
