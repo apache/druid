@@ -51,7 +51,7 @@ public class TieredBrokerConfig
 
   @JsonProperty
   @NotNull
-  private String coordinatorServiceName = null;
+  private String coordinatorServiceName = "druid/coordinator";
 
   @JsonProperty
   @NotNull
