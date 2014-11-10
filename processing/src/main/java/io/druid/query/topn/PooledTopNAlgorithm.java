@@ -164,10 +164,15 @@ public class PooledTopNAlgorithm
       offset += aggregatorSizes[j];
     }
 
+    final int nAggregators = theAggregators.length;
+    final int extra = nAggregators - (nAggregators % 4) - 1;
+    final int ub = (nAggregators / 4) * 4;
+
     while (!cursor.isDone()) {
       final IndexedInts dimValues = dimSelector.getRow();
 
-      for (int i = 0; i < dimValues.size(); ++i) {
+      final int size = dimValues.size();
+      for (int i = 0; i < size; ++i) {
         final int dimIndex = dimValues.get(i);
         int position = positions[dimIndex];
         if (SKIP_POSITION_VALUE == position) {
@@ -176,18 +181,21 @@ public class PooledTopNAlgorithm
         if (INIT_POSITION_VALUE == position) {
           positions[dimIndex] = (dimIndex - numProcessed) * numBytesPerRecord;
           position = positions[dimIndex];
-          for (int j = 0; j < theAggregators.length; ++j) {
+          for (int j = 0; j < nAggregators; ++j) {
             theAggregators[j].init(resultsBuf, position + aggregatorOffsets[j]);
           }
           position = positions[dimIndex];
         }
-        for (int j = 0; j < theAggregators.length; ++j) {
+        for (int j = 0; j < ub; j += 4) {
+          theAggregators[j].aggregate(resultsBuf, position + aggregatorOffsets[j]);
+          theAggregators[j+1].aggregate(resultsBuf, position + aggregatorOffsets[j+1]);
+          theAggregators[j+2].aggregate(resultsBuf, position + aggregatorOffsets[j+2]);
+          theAggregators[j+3].aggregate(resultsBuf, position + aggregatorOffsets[j+3]);
+        }
+        for(int j = extra; j < nAggregators; ++j) {
           theAggregators[j].aggregate(resultsBuf, position + aggregatorOffsets[j]);
         }
-
-
       }
-
       cursor.advance();
     }
   }
