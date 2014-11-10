@@ -32,7 +32,7 @@ public class DruidHttpClientConfig
 {
   @JsonProperty
   @Min(0)
-  private int numConnections = 5;
+  private int numConnections = 20;
 
   @JsonProperty
   private Period readTimeout = new Period("PT15M");
