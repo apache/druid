@@ -172,21 +172,7 @@ public class IndexIO
       throw new ISE("Unknown index version[%s]", version);
     }
   }
-
-  public static boolean hasHandler()
-  {
-    return (IndexIO.handler != null);
-  }
-
-  public static void registerHandler(IndexIOHandler handler)
-  {
-    if (IndexIO.handler == null) {
-      IndexIO.handler = handler;
-    } else {
-      throw new ISE("Already have a handler[%s], cannot register another[%s]", IndexIO.handler, handler);
-    }
-  }
-
+  
   private static void init()
   {
     if (handler == null) {
