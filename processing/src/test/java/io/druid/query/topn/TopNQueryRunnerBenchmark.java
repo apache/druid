@@ -48,7 +48,6 @@ import java.util.Map;
 /**
  * Based on TopNQueryRunnerTest
  */
-//@Ignore // Don't need to actually run the benchmark every time
 public class TopNQueryRunnerBenchmark extends AbstractBenchmark
 {
 
@@ -139,21 +138,27 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
     testCaseMap.get(TestCases.mMappedTestIndex).run(query, context);
   }
 
-/**
- * These are not important
- @BenchmarkOptions(warmupRounds = 10000,benchmarkRounds = 10000)
- @Test public void testrtIndex(){
- testCaseMap.get(TestCases.rtIndex).run(query,context);
- }
+  @Ignore
+  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
+  @Test
+  public void testrtIndex()
+  {
+    testCaseMap.get(TestCases.rtIndex).run(query, context);
+  }
 
- @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
- @Test public void testMerged(){
- testCaseMap.get(TestCases.mergedRealtimeIndex).run(query,context);
- }
+  @Ignore
+  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
+  @Test
+  public void testMerged()
+  {
+    testCaseMap.get(TestCases.mergedRealtimeIndex).run(query, context);
+  }
 
- @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
- @Test public void testOffHeap(){
- testCaseMap.get(TestCases.rtIndexOffheap).run(query,context);
- }
- */
+  @Ignore
+  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
+  @Test
+  public void testOffHeap()
+  {
+    testCaseMap.get(TestCases.rtIndexOffheap).run(query, context);
+  }
 }
