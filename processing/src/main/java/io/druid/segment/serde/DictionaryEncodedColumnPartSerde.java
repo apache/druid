@@ -22,7 +22,6 @@ package io.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
@@ -34,7 +33,6 @@ import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedRTree;
-import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 
@@ -67,7 +65,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   )
   {
     this.isSingleValued = multiValCol == null;
-    this.bitmapSerdeFactory = bitmapSerdeFactory == null ? new ConciseBitmapSerdeFactory() : bitmapSerdeFactory;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
 
     this.dictionary = dictionary;
     this.singleValuedColumn = singleValCol;
@@ -98,7 +96,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   )
   {
     this.isSingleValued = isSingleValued;
-    this.bitmapSerdeFactory = bitmapSerdeFactory == null ? new ConciseBitmapSerdeFactory() : bitmapSerdeFactory;
+    this.bitmapSerdeFactory = bitmapSerdeFactory == null
+                              ? BitmapSerdeFactory.DEFAULT_BITMAP_SERDE_FACTORY
+                              : bitmapSerdeFactory;
 
     this.dictionary = null;
     this.singleValuedColumn = null;
@@ -126,8 +126,6 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     return 1 + size;
   }
 
-  private static ObjectStrategy objectStrategy = new IndexedRTree.ImmutableRTreeObjectStrategy(new ConciseBitmapFactory());
-
   @Override
   public void write(WritableByteChannel channel) throws IOException
   {
@@ -154,8 +152,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     if (spatialIndex != null) {
       ByteBufferSerializer.writeToChannel(
           spatialIndex,
-          objectStrategy,
-          //new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()),
+          new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()),
           channel
       );
     }

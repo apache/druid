@@ -19,9 +19,11 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -32,10 +34,12 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedConciseBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -52,15 +56,17 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
@@ -75,8 +81,6 @@ import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.serde.ComplexMetricColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -106,6 +110,27 @@ public class IndexMerger
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
+
+  private static final ObjectMapper mapper;
+  private static final BitmapSerdeFactory bitmapSerdeFactory;
+
+  static {
+    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
+              }
+            }
+        )
+    );
+    mapper = injector.getInstance(ObjectMapper.class);
+    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
+  }
+
 
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
   {
@@ -761,7 +786,7 @@ public class IndexMerger
       log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
       GenericIndexedWriter<ImmutableBitmap> writer = new GenericIndexedWriter<>(
-          ioPeon, dimension, ConciseCompressedIndexedInts.objectStrategy
+          ioPeon, dimension, bitmapSerdeFactory.getObjectStrategy()
       );
       writer.open();
 
@@ -770,7 +795,7 @@ public class IndexMerger
       RTree tree = null;
       IOPeon spatialIoPeon = new TmpFileIOPeon();
       if (isSpatialDim) {
-        ConciseBitmapFactory bitmapFactory = new ConciseBitmapFactory();
+        BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
         spatialWriter = new ByteBufferWriter<ImmutableRTree>(
             spatialIoPeon, dimension, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory)
         );
@@ -789,7 +814,7 @@ public class IndexMerger
           );
         }
 
-        ConciseSet bitset = new ConciseSet();
+        MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
         for (Integer row : CombiningIterable.createSplatted(
             convertedInverteds,
             Ordering.<Integer>natural().nullsFirst()
@@ -799,7 +824,9 @@ public class IndexMerger
           }
         }
 
-        writer.write(new WrappedImmutableConciseBitmap(ImmutableConciseSet.newImmutableFromMutable(bitset)));
+        writer.write(
+            bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(bitset)
+        );
 
         if (isSpatialDim && dimVal != null) {
           List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
@@ -807,7 +834,7 @@ public class IndexMerger
           for (int j = 0; j < coords.length; j++) {
             coords[j] = Float.valueOf(stringCoords.get(j));
           }
-          tree.insert(coords, new WrappedConciseBitmap(bitset));
+          tree.insert(coords, bitset);
         }
       }
       writer.close();
@@ -910,6 +937,9 @@ public class IndexMerger
       availableMetrics.writeToChannel(channel);
       serializerUtils.writeString(
           channel, String.format("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
+      );
+      serializerUtils.writeString(
+          channel, mapper.writeValueAsString(bitmapSerdeFactory)
       );
     }
     finally {

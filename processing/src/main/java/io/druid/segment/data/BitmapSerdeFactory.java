@@ -34,6 +34,9 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 
 public interface BitmapSerdeFactory
 {
+  //public static BitmapSerdeFactory DEFAULT_BITMAP_SERDE_FACTORY = new ConciseBitmapSerdeFactory();
+  public static BitmapSerdeFactory DEFAULT_BITMAP_SERDE_FACTORY = new RoaringBitmapSerdeFactory();
+
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy();
 
   public BitmapFactory getBitmapFactory();

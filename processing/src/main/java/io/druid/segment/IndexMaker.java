@@ -40,7 +40,6 @@ import com.google.inject.Module;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -67,7 +66,6 @@ import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -83,8 +81,6 @@ import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -1126,7 +1122,7 @@ public class IndexMaker
                     }
                 )
             ),
-            ConciseCompressedIndexedInts.objectStrategy
+            bitmapSerdeFactory.getObjectStrategy()
         );
       } else {
         Iterable<ImmutableBitmap> immutableBitmaps = Iterables.transform(
@@ -1164,7 +1160,7 @@ public class IndexMaker
                 }
               }
           ),
-          ConciseCompressedIndexedInts.objectStrategy
+          bitmapSerdeFactory.getObjectStrategy()
       );
     }
 
@@ -1376,7 +1372,13 @@ public class IndexMaker
     GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.stringStrategy);
     GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.stringStrategy);
 
-    final long numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
+    final String bitmapSerdeFactoryType = mapper.writeValueAsString(bitmapSerdeFactory);
+    final long numBytes = cols.getSerializedSize()
+                          + dims.getSerializedSize()
+                          + 16
+                          // Size of bitmap serde factory
+                          + 4
+                          + bitmapSerdeFactoryType.getBytes().length;
     final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
 
     cols.writeToChannel(writer);
@@ -1393,6 +1395,9 @@ public class IndexMaker
 
     serializerUtils.writeLong(writer, dataInterval.getStartMillis());
     serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+    serializerUtils.writeString(
+        writer, bitmapSerdeFactoryType
+    );
     writer.close();
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
