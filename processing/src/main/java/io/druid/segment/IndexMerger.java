@@ -182,7 +182,13 @@ public class IndexMerger
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index)),
+        Arrays.<IndexableAdapter>asList(
+            new IncrementalIndexAdapter(
+                dataInterval,
+                index,
+                bitmapSerdeFactory.getBitmapFactory()
+            )
+        ),
         index.getMetricAggs(),
         outDir,
         progress

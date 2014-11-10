@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -47,8 +48,17 @@ public class EmptyIndexTest
     }
     tmpDir.deleteOnExit();
 
-    IncrementalIndex emptyIndex = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0], TestQueryRunners.pool);
-    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(new Interval("2012-08-01/P3D"), emptyIndex);
+    IncrementalIndex emptyIndex = new IncrementalIndex(
+        0,
+        QueryGranularity.NONE,
+        new AggregatorFactory[0],
+        TestQueryRunners.pool
+    );
+    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
+        new Interval("2012-08-01/P3D"),
+        emptyIndex,
+        new ConciseBitmapFactory()
+    );
     IndexMaker.merge(
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
         new AggregatorFactory[0],
