@@ -165,8 +165,8 @@ public class PooledTopNAlgorithm
     }
 
     final int nAggregators = theAggregators.length;
-    final int extra = nAggregators - (nAggregators % 4) - 1;
-    final int ub = (nAggregators / 4) * 4;
+    final int extra = nAggregators - nAggregators % 4;
+    final int ub = ((nAggregators / 4) * 4) - 1;
 
     while (!cursor.isDone()) {
       final IndexedInts dimValues = dimSelector.getRow();
