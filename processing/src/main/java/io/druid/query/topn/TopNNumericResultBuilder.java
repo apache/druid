@@ -19,9 +19,8 @@
 
 package io.druid.query.topn;
 
-import com.apple.concurrent.Dispatch;
 import com.google.common.base.Function;
-import com.google.common.collect.*;
+import com.google.common.collect.Lists;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
@@ -29,8 +28,14 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+
 
 /**
  *
@@ -45,7 +50,26 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
   private final Comparator<DimValHolder> dimValComparator;
-  private final Comparator<String> dimNameComparator;
+  private static final Comparator<String> dimNameComparator = new Comparator<String>()
+  {
+    @Override
+    public int compare(String o1, String o2)
+    {
+      int retval;
+      if (null == o1) {
+        if(null == o2){
+          retval = 0;
+        }else {
+          retval = -1;
+        }
+      } else if (null == o2) {
+        retval = 1;
+      } else {
+        retval = o1.compareTo(o2);
+      }
+      return retval;
+    }
+  };
   private final int threshold;
   private final Comparator metricComparator;
 
@@ -66,22 +90,6 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
     this.metricComparator = comparator;
-    this.dimNameComparator = new Comparator<String>()
-    {
-      @Override
-      public int compare(String o1, String o2)
-      {
-        int retval;
-        if (o1 == null) {
-          retval = -1;
-        } else if (o2 == null) {
-          retval = 1;
-        } else {
-          retval = o1.compareTo(o2);
-        }
-        return retval;
-      }
-    };
     this.dimValComparator = new Comparator<DimValHolder>()
     {
       @Override
@@ -97,6 +105,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       }
     };
 
+    // The logic in addEntry first adds, then removes if needed. So it can at any point have up to threshold + 1 entries.
     pQueue = new PriorityQueue<>(this.threshold + 1, this.dimValComparator);
   }
 
@@ -107,7 +116,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       Object[] metricVals
   )
   {
-    final Map<String, Object> metricValues = Maps.newLinkedHashMap();
+    final Map<String, Object> metricValues = new LinkedHashMap<>(metricVals.length + postAggs.size());
 
     metricValues.put(dimSpec.getOutputName(), dimName);
 
@@ -181,7 +190,8 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           @Override
           public int compare(DimValHolder d1, DimValHolder d2)
           {
-            int retVal = -metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
+            // Values flipped compared to earlier
+            int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
             if (retVal == 0) {
               retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
