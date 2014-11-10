@@ -27,8 +27,8 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import io.druid.db.DbConnector;
-import io.druid.db.DbTablesConfig;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.Duration;
 
 import java.util.Arrays;
@@ -48,7 +48,7 @@ public class ConfigManager
   private final Object lock = new Object();
   private boolean started = false;
 
-  private final DbConnector dbConnector;
+  private final MetadataStorageConnector dbConnector;
   private final Supplier<ConfigManagerConfig> config;
 
   private final ScheduledExecutorService exec;
@@ -58,7 +58,7 @@ public class ConfigManager
   private volatile ConfigManager.PollingCallable poller;
 
   @Inject
-  public ConfigManager(DbConnector dbConnector, Supplier<DbTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
+  public ConfigManager(MetadataStorageConnector dbConnector, Supplier<MetadataStorageTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
   {
     this.dbConnector = dbConnector;
     this.config = config;

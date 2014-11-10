@@ -43,6 +43,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.metadata.EntryExistsException;
 
 import java.util.List;
 import java.util.Map;
@@ -292,9 +293,9 @@ public class TaskQueue
    * @param task task to add
    *
    * @return true
-   * @throws TaskExistsException if the task already exists
+   * @throws io.druid.metadata.EntryExistsException if the task already exists
    */
-  public boolean add(final Task task) throws TaskExistsException
+  public boolean add(final Task task) throws EntryExistsException
   {
     giant.lock();
 

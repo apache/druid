@@ -34,9 +34,6 @@ public class RemoteTaskRunnerConfig
   private Period taskAssignmentTimeout = new Period("PT5M");
 
   @JsonProperty
-  private boolean compressZnodes = false;
-
-  @JsonProperty
   private String minWorkerVersion = "0";
 
   @JsonProperty
@@ -46,11 +43,6 @@ public class RemoteTaskRunnerConfig
   public Period getTaskAssignmentTimeout()
   {
     return taskAssignmentTimeout;
-  }
-
-  public boolean isCompressZnodes()
-  {
-    return compressZnodes;
   }
 
   public String getMinWorkerVersion()

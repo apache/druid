@@ -27,8 +27,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.common.config.ConfigManager;
 import io.druid.common.config.ConfigManagerConfig;
 import io.druid.common.config.JacksonConfigManager;
-import io.druid.db.DbConnector;
-import io.druid.db.DbTablesConfig;
+import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.MetadataStorageTablesConfig;
 
 /**
  */
@@ -43,8 +43,8 @@ public class JacksonConfigManagerModule implements Module
 
   @Provides @ManageLifecycle
   public ConfigManager getConfigManager(
-      final DbConnector dbConnector,
-      final Supplier<DbTablesConfig> dbTables,
+      final MetadataStorageConnector dbConnector,
+      final Supplier<MetadataStorageTablesConfig> dbTables,
       final Supplier<ConfigManagerConfig> config,
       final Lifecycle lifecycle
   )

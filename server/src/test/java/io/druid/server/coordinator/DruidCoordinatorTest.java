@@ -27,7 +27,7 @@ import io.druid.client.ImmutableDruidServer;
 import io.druid.client.SingleServerInventoryView;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.curator.inventory.InventoryManagerConfig;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -49,7 +49,7 @@ public class DruidCoordinatorTest
   private DruidCoordinator coordinator;
   private CuratorFramework curator;
   private LoadQueueTaskMaster taskMaster;
-  private DatabaseSegmentManager databaseSegmentManager;
+  private MetadataSegmentManager databaseSegmentManager;
   private SingleServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
@@ -68,7 +68,7 @@ public class DruidCoordinatorTest
     loadManagementPeons = new MapMaker().makeMap();
     serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
 
-    databaseSegmentManager = EasyMock.createNiceMock(DatabaseSegmentManager.class);
+    databaseSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);
 
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);

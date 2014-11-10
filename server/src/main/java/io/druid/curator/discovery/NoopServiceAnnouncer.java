@@ -29,12 +29,10 @@ public class NoopServiceAnnouncer implements ServiceAnnouncer
   @Override
   public void announce(DruidNode node)
   {
-
   }
 
   @Override
   public void unannounce(DruidNode node)
   {
-
   }
 }

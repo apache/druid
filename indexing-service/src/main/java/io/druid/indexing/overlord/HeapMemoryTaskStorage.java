@@ -35,6 +35,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -63,7 +64,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(Task task, TaskStatus status) throws TaskExistsException
+  public void insert(Task task, TaskStatus status) throws EntryExistsException
   {
     giant.lock();
 
@@ -78,7 +79,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       );
 
       if(tasks.containsKey(task.getId())) {
-        throw new TaskExistsException(task.getId());
+        throw new EntryExistsException(task.getId());
       }
 
       log.info("Inserting task %s with status: %s", task.getId(), status);

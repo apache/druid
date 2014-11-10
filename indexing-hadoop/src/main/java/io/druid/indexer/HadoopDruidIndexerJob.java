@@ -32,22 +32,26 @@ public class HadoopDruidIndexerJob implements Jobby
 {
   private static final Logger log = new Logger(HadoopDruidIndexerJob.class);
   private final HadoopDruidIndexerConfig config;
-  private final DbUpdaterJob dbUpdaterJob;
+  private final MetadataStorageUpdaterJob metadataStorageUpdaterJob;
   private IndexGeneratorJob indexJob;
   private volatile List<DataSegment> publishedSegments = null;
 
   @Inject
   public HadoopDruidIndexerJob(
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      MetadataStorageUpdaterJobHandler handler
   )
   {
     config.verify();
     this.config = config;
 
     if (config.isUpdaterJobSpecSet()) {
-      dbUpdaterJob = new DbUpdaterJob(config);
+      metadataStorageUpdaterJob = new MetadataStorageUpdaterJob(
+          config,
+          handler
+      );
     } else {
-      dbUpdaterJob = null;
+      metadataStorageUpdaterJob = null;
     }
   }
 
@@ -64,8 +68,8 @@ public class HadoopDruidIndexerJob implements Jobby
     }
     jobs.add(indexJob);
 
-    if (dbUpdaterJob != null) {
-      jobs.add(dbUpdaterJob);
+    if (metadataStorageUpdaterJob != null) {
+      jobs.add(metadataStorageUpdaterJob);
     } else {
       log.info("No updaterJobSpec set, not uploading to database");
     }
