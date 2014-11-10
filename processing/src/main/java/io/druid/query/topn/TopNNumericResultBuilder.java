@@ -57,9 +57,9 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     {
       int retval;
       if (null == o1) {
-        if(null == o2){
+        if (null == o2) {
           retval = 0;
-        }else {
+        } else {
           retval = -1;
         }
       } else if (null == o2) {
