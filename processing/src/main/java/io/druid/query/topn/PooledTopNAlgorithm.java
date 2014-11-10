@@ -172,31 +172,47 @@ public class PooledTopNAlgorithm
       final IndexedInts dimValues = dimSelector.getRow();
 
       final int dimSize = dimValues.size();
-      final int dimExtra = dimSize - dimSize % 4;
-      final int dimUpper = (dimSize / 4) * 4 - 1;
-      for (int i = 0; i < dimUpper; i += 4) {
+      final int dimExtra = dimSize % AGG_UNROLL_COUNT;
+      switch(dimExtra){
+        case 7:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(6));
+        case 6:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(5));
+        case 5:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(4));
+        case 4:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(3));
+        case 3:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(2));
+        case 2:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(1));
+        case 1:
+          aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(0));
+      }
+      for (int i = dimExtra; i < dimSize; i += AGG_UNROLL_COUNT) {
         aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i));
         aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+1));
         aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+2));
         aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+3));
-      }
-      for (int i = dimExtra; i < dimSize; ++i) {
-        aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i));
+        aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+4));
+        aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+5));
+        aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+6));
+        aggregateDimValues(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(i+7));
       }
       cursor.advance();
     }
   }
 
   private static void aggregateDimValues(
-      int[] positions,
-      BufferAggregator[] theAggregators,
-      int numProcessed,
-      ByteBuffer resultsBuf,
-      int numBytesPerRecord,
-      int[] aggregatorOffsets,
-      int aggSize,
-      int aggExtra,
-      int dimIndex
+      final int[] positions,
+      final BufferAggregator[] theAggregators,
+      final int numProcessed,
+      final ByteBuffer resultsBuf,
+      final int numBytesPerRecord,
+      final int[] aggregatorOffsets,
+      final int aggSize,
+      final int aggExtra,
+      final int dimIndex
   )
   {
     if (SKIP_POSITION_VALUE == positions[dimIndex]) {
