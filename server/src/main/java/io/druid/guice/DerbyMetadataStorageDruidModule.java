@@ -21,11 +21,11 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import com.google.inject.Provides;
 import io.druid.metadata.DerbyConnector;
+import io.druid.metadata.DerbyMetadataStorage;
+import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.SQLMetadataConnector;
-import org.skife.jdbi.v2.IDBI;
 
 public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModule
 {
@@ -41,6 +41,11 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
   {
     createBindingChoices(binder, TYPE);
     super.configure(binder);
+
+    PolyBind.optionBinder(binder, Key.get(MetadataStorage.class))
+            .addBinding(TYPE)
+            .to(DerbyMetadataStorage.class)
+            .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
             .addBinding(TYPE)

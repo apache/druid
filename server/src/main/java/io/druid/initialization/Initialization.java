@@ -45,7 +45,7 @@ import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
-import io.druid.guice.MetadataDbConfigModule;
+import io.druid.guice.MetadataConfigModule;
 import io.druid.guice.ParsersModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
@@ -333,7 +333,7 @@ public class Initialization
         new QueryRunnerFactoryModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
-        new MetadataDbConfigModule(),
+        new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),

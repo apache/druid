@@ -29,7 +29,7 @@ public class MetadataStorageConnectorConfig
   private boolean createTables = true;
 
   @JsonProperty
-  private String connectURI = null;
+  private String connectURI = "jdbc:derby://localhost:1527/druid;create=true";
 
   @JsonProperty
   private String user = null;

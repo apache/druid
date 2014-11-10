@@ -19,15 +19,11 @@
 
 package io.druid.metadata;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import org.apache.derby.drda.NetworkServerControl;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.ConnectionFactory;
-
-import java.net.InetAddress;
 
 public class DerbyConnector extends SQLMetadataConnector
 {
@@ -37,10 +33,20 @@ public class DerbyConnector extends SQLMetadataConnector
   @Inject
   public DerbyConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
   {
-    this(config, dbTables, new DBI(getConnectionFactory("druidDerbyDb")));
+    super(config, dbTables);
+
+    final BasicDataSource datasource = getDatasource();
+    datasource.setDriverClassLoader(getClass().getClassLoader());
+    datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
+
+    this.dbi = new DBI(datasource);
   }
 
-  public DerbyConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables, DBI dbi)
+  public DerbyConnector(
+      Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      DBI dbi
+  )
   {
     super(config, dbTables);
     this.dbi = dbi;
@@ -63,15 +69,4 @@ public class DerbyConnector extends SQLMetadataConnector
 
   @Override
   public DBI getDBI() { return dbi; }
-
-  private static ConnectionFactory getConnectionFactory(String dbName)
-  {
-    try {
-      NetworkServerControl server = new NetworkServerControl(InetAddress.getByName("localhost"),1527);
-      server.start(null);
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-    return new DerbyConnectionFactory(dbName);
-  }
 }
