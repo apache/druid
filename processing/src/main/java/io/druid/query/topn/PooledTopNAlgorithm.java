@@ -146,10 +146,10 @@ public class PooledTopNAlgorithm
 
   @Override
   protected void scanAndAggregate(
-      PooledTopNParams params,
-      int[] positions,
-      BufferAggregator[] theAggregators,
-      int numProcessed
+      final PooledTopNParams params,
+      final int[] positions,
+      final BufferAggregator[] theAggregators,
+      final int numProcessed
   )
   {
     final ByteBuffer resultsBuf = params.getResultsBuf();
@@ -167,7 +167,8 @@ public class PooledTopNAlgorithm
     while (!cursor.isDone()) {
       final IndexedInts dimValues = dimSelector.getRow();
 
-      for (int i = 0; i < dimValues.size(); ++i) {
+      final int size = dimValues.size();
+      for (int i = 0; i < size; ++i) {
         final int dimIndex = dimValues.get(i);
         int position = positions[dimIndex];
         if (SKIP_POSITION_VALUE == position) {
