@@ -27,15 +27,15 @@ import org.skife.config.Default;
 public abstract class IntegrationTestingConfig
 {
   @Config("druid.coordinator.host")
-  @Default("192.168.59.103:3000")
+  @Default("192.168.59.103:8081")
   public abstract String getCoordinatorHost();
 
   @Config("druid.indexer.host")
-  @Default("192.168.59.103:3001")
+  @Default("192.168.59.103:8090")
   public abstract String getIndexerHost();
 
   @Config("druid.router.host")
-  @Default("192.168.59.103:3002")
+  @Default("192.168.59.103:8888")
   public abstract String getRouterHost();
 
   @Config("druid.middlemanager.host")

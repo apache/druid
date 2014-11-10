@@ -108,10 +108,6 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
-            // this should not be necessary ???
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to("9700");
-
             PolyBind.createChoice(
                 binder,
                 "druid.indexer.task.chathandler.type",
