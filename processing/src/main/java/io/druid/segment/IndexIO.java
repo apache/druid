@@ -150,18 +150,8 @@ public class IndexIO
     bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
   }
 
-  private static volatile IndexIOHandler handler = null;
-
-  @Deprecated
-  public static MMappedIndex mapDir(final File inDir) throws IOException
-  {
-    init();
-    return handler.mapDir(inDir);
-  }
-
   public static QueryableIndex loadIndex(File inDir) throws IOException
   {
-    init();
     final int version = SegmentUtils.getVersionFromDir(inDir);
 
     final IndexLoader loader = indexLoaders.get(version);
@@ -170,13 +160,6 @@ public class IndexIO
       return loader.load(inDir);
     } else {
       throw new ISE("Unknown index version[%s]", version);
-    }
-  }
-  
-  private static void init()
-  {
-    if (handler == null) {
-      handler = new DefaultIndexIOHandler();
     }
   }
 
@@ -659,10 +642,12 @@ public class IndexIO
 
   static class LegacyIndexLoader implements IndexLoader
   {
+    private static final IndexIOHandler legacyHandler = new DefaultIndexIOHandler();
+
     @Override
     public QueryableIndex load(File inDir) throws IOException
     {
-      MMappedIndex index = IndexIO.mapDir(inDir);
+      MMappedIndex index = legacyHandler.mapDir(inDir);
 
       Map<String, Column> columns = Maps.newHashMap();
 
