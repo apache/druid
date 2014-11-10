@@ -26,7 +26,7 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RoaringBitmapSerdeFactory.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ConciseBitmapSerdeFactory.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "concise", value = ConciseBitmapSerdeFactory.class),
     @JsonSubTypes.Type(name = "roaring", value = RoaringBitmapSerdeFactory.class)
@@ -34,8 +34,7 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 
 public interface BitmapSerdeFactory
 {
-  //public static BitmapSerdeFactory DEFAULT_BITMAP_SERDE_FACTORY = new ConciseBitmapSerdeFactory();
-  public static BitmapSerdeFactory DEFAULT_BITMAP_SERDE_FACTORY = new RoaringBitmapSerdeFactory();
+  public static BitmapSerdeFactory DEFAULT_BITMAP_SERDE_FACTORY = new ConciseBitmapSerdeFactory();
 
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy();
 
