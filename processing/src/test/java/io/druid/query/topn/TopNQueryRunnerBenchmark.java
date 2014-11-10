@@ -44,6 +44,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Based on TopNQueryRunnerTest
@@ -93,7 +94,9 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               @Override
               public ByteBuffer get()
               {
-                return ByteBuffer.allocate(2000);
+                // See OffheapByteBufferPool
+                // Instead of causing a circular dependency, we simply mimic its behavior
+                return ByteBuffer.allocateDirect(2000);
               }
             }
         ),
