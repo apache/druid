@@ -11375,10 +11375,10 @@ app.factory('$druid', function($q, $http, $utils, $window) {
       return this.getAndProcess("/servers?simple", $utils.processServerTiers);
     },
     getDataSources: function() {
-      return this.getAndProcess("/db/datasources", $utils.processDataSources);
+      return this.getAndProcess("/metadata/datasources", $utils.processDataSources);
     },
     getAllDataSources: function() {
-      return this.getAndProcess("/db/datasources?includeDisabled", function(dataSources) {
+      return this.getAndProcess("/metadata/datasources?includeDisabled", function(dataSources) {
         return dataSources;
       });
     },

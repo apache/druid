@@ -50,8 +50,8 @@ import io.druid.collections.CountingMap;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
-import io.druid.db.DatabaseRuleManager;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.metadata.MetadataRuleManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.segment.IndexIO;
@@ -97,9 +97,9 @@ public class DruidCoordinator
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
-  private final DatabaseSegmentManager databaseSegmentManager;
+  private final MetadataSegmentManager metadataSegmentManager;
   private final ServerInventoryView<Object> serverInventoryView;
-  private final DatabaseRuleManager databaseRuleManager;
+  private final MetadataRuleManager metadataRuleManager;
   private final CuratorFramework curator;
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
@@ -120,9 +120,9 @@ public class DruidCoordinator
       DruidCoordinatorConfig config,
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
-      DatabaseSegmentManager databaseSegmentManager,
+      MetadataSegmentManager metadataSegmentManager,
       ServerInventoryView serverInventoryView,
-      DatabaseRuleManager databaseRuleManager,
+      MetadataRuleManager metadataRuleManager,
       CuratorFramework curator,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
@@ -136,9 +136,9 @@ public class DruidCoordinator
         config,
         zkPaths,
         configManager,
-        databaseSegmentManager,
+        metadataSegmentManager,
         serverInventoryView,
-        databaseRuleManager,
+        metadataRuleManager,
         curator,
         emitter,
         scheduledExecutorFactory,
@@ -154,9 +154,9 @@ public class DruidCoordinator
       DruidCoordinatorConfig config,
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
-      DatabaseSegmentManager databaseSegmentManager,
+      MetadataSegmentManager metadataSegmentManager,
       ServerInventoryView serverInventoryView,
-      DatabaseRuleManager databaseRuleManager,
+      MetadataRuleManager metadataRuleManager,
       CuratorFramework curator,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
@@ -171,9 +171,9 @@ public class DruidCoordinator
     this.zkPaths = zkPaths;
     this.configManager = configManager;
 
-    this.databaseSegmentManager = databaseSegmentManager;
+    this.metadataSegmentManager = metadataSegmentManager;
     this.serverInventoryView = serverInventoryView;
-    this.databaseRuleManager = databaseRuleManager;
+    this.metadataRuleManager = metadataRuleManager;
     this.curator = curator;
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
@@ -207,7 +207,7 @@ public class DruidCoordinator
 
     final DateTime now = new DateTime();
     for (DataSegment segment : getAvailableDataSegments()) {
-      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+      List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
       for (Rule rule : rules) {
         if (rule instanceof LoadRule && rule.appliesTo(segment, now)) {
           for (Map.Entry<String, Integer> entry : ((LoadRule) rule).getTieredReplicants().entrySet()) {
@@ -250,7 +250,7 @@ public class DruidCoordinator
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = Maps.newHashMap();
-    for (DruidDataSource dataSource : databaseSegmentManager.getInventory()) {
+    for (DruidDataSource dataSource : metadataSegmentManager.getInventory()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int availableSegmentSize = segments.size();
 
@@ -283,17 +283,17 @@ public class DruidCoordinator
   public void removeSegment(DataSegment segment)
   {
     log.info("Removing Segment[%s]", segment);
-    databaseSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
   }
 
   public void removeDatasource(String ds)
   {
-    databaseSegmentManager.removeDatasource(ds);
+    metadataSegmentManager.removeDatasource(ds);
   }
 
   public void enableDatasource(String ds)
   {
-    databaseSegmentManager.enableDatasource(ds);
+    metadataSegmentManager.enableDatasource(ds);
   }
 
   public String getCurrentLeader()
@@ -419,7 +419,7 @@ public class DruidCoordinator
   {
     return Iterables.concat(
         Iterables.transform(
-            databaseSegmentManager.getInventory(),
+            metadataSegmentManager.getInventory(),
             new Function<DruidDataSource, Iterable<DataSegment>>()
             {
               @Override
@@ -512,8 +512,8 @@ public class DruidCoordinator
       try {
         leaderCounter++;
         leader = true;
-        databaseSegmentManager.start();
-        databaseRuleManager.start();
+        metadataSegmentManager.start();
+        metadataRuleManager.start();
         serverInventoryView.start();
         serviceAnnouncer.announce(self);
         final int startingLeaderCounter = leaderCounter;
@@ -602,8 +602,8 @@ public class DruidCoordinator
 
         serviceAnnouncer.unannounce(self);
         serverInventoryView.stop();
-        databaseRuleManager.stop();
-        databaseSegmentManager.stop();
+        metadataRuleManager.stop();
+        metadataSegmentManager.stop();
         leader = false;
       }
       catch (Exception e) {
@@ -707,7 +707,7 @@ public class DruidCoordinator
         }
 
         List<Boolean> allStarted = Arrays.asList(
-            databaseSegmentManager.isStarted(),
+            metadataSegmentManager.isStarted(),
             serverInventoryView.isStarted()
         );
         for (Boolean aBoolean : allStarted) {
@@ -725,7 +725,7 @@ public class DruidCoordinator
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
                                          .withStartTime(startTime)
-                                         .withDatasources(databaseSegmentManager.getInventory())
+                                         .withDatasources(metadataSegmentManager.getInventory())
                                          .withDynamicConfigs(getDynamicConfigs())
                                          .withEmitter(emitter)
                                          .withBalancerStrategyFactory(factory)
@@ -821,7 +821,7 @@ public class DruidCoordinator
 
                   return params.buildFromExisting()
                                .withDruidCluster(cluster)
-                               .withDatabaseRuleManager(databaseRuleManager)
+                               .withDatabaseRuleManager(metadataRuleManager)
                                .withLoadManagementPeons(loadManagementPeons)
                                .withSegmentReplicantLookup(segmentReplicantLookup)
                                .withBalancerReferenceTimestamp(DateTime.now())

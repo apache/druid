@@ -67,11 +67,11 @@ druid.discovery.curator.path=/prod/discovery
 druid.s3.accessKey=#{ACCESS_KEY}
 druid.s3.secretKey=#{SECRET_KEY}
 
-druid.db.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.db.connector.user=#{MYSQL_USER}
-druid.db.connector.password=#{MYSQL_PW}
-druid.db.connector.useValidationQuery=true
-druid.db.tables.base=prod
+druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
+druid.metadata.storage.connector.user=#{MYSQL_USER}
+druid.metadata.storage.connector.password=#{MYSQL_PW}
+druid.metadata.storage.connector.useValidationQuery=true
+druid.metadata.storage.tables.base=prod
 
 # Only required if you are autoscaling middle managers
 druid.indexer.autoscale.doAutoscale=true
@@ -91,7 +91,7 @@ druid.indexer.runner.compressZnodes=true
 druid.indexer.runner.minWorkerVersion=#{WORKER_VERSION}
 
 # Store all task state in MySQL
-druid.indexer.storage.type=db
+druid.indexer.storage.type=metadata
 
 druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
 
@@ -229,11 +229,11 @@ druid.zk.paths.base=/druid/prod
 
 druid.discovery.curator.path=/prod/discovery
 
-druid.db.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.db.connector.user=#{MYSQL_USER}
-druid.db.connector.password=#{MYSQL_PW}
-druid.db.connector.useValidationQuery=true
-druid.db.tables.base=prod
+druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
+druid.metadata.storage.connector.user=#{MYSQL_USER}
+druid.metadata.storage.connector.password=#{MYSQL_PW}
+druid.metadata.storage.connector.useValidationQuery=true
+druid.metadata.storage.tables.base=prod
 
 druid.selectors.indexing.serviceName=druid:prod:overlord
 

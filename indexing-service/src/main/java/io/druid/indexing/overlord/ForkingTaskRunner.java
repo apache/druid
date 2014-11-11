@@ -56,8 +56,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.RandomAccessFile;
-import java.nio.channels.Channels;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

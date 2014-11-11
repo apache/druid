@@ -29,7 +29,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidServer;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.PeriodLoadRule;
 import io.druid.server.coordinator.rules.Rule;
@@ -54,7 +54,7 @@ public class DruidCoordinatorBalancerProfiler
   private ImmutableDruidServer druidServer2;
   Map<String, DataSegment> segments = Maps.newHashMap();
   ServiceEmitter emitter;
-  DatabaseRuleManager manager;
+  MetadataRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, 3, "normal");
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
 
@@ -66,7 +66,7 @@ public class DruidCoordinatorBalancerProfiler
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
-    manager = EasyMock.createMock(DatabaseRuleManager.class);
+    manager = EasyMock.createMock(MetadataRuleManager.class);
   }
 
   public void bigProfiler()
