@@ -463,6 +463,8 @@ public class IndexMerger
       }
     }
 
+
+    final Interval dataInterval;
     File v8OutDir = new File(outDir, "v8-tmp");
     v8OutDir.mkdirs();
 
@@ -489,6 +491,7 @@ public class IndexMerger
         maxTime = JodaUtils.maxDateTime(maxTime, index.getDataInterval().getEnd());
       }
 
+      dataInterval = new Interval(minTime, maxTime);
       serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
       serializerUtils.writeString(channel, mapper.writeValueAsString(bitmapSerdeFactory));
     }
@@ -895,6 +898,14 @@ public class IndexMerger
       throw new IOException(String.format("Unable to delete temporary dir[%s]", smooshDir));
     }
 
+    createIndexDrdFile(
+        IndexIO.V8_VERSION,
+        v8OutDir,
+        GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.stringStrategy),
+        GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.stringStrategy),
+        dataInterval
+    );
+
     IndexIO.DefaultIndexIOHandler.convertV8toV9(v8OutDir, outDir);
     FileUtils.deleteDirectory(v8OutDir);
 
@@ -912,6 +923,37 @@ public class IndexMerger
     }
 
     return Lists.newArrayList(retVal);
+  }
+
+  public static void createIndexDrdFile(
+      byte versionId,
+      File inDir,
+      GenericIndexed<String> availableDimensions,
+      GenericIndexed<String> availableMetrics,
+      Interval dataInterval
+  ) throws IOException
+  {
+    File indexFile = new File(inDir, "index.drd");
+
+    FileChannel channel = null;
+    try {
+      channel = new FileOutputStream(indexFile).getChannel();
+      channel.write(ByteBuffer.wrap(new byte[]{versionId}));
+
+      availableDimensions.writeToChannel(channel);
+      availableMetrics.writeToChannel(channel);
+      serializerUtils.writeString(
+          channel, String.format("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
+      );
+      serializerUtils.writeString(
+          channel, mapper.writeValueAsString(bitmapSerdeFactory)
+      );
+    }
+    finally {
+      CloseQuietly.close(channel);
+      channel = null;
+    }
+    IndexIO.checkFileSize(indexFile);
   }
 
   private static class DimValueConverter
