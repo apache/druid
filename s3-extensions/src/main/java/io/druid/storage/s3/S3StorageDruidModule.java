@@ -68,7 +68,7 @@ public class S3StorageDruidModule implements DruidModule
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
-  private class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsProvider 
+  private static class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsProvider 
   {
     private AWSCredentialsConfig config;
 
@@ -99,7 +99,7 @@ public class S3StorageDruidModule implements DruidModule
     public void refresh() {}
   }
   
-  private class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider 
+  private static class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider 
   {
     private AWSCredentialsConfig config;
     private FileSessionCredentialsProvider provider;
