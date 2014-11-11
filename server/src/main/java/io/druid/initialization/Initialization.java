@@ -36,7 +36,7 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DerbyMetadataStorageDruidModule;
+import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;
@@ -45,7 +45,7 @@ import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
-import io.druid.guice.MetadataDbConfigModule;
+import io.druid.guice.MetadataConfigModule;
 import io.druid.guice.ParsersModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
@@ -333,7 +333,7 @@ public class Initialization
         new QueryRunnerFactoryModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
-        new MetadataDbConfigModule(),
+        new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),

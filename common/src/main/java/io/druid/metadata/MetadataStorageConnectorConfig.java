@@ -29,7 +29,13 @@ public class MetadataStorageConnectorConfig
   private boolean createTables = true;
 
   @JsonProperty
-  private String connectURI = null;
+  private String host = "localhost";
+
+  @JsonProperty
+  private int port = 1527;
+
+  @JsonProperty
+  private String connectURI;
 
   @JsonProperty
   private String user = null;
@@ -37,16 +43,26 @@ public class MetadataStorageConnectorConfig
   @JsonProperty
   private String password = null;
 
-  @JsonProperty
-  private String validationQuery = "SELECT 1";
-
   public boolean isCreateTables()
   {
     return createTables;
   }
 
+  public String getHost()
+  {
+    return host;
+  }
+
+  public int getPort()
+  {
+    return port;
+  }
+
   public String getConnectURI()
   {
+    if (connectURI == null) {
+      return String.format("jdbc:derby://%s:%s/druid;create=true", host, port);
+    }
     return connectURI;
   }
 
@@ -60,20 +76,14 @@ public class MetadataStorageConnectorConfig
     return password;
   }
 
-  public String getValidationQuery()
-  {
-    return validationQuery;
-  }
-
   @Override
   public String toString()
   {
     return "DbConnectorConfig{" +
            "createTables=" + createTables +
-           ", connectURI='" + connectURI + '\'' +
+           ", connectURI='" + getConnectURI() + '\'' +
            ", user='" + user + '\'' +
            ", password=****" +
-           ", validationQuery='" + validationQuery + '\'' +
            '}';
   }
 }
