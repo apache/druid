@@ -32,6 +32,7 @@ import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 
 import java.io.File;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -65,11 +66,17 @@ public class CliInternalHadoopIndexer implements Runnable
   public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
   {
     try {
-      HadoopIngestionSpec spec;
       if (argumentSpec.startsWith("{")) {
         return HadoopDruidIndexerConfig.fromString(argumentSpec);
       } else {
-        return HadoopDruidIndexerConfig.fromFile(new File(argumentSpec));
+        URI argumentSpecUri = new URI(argumentSpec);
+        String argumentSpecScheme = argumentSpecUri.getScheme();
+
+        if ((argumentSpecScheme == null) || argumentSpecScheme.equals("file")) {
+          return HadoopDruidIndexerConfig.fromFile(new File(argumentSpecUri.getPath()));
+        } else {
+          return HadoopDruidIndexerConfig.fromDistributedFileSystem(argumentSpec);
+        }
       }
     }
     catch (Exception e) {

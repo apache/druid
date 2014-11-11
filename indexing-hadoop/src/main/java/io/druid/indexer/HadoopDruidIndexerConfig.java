@@ -65,6 +65,10 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
@@ -158,6 +162,28 @@ public class HadoopDruidIndexerConfig
       );
     }
     catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static HadoopDruidIndexerConfig fromDistributedFileSystem(String path)
+  {
+    try
+    {
+      Path pt = new Path(path);
+      FileSystem fs = FileSystem.get(pt.toUri(), new Configuration());
+      Reader reader = new InputStreamReader(fs.open(pt));
+
+      return fromMap(
+        (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
+            reader, new TypeReference<Map<String, Object>>()
+            {
+            }
+            )
+        );
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
