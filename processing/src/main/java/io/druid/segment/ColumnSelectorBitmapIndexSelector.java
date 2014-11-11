@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -30,7 +29,6 @@ import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.Iterator;
 

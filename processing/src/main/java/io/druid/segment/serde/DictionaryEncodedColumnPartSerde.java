@@ -30,7 +30,6 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;

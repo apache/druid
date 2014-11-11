@@ -71,7 +71,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         Map<String, MutableBitmap> bitmapIndexes = invertedIndexes.get(dimension);
 
         if (bitmapIndexes == null || dims == null) {
-          log.error("conciseSets and dims are null!");
+          log.error("bitmapIndexes and dims are null!");
           continue;
         }
         if (dimIndex >= dims.length || dims[dimIndex] == null) {

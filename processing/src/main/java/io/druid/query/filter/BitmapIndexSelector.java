@@ -23,7 +23,6 @@ import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.segment.data.Indexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
  */
