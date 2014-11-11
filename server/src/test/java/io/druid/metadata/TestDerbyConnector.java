@@ -20,6 +20,7 @@
 package io.druid.metadata;
 
 import com.google.common.base.Supplier;
+import io.druid.metadata.storage.derby.DerbyConnector;
 import org.junit.Assert;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;

@@ -17,10 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.metadata.storage.derby;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.metadata.SQLMetadataConnector;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -53,7 +56,7 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected boolean tableExists(Handle handle, String tableName)
+  public boolean tableExists(Handle handle, String tableName)
   {
     return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
                   .bind("tableName", tableName.toUpperCase())
@@ -69,4 +72,7 @@ public class DerbyConnector extends SQLMetadataConnector
 
   @Override
   public DBI getDBI() { return dbi; }
+
+  @Override
+  public String getValidationQuery() { return "VALUES 1"; }
 }

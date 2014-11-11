@@ -36,7 +36,7 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DerbyMetadataStorageDruidModule;
+import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;

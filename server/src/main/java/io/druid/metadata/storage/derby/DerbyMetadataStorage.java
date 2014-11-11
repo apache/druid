@@ -17,20 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.metadata.storage.derby;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.common.logger.Logger;
+import io.druid.guice.ManageLifecycle;
+import io.druid.metadata.MetadataStorage;
+import io.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.derby.drda.NetworkServerControl;
 
 import java.net.InetAddress;
 
-/**
- */
+
+@ManageLifecycle
 public class DerbyMetadataStorage extends MetadataStorage
 {
+  private static final Logger log = new Logger(DerbyMetadataStorage.class);
+
   private final NetworkServerControl server;
 
   @Inject
@@ -50,6 +56,7 @@ public class DerbyMetadataStorage extends MetadataStorage
   public void start()
   {
     try {
+      log.info("Starting Derby Metadata Storage");
       server.start(null);
     }
     catch (Exception e) {

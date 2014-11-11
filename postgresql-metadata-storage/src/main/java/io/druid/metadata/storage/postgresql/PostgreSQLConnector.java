@@ -65,7 +65,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected boolean tableExists(final Handle handle, final String tableName)
+  public boolean tableExists(final Handle handle, final String tableName)
   {
     return !handle.createQuery(
         "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE :tableName"

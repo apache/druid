@@ -42,6 +42,7 @@ import io.druid.metadata.MetadataSegmentManager;
 import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataStorage;
+import io.druid.metadata.MetadataStorageProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
@@ -94,7 +95,9 @@ public class CliCoordinator extends ServerRunnable
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
-            binder.bind(MetadataStorage.class).in(ManageLifecycle.class);
+            binder.bind(MetadataStorage.class)
+                  .toProvider(MetadataStorageProvider.class)
+                  .in(ManageLifecycle.class);
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
@@ -114,6 +117,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(DruidCoordinator.class);
 
+            LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
 
             binder.bind(JettyServerInitializer.class)

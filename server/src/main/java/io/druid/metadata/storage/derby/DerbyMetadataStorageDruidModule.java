@@ -17,14 +17,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.metadata.storage.derby;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import io.druid.metadata.DerbyConnector;
-import io.druid.metadata.DerbyMetadataStorage;
-import io.druid.metadata.MetadataStorage;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.PolyBind;
+import io.druid.guice.SQLMetadataStorageDruidModule;
 import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.MetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 
 public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModule
@@ -42,9 +43,9 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
     createBindingChoices(binder, TYPE);
     super.configure(binder);
 
-    PolyBind.optionBinder(binder, Key.get(MetadataStorage.class))
+    PolyBind.optionBinder(binder, Key.get(MetadataStorageProvider.class))
             .addBinding(TYPE)
-            .to(DerbyMetadataStorage.class)
+            .to(DerbyMetadataStorageProvider.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))

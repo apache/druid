@@ -25,7 +25,6 @@ import com.google.inject.Module;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.MetadataRuleManager;
@@ -35,6 +34,8 @@ import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.metadata.MetadataSegmentPublisherProvider;
 import io.druid.metadata.MetadataStorageConnector;
+import io.druid.metadata.MetadataStorageProvider;
+import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.metadata.SQLMetadataRuleManager;
 import io.druid.metadata.SQLMetadataRuleManagerProvider;
@@ -64,7 +65,11 @@ public class SQLMetadataStorageDruidModule implements Module
         binder, PROPERTY, Key.get(MetadataStorageConnector.class), null, defaultPropertyValue
     );
     PolyBind.createChoiceWithDefault(
-        binder, PROPERTY, Key.get(MetadataStorage.class), Key.get(MetadataStorage.class), defaultPropertyValue
+        binder,
+        PROPERTY,
+        Key.get(MetadataStorageProvider.class),
+        Key.get(NoopMetadataStorageProvider.class),
+        defaultPropertyValue
     );
     PolyBind.createChoiceWithDefault(
         binder, PROPERTY, Key.get(SQLMetadataConnector.class), null, defaultPropertyValue

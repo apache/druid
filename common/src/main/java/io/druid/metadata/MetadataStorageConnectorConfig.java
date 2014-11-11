@@ -43,9 +43,6 @@ public class MetadataStorageConnectorConfig
   @JsonProperty
   private String password = null;
 
-  @JsonProperty
-  private String validationQuery = "SELECT 1";
-
   public boolean isCreateTables()
   {
     return createTables;
@@ -66,7 +63,6 @@ public class MetadataStorageConnectorConfig
     if (connectURI == null) {
       return String.format("jdbc:derby://%s:%s/druid;create=true", host, port);
     }
-
     return connectURI;
   }
 
@@ -80,20 +76,14 @@ public class MetadataStorageConnectorConfig
     return password;
   }
 
-  public String getValidationQuery()
-  {
-    return validationQuery;
-  }
-
   @Override
   public String toString()
   {
     return "DbConnectorConfig{" +
            "createTables=" + createTables +
-           ", connectURI='" + connectURI + '\'' +
+           ", connectURI='" + getConnectURI() + '\'' +
            ", user='" + user + '\'' +
            ", password=****" +
-           ", validationQuery='" + validationQuery + '\'' +
            '}';
   }
 }

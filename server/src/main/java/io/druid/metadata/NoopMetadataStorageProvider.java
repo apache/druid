@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,29 +19,11 @@
 
 package io.druid.metadata;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import org.skife.jdbi.v2.tweak.ConnectionFactory;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-
-public class DerbyConnectionFactory implements ConnectionFactory
+public class NoopMetadataStorageProvider implements MetadataStorageProvider
 {
-  final private String dbName;
-
-  public DerbyConnectionFactory(String dbName) {
-    this.dbName = dbName;
-  }
-
-  public Connection openConnection() throws SQLException {
-    final String nsURL=String.format("jdbc:derby://localhost:1527/%s;create=true", dbName);
-    try {
-      Class.forName("org.apache.derby.jdbc.ClientDriver");
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    return DriverManager.getConnection(nsURL);
+  @Override
+  public MetadataStorage get()
+  {
+    return new MetadataStorage() {};
   }
 }
