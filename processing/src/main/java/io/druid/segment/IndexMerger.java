@@ -493,6 +493,7 @@ public class IndexMerger
 
       dataInterval = new Interval(minTime, maxTime);
       serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
+      serializerUtils.writeString(channel, mapper.writeValueAsString(bitmapSerdeFactory));
     }
     finally {
       CloseQuietly.close(channel);
