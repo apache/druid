@@ -1376,9 +1376,8 @@ public class IndexMaker
     final long numBytes = cols.getSerializedSize()
                           + dims.getSerializedSize()
                           + 16
-                          // Size of bitmap serde factory
-                          + 4
-                          + bitmapSerdeFactoryType.getBytes().length;
+                          + serializerUtils.getSerializedStringByteSize(bitmapSerdeFactoryType);
+
     final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
 
     cols.writeToChannel(writer);

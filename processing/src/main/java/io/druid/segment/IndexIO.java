@@ -36,6 +36,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
@@ -61,6 +62,7 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedRTree;
@@ -203,7 +205,7 @@ public class IndexIO
       case 6:
       case 7:
         log.info("Old version, re-persisting.");
-        IndexMaker.append(
+        IndexMerger.append(
             Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
             converted
         );
@@ -255,12 +257,7 @@ public class IndexIO
           indexBuffer, GenericIndexed.stringStrategy
       );
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
-      final BitmapSerdeFactory segmentBitmapSerdeFactory;
-      if (indexBuffer.hasRemaining()) {
-        segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
-      } else {
-        segmentBitmapSerdeFactory = BitmapSerdeFactory.DEFAULT_BITMAP_SERDE_FACTORY;
-      }
+      final BitmapSerdeFactory conciseBitmapSerdeFactory = new ConciseBitmapSerdeFactory();
 
       CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
           smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()), BYTE_ORDER
@@ -299,7 +296,7 @@ public class IndexIO
       for (int i = 0; i < availableDimensions.size(); ++i) {
         bitmaps.put(
             serializerUtils.readString(invertedBuffer),
-            GenericIndexed.read(invertedBuffer, segmentBitmapSerdeFactory.getObjectStrategy())
+            GenericIndexed.read(invertedBuffer, conciseBitmapSerdeFactory.getObjectStrategy())
         );
       }
 
@@ -310,7 +307,7 @@ public class IndexIO
             serializerUtils.readString(spatialBuffer),
             ByteBufferSerializer.read(
                 spatialBuffer,
-                new IndexedRTree.ImmutableRTreeObjectStrategy(segmentBitmapSerdeFactory.getBitmapFactory())
+                new IndexedRTree.ImmutableRTreeObjectStrategy(conciseBitmapSerdeFactory.getBitmapFactory())
             )
         );
       }
@@ -614,12 +611,10 @@ public class IndexIO
           indexBuffer, GenericIndexed.stringStrategy
       );
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
-      final BitmapSerdeFactory segmentBitmapSerdeFactory;
-      if (indexBuffer.hasRemaining()) {
-        segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
-      } else {
-        segmentBitmapSerdeFactory = BitmapSerdeFactory.DEFAULT_BITMAP_SERDE_FACTORY;
-      }
+      final BitmapSerdeFactory segmentBitmapSerdeFactory = mapper.readValue(
+          serializerUtils.readString(indexBuffer),
+          BitmapSerdeFactory.class
+      );
 
       Set<String> columns = Sets.newTreeSet();
       columns.addAll(Lists.newArrayList(dims9));
@@ -630,9 +625,7 @@ public class IndexIO
       final String segmentBitmapSerdeFactoryString = mapper.writeValueAsString(segmentBitmapSerdeFactory);
 
       final long numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16
-                            // size of segmentBitmapSerdeFactory
-                            + 4
-                            + segmentBitmapSerdeFactoryString.getBytes().length;
+                            + serializerUtils.getSerializedStringByteSize(segmentBitmapSerdeFactoryString);
 
       final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
       cols.writeToChannel(writer);
@@ -678,7 +671,7 @@ public class IndexIO
             )
             .setBitmapIndex(
                 new BitmapIndexColumnPartSupplier(
-                    BitmapSerdeFactory.DEFAULT_BITMAP_SERDE_FACTORY.getBitmapFactory(),
+                    new ConciseBitmapFactory(),
                     index.getBitmapIndexes().get(dimension),
                     index.getDimValueLookup(dimension)
                 )
@@ -740,7 +733,7 @@ public class IndexIO
           index.getDataInterval(),
           new ArrayIndexed<>(cols, String.class),
           index.getAvailableDimensions(),
-          BitmapSerdeFactory.DEFAULT_BITMAP_SERDE_FACTORY.getBitmapFactory(),
+          new ConciseBitmapFactory(),
           columns,
           index.getFileMapper()
       );
@@ -767,6 +760,11 @@ public class IndexIO
       final GenericIndexed<String> dims = GenericIndexed.read(indexBuffer, GenericIndexed.stringStrategy);
       final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
+      /**
+       * This is a workaround for the fact that in v8 segments, we have no information about the type of bitmap
+       * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
+       * this information is appended to the end of index.drd.
+       */
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
       } else {

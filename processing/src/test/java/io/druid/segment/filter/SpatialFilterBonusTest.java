@@ -46,7 +46,7 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
@@ -232,7 +232,7 @@ public class SpatialFilterBonusTest
     tmpFile.mkdirs();
     tmpFile.deleteOnExit();
 
-    IndexMaker.persist(theIndex, tmpFile);
+    IndexMerger.persist(theIndex, tmpFile);
     return IndexIO.loadIndex(tmpFile);
   }
 
@@ -412,12 +412,12 @@ public class SpatialFilterBonusTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      IndexMaker.persist(first, DATA_INTERVAL, firstFile);
-      IndexMaker.persist(second, DATA_INTERVAL, secondFile);
-      IndexMaker.persist(third, DATA_INTERVAL, thirdFile);
+      IndexMerger.persist(first, DATA_INTERVAL, firstFile);
+      IndexMerger.persist(second, DATA_INTERVAL, secondFile);
+      IndexMerger.persist(third, DATA_INTERVAL, thirdFile);
 
       QueryableIndex mergedRealtime = IndexIO.loadIndex(
-          IndexMaker.mergeQueryableIndex(
+          IndexMerger.mergeQueryableIndex(
               Arrays.asList(IndexIO.loadIndex(firstFile), IndexIO.loadIndex(secondFile), IndexIO.loadIndex(thirdFile)),
               METRIC_AGGS,
               mergedFile

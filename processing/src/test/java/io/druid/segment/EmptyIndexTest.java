@@ -59,7 +59,7 @@ public class EmptyIndexTest
         emptyIndex,
         new ConciseBitmapFactory()
     );
-    IndexMaker.merge(
+    IndexMerger.merge(
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
         new AggregatorFactory[0],
         tmpDir
