@@ -326,7 +326,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
   @Override
   public byte[] cacheKey()
   {
-    return (period.toString() + ":" + chronology.getZone().toString()).getBytes(Charsets.UTF_8);
+    return (period.toString() + ":" + chronology.getZone().toString() + ":" + origin).getBytes(Charsets.UTF_8);
   }
 
   @Override
