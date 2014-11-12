@@ -22,7 +22,9 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -50,19 +52,28 @@ public class DataSchema
 
     final Set<String> dimensionExclusions = Sets.newHashSet();
     for (AggregatorFactory aggregator : aggregators) {
-      dimensionExclusions.add(aggregator.getName());
+      dimensionExclusions.addAll(aggregator.requiredFields());
     }
     if (parser != null && parser.getParseSpec() != null) {
-      if (parser.getParseSpec().getTimestampSpec() != null) {
-        dimensionExclusions.add(parser.getParseSpec().getTimestampSpec().getTimestampColumn());
+      final DimensionsSpec dimensionsSpec = parser.getParseSpec().getDimensionsSpec();
+      final TimestampSpec timestampSpec = parser.getParseSpec().getTimestampSpec();
+
+      // exclude timestamp from dimensions by default, unless explicitly included in the list of dimensions
+      if (timestampSpec != null) {
+        final String timestampColumn = timestampSpec.getTimestampColumn();
+        if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensions().contains(timestampColumn))) {
+          dimensionExclusions.add(timestampColumn);
+        }
       }
-      if (parser.getParseSpec().getDimensionsSpec() != null) {
+      if (dimensionsSpec != null) {
         this.parser = parser.withParseSpec(
             parser.getParseSpec()
                   .withDimensionsSpec(
-                      parser.getParseSpec()
-                            .getDimensionsSpec()
-                            .withDimensionExclusions(dimensionExclusions)
+                      dimensionsSpec
+                            .withDimensionExclusions(
+                                Sets.difference(dimensionExclusions,
+                                                Sets.newHashSet(dimensionsSpec.getDimensions()))
+                            )
                   )
         );
       } else {
