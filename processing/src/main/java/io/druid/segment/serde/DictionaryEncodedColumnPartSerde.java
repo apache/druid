@@ -28,9 +28,9 @@ import com.metamx.common.IAE;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
@@ -97,7 +97,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   {
     this.isSingleValued = isSingleValued;
     this.bitmapSerdeFactory = bitmapSerdeFactory == null
-                              ? new ConciseBitmapSerdeFactory()
+                              ? BitmapSerde.createLegacyFactory()
                               : bitmapSerdeFactory;
 
     this.dictionary = null;

@@ -59,10 +59,10 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
+import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedRTree;
@@ -257,7 +257,7 @@ public class IndexIO
           indexBuffer, GenericIndexed.stringStrategy
       );
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
-      final BitmapSerdeFactory conciseBitmapSerdeFactory = new ConciseBitmapSerdeFactory();
+      final BitmapSerdeFactory bitmapSerdeFactory = BitmapSerde.createLegacyFactory();
 
       CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
           smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()), BYTE_ORDER
@@ -296,7 +296,7 @@ public class IndexIO
       for (int i = 0; i < availableDimensions.size(); ++i) {
         bitmaps.put(
             serializerUtils.readString(invertedBuffer),
-            GenericIndexed.read(invertedBuffer, conciseBitmapSerdeFactory.getObjectStrategy())
+            GenericIndexed.read(invertedBuffer, bitmapSerdeFactory.getObjectStrategy())
         );
       }
 
@@ -307,7 +307,7 @@ public class IndexIO
             serializerUtils.readString(spatialBuffer),
             ByteBufferSerializer.read(
                 spatialBuffer,
-                new IndexedRTree.ImmutableRTreeObjectStrategy(conciseBitmapSerdeFactory.getBitmapFactory())
+                new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
             )
         );
       }
@@ -772,7 +772,7 @@ public class IndexIO
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
       } else {
-        segmentBitmapSerdeFactory = new ConciseBitmapSerdeFactory();
+        segmentBitmapSerdeFactory = BitmapSerde.createLegacyFactory();
       }
 
       Map<String, Column> columns = Maps.newHashMap();
