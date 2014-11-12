@@ -60,6 +60,7 @@ import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
 import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.router.TieredBrokerConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
@@ -90,7 +91,7 @@ public class CliCoordinator extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/coordinator");
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
