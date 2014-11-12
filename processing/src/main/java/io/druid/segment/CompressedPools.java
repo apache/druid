@@ -35,6 +35,7 @@ public class CompressedPools
 {
   private static final Logger log = new Logger(CompressedPools.class);
 
+  public static final int BUFFER_SIZE = 0x10000;
   private static final StupidPool<ChunkEncoder> chunkEncoderPool = new StupidPool<ChunkEncoder>(
       new Supplier<ChunkEncoder>()
       {
@@ -44,7 +45,7 @@ public class CompressedPools
         public ChunkEncoder get()
         {
           log.info("Allocating new chunkEncoder[%,d]", counter.incrementAndGet());
-          return new ChunkEncoder(0xFFFF);
+          return new ChunkEncoder(BUFFER_SIZE);
         }
       }
   );
@@ -63,7 +64,7 @@ public class CompressedPools
         public byte[] get()
         {
           log.info("Allocating new outputBytesPool[%,d]", counter.incrementAndGet());
-          return new byte[0xFFFF];
+          return new byte[BUFFER_SIZE];
         }
       }
   );
@@ -82,7 +83,7 @@ public class CompressedPools
         public ByteBuffer get()
         {
           log.info("Allocating new bigEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(0xFFFF).order(ByteOrder.BIG_ENDIAN);
+          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN);
         }
       }
   );
@@ -96,7 +97,7 @@ public class CompressedPools
         public ByteBuffer get()
         {
           log.info("Allocating new littleEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(0xFFFF).order(ByteOrder.LITTLE_ENDIAN);
+          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
         }
       }
   );
