@@ -257,7 +257,7 @@ public class IndexIO
           indexBuffer, GenericIndexed.stringStrategy
       );
       final Interval dataInterval = new Interval(serializerUtils.readString(indexBuffer));
-      final BitmapSerdeFactory bitmapSerdeFactory = BitmapSerde.createLegacyFactory();
+      final BitmapSerdeFactory bitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
 
       CompressedLongsIndexedSupplier timestamps = CompressedLongsIndexedSupplier.fromByteBuffer(
           smooshedFiles.mapFile(makeTimeFile(inDir, BYTE_ORDER).getName()), BYTE_ORDER
@@ -772,7 +772,7 @@ public class IndexIO
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
       } else {
-        segmentBitmapSerdeFactory = BitmapSerde.createLegacyFactory();
+        segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
       Map<String, Column> columns = Maps.newHashMap();

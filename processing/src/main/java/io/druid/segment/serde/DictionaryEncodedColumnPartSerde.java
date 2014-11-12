@@ -97,7 +97,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   {
     this.isSingleValued = isSingleValued;
     this.bitmapSerdeFactory = bitmapSerdeFactory == null
-                              ? BitmapSerde.createLegacyFactory()
+                              ? new BitmapSerde.LegacyBitmapSerdeFactory()
                               : bitmapSerdeFactory;
 
     this.dictionary = null;

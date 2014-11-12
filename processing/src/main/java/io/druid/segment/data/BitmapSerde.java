@@ -23,28 +23,15 @@ import com.metamx.common.ISE;
 
 public class BitmapSerde
 {
-  // default bitmap indices in Druid <= 0.6.x
-  public static final Class<ConciseBitmapSerdeFactory> LEGACY_BITMAP_FACTORY = ConciseBitmapSerdeFactory.class;
 
   // default bitmap indices for Druid >= 0.7.x
-  public static final Class<ConciseBitmapSerdeFactory> DEFAULT_BITMAP_FACTORY = ConciseBitmapSerdeFactory.class;
+  public static class DefaultBitmapSerdeFactory extends ConciseBitmapSerdeFactory {}
 
-  public static BitmapSerdeFactory createDefaultFactory()
-  {
-    try {
-      return DEFAULT_BITMAP_FACTORY.newInstance();
-    } catch(InstantiationException | IllegalAccessException e) {
-      // should never happen
-      throw new ISE(e, "Unable to instatiate BitmapSerdeFactory");
-    }
-  }
+  // default bitmap indices in Druid <= 0.6.x
+  public static class LegacyBitmapSerdeFactory extends ConciseBitmapSerdeFactory {}
+
   public static BitmapSerdeFactory createLegacyFactory()
   {
-    try {
-      return LEGACY_BITMAP_FACTORY.newInstance();
-    } catch(InstantiationException | IllegalAccessException e) {
-      // should never happen
-      throw new ISE(e, "Unable to instatiate BitmapSerdeFactory");
-    }
+    return new LegacyBitmapSerdeFactory();
   }
 }
