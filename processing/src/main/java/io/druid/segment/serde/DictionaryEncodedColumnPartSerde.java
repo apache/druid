@@ -22,18 +22,19 @@ package io.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.BitmapSerde;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -43,18 +44,13 @@ import java.nio.channels.WritableByteChannel;
  */
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
-  @JsonCreator
-  public static DictionaryEncodedColumnPartSerde createDeserializer(
-      boolean singleValued
-  )
-  {
-    return new DictionaryEncodedColumnPartSerde();
-  }
+  private final boolean isSingleValued;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
 
   private final GenericIndexed<String> dictionary;
   private final VSizeIndexedInts singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
-  private final GenericIndexed<ImmutableConciseSet> bitmaps;
+  private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final ImmutableRTree spatialIndex;
 
   private final long size;
@@ -63,10 +59,14 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       GenericIndexed<String> dictionary,
       VSizeIndexedInts singleValCol,
       VSizeIndexed multiValCol,
-      GenericIndexed<ImmutableConciseSet> bitmaps,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      GenericIndexed<ImmutableBitmap> bitmaps,
       ImmutableRTree spatialIndex
   )
   {
+    this.isSingleValued = multiValCol == null;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
+
     this.dictionary = dictionary;
     this.singleValuedColumn = singleValCol;
     this.multiValuedColumn = multiValCol;
@@ -89,20 +89,35 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     this.size = size;
   }
 
-  private DictionaryEncodedColumnPartSerde()
+  @JsonCreator
+  public DictionaryEncodedColumnPartSerde(
+      @JsonProperty("isSingleValued") boolean isSingleValued,
+      @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+  )
   {
-    dictionary = null;
-    singleValuedColumn = null;
-    multiValuedColumn = null;
-    bitmaps = null;
-    spatialIndex = null;
-    size = 0;
+    this.isSingleValued = isSingleValued;
+    this.bitmapSerdeFactory = bitmapSerdeFactory == null
+                              ? new BitmapSerde.LegacyBitmapSerdeFactory()
+                              : bitmapSerdeFactory;
+
+    this.dictionary = null;
+    this.singleValuedColumn = null;
+    this.multiValuedColumn = null;
+    this.bitmaps = null;
+    this.spatialIndex = null;
+    this.size = 0;
   }
 
   @JsonProperty
   private boolean isSingleValued()
   {
-    return singleValuedColumn != null;
+    return isSingleValued;
+  }
+
+  @JsonProperty
+  public BitmapSerdeFactory getBitmapSerdeFactory()
+  {
+    return bitmapSerdeFactory;
   }
 
   @Override
@@ -114,16 +129,32 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   @Override
   public void write(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{(byte) (isSingleValued() ? 0x0 : 0x1)}));
-    dictionary.writeToChannel(channel);
-    if (isSingleValued()) {
-      singleValuedColumn.writeToChannel(channel);
-    } else {
-      multiValuedColumn.writeToChannel(channel);
+    channel.write(ByteBuffer.wrap(new byte[]{(byte) (isSingleValued ? 0x0 : 0x1)}));
+
+    if (dictionary != null) {
+      dictionary.writeToChannel(channel);
     }
-    bitmaps.writeToChannel(channel);
+
+    if (isSingleValued()) {
+      if (singleValuedColumn != null) {
+        singleValuedColumn.writeToChannel(channel);
+      }
+    } else {
+      if (multiValuedColumn != null) {
+        multiValuedColumn.writeToChannel(channel);
+      }
+    }
+
+    if (bitmaps != null) {
+      bitmaps.writeToChannel(channel);
+    }
+
     if (spatialIndex != null) {
-      ByteBufferSerializer.writeToChannel(spatialIndex, IndexedRTree.objectStrategy, channel);
+      ByteBufferSerializer.writeToChannel(
+          spatialIndex,
+          new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory()),
+          channel
+      );
     }
   }
 
@@ -141,23 +172,43 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       singleValuedColumn = VSizeIndexedInts.readFromByteBuffer(buffer);
       multiValuedColumn = null;
       builder.setHasMultipleValues(false)
-             .setDictionaryEncodedColumn(new DictionaryEncodedColumnSupplier(dictionary, singleValuedColumn, null, columnConfig.columnCacheSizeBytes()));
+             .setDictionaryEncodedColumn(
+                 new DictionaryEncodedColumnSupplier(
+                     dictionary,
+                     singleValuedColumn,
+                     null,
+                     columnConfig.columnCacheSizeBytes()
+                 )
+             );
     } else {
       singleValuedColumn = null;
       multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
       builder.setHasMultipleValues(true)
-             .setDictionaryEncodedColumn(new DictionaryEncodedColumnSupplier(dictionary, null, multiValuedColumn, columnConfig.columnCacheSizeBytes()));
+             .setDictionaryEncodedColumn(
+                 new DictionaryEncodedColumnSupplier(
+                     dictionary,
+                     null,
+                     multiValuedColumn,
+                     columnConfig.columnCacheSizeBytes()
+                 )
+             );
     }
 
-    GenericIndexed<ImmutableConciseSet> bitmaps = GenericIndexed.read(
-        buffer, ConciseCompressedIndexedInts.objectStrategy
+    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(
+        buffer, bitmapSerdeFactory.getObjectStrategy()
     );
-    builder.setBitmapIndex(new BitmapIndexColumnPartSupplier(bitmaps, dictionary));
+    builder.setBitmapIndex(
+        new BitmapIndexColumnPartSupplier(
+            bitmapSerdeFactory.getBitmapFactory(),
+            bitmaps,
+            dictionary
+        )
+    );
 
     ImmutableRTree spatialIndex = null;
     if (buffer.hasRemaining()) {
       spatialIndex = ByteBufferSerializer.read(
-          buffer, IndexedRTree.objectStrategy
+          buffer, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapSerdeFactory.getBitmapFactory())
       );
       builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(spatialIndex));
     }
@@ -166,6 +217,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         dictionary,
         singleValuedColumn,
         multiValuedColumn,
+        bitmapSerdeFactory,
         bitmaps,
         spatialIndex
     );

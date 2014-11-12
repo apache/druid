@@ -114,7 +114,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
@@ -328,7 +328,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
               final QueryRunner clientQueryable = serverView.getQueryRunner(server);
               if (clientQueryable == null) {
-                log.makeAlert("WTF!? server[%s] doesn't have a client Queryable?", server).emit();
+                log.error("WTF!? server[%s] doesn't have a client Queryable?", server);
                 continue;
               }
 
@@ -337,13 +337,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               List<Interval> intervals = segmentSpec.getIntervals();
 
               if (!server.isAssignable() || !populateCache || isBySegment) {
-                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec));
+                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), context);
               } else {
                 // this could be more efficient, since we only need to reorder results
                 // for batches of segments with the same segment start time.
                 resultSeqToAdd = toolChest.mergeSequencesUnordered(
                     Sequences.map(
-                        clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec)),
+                        clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec), context),
                         new Function<Object, Sequence<T>>()
                         {
                           private final Function<T, Object> cacheFn = strategy.prepareForCache();

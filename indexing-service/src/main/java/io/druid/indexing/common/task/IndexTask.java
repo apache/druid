@@ -147,7 +147,7 @@ public class IndexTask extends AbstractFixedIntervalTask
               granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
           ),
           new IndexIOConfig(firehoseFactory),
-          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary, null)
+          new IndexTuningConfig(targetPartitionSize, 0, null)
       );
     }
     this.jsonMapper = jsonMapper;
@@ -401,7 +401,11 @@ public class IndexTask extends AbstractFixedIntervalTask
         version,
         wrappedDataSegmentPusher,
         tmpDir
-    ).findPlumber(schema, new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec), metrics);
+    ).findPlumber(
+        schema,
+        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec, null, null),
+        metrics
+    );
 
     // rowFlushBoundary for this job
     final int myRowFlushBoundary = rowFlushBoundary > 0
@@ -557,7 +561,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
         @JsonProperty("numShards") @Nullable Integer numShards
-        )
+    )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
       this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;

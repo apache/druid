@@ -71,7 +71,7 @@ public class SchemalessTestFull
   final QueryGranularity allGran = QueryGranularity.ALL;
   final String dimensionValue = "dimension";
   final String valueValue = "value";
-  final String providerDimension = "provider";
+  final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
   final String placementishDimension = "placementish";
@@ -133,7 +133,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -142,7 +142,7 @@ public class SchemalessTestFull
                                 .put("minIndex", 100.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
+                                .put("market", "total_market")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -161,7 +161,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -182,7 +182,7 @@ public class SchemalessTestFull
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -268,7 +268,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "")
+                                .put("market", "")
                                 .put("rows", 2L)
                                 .put("index", 200.0D)
                                 .put("addRowsIndexConstant", 203.0D)
@@ -277,7 +277,7 @@ public class SchemalessTestFull
                                 .put("minIndex", 100.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -296,7 +296,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "")
+                                .put("market", "")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -305,7 +305,7 @@ public class SchemalessTestFull
                                 .put("minIndex", 100.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -407,7 +407,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -417,7 +417,7 @@ public class SchemalessTestFull
                                 .build(),
                     new HashMap<String, Object>()
                     {{
-                        put("provider", null);
+                        put("market", null);
                         put("rows", 1L);
                         put("index", 0.0D);
                         put("addRowsIndexConstant", 2.0D);
@@ -436,7 +436,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -540,7 +540,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -549,7 +549,7 @@ public class SchemalessTestFull
                                 .put("minIndex", 100.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
+                                .put("market", "total_market")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -568,7 +568,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -587,7 +587,7 @@ public class SchemalessTestFull
             new SearchResultValue(
                 Arrays.<SearchHit>asList(
                     new SearchHit(qualityDimension, "automotive"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -658,7 +658,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 2L)
                                 .put("index", 200.0D)
                                 .put("addRowsIndexConstant", 203.0D)
@@ -755,7 +755,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -765,7 +765,7 @@ public class SchemalessTestFull
                                 .build(),
                     new HashMap<String, Object>()
                     {{
-                        put("provider", null);
+                        put("market", null);
                         put("rows", 1L);
                         put("index", 0.0D);
                         put("addRowsIndexConstant", 2.0D);
@@ -784,7 +784,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -942,7 +942,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 200.0D)
                                 .put("addRowsIndexConstant", 202.0D)
@@ -1042,7 +1042,7 @@ public class SchemalessTestFull
                 Arrays.<Map<String, Object>>asList(
                     new HashMap<String, Object>()
                     {{
-                        put("provider", null);
+                        put("market", null);
                         put("rows", 2L);
                         put("index", 200.0D);
                         put("addRowsIndexConstant", 203.0D);
@@ -1051,7 +1051,7 @@ public class SchemalessTestFull
                         put("minIndex", 100.0);
                       }},
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -1070,7 +1070,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -1169,13 +1169,23 @@ public class SchemalessTestFull
         )
     );
 
+    /* Uncomment when Druid support for nulls/empty strings is actually consistent
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<TopNResultValue>(
             new DateTime("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "")
+                                .put("rows", 6L)
+                                .put("index", 400.0D)
+                                .put("addRowsIndexConstant", 407.0D)
+                                .put("uniques", 0.0)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 0.0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
                                 .put("rows", 4L)
                                 .put("index", 400.0D)
                                 .put("addRowsIndexConstant", 405.0D)
@@ -1184,7 +1194,35 @@ public class SchemalessTestFull
                                 .put("minIndex", 100.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "")
+                                .put("market", "total_market")
+                                .put("rows", 2L)
+                                .put("index", 200.0D)
+                                .put("addRowsIndexConstant", 203.0D)
+                                .put("uniques", UNIQUES_1)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 100.0)
+                                .build()
+                )
+            )
+        )
+    );
+    */
+    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("rows", 4L)
+                                .put("index", 400.0D)
+                                .put("addRowsIndexConstant", 405.0D)
+                                .put("uniques", 0.0D)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 100.0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "")
                                 .put("rows", 3L)
                                 .put("index", 200.0D)
                                 .put("addRowsIndexConstant", 204.0D)
@@ -1193,7 +1231,7 @@ public class SchemalessTestFull
                                 .put("minIndex", 0.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "total_market")
+                                .put("market", "total_market")
                                 .put("rows", 2L)
                                 .put("index", 200.0D)
                                 .put("addRowsIndexConstant", 203.0D)
@@ -1212,7 +1250,7 @@ public class SchemalessTestFull
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "spot")
+                                .put("market", "spot")
                                 .put("rows", 4L)
                                 .put("index", 400.0D)
                                 .put("addRowsIndexConstant", 405.0D)
@@ -1221,7 +1259,7 @@ public class SchemalessTestFull
                                 .put("minIndex", 100.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("provider", "")
+                                .put("market", "")
                                 .put("rows", 1L)
                                 .put("index", 100.0D)
                                 .put("addRowsIndexConstant", 102.0D)
@@ -1242,7 +1280,7 @@ public class SchemalessTestFull
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(providerDimension, "total_market")
+                    new SearchHit(marketDimension, "total_market")
                 )
             )
         )
@@ -1386,8 +1424,9 @@ public class SchemalessTestFull
                                   .build();
 
     failMsg += " timeseries ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1403,7 +1442,7 @@ public class SchemalessTestFull
                                   .dataSource(dataSource)
                                   .granularity(allGran)
                                   .intervals(fullOnInterval)
-                                  .filters(providerDimension, "spot")
+                                  .filters(marketDimension, "spot")
                                   .aggregators(
                                       Lists.<AggregatorFactory>newArrayList(
                                           Iterables.concat(
@@ -1419,8 +1458,9 @@ public class SchemalessTestFull
                                   .build();
 
     failMsg += " filtered timeseries ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1432,7 +1472,7 @@ public class SchemalessTestFull
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
-        .dimension(providerDimension)
+        .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(3)
         .intervals(fullOnInterval)
@@ -1451,8 +1491,9 @@ public class SchemalessTestFull
         .build();
 
     failMsg += " topN ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
 
@@ -1464,8 +1505,8 @@ public class SchemalessTestFull
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
-        .dimension(providerDimension)
-        .filters(providerDimension, "spot")
+        .dimension(marketDimension)
+        .filters(marketDimension, "spot")
         .metric(indexMetric)
         .threshold(3)
         .intervals(fullOnInterval)
@@ -1484,8 +1525,9 @@ public class SchemalessTestFull
         .build();
 
     failMsg += " filtered topN ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TopNResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1501,8 +1543,9 @@ public class SchemalessTestFull
                               .build();
 
     failMsg += " search ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1513,14 +1556,15 @@ public class SchemalessTestFull
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
                               .granularity(allGran)
-                              .filters(providerDimension, "spot")
+                              .filters(marketDimension, "spot")
                               .intervals(fullOnInterval)
                               .query("a")
                               .build();
 
     failMsg += " filtered search ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
@@ -1537,8 +1581,9 @@ public class SchemalessTestFull
                                     .build();
 
     failMsg += " timeBoundary ";
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeBoundaryResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);

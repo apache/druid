@@ -86,7 +86,8 @@ public class ApproximateHistogramGroupByQueryTest
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, mapper, engine)
+        new GroupByQueryQueryToolChest(configSupplier, mapper, engine, pool),
+        pool
     );
 
     GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
@@ -106,7 +107,8 @@ public class ApproximateHistogramGroupByQueryTest
         singleThreadEngine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         singleThreadedConfigSupplier,
-        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine)
+        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine, pool),
+        pool
     );
 
 
@@ -157,8 +159,8 @@ public class ApproximateHistogramGroupByQueryTest
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.providerDimension,
-                    "proViderAlias"
+                    QueryRunnerTestHelper.marketDimension,
+                    "marKetAlias"
                 )
             )
         )
@@ -167,7 +169,7 @@ public class ApproximateHistogramGroupByQueryTest
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        "proViderAlias",
+                        "marKetAlias",
                         OrderByColumnSpec.Direction.DESCENDING
                     )
                 ), 1
@@ -189,7 +191,7 @@ public class ApproximateHistogramGroupByQueryTest
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01T00:00:00.000Z",
-            "provideralias", "upfront",
+            "marketalias", "upfront",
             "rows", 186L,
             "quantile", 880.9881f,
             "apphisto",

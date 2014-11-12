@@ -31,11 +31,14 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -51,23 +54,18 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TestIndex
 {
-  private static final Logger log = new Logger(TestIndex.class);
-
-  private static IncrementalIndex realtimeIndex = null;
-  private static QueryableIndex mmappedIndex = null;
-  private static QueryableIndex mergedRealtime = null;
-
   public static final String[] COLUMNS = new String[]{
       "ts",
-      "provider",
+      "market",
       "quALIty",
       "plAcEmEnT",
       "pLacementish",
       "iNdEx",
       "qualiTy_Uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"provider", "quALIty", "plAcEmEnT", "pLacementish"};
+  public static final String[] DIMENSIONS = new String[]{"market", "quALIty", "plAcEmEnT", "pLacementish"};
   public static final String[] METRICS = new String[]{"iNdEx"};
+  private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
@@ -80,7 +78,11 @@ public class TestIndex
     }
   }
 
-  public static IncrementalIndex getIncrementalTestIndex()
+  private static IncrementalIndex realtimeIndex = null;
+  private static QueryableIndex mmappedIndex = null;
+  private static QueryableIndex mergedRealtime = null;
+
+  public static IncrementalIndex getIncrementalTestIndex(boolean useOffheap)
   {
     synchronized (log) {
       if (realtimeIndex != null) {
@@ -88,7 +90,7 @@ public class TestIndex
       }
     }
 
-    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv");
+    return realtimeIndex = makeRealtimeIndex("druid.sample.tsv", useOffheap);
   }
 
   public static QueryableIndex getMMappedTestIndex()
@@ -99,7 +101,7 @@ public class TestIndex
       }
     }
 
-    IncrementalIndex incrementalIndex = getIncrementalTestIndex();
+    IncrementalIndex incrementalIndex = getIncrementalTestIndex(false);
     mmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
 
     return mmappedIndex;
@@ -113,8 +115,8 @@ public class TestIndex
       }
 
       try {
-        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top");
-        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom");
+        IncrementalIndex top = makeRealtimeIndex("druid.sample.tsv.top", false);
+        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.tsv.bottom", false);
 
         File tmpFile = File.createTempFile("yay", "who");
         tmpFile.delete();
@@ -149,14 +151,27 @@ public class TestIndex
     }
   }
 
-  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
+  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename, final boolean useOffheap)
   {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading index file[%s]", resource);
-
-    final IncrementalIndex retVal = new IncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.NONE, METRIC_AGGS
-    );
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+                                          .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+                                          .withQueryGranularity(QueryGranularity.NONE)
+                                          .withMetrics(METRIC_AGGS)
+                                          .build();
+    final IncrementalIndex retVal;
+    if (useOffheap) {
+      retVal = new OffheapIncrementalIndex(
+          schema,
+          TestQueryRunners.pool
+      );
+    } else {
+      retVal = new IncrementalIndex(
+          schema,
+          TestQueryRunners.pool
+      );
+    }
 
     final AtomicLong startTime = new AtomicLong();
     int lineCount;

@@ -21,6 +21,7 @@ package io.druid.common.utils;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
+import com.google.common.primitives.Ints;
 import io.druid.collections.IntList;
 
 import java.io.IOException;
@@ -261,5 +262,10 @@ public class SerializerUtils
     }
 
     return retVal;
+  }
+
+  public int getSerializedStringByteSize(String str)
+  {
+    return Ints.BYTES + str.getBytes(UTF8).length;
   }
 }

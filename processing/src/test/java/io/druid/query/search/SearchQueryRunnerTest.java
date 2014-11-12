@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -87,7 +88,7 @@ public class SearchQueryRunnerTest
         QueryRunnerTestHelper.qualityDimension,
         Sets.newHashSet("automotive", "mezzanine", "travel", "health", "entertainment")
     );
-    expectedResults.put(QueryRunnerTestHelper.providerDimension, Sets.newHashSet("total_market"));
+    expectedResults.put(QueryRunnerTestHelper.marketDimension, Sets.newHashSet("total_market"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("a"));
 
     checkSearchQuery(searchQuery, expectedResults);
@@ -160,13 +161,13 @@ public class SearchQueryRunnerTest
   public void testSearchWithDimensionProvider()
   {
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
+    expectedResults.put(QueryRunnerTestHelper.marketDimension, new HashSet<String>(Arrays.asList("total_market")));
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .dimensions("provider")
+              .dimensions("market")
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .query("a")
               .build(),
@@ -186,7 +187,7 @@ public class SearchQueryRunnerTest
                     "automotive", "mezzanine", "travel", "health", "entertainment"
                 )
             ),
-            QueryRunnerTestHelper.providerDimension,
+            QueryRunnerTestHelper.marketDimension,
             new HashSet<String>(
                 Arrays.asList("total_market")
             )
@@ -200,7 +201,7 @@ public class SearchQueryRunnerTest
               .dimensions(
                   Arrays.asList(
                       QueryRunnerTestHelper.qualityDimension,
-                      QueryRunnerTestHelper.providerDimension
+                      QueryRunnerTestHelper.marketDimension
                   )
               )
               .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -214,7 +215,7 @@ public class SearchQueryRunnerTest
   public void testSearchWithDimensionsPlacementAndProvider()
   {
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
+    expectedResults.put(QueryRunnerTestHelper.marketDimension, new HashSet<String>(Arrays.asList("total_market")));
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -223,7 +224,7 @@ public class SearchQueryRunnerTest
               .dimensions(
                   Arrays.asList(
                       QueryRunnerTestHelper.placementishDimension,
-                      QueryRunnerTestHelper.providerDimension
+                      QueryRunnerTestHelper.marketDimension
                   )
               )
               .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -258,15 +259,15 @@ public class SearchQueryRunnerTest
   public void testSearchWithSingleFilter2()
   {
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    expectedResults.put(QueryRunnerTestHelper.providerDimension, new HashSet<String>(Arrays.asList("total_market")));
+    expectedResults.put(QueryRunnerTestHelper.marketDimension, new HashSet<String>(Arrays.asList("total_market")));
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
               .dataSource(QueryRunnerTestHelper.dataSource)
               .granularity(QueryRunnerTestHelper.allGran)
-              .filters(QueryRunnerTestHelper.providerDimension, "total_market")
+              .filters(QueryRunnerTestHelper.marketDimension, "total_market")
               .intervals(QueryRunnerTestHelper.fullOnInterval)
-              .dimensions(QueryRunnerTestHelper.providerDimension)
+              .dimensions(QueryRunnerTestHelper.marketDimension)
               .query("a")
               .build(),
         expectedResults
@@ -283,7 +284,7 @@ public class SearchQueryRunnerTest
                              .fields(
                                  Arrays.<DimFilter>asList(
                                      Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.providerDimension)
+                                           .dimension(QueryRunnerTestHelper.marketDimension)
                                            .value("spot")
                                            .build(),
                                      Druids.newSelectorDimFilterBuilder()
@@ -366,7 +367,7 @@ public class SearchQueryRunnerTest
                              .fields(
                                  Arrays.<DimFilter>asList(
                                      Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.providerDimension)
+                                           .dimension(QueryRunnerTestHelper.marketDimension)
                                            .value("total_market")
                                            .build(),
                                      Druids.newSelectorDimFilterBuilder()
@@ -409,8 +410,9 @@ public class SearchQueryRunnerTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
+    HashMap<String,List> context = new HashMap<String, List>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(searchQuery),
+        runner.run(searchQuery, context),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
 

@@ -20,14 +20,21 @@
 package io.druid.query.spec;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.RetryQueryRunner;
+import io.druid.query.SegmentDescriptor;
+import io.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -35,11 +42,11 @@ import java.util.concurrent.Callable;
 public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> base;
-  private final QuerySegmentSpec specificSpec;
+  private final SpecificSegmentSpec specificSpec;
 
   public SpecificSegmentQueryRunner(
       QueryRunner<T> base,
-      QuerySegmentSpec specificSpec
+      SpecificSegmentSpec specificSpec
   )
   {
     this.base = base;
@@ -47,7 +54,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> input)
+  public Sequence<T> run(final Query<T> input, final Map<String, Object> context)
   {
     final Query<T> query = input.withQuerySegmentSpec(specificSpec);
 
@@ -55,14 +62,29 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
     final String currThreadName = currThread.getName();
     final String newName = String.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
 
-    final Sequence<T> baseSequence = doNamed(currThread, currThreadName, newName, new Callable<Sequence<T>>()
-    {
-      @Override
-      public Sequence<T> call() throws Exception
-      {
-        return base.run(query);
-      }
-    });
+    final Sequence<T> baseSequence = doNamed(
+        currThread, currThreadName, newName, new Callable<Sequence<T>>()
+        {
+          @Override
+          public Sequence<T> call() throws Exception
+          {
+            Sequence<T> returningSeq;
+            try {
+              returningSeq = base.run(query, context);
+            }
+            catch (SegmentMissingException e) {
+              List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY);
+              if (missingSegments == null) {
+                missingSegments = Lists.newArrayList();
+                context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, missingSegments);
+              }
+              missingSegments.add(specificSpec.getDescriptor());
+              returningSeq = Sequences.empty();
+            }
+            return returningSeq;
+          }
+        }
+    );
 
     return new Sequence<T>()
     {
@@ -82,7 +104,10 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
       }
 
       @Override
-      public <OutType> Yielder<OutType> toYielder(final OutType initValue, final YieldingAccumulator<OutType, T> accumulator)
+      public <OutType> Yielder<OutType> toYielder(
+          final OutType initValue,
+          final YieldingAccumulator<OutType, T> accumulator
+      )
       {
         return doItNamed(
             new Callable<Yielder<OutType>>()

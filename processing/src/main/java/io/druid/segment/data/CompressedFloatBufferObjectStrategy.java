@@ -28,14 +28,14 @@ import java.nio.FloatBuffer;
 
 /**
 */
-public class CompressedFloatBufferObjectStrategy extends CompressedObjectStrategy<FloatBuffer>
+public class CompressedFloatBufferObjectStrategy extends FixedSizeCompressedObjectStrategy<FloatBuffer>
 {
-  public static CompressedFloatBufferObjectStrategy getBufferForOrder(ByteOrder order)
+  public static CompressedFloatBufferObjectStrategy getBufferForOrder(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
-    return new CompressedFloatBufferObjectStrategy(order);
+    return new CompressedFloatBufferObjectStrategy(order, compression, sizePer);
   }
 
-  private CompressedFloatBufferObjectStrategy(final ByteOrder order)
+  private CompressedFloatBufferObjectStrategy(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
     super(
         order,
@@ -64,7 +64,9 @@ public class CompressedFloatBufferObjectStrategy extends CompressedObjectStrateg
           {
             return into.asFloatBuffer().put(from);
           }
-        }
+        },
+        compression,
+        sizePer
     );
   }
 }

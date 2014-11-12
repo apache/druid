@@ -25,6 +25,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,10 +38,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- */
-public class CompressedFloatsIndexedSupplierTest
+@RunWith(Parameterized.class)
+public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 {
+  public CompressedFloatsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  {
+    super(compressionStrategy);
+  }
+
   private IndexedFloats indexed;
   private CompressedFloatsIndexedSupplier supplier;
   private float[] vals;
@@ -59,30 +65,31 @@ public class CompressedFloatsIndexedSupplierTest
     Closeables.close(indexed, false);
   }
 
-  private void setupSimple()
+  private void setupSimple(final int chunkSize)
   {
     vals = new float[]{
-        0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f
+        0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f
     };
 
     supplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
         FloatBuffer.wrap(vals),
-        5,
-        ByteOrder.nativeOrder()
+        chunkSize,
+        ByteOrder.nativeOrder(),
+        compressionStrategy
     );
 
     indexed = supplier.get();
   }
 
-  private void setupSimpleWithSerde() throws IOException
+  private void setupSimpleWithSerde(final int chunkSize) throws IOException
   {
     vals = new float[]{
-        0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f
+        0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f
     };
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedFloatsIndexedSupplier theSupplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
-        FloatBuffer.wrap(vals), 5, ByteOrder.nativeOrder()
+        FloatBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
@@ -96,7 +103,7 @@ public class CompressedFloatsIndexedSupplierTest
   @Test
   public void testSanity() throws Exception
   {
-    setupSimple();
+    setupSimple(5);
 
     Assert.assertEquals(4, supplier.getBaseFloatBuffers().size());
 
@@ -104,12 +111,23 @@ public class CompressedFloatsIndexedSupplierTest
     for (int i = 0; i < indexed.size(); ++i) {
       Assert.assertEquals(vals[i], indexed.get(i), 0.0);
     }
+
+    // test powers of 2
+    setupSimple(2);
+
+    Assert.assertEquals(9, supplier.getBaseFloatBuffers().size());
+
+    Assert.assertEquals(vals.length, indexed.size());
+    for (int i = 0; i < indexed.size(); ++i) {
+      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
+    }
+
   }
 
   @Test
   public void testBulkFill() throws Exception
   {
-    setupSimple();
+    setupSimple(5);
 
     tryFill(0, 15);
     tryFill(3, 6);
@@ -120,16 +138,26 @@ public class CompressedFloatsIndexedSupplierTest
   @Test(expected = IndexOutOfBoundsException.class)
   public void testBulkFillTooMuch() throws Exception
   {
-    setupSimple();
-    tryFill(7, 10);
+    setupSimple(5);
+    tryFill(7, 11);
   }
 
   @Test
   public void testSanityWithSerde() throws Exception
   {
-    setupSimpleWithSerde();
+    setupSimpleWithSerde(5);
 
     Assert.assertEquals(4, supplier.getBaseFloatBuffers().size());
+
+    Assert.assertEquals(vals.length, indexed.size());
+    for (int i = 0; i < indexed.size(); ++i) {
+      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
+    }
+
+    // test powers of 2
+    setupSimpleWithSerde(2);
+
+    Assert.assertEquals(9, supplier.getBaseFloatBuffers().size());
 
     Assert.assertEquals(vals.length, indexed.size());
     for (int i = 0; i < indexed.size(); ++i) {
@@ -140,7 +168,7 @@ public class CompressedFloatsIndexedSupplierTest
   @Test
   public void testBulkFillWithSerde() throws Exception
   {
-    setupSimpleWithSerde();
+    setupSimpleWithSerde(5);
 
     tryFill(0, 15);
     tryFill(3, 6);
@@ -151,8 +179,8 @@ public class CompressedFloatsIndexedSupplierTest
   @Test(expected = IndexOutOfBoundsException.class)
   public void testBulkFillTooMuchWithSerde() throws Exception
   {
-    setupSimpleWithSerde();
-    tryFill(7, 10);
+    setupSimpleWithSerde(5);
+    tryFill(7, 11);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
@@ -160,7 +188,7 @@ public class CompressedFloatsIndexedSupplierTest
   @Test
   public void testConcurrentThreadReads() throws Exception
   {
-    setupSimple();
+    setupSimple(5);
 
     final AtomicReference<String> reason = new AtomicReference<String>("none");
 

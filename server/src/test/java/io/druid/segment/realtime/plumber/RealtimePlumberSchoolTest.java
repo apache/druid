@@ -165,6 +165,8 @@ public class RealtimePlumberSchoolTest
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,
+        null,
+        null,
         null
     );
 

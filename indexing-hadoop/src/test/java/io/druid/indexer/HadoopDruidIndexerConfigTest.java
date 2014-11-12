@@ -152,6 +152,10 @@ public class HadoopDruidIndexerConfigTest
     for (int i = 0; i < partitionCount; i++) {
       specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, new DefaultObjectMapper()), i));
     }
+    // Backwards compatibility
+    DataRollupSpec rollupSpec = new DataRollupSpec();
+    rollupSpec.rollupGranularity = QueryGranularity.MINUTE;
+
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
         null, null, null,
         "foo",
@@ -172,7 +176,7 @@ public class HadoopDruidIndexerConfigTest
         true,
         ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
         false,
-        new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.MINUTE),
+        rollupSpec,
         null,
         false,
         ImmutableMap.of("foo", "bar"),

@@ -32,7 +32,9 @@ import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
+import io.druid.guice.annotations.Global;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
@@ -46,7 +48,9 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
 
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -57,25 +61,27 @@ import java.util.concurrent.TimeoutException;
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
 {
+  private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
   private final GroupByQueryEngine engine;
   private final QueryWatcher queryWatcher;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
-
-  private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
+  private final StupidPool<ByteBuffer> computationBufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByQueryEngine engine,
       QueryWatcher queryWatcher,
       Supplier<GroupByQueryConfig> config,
-      GroupByQueryQueryToolChest toolChest
+      GroupByQueryQueryToolChest toolChest,
+      @Global StupidPool<ByteBuffer> computationBufferPool
   )
   {
     this.engine = engine;
     this.queryWatcher = queryWatcher;
     this.config = config;
     this.toolChest = toolChest;
+    this.computationBufferPool = computationBufferPool;
   }
 
   @Override
@@ -102,13 +108,14 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                   return new QueryRunner<Row>()
                   {
                     @Override
-                    public Sequence<Row> run(final Query<Row> query)
+                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
                     {
                       final GroupByQuery queryParam = (GroupByQuery) query;
                       final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper
                           .createIndexAccumulatorPair(
                               queryParam,
-                              config.get()
+                              config.get(),
+                              computationBufferPool
                           );
                       final Pair<List, Accumulator<List, Row>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
                       final int priority = query.getContextPriority(0);
@@ -121,13 +128,14 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                             public Void call() throws Exception
                             {
                               if (bySegment) {
-                                input.run(queryParam)
+                                input.run(queryParam, context)
                                      .accumulate(
                                          bySegmentAccumulatorPair.lhs,
                                          bySegmentAccumulatorPair.rhs
                                      );
                               } else {
-                                input.run(query).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                input.run(query, context)
+                                     .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;
@@ -172,7 +180,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-      return new GroupByParallelQueryRunner(queryExecutor, config, queryWatcher, queryRunners);
+
+      return new GroupByParallelQueryRunner(queryExecutor, config, queryWatcher, computationBufferPool, queryRunners);
     }
   }
 
@@ -194,7 +203,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input)
+    public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
     {
       if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);

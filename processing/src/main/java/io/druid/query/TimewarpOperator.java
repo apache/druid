@@ -33,6 +33,8 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import java.util.Arrays;
+import java.util.Map;
+
 
 /**
  * TimewarpOperator is an example post-processing operator that maps current time
@@ -79,7 +81,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query)
+      public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
       {
         final long offset = computeOffset(now);
 
@@ -90,7 +92,8 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         );
         return Sequences.map(
             baseRunner.run(
-                query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval)))
+                query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))),
+                context
             ),
             new Function<T, T>()
             {

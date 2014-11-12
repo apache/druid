@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.io.Files;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IOPeon;
 
 import java.io.File;
@@ -51,7 +52,8 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = CompressedFloatsSupplierSerializer.create(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER,
+        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
     );
 
     writer.open();

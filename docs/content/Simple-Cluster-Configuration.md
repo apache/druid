@@ -30,9 +30,9 @@ Configuration:
 
 -Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.160"]
 
--Ddruid.db.connector.connectURI=jdbc:mysql://localhost:3306/druid
--Ddruid.db.connector.user=druid
--Ddruid.db.connector.password=diurd
+-Ddruid.metadata.storage.connector.connectURI=jdbc:mysql://localhost:3306/druid
+-Ddruid.metadata.storage.connector.user=druid
+-Ddruid.metadata.storage.connector.password=diurd
 
 -Ddruid.selectors.indexing.serviceName=overlord
 -Ddruid.indexer.queue.startDelay=PT0M
@@ -66,9 +66,9 @@ druid.port=8082
 
 druid.zk.service.host=localhost
 
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
+druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.metadata.storage.connector.user=druid
+druid.metadata.storage.connector.password=diurd
 
 druid.coordinator.startDelay=PT70s
 ```

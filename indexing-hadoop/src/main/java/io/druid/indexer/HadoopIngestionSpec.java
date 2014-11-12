@@ -30,7 +30,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.rollup.DataRollupSpec;
-import io.druid.indexer.updater.DbUpdaterJobSpec;
+import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
@@ -70,7 +70,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
       final @JsonProperty("rollupSpec") DataRollupSpec rollupSpec,
-      final @JsonProperty("updaterJobSpec") DbUpdaterJobSpec updaterJobSpec,
+      final @JsonProperty("updaterJobSpec") MetadataStorageUpdaterJobSpec updaterJobSpec,
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
@@ -159,13 +159,15 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           version,
           thePartitionSpec,
           shardSpecs,
-          rollupSpec == null ? 50000 : rollupSpec.rowFlushBoundary,
+          null,
           leaveIntermediate,
           cleanupOnFailure,
           overwriteFiles,
           ignoreInvalidRows,
           jobProperties,
-          combineText
+          combineText,
+          false,
+          false
       );
     }
   }

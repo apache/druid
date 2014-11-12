@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
@@ -13,9 +14,9 @@ import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import io.druid.db.DatabaseSegmentManager;
-import io.druid.db.DatabaseSegmentManagerConfig;
-import io.druid.db.DatabaseSegmentManagerProvider;
+import io.druid.metadata.MetadataSegmentManager;
+import io.druid.metadata.MetadataSegmentManagerConfig;
+import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -69,14 +70,17 @@ public class CliBridge extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/bridge");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8089);
+
             ConfigProvider.bind(binder, BridgeCuratorConfig.class);
 
             binder.bind(BridgeZkCoordinator.class).in(ManageLifecycle.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("bridge"));
 
-            JsonConfigProvider.bind(binder, "druid.manager.segments", DatabaseSegmentManagerConfig.class);
-            binder.bind(DatabaseSegmentManager.class)
-                  .toProvider(DatabaseSegmentManagerProvider.class)
+            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+            binder.bind(MetadataSegmentManager.class)
+                  .toProvider(MetadataSegmentManagerProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(QuerySegmentWalker.class).to(BridgeQuerySegmentWalker.class).in(LazySingleton.class);

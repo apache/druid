@@ -28,6 +28,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,22 +41,26 @@ import java.util.Iterator;
  */
 public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 {
-  public static final byte version = 0x1;
-  public static final int MAX_FLOATS_IN_BUFFER = (0xFFFF >> 2);
+  public static final byte LZF_VERSION = 0x1;
+  public static final byte version = 0x2;
+  public static final int MAX_FLOATS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Floats.BYTES;
 
   private final int totalSize;
   private final int sizePer;
   private final GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   CompressedFloatsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers
+      GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseFloatBuffers = baseFloatBuffers;
+    this.compression = compression;
   }
 
   public int size()
@@ -66,92 +71,33 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
   @Override
   public IndexedFloats get()
   {
-    return new IndexedFloats()
-    {
-      int currIndex = -1;
-      ResourceHolder<FloatBuffer> holder;
-      FloatBuffer buffer;
+    final int div = Integer.numberOfTrailingZeros(sizePer);
+    final int rem = sizePer - 1;
+    final boolean powerOf2 = sizePer == (1 << div);
+    if(powerOf2) {
+      return new CompressedIndexedFloats() {
+        @Override
+        public float get(int index)
+        {
+          // optimize division and remainder for powers of 2
+          final int bufferNum = index >> div;
 
-      @Override
-      public int size()
-      {
-        return totalSize;
-      }
-
-      @Override
-      public float get(int index)
-      {
-        int bufferNum = index / sizePer;
-        int bufferIndex = index % sizePer;
-
-        if (bufferNum != currIndex) {
-          loadBuffer(bufferNum);
-        }
-
-        return buffer.get(buffer.position() + bufferIndex);
-      }
-
-      @Override
-      public void fill(int index, float[] toFill)
-      {
-        if (totalSize - index < toFill.length) {
-          throw new IndexOutOfBoundsException(
-              String.format(
-                  "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-              )
-          );
-        }
-
-        int bufferNum = index / sizePer;
-        int bufferIndex = index % sizePer;
-
-        int leftToFill = toFill.length;
-        while (leftToFill > 0) {
           if (bufferNum != currIndex) {
             loadBuffer(bufferNum);
           }
 
-          buffer.mark();
-          buffer.position(buffer.position() + bufferIndex);
-          final int numToGet = Math.min(buffer.remaining(), leftToFill);
-          buffer.get(toFill, toFill.length - leftToFill, numToGet);
-          buffer.reset();
-          leftToFill -= numToGet;
-          ++bufferNum;
-          bufferIndex = 0;
+          final int bufferIndex = index & rem;
+          return buffer.get(buffer.position() + bufferIndex);
         }
-      }
-
-      private void loadBuffer(int bufferNum)
-      {
-        CloseQuietly.close(holder);
-        holder = baseFloatBuffers.get(bufferNum);
-        buffer = holder.get();
-        currIndex = bufferNum;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "CompressedFloatsIndexedSupplier_Anonymous{" +
-               "currIndex=" + currIndex +
-               ", sizePer=" + sizePer +
-               ", numChunks=" + baseFloatBuffers.size() +
-               ", totalSize=" + totalSize +
-               '}';
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        Closeables.close(holder, false);
-      }
-    };
+      };
+    } else {
+      return new CompressedIndexedFloats();
+    }
   }
 
   public long getSerializedSize()
   {
-    return baseFloatBuffers.getSerializedSize() + 1 + 4 + 4;
+    return baseFloatBuffers.getSerializedSize() + 1 + 4 + 4 + 1;
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -159,6 +105,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     channel.write(ByteBuffer.wrap(new byte[]{version}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
+    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
     baseFloatBuffers.writeToChannel(channel);
   }
 
@@ -167,7 +114,8 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     return new CompressedFloatsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseFloatBuffers, CompressedFloatBufferObjectStrategy.getBufferForOrder(order))
+        GenericIndexed.fromIterable(baseFloatBuffers, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        compression
     );
   }
 
@@ -179,37 +127,62 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     return baseFloatBuffers;
   }
 
-  public static int numFloatsInBuffer(int numFloatsInChunk)
-  {
-    return MAX_FLOATS_IN_BUFFER - (MAX_FLOATS_IN_BUFFER % numFloatsInChunk);
-  }
-
   public static CompressedFloatsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == version) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressedObjectStrategy.CompressionStrategy compression =
+          CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
+
       return new CompressedFloatsIndexedSupplier(
-        buffer.getInt(),
-        buffer.getInt(),
-        GenericIndexed.read(buffer, CompressedFloatBufferObjectStrategy.getBufferForOrder(order))
+          totalSize,
+          sizePer,
+          GenericIndexed.read(
+              buffer,
+              CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                  order,
+                  compression,
+                  sizePer
+              )
+          ),
+          compression
+      );
+    } else if (versionFromBuffer == LZF_VERSION) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      return new CompressedFloatsIndexedSupplier(
+          totalSize,
+          sizePer,
+          GenericIndexed.read(
+              buffer,
+              CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                  order,
+                  compression,
+                  sizePer
+              )
+          ),
+          compression
       );
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedFloatsIndexedSupplier fromFloatBuffer(FloatBuffer buffer, final ByteOrder order)
+  public static CompressedFloatsIndexedSupplier fromFloatBuffer(FloatBuffer buffer, final ByteOrder order, CompressedObjectStrategy.CompressionStrategy compression)
   {
-    return fromFloatBuffer(buffer, MAX_FLOATS_IN_BUFFER, order);
+    return fromFloatBuffer(buffer, MAX_FLOATS_IN_BUFFER, order, compression);
   }
 
   public static CompressedFloatsIndexedSupplier fromFloatBuffer(
-      final FloatBuffer buffer, final int chunkFactor, final ByteOrder order
+      final FloatBuffer buffer, final int chunkFactor, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
-        chunkFactor * Floats.BYTES <= 0xffff, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
+        chunkFactor <= MAX_FLOATS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
     );
 
     return new CompressedFloatsIndexedSupplier(
@@ -252,9 +225,91 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
                 };
               }
             },
-            CompressedFloatBufferObjectStrategy.getBufferForOrder(order)
-        )
+            CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, chunkFactor)
+        ),
+        compression
     );
   }
 
+  private class CompressedIndexedFloats implements IndexedFloats
+  {
+    int currIndex = -1;
+    ResourceHolder<FloatBuffer> holder;
+    FloatBuffer buffer;
+
+    @Override
+    public int size()
+    {
+      return totalSize;
+    }
+
+    @Override
+    public float get(final int index)
+    {
+      // division + remainder is optimized by the compiler so keep those together
+      final int bufferNum = index / sizePer;
+      final int bufferIndex = index % sizePer;
+
+      if (bufferNum != currIndex) {
+        loadBuffer(bufferNum);
+      }
+      return buffer.get(buffer.position() + bufferIndex);
+    }
+
+    @Override
+    public void fill(int index, float[] toFill)
+    {
+      if (totalSize - index < toFill.length) {
+        throw new IndexOutOfBoundsException(
+            String.format(
+                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
+            )
+        );
+      }
+
+      int bufferNum = index / sizePer;
+      int bufferIndex = index % sizePer;
+
+      int leftToFill = toFill.length;
+      while (leftToFill > 0) {
+        if (bufferNum != currIndex) {
+          loadBuffer(bufferNum);
+        }
+
+        buffer.mark();
+        buffer.position(buffer.position() + bufferIndex);
+        final int numToGet = Math.min(buffer.remaining(), leftToFill);
+        buffer.get(toFill, toFill.length - leftToFill, numToGet);
+        buffer.reset();
+        leftToFill -= numToGet;
+        ++bufferNum;
+        bufferIndex = 0;
+      }
+    }
+
+    protected void loadBuffer(int bufferNum)
+    {
+      CloseQuietly.close(holder);
+      holder = baseFloatBuffers.get(bufferNum);
+      buffer = holder.get();
+      currIndex = bufferNum;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "CompressedFloatsIndexedSupplier_Anonymous{" +
+             "currIndex=" + currIndex +
+             ", sizePer=" + sizePer +
+             ", numChunks=" + baseFloatBuffers.size() +
+             ", totalSize=" + totalSize +
+             '}';
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      Closeables.close(holder, false);
+    }
+  }
 }

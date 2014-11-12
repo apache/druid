@@ -25,12 +25,13 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.cli.QueryJettyServerInitializer;
+import io.druid.metadata.MetadataSegmentPublisher;
+import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.RealtimeManager;
-import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -48,18 +49,19 @@ public class RealtimeModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoice(
+    PolyBind.createChoiceWithDefault(
         binder,
         "druid.publish.type",
         Key.get(SegmentPublisher.class),
-        Key.get(DbSegmentPublisher.class)
+        null,
+        "metadata"
     );
     final MapBinder<String, SegmentPublisher> publisherBinder = PolyBind.optionBinder(
         binder,
         Key.get(SegmentPublisher.class)
     );
-    publisherBinder.addBinding("noop").to(NoopSegmentPublisher.class);
-    binder.bind(DbSegmentPublisher.class).in(LazySingleton.class);
+    publisherBinder.addBinding("noop").to(NoopSegmentPublisher.class).in(LazySingleton.class);
+    publisherBinder.addBinding("metadata").to(MetadataSegmentPublisher.class).in(LazySingleton.class);
 
     PolyBind.createChoice(
         binder,
