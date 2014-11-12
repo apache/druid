@@ -96,6 +96,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.carrotsearch</groupId>
+            <artifactId>junit-benchmarks</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
             <scope>test</scope>
@@ -103,6 +108,7 @@
         <dependency>
             <groupId>com.google.caliper</groupId>
             <artifactId>caliper</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
