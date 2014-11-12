@@ -120,7 +120,16 @@ public abstract class AbstractTask implements Task
                   .add("id", id)
                   .add("type", getType())
                   .add("dataSource", dataSource)
+                  .add("priority",priority)
                   .toString();
+  }
+
+  Priority priority = Priority.NORMAL;
+
+  @JsonProperty
+  @Override
+  public Priority getPriority(){
+    return this.priority;
   }
 
   /**

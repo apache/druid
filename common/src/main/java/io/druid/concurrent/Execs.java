@@ -41,20 +41,37 @@ public class Execs
   {
     return Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat));
   }
+  public static ExecutorService singleThreaded(String nameFormat, Integer priority)
+  {
+    return Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat,priority));
+  }
 
   public static ExecutorService multiThreaded(int threads, String nameFormat)
   {
     return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat));
+  }
+  public static ExecutorService multiThreaded(int threads, String nameFormat, Integer priority)
+  {
+    return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat,priority));
   }
 
   public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat)
   {
     return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat));
   }
+  public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat, Integer priority)
+  {
+    return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat, priority));
+  }
 
   public static ThreadFactory makeThreadFactory(String nameFormat)
   {
     return new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build();
+  }
+
+  public static ThreadFactory makeThreadFactory(String nameFormat, Integer priority)
+  {
+    return new ThreadFactoryBuilder().setDaemon(true).setPriority(priority).setNameFormat(nameFormat).build();
   }
 
   /**

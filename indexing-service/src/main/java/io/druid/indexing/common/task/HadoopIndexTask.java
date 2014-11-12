@@ -110,6 +110,7 @@ public class HadoopIndexTask extends AbstractTask
         getTheDataSource(spec, config)
     );
 
+    this.priority = Priority.LOW;
 
     this.spec = spec == null ? config : spec;
 

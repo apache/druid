@@ -56,6 +56,24 @@ import io.druid.query.QueryRunner;
 })
 public interface Task
 {
+  public static enum Priority{
+    // NOTE: Setting negative nice values on linux sysetems (priority > Thread.NORM_PRIORITY) requires running
+    // as *ROOT*. This is, in general, not advisable.
+    // In order to have these priorities honored on linux systems, the JVM must be launched with the following options:
+    //      -XX:+UseThreadPriorities -XX:ThreadPriorityPolicy=42
+    // This induces a bug which allows the setting of thread priority even when executed by a non-root user.
+    // See : http://www.akshaal.info/2008/04/javas-thread-priorities-in-linux.html for an explanation
+    // See : http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/file/b0c7e7f1bbbe/src/os/linux/vm/os_linux.cpp#l3933 for
+    // the bug in action
+    NORMAL(Thread.NORM_PRIORITY), LOW(Thread.MIN_PRIORITY);
+    private final Integer priority;
+    private Priority(int threadPriority){
+      this.priority = threadPriority;
+    }
+    public Integer getPriority(){
+      return this.priority;
+    }
+  }
   /**
    * Returns ID of this task. Must be unique across all tasks ever created.
    * @return task ID
@@ -136,4 +154,10 @@ public interface Task
    * @throws Exception if this task failed
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
+
+  /**
+   * Returns the priority to be hinted when executing the thread
+   * @return an integer representing the thread priority, see {@link java.lang.Thread#setPriority(int) setPriority} for {@link java.lang.Thread}
+   */
+  public Priority getPriority();
 }

@@ -53,6 +53,7 @@ public class MergeTask extends MergeTaskBase
   )
   {
     super(id, dataSource, segments);
+    this.priority = Priority.LOW;
     this.aggregators = aggregators;
   }
 
