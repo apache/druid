@@ -266,6 +266,6 @@ public class SerializerUtils
 
   public int getSerializedStringByteSize(String str)
   {
-    return Ints.BYTES + str.getBytes().length;
+    return Ints.BYTES + str.getBytes(UTF8).length;
   }
 }
