@@ -36,11 +36,6 @@
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>druid-server</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
       <dependency>
         <groupId>io.druid.extensions</groupId>
         <artifactId>druid-s3-extensions</artifactId>
@@ -51,37 +46,38 @@
         <artifactId>druid-histogram</artifactId>
         <version>${project.parent.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.druid.extensions</groupId>
+        <artifactId>mysql-metadata-storage</artifactId>
+        <version>${project.parent.version}</version>
+      </dependency>
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-math</artifactId>
-            <version>2.2</version>
-        </dependency>
-        <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-            <version>4.0-beta</version>
         </dependency>
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-servlet</artifactId>
-            <version>4.0-beta</version>
         </dependency>
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-multibindings</artifactId>
-            <version>4.0-beta</version>
+        </dependency>
+        <dependency>
+            <groupId>io.druid</groupId>
+            <artifactId>druid-server</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
 
         <!-- Tests -->
       <dependency>
         <groupId>org.testng</groupId>
         <artifactId>testng</artifactId>
-        <version>6.8.7</version>
       </dependency>
         <dependency>
             <groupId>org.easymock</groupId>
@@ -104,6 +100,19 @@
               <outputFile>
                 ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
               </outputFile>
+		<filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+              <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                            </transformers>
             </configuration>
           </execution>
         </executions>

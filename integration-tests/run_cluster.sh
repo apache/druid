@@ -1,7 +1,7 @@
 # Add druid jar
-cp ../services/target/druid-services-*-selfcontained.jar docker/
-cp ../s3-extensions/target/druid-s3-extensions-*.jar docker/ 
-cp ../histogram/target/druid-histogram-*.jar docker/ 
+cp ./target/druid-integration-tests-*-selfcontained.jar docker/
+DRUID_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | grep -v '\['`
+
 # Build Druid Cluster Image
 docker build -t druid/cluster docker/
 
@@ -12,6 +12,10 @@ DOCKERDIR=$DIR/docker
 SHARED_DIR=$DIR/shared
 SUPERVISORDIR=/usr/lib/druid/conf
 RESOURCEDIR=$DIR/src/test/resources
+
+# Make directories if they dont exist
+mkdir -p SHARED_DIR/logs
+mkdir -p SHARED_DIR/tasklogs
 
 # Start zookeeper
 docker run -d --name druid-zookeeper -p 2181:2181 -v $SHARED_DIR:/shared -v $DOCKERDIR/zookeeper.conf:$SUPERVISORDIR/zookeeper.conf druid/cluster
