@@ -17,31 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.metadata;
+package io.druid.segment.data;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import org.skife.jdbi.v2.tweak.ConnectionFactory;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+/**
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ConciseBitmapSerdeFactory.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "concise", value = ConciseBitmapSerdeFactory.class),
+    @JsonSubTypes.Type(name = "roaring", value = RoaringBitmapSerdeFactory.class)
+})
 
-public class DerbyConnectionFactory implements ConnectionFactory
+public interface BitmapSerdeFactory
 {
-  final private String dbName;
+  public static BitmapSerdeFactory DEFAULT_BITMAP_SERDE_FACTORY = new ConciseBitmapSerdeFactory();
 
-  public DerbyConnectionFactory(String dbName) {
-    this.dbName = dbName;
-  }
+  public ObjectStrategy<ImmutableBitmap> getObjectStrategy();
 
-  public Connection openConnection() throws SQLException {
-    final String nsURL=String.format("jdbc:derby://localhost:1527/%s;create=true", dbName);
-    try {
-      Class.forName("org.apache.derby.jdbc.ClientDriver");
-    } catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    return DriverManager.getConnection(nsURL);
-  }
+  public BitmapFactory getBitmapFactory();
 }

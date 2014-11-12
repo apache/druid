@@ -1169,6 +1169,7 @@ public class SchemalessTestFull
         )
     );
 
+    /* Uncomment when Druid support for nulls/empty strings is actually consistent
     List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
         new Result<TopNResultValue>(
             new DateTime("2011-01-12T00:00:00.000Z"),
@@ -1191,6 +1192,43 @@ public class SchemalessTestFull
                                 .put("uniques", 0.0D)
                                 .put("maxIndex", 100.0)
                                 .put("minIndex", 100.0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "total_market")
+                                .put("rows", 2L)
+                                .put("index", 200.0D)
+                                .put("addRowsIndexConstant", 203.0D)
+                                .put("uniques", UNIQUES_1)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 100.0)
+                                .build()
+                )
+            )
+        )
+    );
+    */
+    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("rows", 4L)
+                                .put("index", 400.0D)
+                                .put("addRowsIndexConstant", 405.0D)
+                                .put("uniques", 0.0D)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 100.0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "")
+                                .put("rows", 3L)
+                                .put("index", 200.0D)
+                                .put("addRowsIndexConstant", 204.0D)
+                                .put("uniques", 0.0)
+                                .put("maxIndex", 100.0)
+                                .put("minIndex", 0.0)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
                                 .put("market", "total_market")

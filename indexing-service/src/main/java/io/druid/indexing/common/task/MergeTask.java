@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.timeline.DataSegment;
 
@@ -60,7 +60,7 @@ public class MergeTask extends MergeTaskBase
   public File merge(final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    return IndexMaker.mergeQueryableIndex(
+    return IndexMerger.mergeQueryableIndex(
         Lists.transform(
             ImmutableList.copyOf(segments.values()),
             new Function<File, QueryableIndex>()

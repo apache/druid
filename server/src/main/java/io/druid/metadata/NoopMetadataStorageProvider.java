@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,21 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.filter;
+package io.druid.metadata;
 
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.spatial.ImmutableRTree;
-import io.druid.segment.data.Indexed;
-
-/**
- */
-public interface BitmapIndexSelector
+public class NoopMetadataStorageProvider implements MetadataStorageProvider
 {
-  public Indexed<String> getDimensionValues(String dimension);
-  public int getNumRows();
-  public BitmapFactory getBitmapFactory();
-  public ImmutableBitmap getBitmapIndex(String dimension, String value);
-  public ImmutableBitmap getBitmapIndex(String dimension, int idx);
-  public ImmutableRTree getSpatialIndex(String dimension);
+  @Override
+  public MetadataStorage get()
+  {
+    return new MetadataStorage() {};
+  }
 }

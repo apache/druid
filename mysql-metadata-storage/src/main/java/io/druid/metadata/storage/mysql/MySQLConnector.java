@@ -72,7 +72,7 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected boolean tableExists(Handle handle, String tableName)
+  public boolean tableExists(Handle handle, String tableName)
   {
     return !handle.createQuery("SHOW tables LIKE :tableName")
                   .bind("tableName", tableName)
