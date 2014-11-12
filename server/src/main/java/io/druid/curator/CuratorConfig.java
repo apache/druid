@@ -27,6 +27,7 @@ import org.skife.config.Default;
 public abstract class CuratorConfig
 {
   @Config("druid.zk.service.host")
+  @Default("localhost")
   public abstract String getZkHosts();
 
   @Config("druid.zk.service.sessionTimeoutMs")
