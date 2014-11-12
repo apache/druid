@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -33,7 +34,12 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -46,21 +52,20 @@ import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -76,15 +81,12 @@ import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -109,10 +111,23 @@ public class IndexMaker
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
   private static final ObjectMapper mapper;
+  private static final BitmapSerdeFactory bitmapSerdeFactory;
 
   static {
-    final Injector injector = GuiceInjectors.makeStartupInjector();
+    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
+              }
+            }
+        )
+    );
     mapper = injector.getInstance(ObjectMapper.class);
+    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
   }
 
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
@@ -170,7 +185,7 @@ public class IndexMaker
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index)),
+        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index, bitmapSerdeFactory.getBitmapFactory())),
         index.getMetricAggs(),
         outDir,
         progress
@@ -839,13 +854,14 @@ public class IndexMaker
                                        ? new MultiValColumnDictionaryEntryStore()
                                        : new SingleValColumnDictionaryEntryStore();
 
-    ConciseSet nullSet = null;
+    final BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
+    MutableBitmap nullSet = null;
     int rowCount = 0;
 
     for (Rowboat theRow : theRows) {
       if (dimIndex > theRow.getDims().length) {
         if (nullSet == null) {
-          nullSet = new ConciseSet();
+          nullSet = bitmapFactory.makeEmptyMutableBitmap();
         }
         nullSet.add(rowCount);
         adder.add(null);
@@ -853,7 +869,7 @@ public class IndexMaker
         int[] dimVals = theRow.getDims()[dimIndex];
         if (dimVals == null || dimVals.length == 0) {
           if (nullSet == null) {
-            nullSet = new ConciseSet();
+            nullSet = bitmapFactory.makeEmptyMutableBitmap();
           }
           nullSet.add(rowCount);
         }
@@ -1062,18 +1078,18 @@ public class IndexMaker
     }
 
     // Make bitmap indexes
-    List<ConciseSet> conciseSets = Lists.newArrayList();
+    List<MutableBitmap> mutableBitmaps = Lists.newArrayList();
     for (String dimVal : dimensionValues) {
       List<Iterable<Integer>> convertedInverteds = Lists.newArrayListWithCapacity(adapters.size());
       for (int j = 0; j < adapters.size(); ++j) {
         convertedInverteds.add(
             new ConvertingIndexedInts(
-                adapters.get(j).getInverteds(dimension, dimVal), rowNumConversions.get(j)
+                adapters.get(j).getBitmapIndex(dimension, dimVal), rowNumConversions.get(j)
             )
         );
       }
 
-      ConciseSet bitset = new ConciseSet();
+      MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
       for (Integer row : CombiningIterable.createSplatted(
           convertedInverteds,
           Ordering.<Integer>natural().nullsFirst()
@@ -1083,40 +1099,40 @@ public class IndexMaker
         }
       }
 
-      conciseSets.add(bitset);
+      mutableBitmaps.add(bitset);
     }
 
-    GenericIndexed<ImmutableConciseSet> bitmaps;
+    GenericIndexed<ImmutableBitmap> bitmaps;
 
     if (nullSet != null) {
-      final ImmutableConciseSet theNullSet = ImmutableConciseSet.newImmutableFromMutable(nullSet);
+      final ImmutableBitmap theNullSet = bitmapFactory.makeImmutableBitmap(nullSet);
       if (bumpDictionary) {
         bitmaps = GenericIndexed.fromIterable(
             Iterables.concat(
                 Arrays.asList(theNullSet),
                 Iterables.transform(
-                    conciseSets,
-                    new Function<ConciseSet, ImmutableConciseSet>()
+                    mutableBitmaps,
+                    new Function<MutableBitmap, ImmutableBitmap>()
                     {
                       @Override
-                      public ImmutableConciseSet apply(ConciseSet input)
+                      public ImmutableBitmap apply(MutableBitmap input)
                       {
-                        return ImmutableConciseSet.newImmutableFromMutable(input);
+                        return bitmapFactory.makeImmutableBitmap(input);
                       }
                     }
                 )
             ),
-            ConciseCompressedIndexedInts.objectStrategy
+            bitmapSerdeFactory.getObjectStrategy()
         );
       } else {
-        Iterable<ImmutableConciseSet> immutableConciseSets = Iterables.transform(
-            conciseSets,
-            new Function<ConciseSet, ImmutableConciseSet>()
+        Iterable<ImmutableBitmap> immutableBitmaps = Iterables.transform(
+            mutableBitmaps,
+            new Function<MutableBitmap, ImmutableBitmap>()
             {
               @Override
-              public ImmutableConciseSet apply(ConciseSet input)
+              public ImmutableBitmap apply(MutableBitmap input)
               {
-                return ImmutableConciseSet.newImmutableFromMutable(input);
+                return bitmapFactory.makeImmutableBitmap(input);
               }
             }
         );
@@ -1124,30 +1140,27 @@ public class IndexMaker
         bitmaps = GenericIndexed.fromIterable(
             Iterables.concat(
                 Arrays.asList(
-                    ImmutableConciseSet.union(
-                        theNullSet,
-                        Iterables.getFirst(immutableConciseSets, null)
-                    )
+                    theNullSet.union(Iterables.getFirst(immutableBitmaps, null))
                 ),
-                Iterables.skip(immutableConciseSets, 1)
+                Iterables.skip(immutableBitmaps, 1)
             ),
-            ConciseCompressedIndexedInts.objectStrategy
+            bitmapSerdeFactory.getObjectStrategy()
         );
       }
     } else {
       bitmaps = GenericIndexed.fromIterable(
           Iterables.transform(
-              conciseSets,
-              new Function<ConciseSet, ImmutableConciseSet>()
+              mutableBitmaps,
+              new Function<MutableBitmap, ImmutableBitmap>()
               {
                 @Override
-                public ImmutableConciseSet apply(ConciseSet input)
+                public ImmutableBitmap apply(MutableBitmap input)
                 {
-                  return ImmutableConciseSet.newImmutableFromMutable(input);
+                  return bitmapFactory.makeImmutableBitmap(input);
                 }
               }
           ),
-          ConciseCompressedIndexedInts.objectStrategy
+          bitmapSerdeFactory.getObjectStrategy()
       );
     }
 
@@ -1156,7 +1169,11 @@ public class IndexMaker
     boolean hasSpatialIndexes = columnCapabilities.get(dimension).hasSpatialIndexes();
     RTree tree = null;
     if (hasSpatialIndexes) {
-      tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
+      tree = new RTree(
+          2,
+          new LinearGutmanSplitStrategy(0, 50, bitmapSerdeFactory.getBitmapFactory()),
+          bitmapSerdeFactory.getBitmapFactory()
+      );
     }
 
     int dimValIndex = 0;
@@ -1168,7 +1185,7 @@ public class IndexMaker
           for (int j = 0; j < coords.length; j++) {
             coords[j] = Float.valueOf(stringCoords.get(j));
           }
-          tree.insert(coords, conciseSets.get(dimValIndex));
+          tree.insert(coords, mutableBitmaps.get(dimValIndex));
         }
         dimValIndex++;
       }
@@ -1185,6 +1202,7 @@ public class IndexMaker
             dictionary,
             singleValCol,
             multiValCol,
+            bitmapSerdeFactory,
             bitmaps,
             spatialIndex
         ),
@@ -1354,7 +1372,12 @@ public class IndexMaker
     GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.stringStrategy);
     GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.stringStrategy);
 
-    final long numBytes = cols.getSerializedSize() + dims.getSerializedSize() + 16;
+    final String bitmapSerdeFactoryType = mapper.writeValueAsString(bitmapSerdeFactory);
+    final long numBytes = cols.getSerializedSize()
+                          + dims.getSerializedSize()
+                          + 16
+                          + serializerUtils.getSerializedStringByteSize(bitmapSerdeFactoryType);
+
     final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
 
     cols.writeToChannel(writer);
@@ -1371,6 +1394,9 @@ public class IndexMaker
 
     serializerUtils.writeLong(writer, dataInterval.getStartMillis());
     serializerUtils.writeLong(writer, dataInterval.getEndMillis());
+    serializerUtils.writeString(
+        writer, bitmapSerdeFactoryType
+    );
     writer.close();
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));

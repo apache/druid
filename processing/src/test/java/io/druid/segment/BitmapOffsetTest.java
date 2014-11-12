@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import com.metamx.collections.bitmap.ConciseBitmapFactory;
+import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import io.druid.segment.data.Offset;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
@@ -27,7 +29,7 @@ import org.junit.Test;
 
 /**
  */
-public class ConciseOffsetTest
+public class BitmapOffsetTest
 {
   @Test
   public void testSanity() throws Exception
@@ -40,7 +42,7 @@ public class ConciseOffsetTest
 
     ImmutableConciseSet set = ImmutableConciseSet.newImmutableFromMutable(mutableSet);
 
-    ConciseOffset offset = new ConciseOffset(set);
+    BitmapOffset offset = new BitmapOffset(new ConciseBitmapFactory(), new WrappedImmutableConciseBitmap(set));
 
     int count = 0;
     while (offset.withinBounds()) {

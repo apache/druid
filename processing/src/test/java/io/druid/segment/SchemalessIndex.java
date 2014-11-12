@@ -179,11 +179,11 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMaker.persist(top, topFile);
-        IndexMaker.persist(bottom, bottomFile);
+        IndexMerger.persist(top, topFile);
+        IndexMerger.persist(bottom, bottomFile);
 
         mergedIndex = io.druid.segment.IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+            IndexMerger.mergeQueryableIndex(
                 Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)), METRIC_AGGS, mergedFile
             )
         );
@@ -225,7 +225,7 @@ public class SchemalessIndex
         mergedFile.deleteOnExit();
 
         QueryableIndex index = IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+            IndexMerger.mergeQueryableIndex(
                 Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)), METRIC_AGGS, mergedFile
             )
         );
@@ -262,7 +262,7 @@ public class SchemalessIndex
         }
 
         QueryableIndex index = IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile)
+            IndexMerger.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile)
         );
 
         return index;
@@ -343,7 +343,7 @@ public class SchemalessIndex
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          IndexMaker.persist(rowIndex, tmpFile);
+          IndexMerger.persist(rowIndex, tmpFile);
           rowPersistedIndexes.add(IndexIO.loadIndex(tmpFile));
         }
       }
@@ -403,7 +403,7 @@ public class SchemalessIndex
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      IndexMaker.persist(index, theFile);
+      IndexMerger.persist(index, theFile);
     }
 
     return filesToMap;
@@ -463,7 +463,7 @@ public class SchemalessIndex
         );
       }
 
-      return IndexIO.loadIndex(IndexMaker.append(adapters, mergedFile));
+      return IndexIO.loadIndex(IndexMerger.append(adapters, mergedFile));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -482,7 +482,7 @@ public class SchemalessIndex
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
       return IndexIO.loadIndex(
-          IndexMaker.mergeQueryableIndex(
+          IndexMerger.mergeQueryableIndex(
               Lists.newArrayList(
                   Iterables.transform(
                       filesToMap,
