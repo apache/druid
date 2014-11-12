@@ -26,7 +26,6 @@ import com.metamx.common.ISE;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import it.uniroma3.mat.extendedset.intset.IntSet;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
@@ -65,11 +64,10 @@ public class ConciseCompressedIndexedInts implements IndexedInts, Comparable<Imm
   }
 
   @Override
-  public int compareTo(@Nullable ImmutableBitmap conciseCompressedIndexedInts)
+  public int compareTo(ImmutableBitmap conciseCompressedIndexedInts)
   {
-    // TODO
     if (!(conciseCompressedIndexedInts instanceof WrappedImmutableConciseBitmap)) {
-      throw new ISE("WTF bro! No, bad.");
+      throw new ISE("Unknown class [%s]", conciseCompressedIndexedInts.getClass());
     }
 
     return immutableConciseSet.compareTo(((WrappedImmutableConciseBitmap) conciseCompressedIndexedInts).getBitmap());

@@ -756,6 +756,10 @@ public class IndexIO
       SmooshedFileMapper smooshedFiles = Smoosh.map(inDir);
 
       ByteBuffer indexBuffer = smooshedFiles.mapFile("index.drd");
+      /**
+       * Index.drd should consist of the segment version, the columns and dimensions of the segment as generic
+       * indexes, the interval start and end millis as longs (in 16 bytes), and a bitmap index type.
+       */
       final GenericIndexed<String> cols = GenericIndexed.read(indexBuffer, GenericIndexed.stringStrategy);
       final GenericIndexed<String> dims = GenericIndexed.read(indexBuffer, GenericIndexed.stringStrategy);
       final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
@@ -768,7 +772,7 @@ public class IndexIO
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(serializerUtils.readString(indexBuffer), BitmapSerdeFactory.class);
       } else {
-        segmentBitmapSerdeFactory = BitmapSerdeFactory.DEFAULT_BITMAP_SERDE_FACTORY;
+        segmentBitmapSerdeFactory = new ConciseBitmapSerdeFactory();
       }
 
       Map<String, Column> columns = Maps.newHashMap();
