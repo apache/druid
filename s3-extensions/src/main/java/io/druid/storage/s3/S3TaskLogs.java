@@ -21,6 +21,7 @@ package io.druid.storage.s3;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -53,18 +54,18 @@ public class S3TaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);
 
     try {
       final StorageObject objectDetails = service.getObjectDetails(config.getS3Bucket(), taskKey, null, null, null, null);
 
-      return Optional.<InputSupplier<InputStream>>of(
-          new InputSupplier<InputStream>()
+      return Optional.<ByteSource>of(
+          new ByteSource()
           {
             @Override
-            public InputStream getInput() throws IOException
+            public InputStream openStream() throws IOException
             {
               try {
                 final long start;

@@ -19,6 +19,7 @@
 package io.druid.storage.hdfs.tasklog;
 
 import com.google.common.base.Optional;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -61,16 +62,16 @@ public class HdfsTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskId, final long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final Path path = getTaskLogFileFromId(taskId);
     final FileSystem fs = FileSystem.get(new Configuration());
     if (fs.exists(path)) {
-      return Optional.<InputSupplier<InputStream>>of(
-          new InputSupplier<InputStream>()
+      return Optional.<ByteSource>of(
+          new ByteSource()
           {
             @Override
-            public InputStream getInput() throws IOException
+            public InputStream openStream() throws IOException
             {
               log.info("Reading task log from: %s", path);
               final long seekPos;

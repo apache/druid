@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
 import com.google.common.io.Files;
@@ -371,7 +372,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskid, final long offset)
+  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
   {
     final ProcessHolder processHolder;
 
@@ -384,11 +385,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
     }
 
-    return Optional.<InputSupplier<InputStream>>of(
-        new InputSupplier<InputStream>()
+    return Optional.<ByteSource>of(
+        new ByteSource()
         {
           @Override
-          public InputStream getInput() throws IOException
+          public InputStream openStream() throws IOException
           {
             return LogUtils.streamFile(processHolder.logFile, offset);
           }

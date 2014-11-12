@@ -20,6 +20,7 @@
 package io.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import io.druid.indexing.overlord.TaskMaster;
@@ -43,7 +44,7 @@ public class TaskRunnerTaskLogStreamer implements TaskLogStreamer
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(String taskid, long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException
   {
     final TaskRunner runner = taskMaster.getTaskRunner().orNull();
     if (runner instanceof TaskLogStreamer) {
