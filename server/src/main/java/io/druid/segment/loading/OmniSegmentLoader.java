@@ -150,15 +150,10 @@ public class OmniSegmentLoader implements SegmentLoader
     }
 
     try {
+      // Druid creates folders of the form dataSource/interval/version/partitionNum.
+      // We need to clean up all these directories if they are all empty.
       File cacheFile = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
-      log.info("Deleting directory[%s]", cacheFile);
-      FileUtils.deleteDirectory(cacheFile);
-
-      if (cacheFile.getParentFile() != null && cacheFile.getParentFile().listFiles().length == 0) {
-        log.info("Also deleting empty parent directory[%s]", cacheFile.getParentFile());
-        FileUtils.deleteDirectory(cacheFile.getParentFile());
-      }
-
+      cleanupCacheFiles(loc.getPath(), cacheFile);
       loc.removeSegment(segment);
     }
     catch (IOException e) {
@@ -176,5 +171,19 @@ public class OmniSegmentLoader implements SegmentLoader
     }
 
     return loader;
+  }
+
+  public void cleanupCacheFiles(File baseFile, File cacheFile) throws IOException
+  {
+    if (cacheFile.equals(baseFile)) {
+      return;
+    }
+
+    log.info("Deleting directory[%s]", cacheFile);
+    FileUtils.deleteDirectory(cacheFile);
+
+    if (cacheFile.getParentFile() != null && cacheFile.getParentFile().listFiles().length == 0) {
+      cleanupCacheFiles(baseFile, cacheFile.getParentFile());
+    }
   }
 }
