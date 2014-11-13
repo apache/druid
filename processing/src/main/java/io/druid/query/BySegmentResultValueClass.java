@@ -26,7 +26,7 @@ import java.util.List;
 
 /**
  */
-public class BySegmentResultValueClass<T>
+public class BySegmentResultValueClass<T> implements BySegmentResultValue<T>
 {
   private final List<T> results;
   private final String segmentId;
@@ -43,18 +43,27 @@ public class BySegmentResultValueClass<T>
     this.interval = interval;
   }
 
+  @Override
   @JsonProperty("results")
   public List<T> getResults()
   {
     return results;
   }
 
+  @Override
   @JsonProperty("segment")
   public String getSegmentId()
   {
     return segmentId;
   }
 
+  @Override
+  public String getIntervalString()
+  {
+    return interval.toString();
+  }
+
+  @Override
   @JsonProperty("interval")
   public Interval getInterval()
   {

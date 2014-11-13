@@ -23,30 +23,32 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import io.druid.query.BySegmentResultValue;
+import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Result;
+import org.joda.time.Interval;
 
 import java.util.List;
 
 /**
  */
-public class BySegmentTopNResultValue extends TopNResultValue implements BySegmentResultValue<TopNResultValue>
+public class BySegmentTopNResultValue extends TopNResultValue implements BySegmentResultValue<Result<TopNResultValue>>
 {
   private final List<Result<TopNResultValue>> results;
   private final String segmentId;
-  private final String intervalString;
+  private final Interval interval;
 
   @JsonCreator
   public BySegmentTopNResultValue(
       @JsonProperty("results") List<Result<TopNResultValue>> results,
       @JsonProperty("segment") String segmentId,
-      @JsonProperty("interval") String intervalString
+      @JsonProperty("interval") Interval interval
   )
   {
     super(null);
 
     this.results = results;
     this.segmentId = segmentId;
-    this.intervalString = intervalString;
+    this.interval = interval;
   }
 
   @Override
@@ -72,10 +74,16 @@ public class BySegmentTopNResultValue extends TopNResultValue implements BySegme
   }
 
   @Override
-  @JsonProperty("interval")
   public String getIntervalString()
   {
-    return intervalString;
+    return interval.toString();
+  }
+
+  @Override
+  @JsonProperty("interval")
+  public Interval getInterval()
+  {
+    return interval;
   }
 
   @Override
@@ -84,7 +92,7 @@ public class BySegmentTopNResultValue extends TopNResultValue implements BySegme
     return "BySegmentTopNResultValue{" +
            "results=" + results +
            ", segmentId='" + segmentId + '\'' +
-           ", intervalString='" + intervalString + '\'' +
+           ", interval='" + interval.toString() + '\'' +
            '}';
   }
 }
