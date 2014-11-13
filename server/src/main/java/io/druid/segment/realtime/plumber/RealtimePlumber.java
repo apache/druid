@@ -310,7 +310,13 @@ public class RealtimePlumber implements Plumber
           {
             final Interval interval = sink.getInterval();
 
-            // use a file to indicate that pushing has completed
+            // Bail out if this sink has been abandoned by a previously-executed task.
+            if (sinks.get(truncatedTime) != sink) {
+              log.info("Sink[%s] was abandoned, bailing out of persist-n-merge.", sink);
+              return;
+            }
+
+            // Use a file to indicate that pushing has completed.
             final File persistDir = computePersistDir(schema, interval);
             final File mergedTarget = new File(persistDir, "merged");
             final File isPushedMarker = new File(persistDir, "isPushedMarker");
