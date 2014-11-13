@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -104,6 +105,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   ImmutableBitmap baseImmutableBitmap;
   MutableBitmap baseMutableBitmap;
   byte[] baseBytes;
+  ByteBuffer baseByteBuffer;
 
   @Before
   public void setup()
@@ -114,6 +116,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
     }
     baseImmutableBitmap = factory.makeImmutableBitmap(baseMutableBitmap);
     baseBytes = baseImmutableBitmap.toBytes();
+    baseByteBuffer = ByteBuffer.wrap(baseBytes);
   }
 
 
@@ -157,6 +160,15 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   {
     ImmutableBitmap immutableBitmap = factory.makeImmutableBitmap(baseMutableBitmap);
     Assert.assertArrayEquals(baseBytes, immutableBitmap.toBytes());
+  }
+
+
+  @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
+  @Test
+  public void testFromImmutableByteArray()
+  {
+    ImmutableBitmap immutableBitmap = factory.mapImmutableBitmap(baseByteBuffer);
+    Assert.assertEquals(numBits, immutableBitmap.size());
   }
 
 }
