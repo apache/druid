@@ -22,7 +22,6 @@ package io.druid.segment.loading;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,13 +39,6 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
       return IndexIO.loadIndex(parentDir);
     }
     catch (IOException e) {
-      log.warn(e, "Got exception!!!! Going to delete parentDir[%s]", parentDir);
-      try {
-        FileUtils.deleteDirectory(parentDir);
-      }
-      catch (IOException e2) {
-        log.error(e, "Problem deleting parentDir[%s]", parentDir);
-      }
       throw new SegmentLoadingException(e, "%s", e.getMessage());
     }
   }
