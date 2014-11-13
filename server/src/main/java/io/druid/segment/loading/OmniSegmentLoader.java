@@ -138,12 +138,10 @@ public class OmniSegmentLoader implements SegmentLoader
 
       getPuller(segment.getLoadSpec()).getSegmentFiles(segment, storageDir);
 
-      try {
-        FileUtils.deleteDirectory(downloadStartMarker);
-      }
-      catch (Exception e) {
+      if (!downloadStartMarker.delete()) {
         throw new SegmentLoadingException("Unable to remove marker file for [%s]", storageDir);
       }
+
 
       loc.addSegment(segment);
 
