@@ -17,21 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.filter;
+package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.spatial.ImmutableRTree;
-import io.druid.segment.data.Indexed;
 
 /**
  */
-public interface BitmapIndexSelector
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = BitmapSerde.DefaultBitmapSerdeFactory.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "concise", value = ConciseBitmapSerdeFactory.class),
+    @JsonSubTypes.Type(name = "roaring", value = RoaringBitmapSerdeFactory.class)
+})
+public interface BitmapSerdeFactory
 {
-  public Indexed<String> getDimensionValues(String dimension);
-  public int getNumRows();
+  public ObjectStrategy<ImmutableBitmap> getObjectStrategy();
+
   public BitmapFactory getBitmapFactory();
-  public ImmutableBitmap getBitmapIndex(String dimension, String value);
-  public ImmutableBitmap getBitmapIndex(String dimension, int idx);
-  public ImmutableRTree getSpatialIndex(String dimension);
 }

@@ -35,7 +35,7 @@ import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
+import io.druid.segment.data.BitmapCompressedIndexedInts;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -279,7 +279,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getInverteds(String dimension, String value)
+  public IndexedInts getBitmapIndex(String dimension, String value)
   {
     final Column column = input.getColumn(dimension);
 
@@ -292,7 +292,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return new EmptyIndexedInts();
     }
 
-    return new ConciseCompressedIndexedInts(bitmaps.getConciseSet(value));
+    return new BitmapCompressedIndexedInts(bitmaps.getBitmap(value));
   }
 
   @Override

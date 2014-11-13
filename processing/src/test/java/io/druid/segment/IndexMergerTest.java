@@ -39,8 +39,12 @@ import java.util.Arrays;
 
 /**
  */
-public class IndexMakerTest
+public class IndexMergerTest
 {
+  static {
+
+  }
+
   @Test
   public void testPersistCaseInsensitive() throws Exception
   {
@@ -50,7 +54,7 @@ public class IndexMakerTest
 
     final File tempDir = Files.createTempDir();
     try {
-      QueryableIndex index = IndexIO.loadIndex(IndexMaker.persist(toPersist, tempDir));
+      QueryableIndex index = IndexIO.loadIndex(IndexMerger.persist(toPersist, tempDir));
 
       Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
@@ -89,20 +93,20 @@ public class IndexMakerTest
     final File tempDir2 = Files.createTempDir();
     final File mergedDir = Files.createTempDir();
     try {
-      QueryableIndex index1 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tempDir1));
+      QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tempDir1));
 
       Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
       Assert.assertEquals(2, index1.getColumnNames().size());
 
-      QueryableIndex index2 = IndexIO.loadIndex(IndexMaker.persist(toPersist2, tempDir2));
+      QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2));
 
       Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
       Assert.assertEquals(2, index2.getColumnNames().size());
 
       QueryableIndex merged = IndexIO.loadIndex(
-          IndexMaker.mergeQueryableIndex(
+          IndexMerger.mergeQueryableIndex(
               Arrays.asList(index1, index2),
               new AggregatorFactory[]{},
               mergedDir
@@ -146,10 +150,10 @@ public class IndexMakerTest
           )
       );
 
-      final QueryableIndex index1 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tmpDir1));
-      final QueryableIndex index2 = IndexIO.loadIndex(IndexMaker.persist(toPersist1, tmpDir2));
+      final QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir1));
+      final QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir2));
       final QueryableIndex merged = IndexIO.loadIndex(
-          IndexMaker.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
+          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
       );
 
       Assert.assertEquals(1, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());

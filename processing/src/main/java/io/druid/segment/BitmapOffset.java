@@ -19,30 +19,35 @@
 
 package io.druid.segment;
 
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.data.Offset;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
-import it.uniroma3.mat.extendedset.intset.IntSet;
+import org.roaringbitmap.IntIterator;
 
 /**
  */
-public class ConciseOffset implements Offset
+public class BitmapOffset implements Offset
 {
   private static final int INVALID_VALUE = -1;
 
-  IntSet.IntIterator itr;
-  private final ImmutableConciseSet invertedIndex;
+  private final IntIterator itr;
+  private final BitmapFactory bitmapFactory;
+  private final ImmutableBitmap bitmapIndex;
+
   private volatile int val;
 
-  public ConciseOffset(ImmutableConciseSet invertedIndex)
+  public BitmapOffset(BitmapFactory bitmapFactory, ImmutableBitmap bitmapIndex)
   {
-    this.invertedIndex = invertedIndex;
-    this.itr = invertedIndex.iterator();
+    this.bitmapFactory = bitmapFactory;
+    this.bitmapIndex = bitmapIndex;
+    this.itr = bitmapIndex.iterator();
     increment();
   }
 
-  private ConciseOffset(ConciseOffset otherOffset)
+  private BitmapOffset(BitmapOffset otherOffset)
   {
-    this.invertedIndex = otherOffset.invertedIndex;
+    this.bitmapFactory = otherOffset.bitmapFactory;
+    this.bitmapIndex = otherOffset.bitmapIndex;
     this.itr = otherOffset.itr.clone();
     this.val = otherOffset.val;
   }
@@ -66,11 +71,11 @@ public class ConciseOffset implements Offset
   @Override
   public Offset clone()
   {
-    if (invertedIndex == null || invertedIndex.size() == 0) {
-      return new ConciseOffset(new ImmutableConciseSet());
+    if (bitmapIndex == null || bitmapIndex.size() == 0) {
+      return new BitmapOffset(bitmapFactory, bitmapFactory.makeEmptyImmutableBitmap());
     }
 
-    return new ConciseOffset(this);
+    return new BitmapOffset(this);
   }
 
   @Override

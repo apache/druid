@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Preconditions;
+import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
@@ -35,6 +36,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final Interval dataInterval;
   private final Indexed<String> columnNames;
   private final Indexed<String> availableDimensions;
+  private final BitmapFactory bitmapFactory;
   private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
 
@@ -42,6 +44,7 @@ public class SimpleQueryableIndex implements QueryableIndex
       Interval dataInterval,
       Indexed<String> columnNames,
       Indexed<String> dimNames,
+      BitmapFactory bitmapFactory,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper
   )
@@ -50,6 +53,7 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.dataInterval = dataInterval;
     this.columnNames = columnNames;
     this.availableDimensions = dimNames;
+    this.bitmapFactory = bitmapFactory;
     this.columns = columns;
     this.fileMapper = fileMapper;
   }
@@ -76,6 +80,12 @@ public class SimpleQueryableIndex implements QueryableIndex
   public Indexed<String> getAvailableDimensions()
   {
     return availableDimensions;
+  }
+
+  @Override
+  public BitmapFactory getBitmapFactoryForDimensions()
+  {
+    return bitmapFactory;
   }
 
   @Override
