@@ -87,7 +87,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                new UnionQueryRunner<>(
+                new UnionQueryRunner<T>(
                     new MetricsEmittingQueryRunner<T>(
                         emitter,
                         new Function<Query<T>, ServiceMetricEvent.Builder>()
