@@ -82,7 +82,7 @@ Data segment announcers are used to announce segments.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.announcer.type`|Choices: legacy or batch. The type of data segment announcer to use.|legacy|
+|`druid.announcer.type`|Choices: legacy or batch. The type of data segment announcer to use.|batch|
 
 ##### Single Data Segment Announcer
 
