@@ -126,8 +126,7 @@ public class OmniSegmentLoader implements SegmentLoader
       loc.addSegment(segment);
 
       retVal = storageDir;
-    }
-    else {
+    } else {
       retVal = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
     }
 
@@ -154,6 +153,12 @@ public class OmniSegmentLoader implements SegmentLoader
       File cacheFile = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
       log.info("Deleting directory[%s]", cacheFile);
       FileUtils.deleteDirectory(cacheFile);
+
+      if (cacheFile.getParentFile() != null && cacheFile.getParentFile().listFiles().length == 0) {
+        log.info("Also deleting empty parent directory[%s]", cacheFile.getParentFile());
+        FileUtils.deleteDirectory(cacheFile.getParentFile());
+      }
+
       loc.removeSegment(segment);
     }
     catch (IOException e) {
