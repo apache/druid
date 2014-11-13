@@ -27,6 +27,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.SegmentMissingException;
 
@@ -36,6 +37,7 @@ import java.util.Map;
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
   public static String MISSING_SEGMENTS_KEY = "missingSegments";
+  private static final EmittingLogger log = new EmittingLogger(RetryQueryRunner.class);
 
   private final QueryRunner<T> baseRunner;
   private final RetryQueryRunnerConfig config;
@@ -73,6 +75,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
         }
 
         for (int i = 0; i < config.numTries(); i++) {
+          log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
+
           context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
           final Query<T> retryQuery = query.withQuerySegmentSpec(
               new MultipleSpecificSegmentSpec(

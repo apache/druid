@@ -36,8 +36,6 @@ import java.util.List;
  */
 public class TimeseriesQueryEngine
 {
-  private static final int AGG_UNROLL_COUNT = 8;
-
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
     if (adapter == null) {
@@ -61,7 +59,7 @@ public class TimeseriesQueryEngine
             Aggregator[] aggregators = QueryRunnerHelper.makeAggregators(cursor, aggregatorSpecs);
             try {
               while (!cursor.isDone()) {
-                for(Aggregator aggregator : aggregators) {
+                for (Aggregator aggregator : aggregators) {
                   aggregator.aggregate();
                 }
                 cursor.advance();
