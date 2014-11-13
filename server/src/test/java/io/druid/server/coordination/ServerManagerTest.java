@@ -315,7 +315,7 @@ public class ServerManagerTest
         )
     );
 
-    Assert.assertTrue("Operation must complete within 100ms", queryNotifyLatch.await(100, TimeUnit.MILLISECONDS));
+    queryNotifyLatch.await();
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -720,7 +720,7 @@ public class ServerManagerTest
       notifyLatch.countDown();
 
       try {
-        waitYieldLatch.await(25, TimeUnit.MILLISECONDS);
+        waitYieldLatch.await();
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -733,7 +733,7 @@ public class ServerManagerTest
         public OutType get()
         {
           try {
-            waitLatch.await(25, TimeUnit.MILLISECONDS);
+            waitLatch.await();
           }
           catch (Exception e) {
             throw Throwables.propagate(e);
