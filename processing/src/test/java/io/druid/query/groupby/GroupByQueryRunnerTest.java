@@ -784,8 +784,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
+                    QueryRunnerTestHelper.providerDimension,
+                    QueryRunnerTestHelper.providerDimension
                 )
             )
         )
@@ -794,7 +794,7 @@ public class GroupByQueryRunnerTest
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        QueryRunnerTestHelper.marketDimension,
+                        QueryRunnerTestHelper.providerDimension,
                         OrderByColumnSpec.Direction.DESCENDING
                     )
                 ), 3
@@ -808,9 +808,9 @@ public class GroupByQueryRunnerTest
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "upfront", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "total_market", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "spot", "rows", 837L)
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "provider", "upfront", "rows", 186L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "provider", "total_market", "rows", 186L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "provider", "spot", "rows", 837L)
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
