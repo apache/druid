@@ -144,7 +144,24 @@ public class PooledTopNAlgorithm
   {
     return makeBufferAggregators(params.getCursor(), query.getAggregatorSpecs());
   }
-
+  /**
+   * Use aggressive loop unrolling to aggregate the data
+   *
+   * How this works: The aggregates are evaluated AGG_UNROLL_COUNT at a time. This was chosen to be 8 rather arbitrarily.
+   * The offsets into the output buffer are precalculated and stored in aggregatorOffsets
+   *
+   * For queries whose aggregate count is less than AGG_UNROLL_COUNT, the aggregates evaluted in a switch statement.
+   * See http://en.wikipedia.org/wiki/Duff's_device for more information on this kind of approach
+   *
+   * This allows out of order execution of the code. In local tests, the JVM inlines all the way to this function.
+   *
+   * If there are more than AGG_UNROLL_COUNT aggregates, then the remainder is calculated with the switch, and the
+   * blocks of AGG_UNROLL_COUNT are calculated in a partially unrolled for-loop.
+   *
+   * Putting the switch first allows for optimization for the common case (less than AGG_UNROLL_COUNT aggs) but
+   * still optimizes the high quantity of aggregate queries which benefit greatly from any speed improvements
+   * (they simply take longer to start with).
+   */
   @Override
   protected void scanAndAggregate(
       final PooledTopNParams params,
