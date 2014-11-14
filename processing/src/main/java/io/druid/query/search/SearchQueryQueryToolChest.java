@@ -326,7 +326,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                             }
                         ),
                         value.getSegmentId(),
-                        value.getIntervalString()
+                        value.getInterval()
                     )
                 );
               }
