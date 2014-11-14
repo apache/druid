@@ -9,6 +9,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
 import org.joda.time.DateTime;
@@ -63,6 +64,9 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 0;
@@ -128,6 +132,9 @@ public class RetryQueryRunnerTest
             }
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 1;
@@ -192,6 +199,9 @@ public class RetryQueryRunnerTest
             }
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 4;
@@ -241,6 +251,9 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 1;

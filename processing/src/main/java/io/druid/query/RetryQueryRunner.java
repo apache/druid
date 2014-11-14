@@ -22,11 +22,12 @@ package io.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.SegmentMissingException;
 
@@ -36,18 +37,22 @@ import java.util.Map;
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
   public static String MISSING_SEGMENTS_KEY = "missingSegments";
+  private static final EmittingLogger log = new EmittingLogger(RetryQueryRunner.class);
 
   private final QueryRunner<T> baseRunner;
+  private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;
   private final ObjectMapper jsonMapper;
 
   public RetryQueryRunner(
       QueryRunner<T> baseRunner,
+      QueryToolChest<T, Query<T>> toolChest,
       RetryQueryRunnerConfig config,
       ObjectMapper jsonMapper
   )
   {
     this.baseRunner = baseRunner;
+    this.toolChest = toolChest;
     this.config = config;
     this.jsonMapper = jsonMapper;
   }
@@ -55,7 +60,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
-    final Sequence<T> returningSeq = baseRunner.run(query, context);
+    final List<Sequence<T>> listOfSequences = Lists.newArrayList();
+    listOfSequences.add(baseRunner.run(query, context));
 
     return new YieldingSequenceBase<T>()
     {
@@ -64,33 +70,32 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           OutType initValue, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        Yielder<OutType> yielder = returningSeq.toYielder(initValue, accumulator);
-
         final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
 
-        if (missingSegments.isEmpty()) {
-          return yielder;
-        }
+        if (!missingSegments.isEmpty()) {
+          for (int i = 0; i < config.numTries(); i++) {
+            log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
-        for (int i = 0; i < config.numTries(); i++) {
-          context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
-          final Query<T> retryQuery = query.withQuerySegmentSpec(
-              new MultipleSpecificSegmentSpec(
-                  missingSegments
-              )
-          );
-          yielder = baseRunner.run(retryQuery, context).toYielder(initValue, accumulator);
-          if (getMissingSegments(context).isEmpty()) {
-            break;
+            context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
+            final Query<T> retryQuery = query.withQuerySegmentSpec(
+                new MultipleSpecificSegmentSpec(
+                    missingSegments
+                )
+            );
+            Sequence<T> retrySequence = baseRunner.run(retryQuery, context);
+            listOfSequences.add(retrySequence);
+            if (getMissingSegments(context).isEmpty()) {
+              break;
+            }
+          }
+
+          final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
+          if (!finalMissingSegs.isEmpty()) {
+            throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
           }
         }
 
-        final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
-        if (!config.returnPartialResults() && !finalMissingSegs.isEmpty()) {
-          throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
-        }
-
-        return yielder;
+        return toolChest.mergeSequencesUnordered(Sequences.simple(listOfSequences)).toYielder(initValue, accumulator);
       }
     };
   }

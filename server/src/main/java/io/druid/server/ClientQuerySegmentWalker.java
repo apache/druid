@@ -101,6 +101,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         toolChest.preMergeQueryDecoration(
                             new RetryQueryRunner<T>(
                                 baseClient,
+                                toolChest,
                                 retryConfig,
                                 objectMapper
                             )

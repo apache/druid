@@ -153,8 +153,8 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      final Map<String, Object> context = new MapMaker().makeMap();
-      final Sequence res = query.run(texasRanger, context);
+      final Map<String, Object> responseContext = new MapMaker().makeMap();
+      final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -212,7 +212,7 @@ public class QueryResource
                 isSmile ? APPLICATION_JSON : APPLICATION_SMILE
             )
             .header("X-Druid-Query-Id", queryId)
-            .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(context))
+            .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(responseContext))
             .build();
       }
       catch (Exception e) {
