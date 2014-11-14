@@ -54,6 +54,7 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   public LocalFirehoseFactory(
       @JsonProperty("baseDir") File baseDir,
       @JsonProperty("filter") String filter,
+      // Backwards compatible
       @JsonProperty("parser") StringInputRowParser parser
   )
   {
