@@ -17,18 +17,18 @@ Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `t
 
 ### Duration Granularities
 
-Duration granularities are specified as an exact duration in milliseconds and timestamps are returned as UTC. Duration granularity values are Java longs.
+Duration granularities are specified as an exact duration in milliseconds and timestamps are returned as UTC. Duration granularity values are in millis.
 
 They also support specifying an optional origin, which defines where to start counting time buckets from (defaults to 1970-01-01T00:00:00Z).
 
 ```javascript
-{"type": "duration", "duration": "7200000"}
+{"type": "duration", "duration": 7200000}
 ```
 
 This chunks up every 2 hours.
 
 ```javascript
-{"type": "duration", "duration": "3600000", "origin": "2012-01-01T00:30:00Z"}
+{"type": "duration", "duration": 3600000, "origin": "2012-01-01T00:30:00Z"}
 ```
 
 This chunks up every hour on the half-hour.
