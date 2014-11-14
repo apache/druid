@@ -74,12 +74,6 @@ public class BySegmentTopNResultValue extends TopNResultValue implements BySegme
   }
 
   @Override
-  public String getIntervalString()
-  {
-    return interval.toString();
-  }
-
-  @Override
   @JsonProperty("interval")
   public Interval getInterval()
   {
