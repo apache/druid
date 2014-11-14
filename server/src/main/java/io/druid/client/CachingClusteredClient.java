@@ -257,40 +257,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             addSequencesFromCache(sequencesByInterval);
             addSequencesFromServer(sequencesByInterval);
 
-            if(sequencesByInterval.isEmpty()) {
-              return Sequences.empty();
-            }
-
-            Collections.sort(
-                sequencesByInterval,
-                Ordering.from(Comparators.intervalsByStartThenEnd()).onResultOf(Pair.<Interval, Sequence<T>>lhsFn())
-            );
-
-            // result sequences from overlapping intervals could start anywhere within that interval
-            // therefore we cannot assume any ordering with respect to the first result from each
-            // and must resort to calling toolchest.mergeSequencesUnordered for those.
-            Iterator<Pair<Interval, Sequence<T>>> iterator = sequencesByInterval.iterator();
-            Pair<Interval, Sequence<T>> current = iterator.next();
-
-            final List<Sequence<T>> orderedSequences = Lists.newLinkedList();
-            List<Sequence<T>> unordered = Lists.newLinkedList();
-
-            unordered.add(current.rhs);
-
-            while(iterator.hasNext()) {
-              Pair<Interval, Sequence<T>> next = iterator.next();
-              if(!next.lhs.overlaps(current.lhs)) {
-                orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
-                unordered = Lists.newLinkedList();
-              }
-              unordered.add(next.rhs);
-              current = next;
-            }
-            if(!unordered.isEmpty()) {
-              orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
-            }
-
-            return toolChest.mergeSequencesUnordered(Sequences.simple(orderedSequences));
+            return mergeCachedAndUncachedSequences(sequencesByInterval, toolChest);
           }
 
           private void addSequencesFromCache(ArrayList<Pair<Interval, Sequence<T>>> listOfSequences)
@@ -422,6 +389,47 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           }
         }
     );
+  }
+
+  protected Sequence<T> mergeCachedAndUncachedSequences(
+      List<Pair<Interval, Sequence<T>>> sequencesByInterval,
+      QueryToolChest<T, Query<T>> toolChest
+  )
+  {
+    if(sequencesByInterval.isEmpty()) {
+      return Sequences.empty();
+    }
+
+    Collections.sort(
+        sequencesByInterval,
+        Ordering.from(Comparators.intervalsByStartThenEnd()).onResultOf(Pair.<Interval, Sequence<T>>lhsFn())
+    );
+
+    // result sequences from overlapping intervals could start anywhere within that interval
+    // therefore we cannot assume any ordering with respect to the first result from each
+    // and must resort to calling toolchest.mergeSequencesUnordered for those.
+    Iterator<Pair<Interval, Sequence<T>>> iterator = sequencesByInterval.iterator();
+    Pair<Interval, Sequence<T>> current = iterator.next();
+
+    final List<Sequence<T>> orderedSequences = Lists.newLinkedList();
+    List<Sequence<T>> unordered = Lists.newLinkedList();
+
+    unordered.add(current.rhs);
+
+    while(iterator.hasNext()) {
+      Pair<Interval, Sequence<T>> next = iterator.next();
+      if(!next.lhs.overlaps(current.lhs)) {
+        orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
+        unordered = Lists.newLinkedList();
+      }
+      unordered.add(next.rhs);
+      current = next;
+    }
+    if(!unordered.isEmpty()) {
+      orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
+    }
+
+    return toolChest.mergeSequencesUnordered(Sequences.simple(orderedSequences));
   }
 
   private static class CachePopulator
