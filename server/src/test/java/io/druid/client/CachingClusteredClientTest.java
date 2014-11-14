@@ -35,6 +35,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.Sequence;
@@ -593,6 +594,56 @@ public class CachingClusteredClientTest
         )
     );
   }
+
+  @Test
+  public void testOutOfOrderSequenceMerging() throws Exception
+  {
+    List<Pair<Interval, Sequence<Result<TopNResultValue>>>> sequences =
+        Lists.newArrayList(
+            Pair.of(
+                // this could ne the result of a historical node returning the merged result of
+                //     a) an empty result for segment 2011-01-02/2011-01-05
+                // and b) result for a second partition for 2011-01-05/2011-01-10
+                new Interval("2011-01-02/2011-01-10"),
+                Sequences.simple(
+                    makeTopNResults(
+                        new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+                        new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+                        new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+                    )
+                )
+            ),
+
+            Pair.of(
+                new Interval("2011-01-05/2011-01-10"),
+                Sequences.simple(
+                    makeTopNResults(
+                        new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+                        new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+                        new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+                        new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+                    )
+                )
+            )
+        );
+
+    TestHelper.assertExpectedResults(
+        makeTopNResults(
+            new DateTime("2011-01-06T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-07T01"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+            new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            new DateTime("2011-01-08T01"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+            new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
+            new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+        ),
+        client.mergeCachedAndUncachedSequences(
+            sequences,
+            new TopNQueryQueryToolChest(new TopNQueryConfig())
+        )
+    );
+  }
+
 
   @Test
   @SuppressWarnings("unchecked")
