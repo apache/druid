@@ -95,15 +95,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           }
         }
 
-
-        final Sequence<T> retSeq;
-        if (listOfSequences.size() == 1) {
-          retSeq = listOfSequences.get(0);
-        } else {
-          retSeq = toolChest.mergeSequencesUnordered(Sequences.simple(listOfSequences));
-        }
-
-        return retSeq.toYielder(initValue, accumulator);
+        return toolChest.mergeSequencesUnordered(Sequences.simple(listOfSequences)).toYielder(initValue, accumulator);
       }
     };
   }
