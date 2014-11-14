@@ -17,7 +17,7 @@ Supported granularity strings are: `all`, `none`, `minute`, `fifteen_minute`, `t
 
 ### Duration Granularities
 
-Duration granularities are specified as an exact duration in milliseconds and timestamps are returned as UTC.
+Duration granularities are specified as an exact duration in milliseconds and timestamps are returned as UTC. Duration granularity values are Java longs.
 
 They also support specifying an optional origin, which defines where to start counting time buckets from (defaults to 1970-01-01T00:00:00Z).
 
@@ -35,7 +35,7 @@ This chunks up every hour on the half-hour.
 
 ### Period Granularities
 
-Period granularities are specified as arbitrary period combinations of years, months, weeks, hours, minutes and seconds (e.g. P2W, P3M, PT1H30M, PT0.750S) in ISO8601 format. They support specifying a time zone which determines where period boundaries start as well as the timezone of the returned timestamps. By default, years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
+Period granularities are specified as arbitrary period combinations of years, months, weeks, hours, minutes and seconds (e.g. P2W, P3M, PT1H30M, PT0.750S) in [ISO8601](https://en.wikipedia.org/wiki/ISO_8601) format. They support specifying a time zone which determines where period boundaries start as well as the timezone of the returned timestamps. By default, years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
 
 Time zone is optional (defaults to UTC). Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone).
 
