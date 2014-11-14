@@ -26,8 +26,14 @@ public class RetryQueryRunnerConfig
   @JsonProperty
   private int numTries = 1;
 
-  public int numTries()
+  public int getNumTries()
   {
     return numTries;
+  }
+
+  // exists for testing and overrides
+  public boolean isReturnPartialResults()
+  {
+    return false;
   }
 }

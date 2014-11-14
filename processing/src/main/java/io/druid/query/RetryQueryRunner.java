@@ -73,7 +73,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
         final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
 
         if (!missingSegments.isEmpty()) {
-          for (int i = 0; i < config.numTries(); i++) {
+          for (int i = 0; i < config.getNumTries(); i++) {
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
             context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
@@ -90,7 +90,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           }
 
           final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
-          if (!finalMissingSegs.isEmpty()) {
+          if (!config.isReturnPartialResults() && !finalMissingSegs.isEmpty()) {
             throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
           }
         }
