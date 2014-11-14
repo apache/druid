@@ -14,8 +14,8 @@ SUPERVISORDIR=/usr/lib/druid/conf
 RESOURCEDIR=$DIR/src/test/resources
 
 # Make directories if they dont exist
-mkdir -p SHARED_DIR/logs
-mkdir -p SHARED_DIR/tasklogs
+mkdir -p $SHARED_DIR/logs
+mkdir -p $SHARED_DIR/tasklogs
 
 # Start zookeeper
 docker run -d --name druid-zookeeper -p 2181:2181 -v $SHARED_DIR:/shared -v $DOCKERDIR/zookeeper.conf:$SUPERVISORDIR/zookeeper.conf druid/cluster
