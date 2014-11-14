@@ -31,7 +31,5 @@ public interface BySegmentResultValue<T>
 
   public String getSegmentId();
 
-  public String getIntervalString();
-
   public Interval getInterval();
 }

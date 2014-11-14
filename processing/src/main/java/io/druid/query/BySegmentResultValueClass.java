@@ -58,12 +58,6 @@ public class BySegmentResultValueClass<T> implements BySegmentResultValue<T>
   }
 
   @Override
-  public String getIntervalString()
-  {
-    return interval.toString();
-  }
-
-  @Override
   @JsonProperty("interval")
   public Interval getInterval()
   {

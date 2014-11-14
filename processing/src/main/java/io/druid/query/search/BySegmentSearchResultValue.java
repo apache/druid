@@ -72,12 +72,6 @@ public class BySegmentSearchResultValue extends SearchResultValue
   }
 
   @Override
-  public String getIntervalString()
-  {
-    return interval.toString();
-  }
-
-  @Override
   @JsonProperty("interval")
   public Interval getInterval()
   {
