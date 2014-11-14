@@ -26,16 +26,8 @@ public class RetryQueryRunnerConfig
   @JsonProperty
   private int numTries = 1;
 
-  @JsonProperty
-  private boolean returnPartialResults = false;
-
   public int numTries()
   {
     return numTries;
-  }
-
-  public boolean returnPartialResults()
-  {
-    return returnPartialResults;
   }
 }

@@ -90,7 +90,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           }
 
           final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
-          if (!config.returnPartialResults() && !finalMissingSegs.isEmpty()) {
+          if (!finalMissingSegs.isEmpty()) {
             throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
           }
         }
