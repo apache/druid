@@ -22,8 +22,8 @@ package io.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
@@ -40,16 +40,19 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   private static final EmittingLogger log = new EmittingLogger(RetryQueryRunner.class);
 
   private final QueryRunner<T> baseRunner;
+  private final QueryToolChest<T, Query<T>> toolChest;
   private final RetryQueryRunnerConfig config;
   private final ObjectMapper jsonMapper;
 
   public RetryQueryRunner(
       QueryRunner<T> baseRunner,
+      QueryToolChest<T, Query<T>> toolChest,
       RetryQueryRunnerConfig config,
       ObjectMapper jsonMapper
   )
   {
     this.baseRunner = baseRunner;
+    this.toolChest = toolChest;
     this.config = config;
     this.jsonMapper = jsonMapper;
   }
@@ -57,7 +60,9 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
+    final List<Sequence<T>> listOfSequences = Lists.newArrayList();
     final Sequence<T> returningSeq = baseRunner.run(query, context);
+    listOfSequences.add(returningSeq);
 
     return new YieldingSequenceBase<T>()
     {
@@ -66,12 +71,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           OutType initValue, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        Yielder<OutType> yielder = returningSeq.toYielder(initValue, accumulator);
-
         final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
 
         if (missingSegments.isEmpty()) {
-          return yielder;
+          return returningSeq.toYielder(initValue, accumulator);
         }
 
         for (int i = 0; i < config.numTries(); i++) {
@@ -83,7 +86,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
                   missingSegments
               )
           );
-          yielder = baseRunner.run(retryQuery, context).toYielder(initValue, accumulator);
+          Sequence<T> retrySequence = baseRunner.run(retryQuery, context);
+          listOfSequences.add(retrySequence);
           if (getMissingSegments(context).isEmpty()) {
             break;
           }
@@ -94,7 +98,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
         }
 
-        return yielder;
+        return toolChest.mergeSequencesUnordered(Sequences.simple(listOfSequences)).toYielder(initValue, accumulator);
       }
     };
   }
