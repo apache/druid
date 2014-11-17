@@ -53,6 +53,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -60,6 +61,9 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryRunnerTest
 {
+
+  public static final Map<String, Object> CONTEXT = ImmutableMap.of();
+
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
@@ -87,7 +91,7 @@ public class TimeseriesQueryRunnerTest
     QueryGranularity gran = QueryGranularity.DAY;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .granularity(gran)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.asList(
@@ -103,7 +107,7 @@ public class TimeseriesQueryRunnerTest
     DateTime expectedLast = new DateTime("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -168,7 +172,7 @@ public class TimeseriesQueryRunnerTest
     DateTime expectedLast = new DateTime("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Result<TimeseriesResultValue> result = results.iterator().next();
@@ -193,7 +197,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "upfront")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "upfront")
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -205,7 +209,7 @@ public class TimeseriesQueryRunnerTest
 
     Assert.assertEquals(
         Druids.newSelectorDimFilterBuilder()
-              .dimension(QueryRunnerTestHelper.providerDimension)
+              .dimension(QueryRunnerTestHelper.marketDimension)
               .value("upfront")
               .build(),
         query.getDimensionsFilter()
@@ -215,7 +219,7 @@ public class TimeseriesQueryRunnerTest
     DateTime expectedLast = new DateTime("2011-04-15");
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -281,7 +285,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -328,7 +332,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -370,7 +374,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -407,7 +411,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        runner.run(query2),
+        runner.run(query2, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults2, results2);
@@ -418,7 +422,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(
                                        new PeriodGranularity(
                                            new Period("P7D"),
@@ -460,7 +464,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -471,7 +475,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(QueryGranularity.HOUR)
                                    .intervals(
                                        Arrays.asList(
@@ -528,7 +532,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -539,7 +543,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(
                                        new PeriodGranularity(
                                            new Period("PT1H"),
@@ -575,7 +579,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
@@ -586,7 +590,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity(new PeriodGranularity(new Period("P1M"), null, null))
                                    .intervals(
                                        Arrays.asList(
@@ -615,16 +619,15 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-
     Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(query1),
+        runner.run(query1, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults1, results1);
 
     TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
-                                   .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                   .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                    .granularity("DAY")
                                    .intervals(
                                        Arrays.asList(
@@ -655,7 +658,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        runner.run(query2),
+        runner.run(query2, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults2, results2);
@@ -690,7 +693,7 @@ public class TimeseriesQueryRunnerTest
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList();
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -702,7 +705,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "spot", "upfront", "total_market")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -740,7 +743,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -752,7 +755,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-        .filters(new RegexDimFilter(QueryRunnerTestHelper.providerDimension, "^.p.*$")) // spot and upfront
+        .filters(new RegexDimFilter(QueryRunnerTestHelper.marketDimension, "^.p.*$")) // spot and upfront
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(
             Arrays.<AggregatorFactory>asList(
@@ -790,7 +793,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -802,7 +805,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "spot")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "spot")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -840,7 +843,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -852,7 +855,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "upfront")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "upfront")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -890,7 +893,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -902,7 +905,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "total_market")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "total_market")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
@@ -940,7 +943,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -954,7 +957,7 @@ public class TimeseriesQueryRunnerTest
         .fields(
             Arrays.<DimFilter>asList(
                 Druids.newSelectorDimFilterBuilder()
-                      .dimension(QueryRunnerTestHelper.providerDimension)
+                      .dimension(QueryRunnerTestHelper.marketDimension)
                       .value("spot")
                       .build(),
                 Druids.newOrDimFilterBuilder()
@@ -998,7 +1001,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1011,7 +1014,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1056,7 +1059,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1069,7 +1072,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1114,7 +1117,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1127,7 +1130,7 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(
-                                      QueryRunnerTestHelper.providerDimension,
+                                      QueryRunnerTestHelper.marketDimension,
                                       "spot",
                                       "upfront",
                                       "total_market",
@@ -1170,7 +1173,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1183,7 +1186,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newOrDimFilterBuilder()
@@ -1232,7 +1235,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1276,7 +1279,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1288,7 +1291,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(QueryRunnerTestHelper.providerDimension, "billy")
+                                  .filters(QueryRunnerTestHelper.marketDimension, "billy")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -1320,7 +1323,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1333,7 +1336,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("billy")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1378,7 +1381,7 @@ public class TimeseriesQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, results);
@@ -1416,8 +1419,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
+
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1456,8 +1460,9 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
+
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1483,12 +1488,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            CONTEXT
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1515,12 +1521,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            CONTEXT
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1533,7 +1540,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
@@ -1556,7 +1563,7 @@ public class TimeseriesQueryRunnerTest
                                        .fields(
                                            Arrays.<DimFilter>asList(
                                                Druids.newSelectorDimFilterBuilder()
-                                                     .dimension(QueryRunnerTestHelper.providerDimension)
+                                                     .dimension(QueryRunnerTestHelper.marketDimension)
                                                      .value("spot")
                                                      .build(),
                                                Druids.newSelectorDimFilterBuilder()
@@ -1576,12 +1583,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            CONTEXT
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);
@@ -1594,7 +1602,7 @@ public class TimeseriesQueryRunnerTest
                                       .fields(
                                           Arrays.<DimFilter>asList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.providerDimension)
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
                                                     .value("spot")
                                                     .build(),
                                               Druids.newOrDimFilterBuilder()
@@ -1616,7 +1624,7 @@ public class TimeseriesQueryRunnerTest
                                        .fields(
                                            Arrays.<DimFilter>asList(
                                                Druids.newSelectorDimFilterBuilder()
-                                                     .dimension(QueryRunnerTestHelper.providerDimension)
+                                                     .dimension(QueryRunnerTestHelper.marketDimension)
                                                      .value("spot")
                                                      .build(),
                                                Druids.newOrDimFilterBuilder()
@@ -1639,12 +1647,13 @@ public class TimeseriesQueryRunnerTest
                   .intervals(QueryRunnerTestHelper.firstToThird)
                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                  .build()
+                  .build(),
+            CONTEXT
         ),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query),
+        runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     TestHelper.assertExpectedResults(expectedResults, actualResults);

@@ -36,7 +36,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.TaskExistsException;
+import io.druid.metadata.EntryExistsException;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
@@ -131,7 +131,7 @@ public class OverlordResource
               taskQueue.add(task);
               return Response.ok(ImmutableMap.of("task", task.getId())).build();
             }
-            catch (TaskExistsException e) {
+            catch (EntryExistsException e) {
               return Response.status(Response.Status.BAD_REQUEST)
                              .entity(ImmutableMap.of("error", String.format("Task[%s] already exists!", task.getId())))
                              .build();

@@ -1,0 +1,137 @@
+/*
+ * Druid - a distributed column store.
+ * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+package io.druid.metadata;
+
+import com.google.common.base.Optional;
+import com.metamx.common.Pair;
+import org.joda.time.DateTime;
+
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import java.util.List;
+import java.util.Map;
+
+public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+{
+  /**
+   * Creates a new entry.
+   * 
+   * @param id entry id
+   * @param timestamp timestamp this entry was created
+   * @param dataSource datasource associated with this entry
+   * @param entry object representing this entry
+   * @param active active or inactive flag
+   * @param status status object associated wit this object, can be null
+   * @throws EntryExistsException
+   */
+  public void insert(
+      @NotNull String id,
+      @NotNull DateTime timestamp,
+      @NotNull String dataSource,
+      @NotNull EntryType entry,
+      boolean active,
+      @Nullable StatusType status
+  ) throws EntryExistsException;
+
+
+  /**
+   * Sets or updates the status for any active entry with the given id.
+   * Once an entry has been set inactive, its status cannot be updated anymore.
+   *
+   * @param entryId entry id
+   * @param active active
+   * @param status status
+   * @return true if the status was updated, false if the entry did not exist of if the entry was inactive
+   */
+  public boolean setStatus(String entryId, boolean active, StatusType status);
+
+  /**
+   * Retrieves the entry with the given id.
+   *
+   * @param entryId entry id
+   * @return optional entry, absent if the given id does not exist
+   */
+  public Optional<EntryType> getEntry(String entryId);
+
+  /**
+   * Retrieve the status for the entry with the given id.
+   *
+   * @param entryId entry id
+   * @return optional status, absent if entry does not exist or status is not set
+   */
+  public Optional<StatusType> getStatus(String entryId);
+
+  /**
+   * Return all active entries with their respective status
+   *
+   * @return list of (entry, status) pairs
+   */
+  public List<Pair<EntryType, StatusType>> getActiveEntriesWithStatus();
+
+  /**
+   * Return all statuses for inactive entries created on or later than the given timestamp
+   *
+   * @param timestamp timestamp
+   * @return list of statuses
+   */
+  public List<StatusType> getInactiveStatusesSince(DateTime timestamp);
+
+  /**
+   * Add a lock to the given entry
+   *
+   * @param entryId entry id
+   * @param lock lock to add
+   * @return true if the lock was added
+   */
+  public boolean addLock(String entryId, LockType lock);
+
+  /**
+   * Remove the lock with the given lock id.
+   *
+   * @param lockId lock id
+   * @return true if the lock was removed, false if the given lock id did not exist
+   */
+  public boolean removeLock(long lockId);
+
+  /**
+   * Add a log to the entry with the given id.
+   *
+   * @param entryId entry id
+   * @param log log to add
+   * @return true if the log was added
+   */
+  public boolean addLog(String entryId, LogType log);
+
+  /**
+   * Returns the logs for the entry with the given id.
+   *
+   * @param entryId entry id
+   * @return list of logs
+   */
+  public List<LogType> getLogs(String entryId);
+
+  /**
+   * Returns the locks for the given entry
+   *
+   * @param entryId entry id
+   * @return map of lockId to lock
+   */
+  public Map<Long, LockType> getLocks(String entryId);
+}

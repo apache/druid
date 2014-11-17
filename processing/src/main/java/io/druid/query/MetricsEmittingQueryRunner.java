@@ -28,6 +28,8 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -82,7 +84,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     final ServiceMetricEvent.Builder builder = builderFn.apply(query);
     String queryId = query.getId();
@@ -100,7 +102,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
         long startTime = System.currentTimeMillis();
         try {
-          retVal = queryRunner.run(query).accumulate(outType, accumulator);
+          retVal = queryRunner.run(query, context).accumulate(outType, accumulator);
         }
         catch (RuntimeException e) {
           builder.setUser10("failed");
@@ -130,7 +132,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
         long startTime = System.currentTimeMillis();
         try {
-          retVal = queryRunner.run(query).toYielder(initValue, accumulator);
+          retVal = queryRunner.run(query, context).toYielder(initValue, accumulator);
         }
         catch (RuntimeException e) {
           builder.setUser10("failed");

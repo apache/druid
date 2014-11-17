@@ -23,6 +23,9 @@ import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
+import java.util.List;
+import java.util.Map;
+
 /**
 */
 public class ConcatQueryRunner<T> implements QueryRunner<T>
@@ -36,7 +39,7 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     return Sequences.concat(
         Sequences.map(
@@ -46,7 +49,7 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
               @Override
               public Sequence<T> apply(final QueryRunner<T> input)
               {
-                return input.run(query);
+                return input.run(query, context);
               }
             }
         )

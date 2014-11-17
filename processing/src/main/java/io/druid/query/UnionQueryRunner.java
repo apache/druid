@@ -23,11 +23,9 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-
-import java.util.List;
+import java.util.Map;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
@@ -44,7 +42,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
       return toolChest.mergeSequencesUnordered(
           Sequences.simple(
@@ -56,7 +54,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                     public Sequence<T> apply(QueryRunner singleRunner)
                     {
                       return singleRunner.run(
-                          query
+                          query,
+                          context
                       );
                     }
                   }

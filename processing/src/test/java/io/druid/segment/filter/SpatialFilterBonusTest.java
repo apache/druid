@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
@@ -33,6 +34,7 @@ import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -61,6 +63,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -70,13 +73,17 @@ import java.util.Random;
 public class SpatialFilterBonusTest
 {
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
-
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
       new LongSumAggregatorFactory("val", "val")
   };
-
   private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
+  private final Segment segment;
+
+  public SpatialFilterBonusTest(Segment segment)
+  {
+    this.segment = segment;
+  }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -105,14 +112,20 @@ public class SpatialFilterBonusTest
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                             .withQueryGranularity(QueryGranularity.DAY)
                                             .withMetrics(METRIC_AGGS)
-                                            .withSpatialDimensions(
-                                                Arrays.asList(
-                                                    new SpatialDimensionSchema(
-                                                        "dim.geo",
-                                                        Lists.<String>newArrayList()
+                                            .withDimensionsSpec(
+                                                new DimensionsSpec(
+                                                    null,
+                                                    null,
+                                                    Arrays.asList(
+                                                        new SpatialDimensionSchema(
+                                                            "dim.geo",
+                                                            Lists.<String>newArrayList()
+                                                        )
                                                     )
                                                 )
-                                            ).build()
+                                            ).build(),
+        TestQueryRunners.pool,
+        false
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -230,40 +243,60 @@ public class SpatialFilterBonusTest
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Lists.<String>newArrayList()
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Lists.<String>newArrayList()
+                                                          )
                                                       )
                                                   )
-                                              ).build()
+
+                                              ).build(),
+          TestQueryRunners.pool,
+          false
       );
       IncrementalIndex second = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Lists.<String>newArrayList()
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Lists.<String>newArrayList()
+                                                          )
                                                       )
                                                   )
-                                              ).build()
+                                              ).build(),
+          TestQueryRunners.pool,
+          false
       );
       IncrementalIndex third = new IncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
-                                              .withSpatialDimensions(
-                                                  Arrays.asList(
-                                                      new SpatialDimensionSchema(
-                                                          "dim.geo",
-                                                          Lists.<String>newArrayList()
+                                              .withDimensionsSpec(
+                                                  new DimensionsSpec(
+                                                      null,
+                                                      null,
+                                                      Arrays.asList(
+                                                          new SpatialDimensionSchema(
+                                                              "dim.geo",
+                                                              Lists.<String>newArrayList()
+                                                          )
                                                       )
                                                   )
-                                              ).build()
+
+                                              ).build(),
+          TestQueryRunners.pool,
+          false
       );
 
 
@@ -398,13 +431,6 @@ public class SpatialFilterBonusTest
     }
   }
 
-  private final Segment segment;
-
-  public SpatialFilterBonusTest(Segment segment)
-  {
-    this.segment = segment;
-  }
-
   @Test
   public void testSpatialQuery()
   {
@@ -448,8 +474,8 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+      HashMap<String,Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -535,8 +561,8 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+      HashMap<String,Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

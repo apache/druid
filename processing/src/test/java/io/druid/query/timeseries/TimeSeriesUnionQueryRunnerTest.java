@@ -19,10 +19,9 @@
 
 package io.druid.query.timeseries;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -43,12 +42,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class TimeSeriesUnionQueryRunnerTest
@@ -108,9 +107,9 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -144,44 +143,51 @@ public class TimeSeriesUnionQueryRunnerTest
     QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(new QueryConfig());
     QueryRunner mergingrunner = toolChest.mergeResults(
         new UnionQueryRunner<Result<TimeseriesResultValue>>(
-            (Iterable)Arrays.asList(
+            (Iterable) Arrays.asList(
                 new QueryRunner<Result<TimeseriesResultValue>>()
-                                    {
-                                      @Override
-                                      public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
-                                      {
-                                          return Sequences.simple(
-                                              Lists.newArrayList(
-                                                  new Result<TimeseriesResultValue>(
-                                                      new DateTime("2011-04-02"),
-                                                      new TimeseriesResultValue(
-                                                          ImmutableMap.<String, Object>of(
-                                                              "rows",
-                                                              1L,
-                                                              "idx",
-                                                              2L
-                                                          )
-                                                      )
-                                                  ),
-                                                  new Result<TimeseriesResultValue>(
-                                                      new DateTime("2011-04-03"),
-                                                      new TimeseriesResultValue(
-                                                          ImmutableMap.<String, Object>of(
-                                                              "rows",
-                                                              3L,
-                                                              "idx",
-                                                              4L
-                                                          )
-                                                      )
-                                                  )
-                                              )
-                                          );
-                                      }
-                                    },
-                new QueryRunner<Result<TimeseriesResultValue>>(){
+                {
+                  @Override
+                  public Sequence<Result<TimeseriesResultValue>> run(
+                      Query<Result<TimeseriesResultValue>> query,
+                      Map<String, Object> context
+                  )
+                  {
+                    return Sequences.simple(
+                        Lists.newArrayList(
+                            new Result<TimeseriesResultValue>(
+                                new DateTime("2011-04-02"),
+                                new TimeseriesResultValue(
+                                    ImmutableMap.<String, Object>of(
+                                        "rows",
+                                        1L,
+                                        "idx",
+                                        2L
+                                    )
+                                )
+                            ),
+                            new Result<TimeseriesResultValue>(
+                                new DateTime("2011-04-03"),
+                                new TimeseriesResultValue(
+                                    ImmutableMap.<String, Object>of(
+                                        "rows",
+                                        3L,
+                                        "idx",
+                                        4L
+                                    )
+                                )
+                            )
+                        )
+                    );
+                  }
+                },
+                new QueryRunner<Result<TimeseriesResultValue>>()
+                {
 
                   @Override
-                  public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+                  public Sequence<Result<TimeseriesResultValue>> run(
+                      Query<Result<TimeseriesResultValue>> query,
+                      Map<String, Object> context
+                  )
                   {
                     {
                       return Sequences.simple(
@@ -195,6 +201,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                           "idx",
                                           6L
                                       )
+
                                   )
                               ),
                               new Result<TimeseriesResultValue>(
@@ -223,7 +230,8 @@ public class TimeSeriesUnionQueryRunnerTest
                       );
                     }
                   }
-                }),
+                }
+            ),
             toolChest
         )
     );
@@ -256,7 +264,7 @@ public class TimeSeriesUnionQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        mergingrunner.run(query),
+        mergingrunner.run(query, Maps.<String, Object>newHashMap()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 

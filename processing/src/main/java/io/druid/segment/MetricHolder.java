@@ -28,10 +28,13 @@ import com.metamx.common.guava.CloseQuietly;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
+import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedFloats;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -99,6 +102,16 @@ public class MetricHolder
     column.closeAndConsolidate(outSupplier);
   }
 
+  public static void writeLongMetric(
+      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedLongsSupplierSerializer column
+  ) throws IOException
+  {
+    ByteStreams.write(version, outSupplier);
+    serializerUtils.writeString(outSupplier, name);
+    serializerUtils.writeString(outSupplier, "long");
+    column.closeAndConsolidate(outSupplier);
+  }
+
   public static void writeToChannel(MetricHolder holder, WritableByteChannel out) throws IOException
   {
     out.write(ByteBuffer.wrap(version));
@@ -136,6 +149,9 @@ public class MetricHolder
     MetricHolder holder = new MetricHolder(metricName, typeName);
 
     switch (holder.type) {
+      case LONG:
+        holder.longType = CompressedLongsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
+        break;
       case FLOAT:
         holder.floatType = CompressedFloatsIndexedSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
         break;
@@ -163,18 +179,22 @@ public class MetricHolder
 
   public enum MetricType
   {
+    LONG,
     FLOAT,
     COMPLEX;
 
     static MetricType determineType(String typeName)
     {
-      if ("float".equalsIgnoreCase(typeName)) {
+      if ("long".equalsIgnoreCase(typeName)) {
+        return LONG;
+      } else if ("float".equalsIgnoreCase(typeName)) {
         return FLOAT;
       }
       return COMPLEX;
     }
   }
 
+  CompressedLongsIndexedSupplier longType = null;
   CompressedFloatsIndexedSupplier floatType = null;
   Indexed complexType = null;
 
@@ -203,6 +223,12 @@ public class MetricHolder
     return type;
   }
 
+  public IndexedLongs getLongType()
+  {
+    assertType(MetricType.LONG);
+    return longType.get();
+  }
+
   public IndexedFloats getFloatType()
   {
     assertType(MetricType.FLOAT);
@@ -217,9 +243,14 @@ public class MetricHolder
 
   public MetricHolder convertByteOrder(ByteOrder order)
   {
+    MetricHolder retVal;
     switch (type) {
+      case LONG:
+        retVal = new MetricHolder(name, typeName);
+        retVal.longType = longType.convertByteOrder(order);
+        return retVal;
       case FLOAT:
-        MetricHolder retVal = new MetricHolder(name, typeName);
+        retVal = new MetricHolder(name, typeName);
         retVal.floatType = floatType.convertByteOrder(order);
         return retVal;
       case COMPLEX:

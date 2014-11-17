@@ -143,7 +143,9 @@ public class RealtimeIndexTask extends AbstractTask
               null,
               rejectionPolicy == null ? rejectionPolicyFactory : rejectionPolicy,
               maxPendingPersists,
-              spec.getShardSpec()
+              spec.getShardSpec(),
+              false,
+              false
           ),
           null, null, null, null
       );

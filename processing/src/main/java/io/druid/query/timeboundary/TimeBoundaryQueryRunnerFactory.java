@@ -35,6 +35,8 @@ import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -83,7 +85,10 @@ public class TimeBoundaryQueryRunnerFactory
     }
 
     @Override
-    public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> input)
+    public Sequence<Result<TimeBoundaryResultValue>> run(
+        Query<Result<TimeBoundaryResultValue>> input,
+        Map<String, Object> context
+    )
     {
       if (!(input instanceof TimeBoundaryQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeBoundaryQuery.class);

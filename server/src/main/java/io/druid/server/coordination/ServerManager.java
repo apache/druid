@@ -440,7 +440,7 @@ public class ServerManager implements QuerySegmentWalker
                         },
                         new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
                         "scan/time"
-                    ).withWaitMeasuredFromNow(),
+                    ),
                     cacheConfig
                 )
             )

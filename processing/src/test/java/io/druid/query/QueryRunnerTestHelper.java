@@ -83,7 +83,7 @@ public class QueryRunnerTestHelper
   );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
-  public static final String providerDimension = "proVider";
+  public static final String marketDimension = "marKet";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
@@ -195,9 +195,10 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
     return Arrays.asList(
         new Object[][]{
             {
@@ -208,6 +209,9 @@ public class QueryRunnerTestHelper
             },
             {
                 makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            },
+            {
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
             }
         }
     );
@@ -220,9 +224,11 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
+
     return Arrays.asList(
         new Object[][]{
             {
@@ -237,6 +243,9 @@ public class QueryRunnerTestHelper
                     new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
                     unionDataSource
                 )
+            },
+            {
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId), unionDataSource)
             }
         }
     );

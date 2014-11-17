@@ -40,6 +40,7 @@ import org.joda.time.Interval;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -86,7 +87,7 @@ public class BridgeQuerySegmentWalker implements QuerySegmentWalker
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(Query<T> query)
+      public Sequence<T> run(Query<T> query, Map<String, Object> context)
       {
         try {
           Server instance = brokerSelector.pick();

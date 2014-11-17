@@ -28,14 +28,14 @@ import java.nio.LongBuffer;
 
 /**
 */
-public class CompressedLongBufferObjectStrategy extends CompressedObjectStrategy<LongBuffer>
+public class CompressedLongBufferObjectStrategy extends FixedSizeCompressedObjectStrategy<LongBuffer>
 {
-  public static CompressedLongBufferObjectStrategy getBufferForOrder(ByteOrder order)
+  public static CompressedLongBufferObjectStrategy getBufferForOrder(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
-    return new CompressedLongBufferObjectStrategy(order);
+    return new CompressedLongBufferObjectStrategy(order, compression, sizePer);
   }
 
-  private CompressedLongBufferObjectStrategy(final ByteOrder order)
+  private CompressedLongBufferObjectStrategy(final ByteOrder order, final CompressionStrategy compression, final int sizePer)
   {
     super(
         order,
@@ -64,8 +64,9 @@ public class CompressedLongBufferObjectStrategy extends CompressedObjectStrategy
           {
             return into.asLongBuffer().put(from);
           }
-        }
+        },
+        compression,
+        sizePer
     );
   }
-
 }

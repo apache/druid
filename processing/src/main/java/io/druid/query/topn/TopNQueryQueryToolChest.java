@@ -35,6 +35,8 @@ import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.BySegmentResultValue;
+import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
@@ -409,7 +411,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
 
     @Override
-    public Sequence<Result<TopNResultValue>> run(Query<Result<TopNResultValue>> input)
+    public Sequence<Result<TopNResultValue>> run(
+        Query<Result<TopNResultValue>> input,
+        Map<String, Object> context
+    )
     {
       if (!(input instanceof TopNQuery)) {
         throw new ISE("Can only handle [%s], got [%s]", TopNQuery.class, input.getClass());
@@ -417,20 +422,21 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       final TopNQuery query = (TopNQuery) input;
       if (query.getThreshold() > minTopNThreshold) {
-        return runner.run(query);
+        return runner.run(query, context);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withThreshold(minTopNThreshold)),
+          runner.run(query.withThreshold(minTopNThreshold), context),
           new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
           {
             @Override
             public Result<TopNResultValue> apply(Result<TopNResultValue> input)
             {
               if (isBySegment) {
-                BySegmentTopNResultValue value = (BySegmentTopNResultValue) input.getValue();
+                BySegmentResultValue<Result<TopNResultValue>> value = (BySegmentResultValue<Result<TopNResultValue>>) input
+                    .getValue();
 
                 return new Result<TopNResultValue>(
                     input.getTimestamp(),
@@ -457,7 +463,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                             }
                         ),
                         value.getSegmentId(),
-                        value.getIntervalString()
+                        value.getInterval()
                     )
                 );
               }

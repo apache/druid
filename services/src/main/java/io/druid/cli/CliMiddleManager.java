@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
@@ -74,6 +75,9 @@ public class CliMiddleManager extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
+
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);

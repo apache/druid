@@ -71,7 +71,8 @@ public class DruidSecondaryModule implements Module
     binder.install(new DruidGuiceExtensions());
     binder.bind(Properties.class).toInstance(properties);
     binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
-    binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class));
+    // make objectMapper eager to ensure jackson gets setup with guice injection for JsonConfigurator
+    binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class)).asEagerSingleton();
     binder.bind(Validator.class).toInstance(validator);
     binder.bind(JsonConfigurator.class).toInstance(jsonConfigurator);
   }

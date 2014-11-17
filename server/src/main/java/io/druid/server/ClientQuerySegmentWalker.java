@@ -34,8 +34,9 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.RetryQueryRunner;
+import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -48,6 +49,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final CachingClusteredClient baseClient;
   private final QueryToolChestWarehouse warehouse;
+  private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
 
   @Inject
@@ -55,12 +57,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServiceEmitter emitter,
       CachingClusteredClient baseClient,
       QueryToolChestWarehouse warehouse,
+      RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper
   )
   {
     this.emitter = emitter;
     this.baseClient = baseClient;
     this.warehouse = warehouse;
+    this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
   }
 
@@ -82,18 +86,25 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                    new MetricsEmittingQueryRunner<T>(
-                        emitter,
-                        new Function<Query<T>, ServiceMetricEvent.Builder>()
-                        {
-                          @Override
-                          public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
-                          {
-                            return toolChest.makeMetricBuilder(query);
-                          }
-                        },
-                        toolChest.preMergeQueryDecoration(baseClient)
-                    ).withWaitMeasuredFromNow()
+                new MetricsEmittingQueryRunner<T>(
+                    emitter,
+                    new Function<Query<T>, ServiceMetricEvent.Builder>()
+                    {
+                      @Override
+                      public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
+                      {
+                        return toolChest.makeMetricBuilder(query);
+                      }
+                    },
+                    toolChest.preMergeQueryDecoration(
+                        new RetryQueryRunner<T>(
+                            baseClient,
+                            toolChest,
+                            retryConfig,
+                            objectMapper
+                        )
+                    )
+                ).withWaitMeasuredFromNow()
             )
         ),
         toolChest
@@ -102,7 +113,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final Map<String, Object> context = query.getContext();
     PostProcessingOperator<T> postProcessing = null;
-    if(context != null) {
+    if (context != null) {
       postProcessing = objectMapper.convertValue(
           context.get("postProcessing"),
           new TypeReference<PostProcessingOperator<T>>()

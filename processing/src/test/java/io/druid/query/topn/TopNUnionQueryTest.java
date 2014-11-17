@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -100,7 +101,7 @@ public class TopNUnionQueryTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.unionDataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.providerDimension)
+        .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -130,7 +131,7 @@ public class TopNUnionQueryTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.providerDimension, "total_market")
+                                .put(QueryRunnerTestHelper.marketDimension, "total_market")
                                 .put("rows", 744L)
                                 .put("index", 862719.3151855469D)
                                 .put("addRowsIndexConstant", 863464.3151855469D)
@@ -144,7 +145,7 @@ public class TopNUnionQueryTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.providerDimension, "upfront")
+                                .put(QueryRunnerTestHelper.marketDimension, "upfront")
                                 .put("rows", 744L)
                                 .put("index", 768184.4240722656D)
                                 .put("addRowsIndexConstant", 768929.4240722656D)
@@ -158,7 +159,7 @@ public class TopNUnionQueryTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.providerDimension, "spot")
+                                .put(QueryRunnerTestHelper.marketDimension, "spot")
                                 .put("rows", 3348L)
                                 .put("index", 382426.28929138184D)
                                 .put("addRowsIndexConstant", 385775.28929138184D)
@@ -175,8 +176,8 @@ public class TopNUnionQueryTest
             )
         )
     );
-
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query));
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
 

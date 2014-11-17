@@ -24,8 +24,8 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.TimestampColumnSelector;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
@@ -68,12 +68,6 @@ public class FilteredAggregatorTest
 
     return new ColumnSelectorFactory()
     {
-      @Override
-      public TimestampColumnSelector makeTimestampColumnSelector()
-      {
-        throw new UnsupportedOperationException();
-      }
-
       @Override
       public DimensionSelector makeDimensionSelector(String dimensionName)
       {
@@ -125,6 +119,12 @@ public class FilteredAggregatorTest
         } else {
           throw new UnsupportedOperationException();
         }
+      }
+
+      @Override
+      public LongColumnSelector makeLongColumnSelector(String columnName)
+      {
+        throw new UnsupportedOperationException();
       }
 
       @Override

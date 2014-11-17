@@ -87,6 +87,13 @@ public class ApproximateHistogramBufferAggregator implements BufferAggregator
     throw new UnsupportedOperationException("ApproximateHistogramBufferAggregator does not support getFloat()");
   }
 
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramBufferAggregator does not support getLong()");
+  }
+
   @Override
   public void close()
   {

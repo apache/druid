@@ -42,7 +42,7 @@ import static io.druid.query.QueryRunnerTestHelper.commonAggregators;
 import static io.druid.query.QueryRunnerTestHelper.dataSource;
 import static io.druid.query.QueryRunnerTestHelper.fullOnInterval;
 import static io.druid.query.QueryRunnerTestHelper.indexMetric;
-import static io.druid.query.QueryRunnerTestHelper.providerDimension;
+import static io.druid.query.QueryRunnerTestHelper.marketDimension;
 
 public class TopNQueryTest
 {
@@ -54,7 +54,7 @@ public class TopNQueryTest
     Query query = new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
-        .dimension(providerDimension)
+        .dimension(marketDimension)
         .metric(indexMetric)
         .threshold(4)
         .intervals(fullOnInterval)

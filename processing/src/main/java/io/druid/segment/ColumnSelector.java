@@ -23,6 +23,5 @@ package io.druid.segment;import io.druid.segment.column.Column;
  */
 public interface ColumnSelector
 {
-  public Column getTimeColumn();
   public Column getColumn(String columnName);
 }

@@ -44,6 +44,7 @@ import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -94,13 +95,13 @@ public class TimeBoundaryQueryQueryToolChest
     {
       @Override
       protected Sequence<Result<TimeBoundaryResultValue>> doRun(
-          QueryRunner<Result<TimeBoundaryResultValue>> baseRunner, Query<Result<TimeBoundaryResultValue>> input
+          QueryRunner<Result<TimeBoundaryResultValue>> baseRunner, Query<Result<TimeBoundaryResultValue>> input, Map<String, Object> context
       )
       {
         TimeBoundaryQuery query = (TimeBoundaryQuery) input;
         return Sequences.simple(
             query.mergeResults(
-                Sequences.toList(baseRunner.run(query), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
+                Sequences.toList(baseRunner.run(query, context), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
             )
         );
       }

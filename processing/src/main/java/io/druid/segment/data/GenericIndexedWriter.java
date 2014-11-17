@@ -38,8 +38,6 @@ import java.util.Arrays;
  */
 public class GenericIndexedWriter<T> implements Closeable
 {
-  private static final byte[] EMPTY_ARRAY = new byte[]{};
-  
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ObjectStrategy<T> strategy;

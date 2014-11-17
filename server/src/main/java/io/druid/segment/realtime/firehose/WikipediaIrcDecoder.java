@@ -242,6 +242,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
 
       @Override
+      public long getLongMetric(String metric)
+      {
+        return new Float(metrics.get(metric)).longValue();
+      }
+
+      @Override
       public int compareTo(Row o)
       {
         return timestamp.compareTo(o.getTimestamp());

@@ -116,6 +116,8 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));
@@ -185,6 +187,12 @@ public class RealtimeManagerTest
       public float getFloatMetric(String metric)
       {
         return 0;
+      }
+
+      @Override
+      public long getLongMetric(String metric)
+      {
+        return 0L;
       }
 
       @Override

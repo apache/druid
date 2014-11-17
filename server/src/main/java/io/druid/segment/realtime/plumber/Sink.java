@@ -26,11 +26,12 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
@@ -47,16 +48,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class Sink implements Iterable<FireHydrant>
 {
-  private static final Logger log = new Logger(Sink.class);
 
-  private volatile FireHydrant currHydrant;
   private final Object hydrantLock = new Object();
-
   private final Interval interval;
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
+  private volatile FireHydrant currHydrant;
 
   public Sink(
       Interval interval,
@@ -177,14 +176,29 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
-    IncrementalIndex newIndex = new IncrementalIndex(
-        new IncrementalIndexSchema.Builder()
-            .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-            .withSpatialDimensions(schema.getParser())
-            .withMetrics(schema.getAggregators())
-            .build()
-    );
+    int aggsSize = 0;
+    for (AggregatorFactory agg : schema.getAggregators()) {
+      aggsSize += agg.getMaxIntermediateSize();
+    }
+    int bufferSize = aggsSize * config.getMaxRowsInMemory();
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(minTimestamp)
+        .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
+        .withDimensionsSpec(schema.getParser())
+        .withMetrics(schema.getAggregators())
+        .build();
+    final IncrementalIndex newIndex;
+    if (config.isIngestOffheap()) {
+      newIndex = new OffheapIncrementalIndex(
+          indexSchema,
+          new OffheapBufferPool(bufferSize)
+      );
+    } else {
+      newIndex = new IncrementalIndex(
+          indexSchema,
+          new OffheapBufferPool(bufferSize)
+      );
+    }
 
     final FireHydrant old;
     synchronized (hydrantLock) {

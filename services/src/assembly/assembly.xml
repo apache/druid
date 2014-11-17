@@ -15,6 +15,13 @@
             <outputDirectory>config</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>../examples/config/_global</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>config/_global</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>../examples/config/broker</directory>
             <includes>
                 <include>*</include>

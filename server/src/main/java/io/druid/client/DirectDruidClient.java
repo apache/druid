@@ -22,6 +22,7 @@ package io.druid.client;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -111,7 +112,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = query.getContextBySegment(false);
@@ -156,6 +157,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   log.debug("Initial response from url[%s]", url);
                   startTime = System.currentTimeMillis();
                   byteCount += response.getContent().readableBytes();
+
+                  try {
+                    final Map<String, Object> responseContext = objectMapper.readValue(
+                        response.headers().get("X-Druid-Response-Context"), new TypeReference<Map<String, Object>>()
+                        {
+                        }
+                    );
+                    context.putAll(responseContext);
+                  }
+                  catch (IOException e) {
+                    e.printStackTrace();
+                  }
+
                   return super.handleResponse(response);
                 }
 
@@ -190,40 +204,40 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       openConnections.getAndIncrement();
       Futures.addCallback(
           future, new FutureCallback<InputStream>()
-      {
-        @Override
-        public void onSuccess(InputStream result)
-        {
-          openConnections.getAndDecrement();
-        }
+          {
+            @Override
+            public void onSuccess(InputStream result)
+            {
+              openConnections.getAndDecrement();
+            }
 
-        @Override
-        public void onFailure(Throwable t)
-        {
-          openConnections.getAndDecrement();
-          if (future.isCancelled()) {
-            // forward the cancellation to underlying queriable node
-            try {
-              StatusResponseHolder res = httpClient
-                  .delete(new URL(cancelUrl))
-                  .setContent(objectMapper.writeValueAsBytes(query))
-                  .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
-                  .go(new StatusResponseHandler(Charsets.UTF_8))
-                  .get();
-              if (res.getStatus().getCode() >= 500) {
-                throw new RE(
-                    "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
-                    res.getStatus().getCode(),
-                    res.getStatus().getReasonPhrase()
-                );
+            @Override
+            public void onFailure(Throwable t)
+            {
+              openConnections.getAndDecrement();
+              if (future.isCancelled()) {
+                // forward the cancellation to underlying queriable node
+                try {
+                  StatusResponseHolder res = httpClient
+                      .delete(new URL(cancelUrl))
+                      .setContent(objectMapper.writeValueAsBytes(query))
+                      .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
+                      .go(new StatusResponseHandler(Charsets.UTF_8))
+                      .get();
+                  if (res.getStatus().getCode() >= 500) {
+                    throw new RE(
+                        "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+                        res.getStatus().getCode(),
+                        res.getStatus().getReasonPhrase()
+                    );
+                  }
+                }
+                catch (IOException | ExecutionException | InterruptedException e) {
+                  Throwables.propagate(e);
+                }
               }
             }
-            catch (IOException | ExecutionException | InterruptedException e) {
-              Throwables.propagate(e);
-            }
           }
-        }
-      }
       );
     }
     catch (IOException e) {
@@ -321,8 +335,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           if (nextToken == JsonToken.START_OBJECT) {
             QueryInterruptedException e = jp.getCodec().readValue(jp, QueryInterruptedException.class);
             throw e;
-          }
-          else if (nextToken != JsonToken.START_ARRAY) {
+          } else if (nextToken != JsonToken.START_ARRAY) {
             throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
             jp.nextToken();
@@ -330,7 +343,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
         catch (IOException | InterruptedException | ExecutionException e) {
-          throw new RE(e, "Failure getting results from[%s]", url);
+          throw new RE(e, "Failure getting results from[%s] because of [%s]", url, e.getMessage());
         }
         catch (CancellationException e) {
           throw new QueryInterruptedException("Query cancelled");

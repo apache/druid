@@ -28,7 +28,7 @@ import java.util.Comparator;
  */
 public class LongSumAggregatorTest
 {
-  private void aggregate(TestFloatColumnSelector selector, LongSumAggregator agg)
+  private void aggregate(TestLongColumnSelector selector, LongSumAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -37,7 +37,7 @@ public class LongSumAggregatorTest
   @Test
   public void testAggregate()
   {
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(new float[]{24.15f, 20f});
+    final TestLongColumnSelector selector = new TestLongColumnSelector(new long[]{24L, 20L});
     LongSumAggregator agg = new LongSumAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());
@@ -58,7 +58,7 @@ public class LongSumAggregatorTest
   @Test
   public void testComparator()
   {
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(new float[]{18293f});
+    final TestLongColumnSelector selector = new TestLongColumnSelector(new long[]{18293L});
     LongSumAggregator agg = new LongSumAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());

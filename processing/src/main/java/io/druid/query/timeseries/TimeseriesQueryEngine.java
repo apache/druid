@@ -20,13 +20,13 @@
 package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
-import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.Cursor;
+import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.filter.Filters;
 
@@ -39,7 +39,7 @@ public class TimeseriesQueryEngine
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
     if (adapter == null) {
-      throw new ISE(
+      throw new SegmentMissingException(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }

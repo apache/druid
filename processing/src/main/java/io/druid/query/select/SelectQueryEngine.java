@@ -28,10 +28,11 @@ import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.TimestampColumnSelector;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -83,7 +84,7 @@ public class SelectQueryEngine
                      .getThreshold()
             );
 
-            final TimestampColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
+            final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
             final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
             for (String dim : dims) {
@@ -110,7 +111,7 @@ public class SelectQueryEngine
             int offset = 0;
             while (!cursor.isDone() && offset < query.getPagingSpec().getThreshold()) {
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-              theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.getTimestamp()));
+              theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
               for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                 final String dim = dimSelector.getKey();

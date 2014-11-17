@@ -18,11 +18,13 @@ The default limit spec takes a limit and the list of columns to do an orderBy op
 
 #### OrderByColumnSpec
 
-OrderByColumnSpecs indicate how to do order by operations. Each order by condition can be a `jsonString` or a map of the following form:
+OrderByColumnSpecs indicate how to do order by operations. Each order-by condition can be a `jsonString` or a map of the following form:
 
 ```json 
 {
-    "dimension" : <Any dimension or metric>,
-    "direction" : "ASCENDING OR DESCENDING"
+    "dimension" : "<Any dimension or metric name>",
+    "direction" : <"ascending"|"descending">
 }
 ```
+
+If only the dimension is provided (as a JSON string), the default order-by is ascending.

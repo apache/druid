@@ -29,7 +29,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.client.DruidServer;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.IntervalDropRule;
@@ -57,7 +57,7 @@ public class DruidCoordinatorRuleRunnerTest
   private List<DataSegment> availableSegments;
   private DruidCoordinatorRuleRunner ruleRunner;
   private ServiceEmitter emitter;
-  private DatabaseRuleManager databaseRuleManager;
+  private MetadataRuleManager databaseRuleManager;
 
   @Before
   public void setUp()
@@ -66,7 +66,7 @@ public class DruidCoordinatorRuleRunnerTest
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
-    databaseRuleManager = EasyMock.createMock(DatabaseRuleManager.class);
+    databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
 
     DateTime start = new DateTime("2012-01-01");
     availableSegments = Lists.newArrayList();

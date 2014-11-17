@@ -20,6 +20,7 @@
 package io.druid.indexer.rollup;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.util.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
@@ -30,32 +31,17 @@ import java.util.List;
  *
  * Adjust to JsonCreator and final fields when resolved.
  */
+@Deprecated
 public class DataRollupSpec
 {
   @JsonProperty
-  public List<AggregatorFactory> aggs;
+  public List<AggregatorFactory> aggs = Lists.newArrayList();
 
   @JsonProperty
   public QueryGranularity rollupGranularity = QueryGranularity.NONE;
 
-  @JsonProperty
-  public int rowFlushBoundary = 500000;
-
-  public DataRollupSpec() {}
-
-  public DataRollupSpec(List<AggregatorFactory> aggs, QueryGranularity rollupGranularity)
-  {
-    this.aggs = aggs;
-    this.rollupGranularity = rollupGranularity;
-  }
-
   public List<AggregatorFactory> getAggs()
   {
     return aggs;
-  }
-
-  public QueryGranularity getRollupGranularity()
-  {
-    return rollupGranularity;
   }
 }

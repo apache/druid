@@ -37,7 +37,6 @@ import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 import java.util.Map;

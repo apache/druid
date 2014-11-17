@@ -57,6 +57,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -123,7 +124,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query)
+          public Sequence run(Query query, Map context)
           {
             return resultSeq;
           }
@@ -140,8 +141,8 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-
-    Sequence res = runner.run(query);
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    Sequence res = runner.run(query, context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
@@ -213,7 +214,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query)
+          public Sequence run(Query query, Map context)
           {
             return Sequences.empty();
           }
@@ -221,8 +222,8 @@ public class CachingQueryRunnerTest
         new CacheConfig()
 
     );
-
-    List<Object> results = Sequences.toList(runner.run(query), new ArrayList());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    List<Object> results = Sequences.toList(runner.run(query, context), new ArrayList());
     Assert.assertEquals(expectedResults, results);
   }
 

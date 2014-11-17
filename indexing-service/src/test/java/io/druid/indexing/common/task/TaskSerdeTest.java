@@ -244,51 +244,6 @@ public class TaskSerdeTest
   }
 
   @Test
-  public void testDeleteTaskSerde() throws Exception
-  {
-    final DeleteTask task = new DeleteTask(
-        null,
-        "foo",
-        new Interval("2010-01-01/P1D")
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final DeleteTask task2 = (DeleteTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-  }
-
-  @Test
-  public void testDeleteTaskFromJson() throws Exception
-  {
-    final DeleteTask task = (DeleteTask) jsonMapper.readValue(
-        "{\"type\":\"delete\",\"dataSource\":\"foo\",\"interval\":\"2010-01-01/P1D\"}",
-        Task.class
-    );
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final DeleteTask task2 = (DeleteTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertNotNull(task.getId());
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-  }
-
-  @Test
   public void testAppendTaskSerde() throws Exception
   {
     final AppendTask task = new AppendTask(
@@ -413,7 +368,7 @@ public class TaskSerdeTest
             true,
             null,
             false,
-            new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.NONE),
+            null,
             null,
             false,
             ImmutableMap.of("foo", "bar"),

@@ -23,6 +23,9 @@ package io.druid.query;
 
 import com.metamx.common.guava.Sequence;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * If there's a subquery, run it instead of the outer query
  */
@@ -36,13 +39,13 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, Map<String, Object> context)
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof QueryDataSource) {
-      return run((Query<T>) ((QueryDataSource) dataSource).getQuery());
+      return run((Query<T>) ((QueryDataSource) dataSource).getQuery(), context);
     } else {
-      return baseRunner.run(query);
+      return baseRunner.run(query, context);
     }
   }
 }

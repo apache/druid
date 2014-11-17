@@ -19,8 +19,10 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.name.Named;
 import io.druid.common.utils.SocketUtil;
 
 import javax.validation.constraints.Max;
@@ -31,15 +33,17 @@ import javax.validation.constraints.NotNull;
  */
 public class DruidNode
 {
+  public static final String DEFAULT_HOST = "localhost";
+
   private String hostNoPort;
 
   @JsonProperty("service")
   @NotNull
-  private String serviceName = null;
+  private String serviceName;
 
   @JsonProperty
   @NotNull
-  private String host = null;
+  private String host;
 
   @JsonProperty
   @Min(0) @Max(0xffff)
@@ -47,16 +51,21 @@ public class DruidNode
 
   @JsonCreator
   public DruidNode(
-      @JsonProperty("service") String serviceName,
+      @JacksonInject @Named("serviceName") @JsonProperty("service") String serviceName,
       @JsonProperty("host") String host,
-      @JsonProperty("port") Integer port
+      @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port
   )
+  {
+    init(serviceName, host, port);
+  }
+
+  private void init(String serviceName, String host, Integer port)
   {
     this.serviceName = serviceName;
 
     if (port == null) {
       if (host == null) {
-        setHostAndPort(null, -1, null);
+        setHostAndPort(DEFAULT_HOST, -1, DEFAULT_HOST);
       }
       else if (host.contains(":")) {
         final String[] hostParts = host.split(":");
@@ -74,7 +83,7 @@ public class DruidNode
     }
     else {
       if (host == null || host.contains(":")) {
-        setHostAndPort(host, port, host == null ? null : host.split(":")[0]);
+        setHostAndPort(host == null ? DEFAULT_HOST : host, port, host == null ? DEFAULT_HOST : host.split(":")[0]);
       }
       else {
         setHostAndPort(String.format("%s:%d", host, port), port, host);
