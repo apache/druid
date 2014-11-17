@@ -4,18 +4,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.util.Maps;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
-public class FillCapacityWithPreferenceConfig
+public class FillCapacityWithIsolationConfig
 {
   @JsonProperty
   @NotNull
-  // key:Datasource, value:nodeHostName
-  private Map<String, String> preferences = Maps.newHashMap();
+  // key:Datasource, value:[nodeHostNames]
+  private Map<String, List<String>> preferences = Maps.newHashMap();
 
-  public Map<String, String> getPreferences()
+  public Map<String, List<String>> getPreferences()
   {
     return preferences;
   }

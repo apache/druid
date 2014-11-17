@@ -71,7 +71,7 @@ import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactoryImpl
 import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
-import io.druid.indexing.overlord.setup.FillCapacityWithPreferenceWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.FillCapacityWithIsolationWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
@@ -220,8 +220,8 @@ public class CliOverlord extends ServerRunnable
             binder.bind(FillCapacityWorkerSelectStrategy.class).in(LazySingleton.class);
 
             stratBinder.addBinding("fillCapacityWithPreference")
-                       .to(FillCapacityWithPreferenceWorkerSelectStrategy.class);
-            binder.bind(FillCapacityWithPreferenceWorkerSelectStrategy.class).in(LazySingleton.class);
+                       .to(FillCapacityWithIsolationWorkerSelectStrategy.class);
+            binder.bind(FillCapacityWithIsolationWorkerSelectStrategy.class).in(LazySingleton.class);
           }
 
           private void configureAutoscale(Binder binder)
