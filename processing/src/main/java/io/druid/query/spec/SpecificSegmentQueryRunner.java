@@ -23,7 +23,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
@@ -68,20 +67,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           @Override
           public Sequence<T> call() throws Exception
           {
-            Sequence<T> returningSeq;
-            try {
-              returningSeq = base.run(query, context);
-            }
-            catch (SegmentMissingException e) {
-              List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY);
-              if (missingSegments == null) {
-                missingSegments = Lists.newArrayList();
-                context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, missingSegments);
-              }
-              missingSegments.add(specificSpec.getDescriptor());
-              returningSeq = Sequences.empty();
-            }
-            return returningSeq;
+            return base.run(query, context);
           }
         }
     );
@@ -97,7 +83,18 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
               @Override
               public OutType call() throws Exception
               {
-                return baseSequence.accumulate(initValue, accumulator);
+                try {
+                  return baseSequence.accumulate(initValue, accumulator);
+                }
+                catch (SegmentMissingException e) {
+                  List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY);
+                  if (missingSegments == null) {
+                    missingSegments = Lists.newArrayList();
+                    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, missingSegments);
+                  }
+                  missingSegments.add(specificSpec.getDescriptor());
+                  return initValue;
+                }
               }
             }
         );

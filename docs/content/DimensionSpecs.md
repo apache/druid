@@ -29,7 +29,7 @@ Returns dimension values transformed using the given [DimExtractionFn](#toc_3)
 }
 ```
 
-## DimExtractionFn
+## <a id="toc_3"></a>DimExtractionFn
 
 `DimExtractionFn`s define the transformation applied to each dimension value
 
