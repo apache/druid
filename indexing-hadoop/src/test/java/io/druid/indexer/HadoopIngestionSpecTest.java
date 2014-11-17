@@ -22,12 +22,12 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.druid.db.DbConnectorConfig;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
-import io.druid.indexer.updater.DbUpdaterJobSpec;
+import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -192,14 +192,13 @@ public class HadoopIngestionSpecTest
         HadoopIngestionSpec.class
     );
 
-    final DbUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
-    final DbConnectorConfig connectorConfig = spec.get();
+    final MetadataStorageUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
+    final MetadataStorageConnectorConfig connectorConfig = spec.get();
 
     Assert.assertEquals("segments", spec.getSegmentTable());
     Assert.assertEquals("jdbc:mysql://localhost/druid", connectorConfig.getConnectURI());
     Assert.assertEquals("rofl", connectorConfig.getUser());
     Assert.assertEquals("p4ssw0rd", connectorConfig.getPassword());
-    Assert.assertEquals(false, connectorConfig.isUseValidationQuery());
   }
 
   @Test

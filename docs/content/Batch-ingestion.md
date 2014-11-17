@@ -162,37 +162,58 @@ The indexing process has the ability to roll data up as it processes the incomin
 
 ### Partitioning specification
 
-Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in some other way depending on partition type.
-Druid supports two types of partitions spec - singleDimension and hashed.
+Segments are always partitioned based on timestamp (according to the granularitySpec) and may be further partitioned in
+some other way depending on partition type. Druid supports two types of partitioning strategies: "hashed" (based on the
+hash of all dimensions in each row), and "dimension" (based on ranges of a single dimension).
 
-In SingleDimension partition type data is partitioned based on the values in that dimension.
-For example, data for a day may be split by the dimension "last\_name" into two segments: one with all values from A-M and one with all values from N-Z.
+Hashed partitioning is recommended in most cases, as it will improve indexing performance and create more uniformly
+sized data segments relative to single-dimension partitioning.
 
-In hashed partition type, the number of partitions is determined based on the targetPartitionSize and cardinality of input set and the data is partitioned based on the hashcode of the row.
-
-It is recommended to use Hashed partition as it is more efficient than singleDimension since it does not need to determine the dimension for creating partitions.
-Hashing also gives better distribution of data resulting in equal sized partitions and improving query performance
-
-To use this druid to automatically determine optimal partitions indexer must be given a target partition size. It can then find a good set of partition ranges on its own.
-
-#### Configuration for disabling auto-sharding and creating Fixed number of partitions
- Druid can be configured to NOT run determine partitions and create a fixed number of shards by specifying numShards in hashed partitionsSpec.
- e.g This configuration will skip determining optimal partitions and always create 4 shards for every segment granular interval
+#### Hash-based partitioning
 
 ```json
   "partitionsSpec": {
-     "type": "hashed"
-     "numShards": 4
+     "type": "hashed",
+     "targetPartitionSize": 5000000
    }
 ```
 
+Hashed partitioning works by first selecting a number of segments, and then partitioning rows across those segments
+according to the hash of all dimensions in each row. The number of segments is determined automatically based on the
+cardinality of the input set and a target partition size.
+
+The configuration options are:
+
 |property|description|required?|
 |--------|-----------|---------|
-|type|type of partitionSpec to be used |no, default : singleDimension|
-|targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 700MB\~1GB.|yes|
+|type|type of partitionSpec to be used |"hashed"|
+|targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
+|numShards|specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or targetPartitionSize|
+
+#### Single-dimension partitioning
+
+```json
+  "partitionsSpec": {
+     "type": "dimension",
+     "targetPartitionSize": 5000000
+   }
+```
+
+Single-dimension partitioning works by first selecting a dimension to partition on, and then separating that dimension
+into contiguous ranges. Each segment will contain all rows with values of that dimension in that range. For example,
+your segments may be partitioned on the dimension "host" using the ranges "a.example.com" to "f.example.com" and
+"f.example.com" to "z.example.com". By default, the dimension to use is determined automatically, although you can
+override it with a specific dimension.
+
+The configuration options are:
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|type of partitionSpec to be used |"dimension"|
+|targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
+|maxPartitionSize|maximum number of rows to include in a partition. Defaults to 50% larger than the targetPartitionSize.|no|
 |partitionDimension|the dimension to partition on. Leave blank to select a dimension automatically.|no|
-|assumeGrouped|assume input data has already been grouped on time and dimensions. This is faster, but can choose suboptimal partitions if the assumption is violated.|no|
-|numShards|provides a way to manually override druid-auto sharding and specify the number of shards to create for each segment granular interval.It is only supported by hashed partitionSpec and targetPartitionSize must be set to -1|no|
+|assumeGrouped|assume input data has already been grouped on time and dimensions. Ingestion will run faster, but can choose suboptimal partitions if the assumption is violated.|no|
 
 ### Updater job spec
 

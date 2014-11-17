@@ -200,9 +200,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   /**
    * Checks if the payload for the given ByteBuffer is sparse or not.
    * The given buffer must be positioned at getPayloadBytePosition() prior to calling isSparse
-   *
-   * @param buffer
-   * @return
    */
   private static boolean isSparse(ByteBuffer buffer)
   {
@@ -636,8 +633,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
    * @param position   The position into the byte buffer, this position represents two "registers"
    * @param offsetDiff The difference in offset between the byteToAdd and the current HyperLogLogCollector
    * @param byteToAdd  The byte to merge into the current HyperLogLogCollector
-   *
-   * @return
    */
   private static int mergeAndStoreByteRegister(
       final ByteBuffer storageBuffer,

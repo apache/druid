@@ -25,6 +25,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -39,11 +40,10 @@ public class CompressedLongsSupplierSerializer
       IOPeon ioPeon, final String filenameBase, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
-    final int sizePer = 0xFFFF / Longs.BYTES;
     final CompressedLongsSupplierSerializer retVal = new CompressedLongsSupplierSerializer(
-        sizePer,
+        CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
         new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
-            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER)
         ),
         compression
     );

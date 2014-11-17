@@ -68,7 +68,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
         curator,
         new SimplePathChildrenCacheFactory
             .Builder()
-            .withCompressed(remoteTaskRunnerConfig.isCompressZnodes())
+            .withCompressed(true)
             .build(),
         httpClient,
         strategy

@@ -164,7 +164,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
             @Override
             public void childEvent(CuratorFramework client, final PathChildrenCacheEvent event) throws Exception
             {
-              Worker worker;
+              final Worker worker;
               switch (event.getType()) {
                 case CHILD_ADDED:
                   worker = jsonMapper.readValue(
@@ -198,6 +198,14 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
                       }
                   );
                   break;
+                case CHILD_UPDATED:
+                  worker = jsonMapper.readValue(
+                      event.getData().getData(),
+                      Worker.class
+                  );
+                  updateWorker(worker);
+                  break;
+
                 case CHILD_REMOVED:
                   worker = jsonMapper.readValue(
                       event.getData().getData(),
@@ -742,6 +750,24 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * We allow workers to change their own capacities and versions. They cannot change their own hosts or ips without
+   * dropping themselves and re-announcing.
+   */
+  private void updateWorker(final Worker worker)
+  {
+    final ZkWorker zkWorker = zkWorkers.get(worker.getHost());
+    if (zkWorker != null) {
+      log.info("Worker[%s] updated its announcement from[%s] to[%s].", worker.getHost(), zkWorker.getWorker(), worker);
+      zkWorker.setWorker(worker);
+    } else {
+      log.warn(
+          "WTF, worker[%s] updated its announcement but we didn't have a ZkWorker for it. Ignoring.",
+          worker.getHost()
+      );
     }
   }
 

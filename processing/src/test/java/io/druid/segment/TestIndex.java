@@ -56,14 +56,14 @@ public class TestIndex
 {
   public static final String[] COLUMNS = new String[]{
       "ts",
-      "provider",
+      "market",
       "quALIty",
       "plAcEmEnT",
       "pLacementish",
       "iNdEx",
       "qualiTy_Uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"provider", "quALIty", "plAcEmEnT", "pLacementish"};
+  public static final String[] DIMENSIONS = new String[]{"market", "quALIty", "plAcEmEnT", "pLacementish"};
   public static final String[] METRICS = new String[]{"iNdEx"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
@@ -132,11 +132,11 @@ public class TestIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMaker.persist(top, DATA_INTERVAL, topFile);
-        IndexMaker.persist(bottom, DATA_INTERVAL, bottomFile);
+        IndexMerger.persist(top, DATA_INTERVAL, topFile);
+        IndexMerger.persist(bottom, DATA_INTERVAL, bottomFile);
 
         mergedRealtime = IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+            IndexMerger.mergeQueryableIndex(
                 Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
                 METRIC_AGGS,
                 mergedFile
@@ -242,7 +242,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      IndexMaker.persist(index, someTmpFile);
+      IndexMerger.persist(index, someTmpFile);
       return IndexIO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

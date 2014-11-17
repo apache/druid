@@ -20,8 +20,8 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Throwables;
-import com.metamx.common.guava.CloseQuietly;
 import com.google.common.collect.Maps;
+import com.metamx.common.guava.CloseQuietly;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
@@ -30,7 +30,6 @@ import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.lz4.LZ4SafeDecompressor;
-import net.jpountz.lz4.LZ4UnknownSizeDecompressor;
 
 import java.io.IOException;
 import java.nio.Buffer;

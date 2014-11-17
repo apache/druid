@@ -38,9 +38,10 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.TimestampColumnSelector;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
@@ -265,19 +266,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
-              public TimestampColumnSelector makeTimestampColumnSelector()
-              {
-                return new TimestampColumnSelector()
-                {
-                  @Override
-                  public long getTimestamp()
-                  {
-                    return currEntry.getKey().getTimestamp();
-                  }
-                };
-              }
-
-              @Override
               public DimensionSelector makeDimensionSelector(String dimension)
               {
                 final String dimensionName = dimension.toLowerCase();
@@ -374,6 +362,49 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   public float get()
                   {
                     return agg.getFloat(
+                        index.getMetricBuffer(),
+                        index.getMetricPosition(currEntry.getValue(), metricIndex)
+                    );
+                  }
+                };
+              }
+
+              @Override
+              public LongColumnSelector makeLongColumnSelector(String columnName)
+              {
+                final String metricName = columnName.toLowerCase();
+
+                if(metricName.equals(Column.TIME_COLUMN_NAME)){
+                  return new LongColumnSelector()
+                  {
+                    @Override
+                    public long get()
+                    {
+                      return currEntry.getKey().getTimestamp();
+                    }
+                  };
+                }
+                final Integer metricIndexInt = index.getMetricIndex(metricName);
+                if (metricIndexInt == null) {
+                  return new LongColumnSelector()
+                  {
+                    @Override
+                    public long get()
+                    {
+                      return 0L;
+                    }
+                  };
+                }
+
+                final int metricIndex = metricIndexInt;
+                final BufferAggregator agg = index.getAggregator(metricIndex);
+
+                return new LongColumnSelector()
+                {
+                  @Override
+                  public long get()
+                  {
+                    return agg.getLong(
                         index.getMetricBuffer(),
                         index.getMetricPosition(currEntry.getValue(), metricIndex)
                     );

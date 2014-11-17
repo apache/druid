@@ -27,7 +27,7 @@ druid.host=localhost
 druid.service=realtime
 druid.port=8083
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.156"]
+druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.160"]
 
 
 druid.zk.service.host=localhost
@@ -35,12 +35,12 @@ druid.zk.service.host=localhost
 # The realtime config file.
 druid.realtime.specFile=/path/to/specFile
 
-# Choices: db (hand off segments), noop (do not hand off segments).
-druid.publish.type=db
+# Choices: metadata (hand off segments), noop (do not hand off segments).
+druid.publish.type=metadata
 
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
+druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.metadata.storage.connector.user=druid
+druid.metadata.storage.connector.password=diurd
 
 druid.processing.buffer.sizeBytes=100000000
 ```
@@ -76,7 +76,7 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/realtime
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.156","io.druid.extensions:druid-kafka-seven:0.6.156"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.160","io.druid.extensions:druid-kafka-seven:0.6.160"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
@@ -84,13 +84,13 @@ druid.zk.paths.base=/druid/prod
 druid.s3.accessKey=#{ACCESS_KEY}
 druid.s3.secretKey=#{SECRET_KEY}
 
-druid.db.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.db.connector.user=#{MYSQL_USER}
-druid.db.connector.password=#{MYSQL_PW}
-druid.db.connector.useValidationQuery=true
-druid.db.tables.base=prod
+druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
+druid.metadata.storage.connector.user=#{MYSQL_USER}
+druid.metadata.storage.connector.password=#{MYSQL_PW}
+druid.metadata.storage.connector.useValidationQuery=true
+druid.metadata.storage.tables.base=prod
 
-druid.publish.type=db
+druid.publish.type=metadata
 
 druid.processing.numThreads=3
 

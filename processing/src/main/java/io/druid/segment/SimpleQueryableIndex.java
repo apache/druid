@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Preconditions;
+import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
@@ -34,24 +36,25 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final Interval dataInterval;
   private final Indexed<String> columnNames;
   private final Indexed<String> availableDimensions;
-  private final Column timeColumn;
-  private final Map<String, Column> otherColumns;
+  private final BitmapFactory bitmapFactory;
+  private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
       Indexed<String> columnNames,
       Indexed<String> dimNames,
-      Column timeColumn,
-      Map<String, Column> otherColumns,
+      BitmapFactory bitmapFactory,
+      Map<String, Column> columns,
       SmooshedFileMapper fileMapper
   )
   {
+    Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
     this.dataInterval = dataInterval;
     this.columnNames = columnNames;
     this.availableDimensions = dimNames;
-    this.timeColumn = timeColumn;
-    this.otherColumns = otherColumns;
+    this.bitmapFactory = bitmapFactory;
+    this.columns = columns;
     this.fileMapper = fileMapper;
   }
 
@@ -64,7 +67,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   @Override
   public int getNumRows()
   {
-    return timeColumn.getLength();
+    return columns.get(Column.TIME_COLUMN_NAME).getLength();
   }
 
   @Override
@@ -80,15 +83,15 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Column getTimeColumn()
+  public BitmapFactory getBitmapFactoryForDimensions()
   {
-    return timeColumn;
+    return bitmapFactory;
   }
 
   @Override
   public Column getColumn(String columnName)
   {
-    return otherColumns.get(columnName);
+    return columns.get(columnName);
   }
 
   @Override

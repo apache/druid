@@ -22,11 +22,11 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import io.druid.indexing.common.task.Task;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -46,15 +46,15 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class ZkWorker implements Closeable
 {
-  private final Worker worker;
   private final PathChildrenCache statusCache;
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
+  private AtomicReference<Worker> worker;
   private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
-    this.worker = worker;
+    this.worker = new AtomicReference<>(worker);
     this.statusCache = statusCache;
     this.cacheConverter = new Function<ChildData, TaskAnnouncement>()
     {
@@ -84,7 +84,7 @@ public class ZkWorker implements Closeable
   @JsonProperty("worker")
   public Worker getWorker()
   {
-    return worker;
+    return worker.get();
   }
 
   @JsonProperty("runningTasks")
@@ -137,30 +137,28 @@ public class ZkWorker implements Closeable
     return getRunningTasks().containsKey(taskId);
   }
 
-  public boolean isAtCapacity()
-  {
-    return getCurrCapacityUsed() >= worker.getCapacity();
-  }
-
   public boolean isValidVersion(String minVersion)
   {
-    return worker.getVersion().compareTo(minVersion) >= 0;
+    return worker.get().getVersion().compareTo(minVersion) >= 0;
   }
 
-  public boolean canRunTask(Task task)
+  public void setWorker(Worker newWorker)
   {
-    return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
-            && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
+    final Worker oldWorker = worker.get();
+    Preconditions.checkArgument(newWorker.getHost().equals(oldWorker.getHost()), "Cannot change Worker host");
+    Preconditions.checkArgument(newWorker.getIp().equals(oldWorker.getIp()), "Cannot change Worker ip");
+
+    worker.set(newWorker);
   }
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
   {
-    lastCompletedTaskTime.getAndSet(completedTaskTime);
+    lastCompletedTaskTime.set(completedTaskTime);
   }
 
   public ImmutableZkWorker toImmutable()
   {
-    return new ImmutableZkWorker(worker, getCurrCapacityUsed(), getAvailabilityGroups());
+    return new ImmutableZkWorker(worker.get(), getCurrCapacityUsed(), getAvailabilityGroups());
   }
 
   @Override

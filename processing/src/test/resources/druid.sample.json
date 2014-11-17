@@ -4,7 +4,7 @@
    },
    {
       "timestamp":"2011-01-12T00:00:00.000Z",
-      "provider":"spot",
+      "market":"spot",
       "quality":"automotive",
       "placement":"preferred",
       "placementish":["a", "preferred"],
@@ -12,7 +12,7 @@
    },
    {
       "timestamp":"2011-01-12T00:00:00.000Z",
-      "provider":"spot",
+      "market":"spot",
       "quality":"automotive",
       "index":100.000000
    },
@@ -23,14 +23,14 @@
    },
    {
       "timestamp":"2011-01-13T00:00:00.000Z",
-      "provider":"total_market",
+      "market":"total_market",
       "placementish":["h", "preferred"],
       "placement":"preferred",
       "index":100.000000
    },
    {
       "timestamp":"2011-01-13T00:00:00.000Z",
-      "provider":"total_market",
+      "market":"total_market",
       "placementish":["p", "preferred"],
       "quality":"business",
       "placement":"mezzanine",
@@ -39,7 +39,7 @@
    {
       "timestamp":"2011-01-12T00:00:00.000Z",
       "placementish":"preferred",
-      "provider":"spot",
+      "market":"spot",
       "index":100.000000
    },
    {
@@ -55,12 +55,12 @@
    },
    {
       "timestamp":"2011-01-12T00:00:00.000Z",
-      "provider":"",
+      "market":"",
       "index":100.000000
    },
    {
       "timestamp":"2011-01-12T00:00:00.000Z",
-      "provider":["", "spot"],
+      "market":["", "spot"],
       "index":100.000000
    }
 ]

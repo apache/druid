@@ -63,12 +63,12 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   public CardinalityAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldNames") final List<String> fieldNames,
-      @JsonProperty("byRow") final Boolean byRow
+      @JsonProperty("byRow") final boolean byRow
   )
   {
     this.name = name;
     this.fieldNames = fieldNames;
-    this.byRow = byRow == null ? false : byRow;
+    this.byRow = byRow;
   }
 
   @Override
@@ -201,6 +201,12 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   public List<String> getFieldNames()
   {
     return fieldNames;
+  }
+
+  @JsonProperty
+  public boolean isByRow()
+  {
+    return byRow;
   }
 
   @Override

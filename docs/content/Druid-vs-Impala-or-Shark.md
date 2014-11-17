@@ -1,6 +1,10 @@
 ---
 layout: doc_page
 ---
+
+Druid vs Impala or Shark
+========================
+
 The question of Druid versus Impala or Shark basically comes down to your product requirements and what the systems were designed to do.  
 
 Druid was designed to

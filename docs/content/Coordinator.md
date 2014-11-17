@@ -20,9 +20,7 @@ io.druid.cli.Main server coordinator
 Rules
 -----
 
-Segments are loaded and dropped from the cluster based on a set of rules. Rules indicate how segments should be assigned to different historical node tiers and how many replicants of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The coordinator loads a set of rules from the database. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
-
-For more information on rules, see [Rule Configuration](Rule-Configuration.html).
+Segments can be automatically loaded and dropped from the cluster based on a set of rules. For more information on rules, see [Rule Configuration](Rule-Configuration.html).
 
 Cleaning Up Segments
 --------------------

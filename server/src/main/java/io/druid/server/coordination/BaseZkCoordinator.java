@@ -37,7 +37,6 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
@@ -210,6 +209,11 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
         started = false;
       }
     }
+  }
+
+  public boolean isStarted()
+  {
+    return started;
   }
 
   public abstract void loadLocalCache();

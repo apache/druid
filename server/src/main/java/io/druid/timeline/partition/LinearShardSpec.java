@@ -50,7 +50,7 @@ public class LinearShardSpec implements ShardSpec
     return new ShardSpecLookup()
     {
       @Override
-      public ShardSpec getShardSpec(InputRow row)
+      public ShardSpec getShardSpec(long timestamp, InputRow row)
       {
         return shardSpecs.get(0);
       }
@@ -63,7 +63,7 @@ public class LinearShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(InputRow inputRow) {
+  public boolean isInChunk(long timestamp, InputRow inputRow) {
     return true;
   }
 

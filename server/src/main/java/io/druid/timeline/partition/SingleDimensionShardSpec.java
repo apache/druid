@@ -100,10 +100,10 @@ public class SingleDimensionShardSpec implements ShardSpec
     return new ShardSpecLookup()
     {
       @Override
-      public ShardSpec getShardSpec(InputRow row)
+      public ShardSpec getShardSpec(long timestamp, InputRow row)
       {
         for (ShardSpec spec : shardSpecs) {
-          if (spec.isInChunk(row)) {
+          if (spec.isInChunk(timestamp, row)) {
             return spec;
           }
         }
@@ -124,7 +124,7 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isInChunk(InputRow inputRow)
+  public boolean isInChunk(long timestamp, InputRow inputRow)
   {
     final List<String> values = inputRow.getDimension(dimension);
 

@@ -44,4 +44,9 @@ public class TestFloatColumnSelector implements FloatColumnSelector
   {
     ++index;
   }
+
+  public int getIndex()
+  {
+    return index;
+  }
 }

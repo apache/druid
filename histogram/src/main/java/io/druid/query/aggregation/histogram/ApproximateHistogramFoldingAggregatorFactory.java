@@ -76,7 +76,8 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
       };
     }
 
-    if (ApproximateHistogram.class.isAssignableFrom(selector.classOfObject())) {
+    final Class cls = selector.classOfObject();
+    if (cls.equals(Object.class) || ApproximateHistogram.class.isAssignableFrom(cls)) {
       return new ApproximateHistogramFoldingAggregator(
           name,
           selector,
@@ -89,7 +90,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
     throw new IAE(
         "Incompatible type for metric[%s], expected a ApproximateHistogram, got a %s",
         fieldName,
-        selector.classOfObject()
+        cls
     );
   }
 
@@ -117,14 +118,15 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
       };
     }
 
-    if (ApproximateHistogram.class.isAssignableFrom(selector.classOfObject())) {
+    final Class cls = selector.classOfObject();
+    if (cls.equals(Object.class) || ApproximateHistogram.class.isAssignableFrom(cls)) {
       return new ApproximateHistogramFoldingBufferAggregator(selector, resolution, lowerLimit, upperLimit);
     }
 
     throw new IAE(
         "Incompatible type for metric[%s], expected a ApproximateHistogram, got a %s",
         fieldName,
-        selector.classOfObject()
+        cls
     );
   }
 

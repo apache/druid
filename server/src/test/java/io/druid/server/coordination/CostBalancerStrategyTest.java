@@ -27,11 +27,12 @@ import io.druid.server.coordinator.CostBalancerStrategy;
 import io.druid.server.coordinator.LoadQueuePeonTester;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -109,19 +110,33 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testCostBalancerMultithreadStrategy() throws InterruptedException
+  public void testCostBalancerMultiThreadedStrategy() throws InterruptedException
   {
     setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
 
-    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 1);
+    final DateTime referenceTimestamp = new DateTime("2014-01-01");
+    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 4);
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
 
   @Test
-  public void testPerf() throws InterruptedException
+  public void testCostBalancerSingleThreadStrategy() throws InterruptedException
+  {
+    setupDummyCluster(10, 20);
+    DataSegment segment = getSegment(1000);
+
+    final DateTime referenceTimestamp = new DateTime("2014-01-01");
+    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 1);
+    ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
+    Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
+  }
+
+  @Test @Ignore
+  public void testBenchmark() throws InterruptedException
   {
     setupDummyCluster(100, 500);
     DataSegment segment = getSegment(1000);
@@ -140,10 +155,5 @@ public class CostBalancerStrategyTest
 
     System.err.println("Latency - Single Threaded (ms): " + latencySingleThread);
     System.err.println("Latency - Multi Threaded (ms): " + latencyMultiThread);
-
-    Assert.assertTrue("Latency of multi-thread strategy should always be less than single thread.", latencyMultiThread < latencySingleThread);
   }
-
-
-
 }

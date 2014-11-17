@@ -48,6 +48,8 @@ public class OmniSegmentLoader implements SegmentLoader
 
   private final List<StorageLocation> locations;
 
+  private final Object lock = new Object();
+
   @Inject
   public OmniSegmentLoader(
       Map<String, DataSegmentPuller> pullers,
@@ -118,16 +120,33 @@ public class OmniSegmentLoader implements SegmentLoader
       }
 
       File storageDir = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
-      if (!storageDir.mkdirs()) {
-        log.debug("Unable to make parent file[%s]", storageDir);
+
+      // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
+      // the parent directories of the segment are removed
+      final File downloadStartMarker = new File(storageDir, "downloadStartMarker");
+      synchronized (lock) {
+        if (!storageDir.mkdirs()) {
+          log.debug("Unable to make parent file[%s]", storageDir);
+        }
+        try {
+          downloadStartMarker.createNewFile();
+        }
+        catch (IOException e) {
+          throw new SegmentLoadingException("Unable to create marker file for [%s]", storageDir);
+        }
       }
 
       getPuller(segment.getLoadSpec()).getSegmentFiles(segment, storageDir);
+
+      if (!downloadStartMarker.delete()) {
+        throw new SegmentLoadingException("Unable to remove marker file for [%s]", storageDir);
+      }
+
+
       loc.addSegment(segment);
 
       retVal = storageDir;
-    }
-    else {
+    } else {
       retVal = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
     }
 
@@ -151,9 +170,10 @@ public class OmniSegmentLoader implements SegmentLoader
     }
 
     try {
+      // Druid creates folders of the form dataSource/interval/version/partitionNum.
+      // We need to clean up all these directories if they are all empty.
       File cacheFile = new File(loc.getPath(), DataSegmentPusherUtil.getStorageDir(segment));
-      log.info("Deleting directory[%s]", cacheFile);
-      FileUtils.deleteDirectory(cacheFile);
+      cleanupCacheFiles(loc.getPath(), cacheFile);
       loc.removeSegment(segment);
     }
     catch (IOException e) {
@@ -171,5 +191,26 @@ public class OmniSegmentLoader implements SegmentLoader
     }
 
     return loader;
+  }
+
+  public void cleanupCacheFiles(File baseFile, File cacheFile) throws IOException
+  {
+    if (cacheFile.equals(baseFile)) {
+      return;
+    }
+
+    synchronized (lock) {
+      log.info("Deleting directory[%s]", cacheFile);
+      try {
+        FileUtils.deleteDirectory(cacheFile);
+      }
+      catch (Exception e) {
+        log.error("Unable to remove file[%s]", cacheFile);
+      }
+    }
+
+    if (cacheFile.getParentFile() != null && cacheFile.getParentFile().listFiles().length == 0) {
+      cleanupCacheFiles(baseFile, cacheFile.getParentFile());
+    }
   }
 }

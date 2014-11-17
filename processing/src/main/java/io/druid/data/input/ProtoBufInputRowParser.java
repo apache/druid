@@ -62,7 +62,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   {
     this.parseSpec = parseSpec;
     this.descriptorFileInClasspath = descriptorFileInClasspath;
-    this.mapParser = new MapInputRowParser(this.parseSpec);
+      this.mapParser = new MapInputRowParser(this.parseSpec);
   }
 
   @Override

@@ -25,8 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class IndexingServiceSelectorConfig
 {
+  public static final String DEFAULT_SERVICE_NAME = "druid/overlord";
+
   @JsonProperty
-  private String serviceName = null;
+  private String serviceName = DEFAULT_SERVICE_NAME;
 
   public String getServiceName()
   {

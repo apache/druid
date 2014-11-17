@@ -42,7 +42,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   ) throws IOException
   {
     toolbox.verifyTaskLocksAndSinglePartitionSettitude(task, segments, true);
-    toolbox.getIndexerDBCoordinator().updateSegmentMetadata(segments);
+    toolbox.getIndexerMetadataStorageCoordinator().updateSegmentMetadata(segments);
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

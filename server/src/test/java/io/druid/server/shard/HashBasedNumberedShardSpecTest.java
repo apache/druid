@@ -127,7 +127,7 @@ public class HashBasedNumberedShardSpecTest
   public boolean assertExistsInOneSpec(List<ShardSpec> specs, InputRow row)
   {
     for (ShardSpec spec : specs) {
-      if (spec.isInChunk(row)) {
+      if (spec.isInChunk(row.getTimestampFromEpoch(), row)) {
         return true;
       }
     }
@@ -145,7 +145,7 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
-    protected int hash(InputRow inputRow)
+    protected int hash(long timestamp, InputRow inputRow)
     {
       return inputRow.hashCode();
     }
@@ -203,9 +203,16 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    public long getLongMetric(String s)
+    {
+      return 0L;
+    }
+
+    @Override
     public int compareTo(Row o)
     {
       return 0;
     }
   }
+
 }

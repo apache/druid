@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
@@ -41,7 +42,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
         <apache.curator.version>2.6.0</apache.curator.version>
-        <druid.api.version>0.2.16-SNAPSHOT</druid.api.version>
+        <druid.api.version>0.2.18-SNAPSHOT</druid.api.version>
     </properties>
 
     <modules>
@@ -60,6 +61,8 @@
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>histogram</module>
+        <module>mysql-metadata-storage</module>
+        <module>postgresql-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
@@ -89,7 +92,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>bytebuffer-collections</artifactId>
-                <version>0.0.2</version>
+                <version>0.1.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -192,11 +195,6 @@
                 <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
-                <groupId>it.uniroma3.mat</groupId>
-                <artifactId>extendedset</artifactId>
-                <version>1.3.4</version>
-            </dependency>
-            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>16.0.1</version>
@@ -254,6 +252,11 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
                 <artifactId>jackson-jaxrs-json-provider</artifactId>
+                <version>2.2.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-smile-provider</artifactId>
                 <version>2.2.3</version>
             </dependency>
             <dependency>
@@ -382,6 +385,11 @@
                 <version>1.2</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-dbcp2</artifactId>
+                <version>2.0.1</version>
+            </dependency>
+            <dependency>
                 <groupId>net.jpountz.lz4</groupId>
                 <artifactId>lz4</artifactId>
                 <version>1.2.0</version>
@@ -434,6 +442,16 @@
                 <artifactId>mapdb</artifactId>
                 <version>1.0.6</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbynet</artifactId>
+                <version>10.11.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbyclient</artifactId>
+                <version>10.11.1.1</version>
+            </dependency>
 
             <!-- Test Scope -->
             <dependency>
@@ -454,6 +472,12 @@
                 <artifactId>junit</artifactId>
                 <version>4.11</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+              <groupId>com.carrotsearch</groupId>
+              <artifactId>junit-benchmarks</artifactId>
+              <version>0.7.2</version>
+              <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.caliper</groupId>

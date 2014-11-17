@@ -2,6 +2,10 @@
 layout: doc_page
 ---
 
+Druid vs Hadoop
+===============
+
+
 Hadoop has shown the world that it’s possible to house your data warehouse on commodity hardware for a fraction of the price of typical solutions. As people adopt Hadoop for their data warehousing needs, they find two things.
 
 1.  They can now query all of their data in a fairly flexible manner and answer any question they have

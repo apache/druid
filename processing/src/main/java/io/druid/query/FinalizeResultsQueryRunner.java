@@ -84,7 +84,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
             throw new ISE("Cannot have a null result!");
           }
 
-          BySegmentResultValueClass<T> resultsClass = result.getValue();
+          BySegmentResultValue<T> resultsClass = result.getValue();
 
           return (T) new Result<BySegmentResultValueClass>(
               result.getTimestamp(),

@@ -21,9 +21,11 @@ package io.druid.segment;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import org.joda.time.Interval;
@@ -46,9 +48,18 @@ public class EmptyIndexTest
     }
     tmpDir.deleteOnExit();
 
-    IncrementalIndex emptyIndex = new IncrementalIndex(0, QueryGranularity.NONE, new AggregatorFactory[0], TestQueryRunners.pool);
-    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(new Interval("2012-08-01/P3D"), emptyIndex);
-    IndexMaker.merge(
+    IncrementalIndex emptyIndex = new IncrementalIndex(
+        0,
+        QueryGranularity.NONE,
+        new AggregatorFactory[0],
+        TestQueryRunners.pool
+    );
+    IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
+        new Interval("2012-08-01/P3D"),
+        emptyIndex,
+        new ConciseBitmapFactory()
+    );
+    IndexMerger.merge(
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
         new AggregatorFactory[0],
         tmpDir
@@ -59,6 +70,6 @@ public class EmptyIndexTest
     Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
     Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));
     Assert.assertEquals("getDataInterval", new Interval("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
-    Assert.assertEquals("getReadOnlyTimestamps", 0, emptyQueryableIndex.getTimeColumn().getLength());
+    Assert.assertEquals("getReadOnlyTimestamps", 0, emptyQueryableIndex.getColumn(Column.TIME_COLUMN_NAME).getLength());
   }
 }

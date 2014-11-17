@@ -18,7 +18,8 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.druid</groupId>
     <artifactId>druid-processing</artifactId>
@@ -54,10 +55,6 @@
             <artifactId>config-magic</artifactId>
         </dependency>
         <dependency>
-            <groupId>it.uniroma3.mat</groupId>
-            <artifactId>extendedset</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
@@ -83,12 +80,12 @@
             <artifactId>alphanum</artifactId>
         </dependency>
         <dependency>
-          <groupId>net.jpountz.lz4</groupId>
-          <artifactId>lz4</artifactId>
+            <groupId>net.jpountz.lz4</groupId>
+            <artifactId>lz4</artifactId>
         </dependency>
         <dependency>
-          <groupId>org.mapdb</groupId>
-          <artifactId>mapdb</artifactId>
+            <groupId>org.mapdb</groupId>
+            <artifactId>mapdb</artifactId>
         </dependency>
 
 
@@ -99,14 +96,20 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.carrotsearch</groupId>
+            <artifactId>junit-benchmarks</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
-      <dependency>
-        <groupId>com.google.caliper</groupId>
-        <artifactId>caliper</artifactId>
-      </dependency>
+        <dependency>
+            <groupId>com.google.caliper</groupId>
+            <artifactId>caliper</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

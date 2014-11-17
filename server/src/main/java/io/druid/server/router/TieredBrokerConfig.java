@@ -34,9 +34,12 @@ import java.util.List;
  */
 public class TieredBrokerConfig
 {
+  public static final String DEFAULT_COORDINATOR_SERVICE_NAME = "druid/coordinator";
+  public static final String DEFAULT_BROKER_SERVICE_NAME = "druid/broker";
+
   @JsonProperty
   @NotNull
-  private String defaultBrokerServiceName = "";
+  private String defaultBrokerServiceName = DEFAULT_BROKER_SERVICE_NAME;
 
   @JsonProperty
   private LinkedHashMap<String, String> tierToBrokerMap;
@@ -51,7 +54,7 @@ public class TieredBrokerConfig
 
   @JsonProperty
   @NotNull
-  private String coordinatorServiceName = null;
+  private String coordinatorServiceName = DEFAULT_COORDINATOR_SERVICE_NAME;
 
   @JsonProperty
   @NotNull

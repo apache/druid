@@ -49,8 +49,6 @@ public interface HavingSpec
    * @param row A Row of data that may contain aggregated values
    *
    * @return true if the given row satisfies the having spec. False otherwise.
-   *
-   * @see Row
    */
   public boolean eval(Row row);
 

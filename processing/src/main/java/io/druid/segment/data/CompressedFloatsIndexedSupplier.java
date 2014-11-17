@@ -28,6 +28,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,7 +43,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 {
   public static final byte LZF_VERSION = 0x1;
   public static final byte version = 0x2;
-  public static final int MAX_FLOATS_IN_BUFFER = (0xFFFF >> 2);
+  public static final int MAX_FLOATS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Floats.BYTES;
 
   private final int totalSize;
   private final int sizePer;
@@ -70,87 +71,28 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
   @Override
   public IndexedFloats get()
   {
-    return new IndexedFloats()
-    {
-      int currIndex = -1;
-      ResourceHolder<FloatBuffer> holder;
-      FloatBuffer buffer;
+    final int div = Integer.numberOfTrailingZeros(sizePer);
+    final int rem = sizePer - 1;
+    final boolean powerOf2 = sizePer == (1 << div);
+    if(powerOf2) {
+      return new CompressedIndexedFloats() {
+        @Override
+        public float get(int index)
+        {
+          // optimize division and remainder for powers of 2
+          final int bufferNum = index >> div;
 
-      @Override
-      public int size()
-      {
-        return totalSize;
-      }
-
-      @Override
-      public float get(int index)
-      {
-        int bufferNum = index / sizePer;
-        int bufferIndex = index % sizePer;
-
-        if (bufferNum != currIndex) {
-          loadBuffer(bufferNum);
-        }
-
-        return buffer.get(buffer.position() + bufferIndex);
-      }
-
-      @Override
-      public void fill(int index, float[] toFill)
-      {
-        if (totalSize - index < toFill.length) {
-          throw new IndexOutOfBoundsException(
-              String.format(
-                  "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-              )
-          );
-        }
-
-        int bufferNum = index / sizePer;
-        int bufferIndex = index % sizePer;
-
-        int leftToFill = toFill.length;
-        while (leftToFill > 0) {
           if (bufferNum != currIndex) {
             loadBuffer(bufferNum);
           }
 
-          buffer.mark();
-          buffer.position(buffer.position() + bufferIndex);
-          final int numToGet = Math.min(buffer.remaining(), leftToFill);
-          buffer.get(toFill, toFill.length - leftToFill, numToGet);
-          buffer.reset();
-          leftToFill -= numToGet;
-          ++bufferNum;
-          bufferIndex = 0;
+          final int bufferIndex = index & rem;
+          return buffer.get(buffer.position() + bufferIndex);
         }
-      }
-
-      private void loadBuffer(int bufferNum)
-      {
-        CloseQuietly.close(holder);
-        holder = baseFloatBuffers.get(bufferNum);
-        buffer = holder.get();
-        currIndex = bufferNum;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "CompressedFloatsIndexedSupplier_Anonymous{" +
-               "currIndex=" + currIndex +
-               ", sizePer=" + sizePer +
-               ", numChunks=" + baseFloatBuffers.size() +
-               ", totalSize=" + totalSize +
-               '}';
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        Closeables.close(holder, false);
-      }
-    };
+      };
+    } else {
+      return new CompressedIndexedFloats();
+    }
   }
 
   public long getSerializedSize()
@@ -179,17 +121,10 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   /**
    * For testing. Do not depend on unless you like things breaking.
-   * 
-   * @return
    */
   GenericIndexed<ResourceHolder<FloatBuffer>> getBaseFloatBuffers()
   {
     return baseFloatBuffers;
-  }
-
-  public static int numFloatsInBuffer(int numFloatsInChunk)
-  {
-    return MAX_FLOATS_IN_BUFFER - (MAX_FLOATS_IN_BUFFER % numFloatsInChunk);
   }
 
   public static CompressedFloatsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
@@ -247,7 +182,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
   )
   {
     Preconditions.checkArgument(
-        chunkFactor * Floats.BYTES <= 0xffff, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
+        chunkFactor <= MAX_FLOATS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
     );
 
     return new CompressedFloatsIndexedSupplier(
@@ -296,4 +231,85 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     );
   }
 
+  private class CompressedIndexedFloats implements IndexedFloats
+  {
+    int currIndex = -1;
+    ResourceHolder<FloatBuffer> holder;
+    FloatBuffer buffer;
+
+    @Override
+    public int size()
+    {
+      return totalSize;
+    }
+
+    @Override
+    public float get(final int index)
+    {
+      // division + remainder is optimized by the compiler so keep those together
+      final int bufferNum = index / sizePer;
+      final int bufferIndex = index % sizePer;
+
+      if (bufferNum != currIndex) {
+        loadBuffer(bufferNum);
+      }
+      return buffer.get(buffer.position() + bufferIndex);
+    }
+
+    @Override
+    public void fill(int index, float[] toFill)
+    {
+      if (totalSize - index < toFill.length) {
+        throw new IndexOutOfBoundsException(
+            String.format(
+                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
+            )
+        );
+      }
+
+      int bufferNum = index / sizePer;
+      int bufferIndex = index % sizePer;
+
+      int leftToFill = toFill.length;
+      while (leftToFill > 0) {
+        if (bufferNum != currIndex) {
+          loadBuffer(bufferNum);
+        }
+
+        buffer.mark();
+        buffer.position(buffer.position() + bufferIndex);
+        final int numToGet = Math.min(buffer.remaining(), leftToFill);
+        buffer.get(toFill, toFill.length - leftToFill, numToGet);
+        buffer.reset();
+        leftToFill -= numToGet;
+        ++bufferNum;
+        bufferIndex = 0;
+      }
+    }
+
+    protected void loadBuffer(int bufferNum)
+    {
+      CloseQuietly.close(holder);
+      holder = baseFloatBuffers.get(bufferNum);
+      buffer = holder.get();
+      currIndex = bufferNum;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "CompressedFloatsIndexedSupplier_Anonymous{" +
+             "currIndex=" + currIndex +
+             ", sizePer=" + sizePer +
+             ", numChunks=" + baseFloatBuffers.size() +
+             ", totalSize=" + totalSize +
+             '}';
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      Closeables.close(holder, false);
+    }
+  }
 }

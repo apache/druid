@@ -19,12 +19,12 @@
 
 package io.druid.firehose.rabbitmq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Maps;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.LongString;
 
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 /**
@@ -33,140 +33,229 @@ import java.util.Map;
  */
 public class JacksonifiedConnectionFactory extends ConnectionFactory
 {
+  public static JacksonifiedConnectionFactory makeDefaultConnectionFactory() throws Exception
+  {
+    return new JacksonifiedConnectionFactory(null, 0, null, null, null, null, 0, 0, 0, 0, null);
+  }
+
+  private static Map<String, Object> getSerializableClientProperties(final Map<String, Object> clientProperties)
+  {
+    return Maps.transformEntries(
+        clientProperties,
+        new Maps.EntryTransformer<String, Object, Object>()
+        {
+          @Override
+          public Object transformEntry(String key, Object value)
+          {
+            if (value instanceof LongString) {
+              return value.toString();
+            }
+            return value;
+          }
+        }
+    );
+  }
+
+  private final String host;
+  private final int port;
+  private final String username;
+  private final String password;
+  private final String virtualHost;
+  private final String uri;
+  private final int requestedChannelMax;
+  private final int requestedFrameMax;
+  private final int requestedHeartbeat;
+  private final int connectionTimeout;
+  private final Map<String, Object> clientProperties;
+
+  @JsonCreator
+  public JacksonifiedConnectionFactory(
+      @JsonProperty("host") String host,
+      @JsonProperty("port") int port,
+      @JsonProperty("username") String username,
+      @JsonProperty("password") String password,
+      @JsonProperty("virtualHost") String virtualHost,
+      @JsonProperty("uri") String uri,
+      @JsonProperty("requestedChannelMax") int requestedChannelMax,
+      @JsonProperty("requestedFrameMax") int requestedFrameMax,
+      @JsonProperty("requestedHeartbeat") int requestedHeartbeat,
+      @JsonProperty("connectionTimeout") int connectionTimeout,
+      @JsonProperty("clientProperties") Map<String, Object> clientProperties
+  ) throws Exception
+  {
+    super();
+
+    this.host = host == null ? super.getHost() : host;
+    this.port = port == 0 ? super.getPort() : port;
+    this.username = username == null ? super.getUsername() : username;
+    this.password = password == null ? super.getPassword() : password;
+    this.virtualHost = virtualHost == null ? super.getVirtualHost() : virtualHost;
+    this.uri = uri;
+    this.requestedChannelMax = requestedChannelMax == 0 ? super.getRequestedChannelMax() : requestedChannelMax;
+    this.requestedFrameMax = requestedFrameMax == 0 ? super.getRequestedFrameMax() : requestedFrameMax;
+    this.requestedHeartbeat = requestedHeartbeat == 0 ? super.getRequestedHeartbeat() : requestedHeartbeat;
+    this.connectionTimeout = connectionTimeout == 0 ? super.getConnectionTimeout() : connectionTimeout;
+    this.clientProperties = clientProperties == null ? super.getClientProperties() : clientProperties;
+
+    super.setHost(this.host);
+    super.setPort(this.port);
+    super.setUsername(this.username);
+    super.setPassword(this.password);
+    super.setVirtualHost(this.virtualHost);
+    if (this.uri != null) {
+      super.setUri(this.uri);
+    }
+    super.setRequestedChannelMax(this.requestedChannelMax);
+    super.setRequestedFrameMax(this.requestedFrameMax);
+    super.setRequestedHeartbeat(this.requestedHeartbeat);
+    super.setConnectionTimeout(this.connectionTimeout);
+    super.setClientProperties(this.clientProperties);
+  }
+
   @Override
   @JsonProperty
   public String getHost()
   {
-    return super.getHost();
-  }
-
-  @Override
-  public void setHost(String host)
-  {
-    super.setHost(host);
+    return host;
   }
 
   @Override
   @JsonProperty
   public int getPort()
   {
-    return super.getPort();
+    return port;
   }
 
-  @Override
-  public void setPort(int port)
-  {
-    super.setPort(port);
-  }
 
   @Override
   @JsonProperty
   public String getUsername()
   {
-    return super.getUsername();
-  }
-
-  @Override
-  public void setUsername(String username)
-  {
-    super.setUsername(username);
+    return username;
   }
 
   @Override
   @JsonProperty
   public String getPassword()
   {
-    return super.getPassword();
-  }
-
-  @Override
-  public void setPassword(String password)
-  {
-    super.setPassword(password);
+    return password;
   }
 
   @Override
   @JsonProperty
   public String getVirtualHost()
   {
-    return super.getVirtualHost();
+    return virtualHost;
   }
 
-  @Override
-  public void setVirtualHost(String virtualHost)
-  {
-    super.setVirtualHost(virtualHost);
-  }
-
-  @Override
   @JsonProperty
-  public void setUri(String uriString) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException
+  public String getUri()
   {
-    super.setUri(uriString);
+    return uri;
   }
 
   @Override
   @JsonProperty
   public int getRequestedChannelMax()
   {
-    return super.getRequestedChannelMax();
-  }
-
-  @Override
-  public void setRequestedChannelMax(int requestedChannelMax)
-  {
-    super.setRequestedChannelMax(requestedChannelMax);
+    return requestedChannelMax;
   }
 
   @Override
   @JsonProperty
   public int getRequestedFrameMax()
   {
-    return super.getRequestedFrameMax();
-  }
-
-  @Override
-  public void setRequestedFrameMax(int requestedFrameMax)
-  {
-    super.setRequestedFrameMax(requestedFrameMax);
+    return requestedFrameMax;
   }
 
   @Override
   @JsonProperty
   public int getRequestedHeartbeat()
   {
-    return super.getRequestedHeartbeat();
-  }
-
-  @Override
-  public void setConnectionTimeout(int connectionTimeout)
-  {
-    super.setConnectionTimeout(connectionTimeout);
+    return requestedHeartbeat;
   }
 
   @Override
   @JsonProperty
   public int getConnectionTimeout()
   {
-    return super.getConnectionTimeout();
+    return connectionTimeout;
+  }
+
+  @JsonProperty("clientProperties")
+  public Map<String, Object> getSerializableClientProperties()
+  {
+    return getSerializableClientProperties(clientProperties);
   }
 
   @Override
-  public void setRequestedHeartbeat(int requestedHeartbeat)
+  public boolean equals(Object o)
   {
-    super.setRequestedHeartbeat(requestedHeartbeat);
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    JacksonifiedConnectionFactory that = (JacksonifiedConnectionFactory) o;
+
+    if (connectionTimeout != that.connectionTimeout) {
+      return false;
+    }
+    if (port != that.port) {
+      return false;
+    }
+    if (requestedChannelMax != that.requestedChannelMax) {
+      return false;
+    }
+    if (requestedFrameMax != that.requestedFrameMax) {
+      return false;
+    }
+    if (requestedHeartbeat != that.requestedHeartbeat) {
+      return false;
+    }
+    if (clientProperties != null
+        ? !Maps.difference(
+        getSerializableClientProperties(clientProperties),
+        getSerializableClientProperties(that.clientProperties)
+    ).areEqual()
+        : that.clientProperties != null) {
+      return false;
+    }
+    if (host != null ? !host.equals(that.host) : that.host != null) {
+      return false;
+    }
+    if (password != null ? !password.equals(that.password) : that.password != null) {
+      return false;
+    }
+    if (uri != null ? !uri.equals(that.uri) : that.uri != null) {
+      return false;
+    }
+    if (username != null ? !username.equals(that.username) : that.username != null) {
+      return false;
+    }
+    if (virtualHost != null ? !virtualHost.equals(that.virtualHost) : that.virtualHost != null) {
+      return false;
+    }
+
+    return true;
   }
 
   @Override
-  @JsonProperty
-  public Map<String, Object> getClientProperties()
+  public int hashCode()
   {
-    return super.getClientProperties();
-  }
-
-  @Override
-  public void setClientProperties(Map<String, Object> clientProperties)
-  {
-    super.setClientProperties(clientProperties);
+    int result = host != null ? host.hashCode() : 0;
+    result = 31 * result + port;
+    result = 31 * result + (username != null ? username.hashCode() : 0);
+    result = 31 * result + (password != null ? password.hashCode() : 0);
+    result = 31 * result + (virtualHost != null ? virtualHost.hashCode() : 0);
+    result = 31 * result + (uri != null ? uri.hashCode() : 0);
+    result = 31 * result + requestedChannelMax;
+    result = 31 * result + requestedFrameMax;
+    result = 31 * result + requestedHeartbeat;
+    result = 31 * result + connectionTimeout;
+    result = 31 * result + (clientProperties != null ? clientProperties.hashCode() : 0);
+    return result;
   }
 }

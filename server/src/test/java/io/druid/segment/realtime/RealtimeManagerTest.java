@@ -177,6 +177,12 @@ public class RealtimeManagerTest
       }
 
       @Override
+      public long getLongMetric(String metric)
+      {
+        return 0L;
+      }
+
+      @Override
       public Object getRaw(String dimension)
       {
         return null;

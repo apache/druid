@@ -51,10 +51,11 @@ import io.druid.query.select.EventHolder;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexIO;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.TimestampColumnSelector;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -244,7 +245,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                     @Override
                     public Sequence<InputRow> apply(final Cursor cursor)
                     {
-                      final TimestampColumnSelector timestampColumnSelector = cursor.makeTimestampColumnSelector();
+                      final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
                       final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                       for (String dim : dims) {
@@ -281,7 +282,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                                 public InputRow next()
                                 {
                                   final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-                                  final long timestamp = timestampColumnSelector.getTimestamp();
+                                  final long timestamp = timestampColumnSelector.get();
                                   theEvent.put(EventHolder.timestampKey, new DateTime(timestamp));
 
                                   for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {

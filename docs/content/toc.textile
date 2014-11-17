@@ -17,7 +17,9 @@ h2. Getting Started
 h2. Booting a Druid Cluster
 * "Simple Cluster Configuration":Simple-Cluster-Configuration.html
 * "Production Cluster Configuration":Production-Cluster-Configuration.html
+* "Production Hadoop Configuration":Hadoop-Configuration.html
 * "Rolling Cluster Updates":Rolling-Updates.html
+* "Recommendations":Recommendations.html
 
 h2. Configuration
 * "Common Configuration":Configuration.html
@@ -84,6 +86,7 @@ h2. Experimental
 * "Geographic Queries":./GeographicQueries.html
 * "Select Query":./SelectQuery.html
 * "Approximate Histograms and Quantiles":./ApproxHisto.html
+* "Router node":./Router.html
 
 h2. Development
 * "Versioning":./Versioning.html
@@ -91,4 +94,4 @@ h2. Development
 * "Libraries":./Libraries.html
 
 h2. Misc
-* "Thanks":./Thanks.html
+* "Thanks":/thanks.html

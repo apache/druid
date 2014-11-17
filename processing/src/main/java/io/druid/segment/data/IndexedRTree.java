@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.collect.Ordering;
+import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 
 import java.nio.ByteBuffer;
@@ -28,9 +29,6 @@ import java.nio.ByteBuffer;
  */
 public class IndexedRTree implements Comparable<IndexedRTree>
 {
-  public static ObjectStrategy<ImmutableRTree> objectStrategy =
-      new ImmutableRTreeObjectStrategy();
-
   private static Ordering<ImmutableRTree> comparator = new Ordering<ImmutableRTree>()
   {
     @Override
@@ -69,9 +67,16 @@ public class IndexedRTree implements Comparable<IndexedRTree>
     return immutableRTree;
   }
 
-  private static class ImmutableRTreeObjectStrategy
+  public static class ImmutableRTreeObjectStrategy
       implements ObjectStrategy<ImmutableRTree>
   {
+    private final BitmapFactory bitmapFactory;
+
+    public ImmutableRTreeObjectStrategy(BitmapFactory bitmapFactory)
+    {
+      this.bitmapFactory = bitmapFactory;
+    }
+
     @Override
     public Class<? extends ImmutableRTree> getClazz()
     {
@@ -81,10 +86,9 @@ public class IndexedRTree implements Comparable<IndexedRTree>
     @Override
     public ImmutableRTree fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
-
       final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
       readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-      return new ImmutableRTree(readOnlyBuffer);
+      return new ImmutableRTree(readOnlyBuffer, bitmapFactory);
     }
 
     @Override

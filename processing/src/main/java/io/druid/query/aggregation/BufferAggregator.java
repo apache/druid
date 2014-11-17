@@ -90,6 +90,23 @@ public interface BufferAggregator
   float getFloat(ByteBuffer buf, int position);
 
   /**
+   * Returns the long representation of the given aggregate byte array
+   *
+   * Converts the given byte buffer representation into the intermediate aggregate value.
+   *
+   * <b>Implementations must not change the position, limit or mark of the given buffer</b>
+   *
+   * Implementations are only required to support this method if they are aggregations which
+   * have an {@link AggregatorFactory#getTypeName()} of "long".
+   * If unimplemented, throwing an {@link UnsupportedOperationException} is common and recommended.
+   *
+   * @param buf byte buffer storing the byte array representation of the aggregate
+   * @param position offset within the byte buffer at which the aggregate value is stored
+   * @return the long representation of the aggregate
+   */
+  long getLong(ByteBuffer buf, int position);
+
+  /**
    * Release any resources used by the aggregator
    */
   void close();
