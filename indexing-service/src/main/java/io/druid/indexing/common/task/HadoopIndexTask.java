@@ -187,7 +187,7 @@ public class HadoopIndexTask extends AbstractTask
     final List<URL> extensionURLs = Lists.newArrayList();
     for (String coordinate : extensionsConfig.getCoordinates()) {
       final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
-          aetherClient, coordinate
+          aetherClient, coordinate, extensionsConfig.getDefaultVersion()
       );
       extensionURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
     }
@@ -200,7 +200,7 @@ public class HadoopIndexTask extends AbstractTask
     // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
     for (String hadoopDependencyCoordinate : finalHadoopDependencyCoordinates) {
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-          aetherClient, hadoopDependencyCoordinate
+          aetherClient, hadoopDependencyCoordinate, extensionsConfig.getDefaultVersion()
       );
       driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
     }

@@ -93,9 +93,6 @@ import java.util.Set;
  */
 public class Initialization
 {
-  // default version to use for extensions without version info
-  private static final String DEFAULT_VERSION = Initialization.class.getPackage().getImplementationVersion();
-
   private static final Logger log = new Logger(Initialization.class);
   private static final Map<String, URLClassLoader> loadersMap = Maps.newHashMap();
 
@@ -143,7 +140,7 @@ public class Initialization
     for (String coordinate : config.getCoordinates()) {
       log.info("Loading extension[%s] for class[%s]", coordinate, clazz.getName());
       try {
-        URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate);
+        URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate, config.getDefaultVersion());
 
         final ServiceLoader<T> serviceLoader = ServiceLoader.load(clazz, loader);
 
@@ -163,7 +160,7 @@ public class Initialization
     return retVal;
   }
 
-  public static URLClassLoader getClassLoaderForCoordinates(TeslaAether aether, String coordinate)
+  public static URLClassLoader getClassLoaderForCoordinates(TeslaAether aether, String coordinate, String defaultVersion)
       throws DependencyResolutionException, MalformedURLException
   {
     URLClassLoader loader = loadersMap.get(coordinate);
@@ -177,8 +174,8 @@ public class Initialization
       }
       catch (IllegalArgumentException e) {
         // try appending the default version so we can specify artifacts without versions
-        if (DEFAULT_VERSION != null) {
-          versionedArtifact = new DefaultArtifact(coordinate + ":" + DEFAULT_VERSION);
+        if (defaultVersion != null) {
+          versionedArtifact = new DefaultArtifact(coordinate + ":" + defaultVersion);
         } else {
           throw e;
         }
