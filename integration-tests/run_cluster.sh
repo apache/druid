@@ -9,7 +9,7 @@ docker build -t druid/cluster docker/
 rm docker/*.jar
 DIR=$(cd $(dirname $0) && pwd)
 DOCKERDIR=$DIR/docker
-SHARED_DIR=$DIR/shared
+SHARED_DIR=${HOME}/shared
 SUPERVISORDIR=/usr/lib/druid/conf
 RESOURCEDIR=$DIR/src/test/resources
 
