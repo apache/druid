@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.setup;
+package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -76,6 +76,42 @@ public class StringEC2UserData implements EC2UserData<StringEC2UserData>
       finalData = data;
     }
     return Base64.encodeBase64String(finalData.getBytes(Charsets.UTF_8));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    StringEC2UserData that = (StringEC2UserData) o;
+
+    if (data != null ? !data.equals(that.data) : that.data != null) {
+      return false;
+    }
+    if (version != null ? !version.equals(that.version) : that.version != null) {
+      return false;
+    }
+    if (versionReplacementString != null
+        ? !versionReplacementString.equals(that.versionReplacementString)
+        : that.versionReplacementString != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = data != null ? data.hashCode() : 0;
+    result = 31 * result + (versionReplacementString != null ? versionReplacementString.hashCode() : 0);
+    result = 31 * result + (version != null ? version.hashCode() : 0);
+    return result;
   }
 
   @Override

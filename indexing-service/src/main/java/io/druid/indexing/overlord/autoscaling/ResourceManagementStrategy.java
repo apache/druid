@@ -17,32 +17,22 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.indexing.overlord.autoscaling;
 
-import java.util.List;
+import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
+import io.druid.indexing.overlord.ZkWorker;
+
+import java.util.Collection;
 
 /**
- * The AutoScalingStrategy has the actual methods to provision and terminate worker nodes.
+ * The ResourceManagementStrategy decides if worker nodes should be provisioned or determined
+ * based on the available tasks in the system and the state of the workers in the system.
  */
-public interface AutoScalingStrategy
+public interface ResourceManagementStrategy
 {
-  public AutoScalingData provision();
+  public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
-  public AutoScalingData terminate(List<String> ips);
+  public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
 
-  public AutoScalingData terminateWithIds(List<String> ids);
-
-  /**
-   * Provides a lookup of ip addresses to node ids
-   * @param ips - nodes IPs
-   * @return node ids
-   */
-  public List<String> ipToIdLookup(List<String> ips);
-
-  /**
-   * Provides a lookup of node ids to ip addresses
-   * @param nodeIds - nodes ids
-   * @return IPs associated with the node
-   */
-  public List<String> idToIpLookup(List<String> nodeIds);
+  public ScalingStats getStats();
 }
