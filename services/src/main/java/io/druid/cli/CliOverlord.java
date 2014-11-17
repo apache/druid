@@ -71,6 +71,7 @@ import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactoryImpl
 import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
+import io.druid.indexing.overlord.setup.FillCapacityWithPreferenceWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
@@ -117,7 +118,9 @@ public class CliOverlord extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
+            binder.bindConstant()
+                  .annotatedWith(Names.named("serviceName"))
+                  .to(IndexingServiceSelectorConfig.DEFAULT_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
 
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
@@ -215,6 +218,10 @@ public class CliOverlord extends ServerRunnable
 
             stratBinder.addBinding("fillCapacity").to(FillCapacityWorkerSelectStrategy.class);
             binder.bind(FillCapacityWorkerSelectStrategy.class).in(LazySingleton.class);
+
+            stratBinder.addBinding("fillCapacityWithPreference")
+                       .to(FillCapacityWithPreferenceWorkerSelectStrategy.class);
+            binder.bind(FillCapacityWithPreferenceWorkerSelectStrategy.class).in(LazySingleton.class);
           }
 
           private void configureAutoscale(Binder binder)

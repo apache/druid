@@ -84,7 +84,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
         log.warn("No workerSetupData available, cannot provision new workers.");
         return false;
       }
-      final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config, workerSetupData);
+      final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config);
       final int currValidWorkers = Collections2.filter(zkWorkers, isValidWorker).size();
 
       final List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
@@ -181,7 +181,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
       updateTargetWorkerCount(workerSetupData, pendingTasks, zkWorkers);
 
-      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config, workerSetupData);
+      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
       if (currentlyTerminating.isEmpty()) {
         final int excessWorkers = (zkWorkers.size() + currentlyProvisioning.size()) - targetWorkerCount;
         if (excessWorkers > 0) {
@@ -246,11 +246,10 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   private static Predicate<ZkWorker> createLazyWorkerPredicate(
-      final SimpleResourceManagementConfig config,
-      final WorkerSetupData workerSetupData
+      final SimpleResourceManagementConfig config
   )
   {
-    final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config, workerSetupData);
+    final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config);
 
     return new Predicate<ZkWorker>()
     {
@@ -265,8 +264,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   private static Predicate<ZkWorker> createValidWorkerPredicate(
-      final SimpleResourceManagementConfig config,
-      final WorkerSetupData workerSetupData
+      final SimpleResourceManagementConfig config
   )
   {
     return new Predicate<ZkWorker>()
@@ -292,9 +290,9 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     synchronized (lock) {
       final Collection<ZkWorker> validWorkers = Collections2.filter(
           zkWorkers,
-          createValidWorkerPredicate(config, workerSetupData)
+          createValidWorkerPredicate(config)
       );
-      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config, workerSetupData);
+      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
       final int minWorkerCount = workerSetupData.getMinNumWorkers();
       final int maxWorkerCount = workerSetupData.getMaxNumWorkers();
 
@@ -322,7 +320,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       }
 
       final boolean notTakingActions = currentlyProvisioning.isEmpty()
-                                    && currentlyTerminating.isEmpty();
+                                       && currentlyTerminating.isEmpty();
       final boolean shouldScaleUp = notTakingActions
                                     && validWorkers.size() >= targetWorkerCount
                                     && targetWorkerCount < maxWorkerCount
