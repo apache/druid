@@ -93,6 +93,9 @@ import java.util.Set;
  */
 public class Initialization
 {
+  // default version to use for extensions without version info
+  private static final String DEFAULT_VERSION = Initialization.class.getPackage().getImplementationVersion();
+
   private static final Logger log = new Logger(Initialization.class);
   private static final Map<String, URLClassLoader> loadersMap = Maps.newHashMap();
 
@@ -166,7 +169,22 @@ public class Initialization
     URLClassLoader loader = loadersMap.get(coordinate);
     if (loader == null) {
       final CollectRequest collectRequest = new CollectRequest();
-      collectRequest.setRoot(new Dependency(new DefaultArtifact(coordinate), JavaScopes.RUNTIME));
+
+      DefaultArtifact versionedArtifact;
+      try {
+        // this will throw an exception if no version is specified
+        versionedArtifact = new DefaultArtifact(coordinate);
+      }
+      catch (IllegalArgumentException e) {
+        // try appending the default version so we can specify artifacts without versions
+        if (DEFAULT_VERSION != null) {
+          versionedArtifact = new DefaultArtifact(coordinate + ":" + DEFAULT_VERSION);
+        } else {
+          throw e;
+        }
+      }
+
+      collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
       DependencyRequest dependencyRequest = new DependencyRequest(
           collectRequest,
           DependencyFilterUtils.andFilter(
