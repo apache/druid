@@ -23,24 +23,16 @@ package io.druid.testing;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import org.apache.commons.io.IOUtils;
+
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 public class DockerConfigProvider  implements IntegrationTestingConfigProvider
 {
-  private static String lookupIp(){
-    try {
-      final Process process = Runtime.getRuntime().exec("boot2docker ip");
-      process.waitFor();
-      final List<String> output = IOUtils.readLines(process.getInputStream());
-      return output.get(0);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
 
   @JsonProperty
-  private String dockerIp = lookupIp();
+  @NotNull
+  private String dockerIp;
 
   @Override
   public IntegrationTestingConfig get()

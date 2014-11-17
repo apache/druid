@@ -178,7 +178,7 @@
               </execution>
             </executions>
             <configuration>
-              <argLine>-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dtestrunfactory=org.testng.DruidTestRunnerFactory -Ddruid.properties.file=src/test/resources/test_runtime.properties -D</argLine>
+              <argLine>-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dtestrunfactory=org.testng.DruidTestRunnerFactory -Ddruid.test.config.dockerIp=${env.DOCKER_IP} -Ddruid.zk.service.host=${env.DOCKER_IP}</argLine>
               <suiteXmlFiles>
                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
               </suiteXmlFiles>
