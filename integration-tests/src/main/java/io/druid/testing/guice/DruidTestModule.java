@@ -28,8 +28,11 @@ import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.core.LoggingEmitterConfig;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.ConfigProvider;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.ManageLifecycle;
 import io.druid.testing.IntegrationTestingConfig;
+import io.druid.testing.IntegrationTestingConfigProvider;
 
 /**
  */
@@ -38,7 +41,8 @@ public class DruidTestModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, IntegrationTestingConfig.class);
+    binder.bind(IntegrationTestingConfig.class).toProvider(IntegrationTestingConfigProvider.class).in(ManageLifecycle.class);
+    JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
   }
 
   @Provides

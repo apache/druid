@@ -19,15 +19,14 @@
 
 package io.druid.testing;
 
-/**
- */
-public interface IntegrationTestingConfig
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class)
+})
+public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
 {
-  public String getCoordinatorHost();
-
-  public String getIndexerHost();
-
-  public String getRouterHost();
-
-  public String getMiddleManagerHost();
 }

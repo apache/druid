@@ -139,6 +139,33 @@
       <build>
         <plugins>
           <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2.1</version>
+            <executions>
+              <execution>
+                <id>build-and-start-druid-cluster</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>pre-integration-test</phase>
+                <configuration>
+                  <executable>${project.basedir}/run_cluster.sh</executable>
+                </configuration>
+              </execution>
+              <execution>
+                <id>stop-druid-cluster</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+                <configuration>
+                  <executable>${project.basedir}/stop_cluster.sh</executable>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
             <artifactId>maven-failsafe-plugin</artifactId>
             <executions>
               <execution>
@@ -151,7 +178,7 @@
               </execution>
             </executions>
             <configuration>
-              <argLine>-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dtestrunfactory=org.testng.DruidTestRunnerFactory -Ddruid.properties.file=src/test/resources/test_runtime.properties</argLine>
+              <argLine>-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dtestrunfactory=org.testng.DruidTestRunnerFactory -Ddruid.properties.file=src/test/resources/test_runtime.properties -D</argLine>
               <suiteXmlFiles>
                 <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
               </suiteXmlFiles>

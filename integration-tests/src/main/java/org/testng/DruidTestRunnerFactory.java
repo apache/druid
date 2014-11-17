@@ -114,27 +114,32 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
     public void waitUntilInstanceReady(final HttpClient client, final String host)
     {
       final StatusResponseHandler handler = new StatusResponseHandler(Charsets.UTF_8);
-
       RetryUtil.retryUntilTrue(
           new Callable<Boolean>()
           {
             @Override
             public Boolean call() throws Exception
             {
-              StatusResponseHolder response = client.get(
-                  new URL(
-                      String.format(
-                          "http://%s/status",
-                          host
-                      )
-                  )
-              )
-                                                    .go(handler)
-                                                    .get();
-              System.out.println(response.getStatus() + response.getContent());
-              if (response.getStatus().equals(HttpResponseStatus.OK)) {
-                return true;
-              } else {
+              try {
+                StatusResponseHolder response = client.get(
+                    new URL(
+                        String.format(
+                            "http://%s/status",
+                            host
+                        )
+                    )
+                )
+                                                      .go(handler)
+                                                      .get();
+                System.out.println(response.getStatus() + response.getContent());
+                if (response.getStatus().equals(HttpResponseStatus.OK)) {
+                  return true;
+                } else {
+                  return false;
+                }
+              }
+              catch (Throwable e) {
+                e.printStackTrace();
                 return false;
               }
             }

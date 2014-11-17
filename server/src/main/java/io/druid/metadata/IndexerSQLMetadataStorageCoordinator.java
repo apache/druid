@@ -317,7 +317,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                {
                                  try {
                                    DataSegment segment = jsonMapper.readValue(
-                                       (String) stringObjectMap.get("payload"),
+                                       (byte[])stringObjectMap.get("payload"),
                                        DataSegment.class
                                    );
 
