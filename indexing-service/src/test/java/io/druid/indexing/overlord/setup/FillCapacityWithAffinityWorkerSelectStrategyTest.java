@@ -14,13 +14,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class FillCapacityWithIsolationWorkerSelectStrategyTest
+public class FillCapacityWithAffinityWorkerSelectStrategyTest
 {
   @Test
   public void testFindWorkerForTask() throws Exception
   {
-    FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithIsolationWorkerSelectStrategy(
-        new FillCapacityWithIsolationConfig()
+    FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
+        new FillCapacityWithAffinityConfig()
         {
           @Override
           public Map<String, List<String>> getPreferences()
@@ -60,8 +60,8 @@ public class FillCapacityWithIsolationWorkerSelectStrategyTest
   @Test
   public void testFindWorkerForTaskWithNulls() throws Exception
   {
-    FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithIsolationWorkerSelectStrategy(
-        new FillCapacityWithIsolationConfig()
+    FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
+        new FillCapacityWithAffinityConfig()
         {
           @Override
           public Map<String, List<String>> getPreferences()
@@ -94,8 +94,8 @@ public class FillCapacityWithIsolationWorkerSelectStrategyTest
   @Test
   public void testIsolation() throws Exception
   {
-    FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithIsolationWorkerSelectStrategy(
-        new FillCapacityWithIsolationConfig()
+    FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
+        new FillCapacityWithAffinityConfig()
         {
           @Override
           public Map<String, List<String>> getPreferences()

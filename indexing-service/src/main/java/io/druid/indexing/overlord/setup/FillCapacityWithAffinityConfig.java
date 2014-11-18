@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  */
-public class FillCapacityWithIsolationConfig
+public class FillCapacityWithAffinityConfig
 {
   @JsonProperty
   @NotNull
