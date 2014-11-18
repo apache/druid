@@ -156,6 +156,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
     {
       private String dimension = query.getDimensionSpec().getOutputName();
+      final List<PostAggregator> prunedAggs = prunePostAggregators(query);
 
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
@@ -172,7 +173,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
                       values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
                     }
-                    for (PostAggregator postAgg : prunePostAggregators(query)) {
+                    for (PostAggregator postAgg : prunedAggs) {
                       Object calculatedPostAgg = input.getMetric(postAgg.getName());
                       if (calculatedPostAgg != null) {
                         values.put(postAgg.getName(), calculatedPostAgg);
