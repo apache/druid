@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
+import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -77,7 +77,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testPartitionsSpecAutoDimension()
+  public void testPartitionsSpecAutoHashed()
   {
     final HadoopIngestionSpec schema;
 
@@ -125,6 +125,7 @@ public class HadoopIngestionSpecTest
 
     try {
       schema = jsonReadWriteRead(
+
           "{\n"
           + "    \"tuningConfig\": {\n"
           + "        \"type\": \"hadoop\",\n"
