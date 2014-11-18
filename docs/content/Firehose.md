@@ -93,6 +93,22 @@ A sample ingest firehose spec is shown below -
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](Filters.html)|yes|
 
+#### CombiningFirehose
+This firehose can be used to combine and merge data from a list of different firehoses.
+This can be used to merge data from more than one firehoses.
+
+```json
+{
+    "type"  :   "combining",
+    "delegates" : [ { firehose1 }, { firehose2 }, ..... ]
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|combining|yes|
+|delegates|list of firehoses to combine data from|yes|
+
 Parsing Data
 ------------
 
