@@ -83,7 +83,7 @@ public class CliHadoopIndexer implements Runnable
       final List<URL> extensionURLs = Lists.newArrayList();
       for (String coordinate : extensionsConfig.getCoordinates()) {
         final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
-            aetherClient, coordinate
+            aetherClient, coordinate, extensionsConfig.getDefaultVersion()
         );
         extensionURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
       }
@@ -96,7 +96,7 @@ public class CliHadoopIndexer implements Runnable
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
       for (String coordinate : allCoordinates) {
         final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-            aetherClient, coordinate
+            aetherClient, coordinate, extensionsConfig.getDefaultVersion()
         );
         driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
       }
