@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -29,53 +29,83 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.indexing.overlord.setup.EC2NodeData;
-import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.indexing.overlord.autoscaling.AutoScaler;
+import io.druid.indexing.overlord.autoscaling.AutoScalingData;
+import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementConfig;
 
 import java.util.List;
 
 /**
  */
-public class EC2AutoScalingStrategy implements AutoScalingStrategy
+public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
 {
-  private static final EmittingLogger log = new EmittingLogger(EC2AutoScalingStrategy.class);
+  private static final EmittingLogger log = new EmittingLogger(EC2AutoScaler.class);
 
+  private final int minNumWorkers;
+  private final int maxNumWorkers;
+  private final EC2EnvironmentConfig envConfig;
   private final AmazonEC2 amazonEC2Client;
   private final SimpleResourceManagementConfig config;
-  private final Supplier<WorkerSetupData> workerSetupDataRef;
 
-  @Inject
-  public EC2AutoScalingStrategy(
-      AmazonEC2 amazonEC2Client,
-      SimpleResourceManagementConfig config,
-      Supplier<WorkerSetupData> workerSetupDataRef
+  @JsonCreator
+  public EC2AutoScaler(
+      @JsonProperty("minNumWorkers") int minNumWorkers,
+      @JsonProperty("maxNumWorkers") int maxNumWorkers,
+      @JsonProperty("envConfig") EC2EnvironmentConfig envConfig,
+      @JacksonInject AmazonEC2 amazonEC2Client,
+      @JacksonInject SimpleResourceManagementConfig config
   )
   {
+    this.minNumWorkers = minNumWorkers;
+    this.maxNumWorkers = maxNumWorkers;
+    this.envConfig = envConfig;
     this.amazonEC2Client = amazonEC2Client;
     this.config = config;
-    this.workerSetupDataRef = workerSetupDataRef;
+  }
+
+  @Override
+  @JsonProperty
+  public int getMinNumWorkers()
+  {
+    return minNumWorkers;
+  }
+
+  @Override
+  @JsonProperty
+  public int getMaxNumWorkers()
+  {
+    return maxNumWorkers;
+  }
+
+  @Override
+  @JsonProperty
+  public EC2EnvironmentConfig getEnvConfig()
+  {
+    return envConfig;
   }
 
   @Override
   public AutoScalingData provision()
   {
     try {
-      final WorkerSetupData setupData = workerSetupDataRef.get();
-      final EC2NodeData workerConfig = setupData.getNodeData();
+      final EC2NodeData workerConfig = envConfig.getNodeData();
       final String userDataBase64;
 
-      if (setupData.getUserData() == null) {
+      if (envConfig.getUserData() == null) {
         userDataBase64 = null;
       } else {
         if (config.getWorkerVersion() == null) {
-          userDataBase64 = setupData.getUserData().getUserDataBase64();
+          userDataBase64 = envConfig.getUserData().getUserDataBase64();
         } else {
-          userDataBase64 = setupData.getUserData().withVersion(config.getWorkerVersion()).getUserDataBase64();
+          userDataBase64 = envConfig.getUserData()
+                                    .withVersion(config.getWorkerVersion())
+                                    .getUserDataBase64();
         }
       }
 
@@ -87,7 +117,7 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
           )
               .withInstanceType(workerConfig.getInstanceType())
               .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
-              .withPlacement(new Placement(setupData.getAvailabilityZone()))
+              .withPlacement(new Placement(envConfig.getAvailabilityZone()))
               .withKeyName(workerConfig.getKeyName())
               .withUserData(userDataBase64)
       );
@@ -252,5 +282,49 @@ public class EC2AutoScalingStrategy implements AutoScalingStrategy
     log.debug("Performing lookup: %s --> %s", nodeIds, retVal);
 
     return retVal;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "EC2AutoScaler{" +
+           "envConfig=" + envConfig +
+           ", maxNumWorkers=" + maxNumWorkers +
+           ", minNumWorkers=" + minNumWorkers +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    EC2AutoScaler that = (EC2AutoScaler) o;
+
+    if (maxNumWorkers != that.maxNumWorkers) {
+      return false;
+    }
+    if (minNumWorkers != that.minNumWorkers) {
+      return false;
+    }
+    if (envConfig != null ? !envConfig.equals(that.envConfig) : that.envConfig != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = minNumWorkers;
+    result = 31 * result + maxNumWorkers;
+    result = 31 * result + (envConfig != null ? envConfig.hashCode() : 0);
+    return result;
   }
 }

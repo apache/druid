@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.indexing.overlord.autoscaling;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -34,7 +34,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
-import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.indexing.overlord.setup.WorkerBehaviourConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -48,9 +48,8 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 {
   private static final EmittingLogger log = new EmittingLogger(SimpleResourceManagementStrategy.class);
 
-  private final AutoScalingStrategy autoScalingStrategy;
   private final SimpleResourceManagementConfig config;
-  private final Supplier<WorkerSetupData> workerSetupDataRef;
+  private final Supplier<WorkerBehaviourConfig> workerConfigRef;
   private final ScalingStats scalingStats;
 
   private final Object lock = new Object();
@@ -63,14 +62,12 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
   @Inject
   public SimpleResourceManagementStrategy(
-      AutoScalingStrategy autoScalingStrategy,
       SimpleResourceManagementConfig config,
-      Supplier<WorkerSetupData> workerSetupDataRef
+      Supplier<WorkerBehaviourConfig> workerConfigRef
   )
   {
-    this.autoScalingStrategy = autoScalingStrategy;
     this.config = config;
-    this.workerSetupDataRef = workerSetupDataRef;
+    this.workerConfigRef = workerConfigRef;
     this.scalingStats = new ScalingStats(config.getNumEventsToTrack());
   }
 
@@ -79,15 +76,15 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   {
     synchronized (lock) {
       boolean didProvision = false;
-      final WorkerSetupData workerSetupData = workerSetupDataRef.get();
-      if (workerSetupData == null) {
-        log.warn("No workerSetupData available, cannot provision new workers.");
+      final WorkerBehaviourConfig workerConfig = workerConfigRef.get();
+      if (workerConfig == null) {
+        log.warn("No workerConfig available, cannot provision new workers.");
         return false;
       }
       final Predicate<ZkWorker> isValidWorker = createValidWorkerPredicate(config);
       final int currValidWorkers = Collections2.filter(zkWorkers, isValidWorker).size();
 
-      final List<String> workerNodeIds = autoScalingStrategy.ipToIdLookup(
+      final List<String> workerNodeIds = workerConfig.getAutoScaler().ipToIdLookup(
           Lists.newArrayList(
               Iterables.<ZkWorker, String>transform(
                   zkWorkers,
@@ -104,11 +101,11 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       );
       currentlyProvisioning.removeAll(workerNodeIds);
 
-      updateTargetWorkerCount(workerSetupData, pendingTasks, zkWorkers);
+      updateTargetWorkerCount(workerConfig, pendingTasks, zkWorkers);
 
       int want = targetWorkerCount - (currValidWorkers + currentlyProvisioning.size());
       while (want > 0) {
-        final AutoScalingData provisioned = autoScalingStrategy.provision();
+        final AutoScalingData provisioned = workerConfig.getAutoScaler().provision();
         final List<String> newNodes;
         if (provisioned == null || (newNodes = provisioned.getNodeIds()).isEmpty()) {
           break;
@@ -132,7 +129,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
              .addData("provisioningCount", currentlyProvisioning.size())
              .emit();
 
-          autoScalingStrategy.terminateWithIds(Lists.newArrayList(currentlyProvisioning));
+          workerConfig.getAutoScaler().terminateWithIds(Lists.newArrayList(currentlyProvisioning));
           currentlyProvisioning.clear();
         }
       }
@@ -145,15 +142,15 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     synchronized (lock) {
-      final WorkerSetupData workerSetupData = workerSetupDataRef.get();
-      if (workerSetupData == null) {
-        log.warn("No workerSetupData available, cannot terminate workers.");
+      final WorkerBehaviourConfig workerConfig = workerConfigRef.get();
+      if (workerConfig == null) {
+        log.warn("No workerConfig available, cannot terminate workers.");
         return false;
       }
 
       boolean didTerminate = false;
       final Set<String> workerNodeIds = Sets.newHashSet(
-          autoScalingStrategy.ipToIdLookup(
+          workerConfig.getAutoScaler().ipToIdLookup(
               Lists.newArrayList(
                   Iterables.transform(
                       zkWorkers,
@@ -179,7 +176,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       currentlyTerminating.clear();
       currentlyTerminating.addAll(stillExisting);
 
-      updateTargetWorkerCount(workerSetupData, pendingTasks, zkWorkers);
+      updateTargetWorkerCount(workerConfig, pendingTasks, zkWorkers);
 
       final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
       if (currentlyTerminating.isEmpty()) {
@@ -211,7 +208,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
                 Joiner.on(", ").join(laziestWorkerIps)
             );
 
-            final AutoScalingData terminated = autoScalingStrategy.terminate(laziestWorkerIps);
+            final AutoScalingData terminated = workerConfig.getAutoScaler().terminate(laziestWorkerIps);
             if (terminated != null) {
               currentlyTerminating.addAll(terminated.getNodeIds());
               lastTerminateTime = new DateTime();
@@ -282,7 +279,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   private void updateTargetWorkerCount(
-      final WorkerSetupData workerSetupData,
+      final WorkerBehaviourConfig workerConfig,
       final Collection<RemoteTaskRunnerWorkItem> pendingTasks,
       final Collection<ZkWorker> zkWorkers
   )
@@ -293,8 +290,8 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           createValidWorkerPredicate(config)
       );
       final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
-      final int minWorkerCount = workerSetupData.getMinNumWorkers();
-      final int maxWorkerCount = workerSetupData.getMaxNumWorkers();
+      final int minWorkerCount = workerConfig.getAutoScaler().getMinNumWorkers();
+      final int maxWorkerCount = workerConfig.getAutoScaler().getMaxNumWorkers();
 
       if (minWorkerCount > maxWorkerCount) {
         log.error("Huh? minWorkerCount[%d] > maxWorkerCount[%d]. I give up!", minWorkerCount, maxWorkerCount);

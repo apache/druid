@@ -21,30 +21,37 @@ package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Maps;
-
-import java.util.List;
-import java.util.Map;
+import io.druid.indexing.overlord.autoscaling.AutoScaler;
 
 /**
  */
-public class FillCapacityWithAffinityConfig
+public class WorkerBehaviourConfig
 {
-  // key:Datasource, value:[nodeHostNames]
-  private Map<String, List<String>> affinity = Maps.newHashMap();
+  public static final String CONFIG_KEY = "worker.config";
+
+  private final WorkerSelectStrategy selectStrategy;
+  private final AutoScaler autoScaler;
 
   @JsonCreator
-  public FillCapacityWithAffinityConfig(
-      @JsonProperty("affinity") Map<String, List<String>> affinity
+  public WorkerBehaviourConfig(
+      @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
+      @JsonProperty("autoScaler") AutoScaler autoScaler
   )
   {
-    this.affinity = affinity;
+    this.selectStrategy = selectStrategy;
+    this.autoScaler = autoScaler;
   }
 
   @JsonProperty
-  public Map<String, List<String>> getAffinity()
+  public WorkerSelectStrategy getSelectStrategy()
   {
-    return affinity;
+    return selectStrategy;
+  }
+
+  @JsonProperty
+  public AutoScaler getAutoScaler()
+  {
+    return autoScaler;
   }
 
   @Override
@@ -57,11 +64,12 @@ public class FillCapacityWithAffinityConfig
       return false;
     }
 
-    FillCapacityWithAffinityConfig that = (FillCapacityWithAffinityConfig) o;
+    WorkerBehaviourConfig that = (WorkerBehaviourConfig) o;
 
-    if (affinity != null
-        ? !Maps.difference(affinity, that.affinity).entriesDiffering().isEmpty()
-        : that.affinity != null) {
+    if (autoScaler != null ? !autoScaler.equals(that.autoScaler) : that.autoScaler != null) {
+      return false;
+    }
+    if (selectStrategy != null ? !selectStrategy.equals(that.selectStrategy) : that.selectStrategy != null) {
       return false;
     }
 
@@ -71,6 +79,17 @@ public class FillCapacityWithAffinityConfig
   @Override
   public int hashCode()
   {
-    return affinity != null ? affinity.hashCode() : 0;
+    int result = selectStrategy != null ? selectStrategy.hashCode() : 0;
+    result = 31 * result + (autoScaler != null ? autoScaler.hashCode() : 0);
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WorkerConfiguration{" +
+           "selectStrategy=" + selectStrategy +
+           ", autoScaler=" + autoScaler +
+           '}';
   }
 }

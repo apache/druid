@@ -17,14 +17,38 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.indexing.overlord.autoscaling;
 
+import com.google.inject.Inject;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.indexing.overlord.RemoteTaskRunner;
 
 /**
  */
-public interface ResourceManagementSchedulerFactory
+public class ResourceManagementSchedulerFactoryImpl implements ResourceManagementSchedulerFactory
 {
-  public ResourceManagementScheduler build(RemoteTaskRunner runner, ScheduledExecutorFactory executorFactory);
+  private final ResourceManagementSchedulerConfig config;
+  private final ResourceManagementStrategy strategy;
+
+  @Inject
+  public ResourceManagementSchedulerFactoryImpl(
+      ResourceManagementStrategy strategy,
+      ResourceManagementSchedulerConfig config,
+      ScheduledExecutorFactory executorFactory
+  )
+  {
+    this.config = config;
+    this.strategy = strategy;
+  }
+
+  @Override
+  public ResourceManagementScheduler build(RemoteTaskRunner runner, ScheduledExecutorFactory executorFactory)
+  {
+    if (config.isDoAutoscale()) {
+      return new ResourceManagementScheduler(runner, strategy, config, executorFactory.create(1, "ScalingExec--%d"));
+    }
+    else {
+      return new NoopResourceManagementScheduler();
+    }
+  }
 }

@@ -17,52 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.setup;
+package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.indexing.overlord.autoscaling.ec2.EC2NodeData;
-import io.druid.indexing.overlord.autoscaling.ec2.EC2UserData;
 
 /**
  */
-@Deprecated
-public class WorkerSetupData
+public class EC2EnvironmentConfig
 {
-  public static final String CONFIG_KEY = "worker.setup";
-
-  private final int minNumWorkers;
-  private final int maxNumWorkers;
   private final String availabilityZone;
   private final EC2NodeData nodeData;
   private final EC2UserData userData;
 
   @JsonCreator
-  public WorkerSetupData(
-      @JsonProperty("minNumWorkers") int minNumWorkers,
-      @JsonProperty("maxNumWorkers") int maxNumWorkers,
+  public EC2EnvironmentConfig(
       @JsonProperty("availabilityZone") String availabilityZone,
       @JsonProperty("nodeData") EC2NodeData nodeData,
       @JsonProperty("userData") EC2UserData userData
   )
   {
-    this.minNumWorkers = minNumWorkers;
-    this.maxNumWorkers = maxNumWorkers;
     this.availabilityZone = availabilityZone;
     this.nodeData = nodeData;
     this.userData = userData;
-  }
-
-  @JsonProperty
-  public int getMinNumWorkers()
-  {
-    return minNumWorkers;
-  }
-
-  @JsonProperty
-  public int getMaxNumWorkers()
-  {
-    return maxNumWorkers;
   }
 
   @JsonProperty
@@ -86,12 +63,44 @@ public class WorkerSetupData
   @Override
   public String toString()
   {
-    return "WorkerSetupData{" +
-           ", minNumWorkers=" + minNumWorkers +
-           ", maxNumWorkers=" + maxNumWorkers +
-           ", availabilityZone=" + availabilityZone +
+    return "EC2EnvironmentConfig{" +
+           "availabilityZone='" + availabilityZone + '\'' +
            ", nodeData=" + nodeData +
            ", userData=" + userData +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    EC2EnvironmentConfig that = (EC2EnvironmentConfig) o;
+
+    if (availabilityZone != null ? !availabilityZone.equals(that.availabilityZone) : that.availabilityZone != null) {
+      return false;
+    }
+    if (nodeData != null ? !nodeData.equals(that.nodeData) : that.nodeData != null) {
+      return false;
+    }
+    if (userData != null ? !userData.equals(that.userData) : that.userData != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = availabilityZone != null ? availabilityZone.hashCode() : 0;
+    result = 31 * result + (nodeData != null ? nodeData.hashCode() : 0);
+    result = 31 * result + (userData != null ? userData.hashCode() : 0);
+    return result;
   }
 }

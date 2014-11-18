@@ -35,7 +35,6 @@ import io.druid.client.indexing.IndexingServiceSelectorConfig;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
-import io.druid.guice.JacksonConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -59,22 +58,15 @@ import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactoryImpl;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementStrategy;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
-import io.druid.indexing.overlord.scaling.AutoScalingStrategy;
-import io.druid.indexing.overlord.scaling.EC2AutoScalingStrategy;
-import io.druid.indexing.overlord.scaling.NoopAutoScalingStrategy;
-import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerConfig;
-import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactory;
-import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactoryImpl;
-import io.druid.indexing.overlord.scaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.scaling.SimpleResourceManagementConfig;
-import io.druid.indexing.overlord.scaling.SimpleResourceManagementStrategy;
-import io.druid.indexing.overlord.setup.FillCapacityWithAffinityWorkerSelectStrategy;
-import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
-import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
-import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.http.RedirectFilter;
@@ -204,24 +196,6 @@ public class CliOverlord extends ServerRunnable
 
             biddy.addBinding("remote").to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
-
-            PolyBind.createChoice(
-                binder,
-                "druid.indexer.runner.workerSelectStrategy.type",
-                Key.get(WorkerSelectStrategy.class),
-                Key.get(FillCapacityWorkerSelectStrategy.class)
-            );
-            final MapBinder<String, WorkerSelectStrategy> stratBinder = PolyBind.optionBinder(
-                binder,
-                Key.get(WorkerSelectStrategy.class)
-            );
-
-            stratBinder.addBinding("fillCapacity").to(FillCapacityWorkerSelectStrategy.class);
-            binder.bind(FillCapacityWorkerSelectStrategy.class).in(LazySingleton.class);
-
-            stratBinder.addBinding("fillCapacityWithPreference")
-                       .to(FillCapacityWithAffinityWorkerSelectStrategy.class);
-            binder.bind(FillCapacityWithAffinityWorkerSelectStrategy.class).in(LazySingleton.class);
           }
 
           private void configureAutoscale(Binder binder)
@@ -230,24 +204,6 @@ public class CliOverlord extends ServerRunnable
             binder.bind(ResourceManagementStrategy.class)
                   .to(SimpleResourceManagementStrategy.class)
                   .in(LazySingleton.class);
-
-            JacksonConfigProvider.bind(binder, WorkerSetupData.CONFIG_KEY, WorkerSetupData.class, null);
-
-            PolyBind.createChoice(
-                binder,
-                "druid.indexer.autoscale.strategy",
-                Key.get(AutoScalingStrategy.class),
-                Key.get(NoopAutoScalingStrategy.class)
-            );
-
-            final MapBinder<String, AutoScalingStrategy> autoScalingBinder = PolyBind.optionBinder(
-                binder, Key.get(AutoScalingStrategy.class)
-            );
-            autoScalingBinder.addBinding("ec2").to(EC2AutoScalingStrategy.class);
-            binder.bind(EC2AutoScalingStrategy.class).in(LazySingleton.class);
-
-            autoScalingBinder.addBinding("noop").to(NoopAutoScalingStrategy.class);
-            binder.bind(NoopAutoScalingStrategy.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.indexer.autoscale", SimpleResourceManagementConfig.class);
           }

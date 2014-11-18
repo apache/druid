@@ -11,8 +11,6 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 public class FillCapacityWithAffinityWorkerSelectStrategyTest
 {
@@ -20,18 +18,11 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTask() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new FillCapacityWithAffinityConfig()
-        {
-          @Override
-          public Map<String, List<String>> getPreferences()
-          {
-            return ImmutableMap.of("foo", Arrays.asList("localhost"));
-          }
-        },
-        new RemoteTaskRunnerConfig()
+        new FillCapacityWithAffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")))
     );
 
     Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
             new ImmutableZkWorker(
@@ -61,18 +52,11 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithNulls() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new FillCapacityWithAffinityConfig()
-        {
-          @Override
-          public Map<String, List<String>> getPreferences()
-          {
-            return ImmutableMap.of("foo", Arrays.asList("localhost"));
-          }
-        },
-        new RemoteTaskRunnerConfig()
+        new FillCapacityWithAffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")))
     );
 
     Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
             new ImmutableZkWorker(
@@ -95,18 +79,11 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   public void testIsolation() throws Exception
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
-        new FillCapacityWithAffinityConfig()
-        {
-          @Override
-          public Map<String, List<String>> getPreferences()
-          {
-            return ImmutableMap.of("foo", Arrays.asList("localhost"));
-          }
-        },
-        new RemoteTaskRunnerConfig()
+        new FillCapacityWithAffinityConfig(ImmutableMap.of("foo", Arrays.asList("localhost")))
     );
 
     Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "localhost",
             new ImmutableZkWorker(

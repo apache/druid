@@ -88,7 +88,7 @@ import java.util.concurrent.TimeUnit;
  * <p/>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
- * For example, {@link io.druid.indexing.overlord.scaling.ResourceManagementScheduler} can take care of these duties.
+ * For example, {@link io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler} can take care of these duties.
  * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the worker.
  * <p/>
@@ -530,6 +530,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
       final Optional<ImmutableZkWorker> immutableZkWorker = strategy.findWorkerForTask(
+          config,
           ImmutableMap.copyOf(
               Maps.transformEntries(
                   zkWorkers,
