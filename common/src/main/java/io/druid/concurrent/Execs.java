@@ -81,6 +81,9 @@ public class Execs
    */
   public static ExecutorService newBlockingSingleThreaded(final String nameFormat, final int capacity)
   {
+    return newBlockingSingleThreaded(nameFormat, capacity, Thread.NORM_PRIORITY);
+  }
+  public static ExecutorService newBlockingSingleThreaded(final String nameFormat, final int capacity, final Integer priority){
     final BlockingQueue<Runnable> queue;
     if (capacity > 0) {
       queue = new ArrayBlockingQueue<>(capacity);
