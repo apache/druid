@@ -42,7 +42,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
         <apache.curator.version>2.6.0</apache.curator.version>
-        <druid.api.version>0.2.16</druid.api.version>
+        <druid.api.version>0.2.17</druid.api.version>
     </properties>
 
     <modules>
@@ -61,6 +61,8 @@
         <module>kafka-eight</module>
         <module>rabbitmq</module>
         <module>histogram</module>
+        <module>mysql-metadata-storage</module>
+        <module>postgresql-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
@@ -90,7 +92,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>bytebuffer-collections</artifactId>
-                <version>0.0.4</version>
+                <version>0.1.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -191,11 +193,6 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-x-discovery</artifactId>
                 <version>${apache.curator.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>it.uniroma3.mat</groupId>
-                <artifactId>extendedset</artifactId>
-                <version>1.3.7</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -388,6 +385,11 @@
                 <version>1.2</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-dbcp2</artifactId>
+                <version>2.0.1</version>
+            </dependency>
+            <dependency>
                 <groupId>net.jpountz.lz4</groupId>
                 <artifactId>lz4</artifactId>
                 <version>1.2.0</version>
@@ -440,6 +442,16 @@
                 <artifactId>mapdb</artifactId>
                 <version>1.0.6</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbynet</artifactId>
+                <version>10.11.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbyclient</artifactId>
+                <version>10.11.1.1</version>
+            </dependency>
 
             <!-- Test Scope -->
             <dependency>
@@ -460,6 +472,12 @@
                 <artifactId>junit</artifactId>
                 <version>4.11</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+              <groupId>com.carrotsearch</groupId>
+              <artifactId>junit-benchmarks</artifactId>
+              <version>0.7.2</version>
+              <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.caliper</groupId>

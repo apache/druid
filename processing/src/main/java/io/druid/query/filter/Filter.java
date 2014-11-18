@@ -19,12 +19,12 @@
 
 package io.druid.query.filter;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 
 /**
  */
 public interface Filter
 {
-  public ImmutableConciseSet goConcise(BitmapIndexSelector selector);
+  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
   public ValueMatcher makeMatcher(ValueMatcherFactory factory);
 }

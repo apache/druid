@@ -21,9 +21,12 @@ package io.druid.query.search;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.FunctionalIterable;
@@ -48,8 +51,8 @@ import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -94,12 +97,14 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         dimsToSearch = dimensions;
       }
 
+      BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
-      final ImmutableConciseSet baseFilter;
+      final ImmutableBitmap baseFilter;
       if (filter == null) {
-        baseFilter = ImmutableConciseSet.complement(new ImmutableConciseSet(), index.getNumRows());
+        baseFilter = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), index.getNumRows());
       } else {
-        baseFilter = filter.goConcise(new ColumnSelectorBitmapIndexSelector(index));
+        ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(bitmapFactory, index);
+        baseFilter = filter.getBitmapIndex(selector);
       }
 
       for (String dimension : dimsToSearch) {
@@ -113,7 +118,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
             String dimVal = Strings.nullToEmpty(bitmapIndex.getValue(i));
             if (searchQuerySpec.accept(dimVal) &&
-                ImmutableConciseSet.intersection(baseFilter, bitmapIndex.getConciseSet(i)).size() > 0) {
+                bitmapFactory.intersection(Arrays.asList(baseFilter, bitmapIndex.getBitmap(i))).size() > 0) {
               retVal.add(new SearchHit(dimension, dimVal));
               if (retVal.size() >= limit) {
                 return makeReturnResult(limit, retVal);

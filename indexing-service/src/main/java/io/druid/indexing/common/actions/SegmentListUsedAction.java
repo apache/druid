@@ -68,7 +68,7 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   @Override
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    return toolbox.getIndexerDBCoordinator().getUsedSegmentsForInterval(dataSource, interval);
+    return toolbox.getIndexerMetadataStorageCoordinator().getUsedSegmentsForInterval(dataSource, interval);
   }
 
   @Override

@@ -42,7 +42,7 @@ public interface IndexableAdapter
 
   Iterable<Rowboat> getRows();
 
-  IndexedInts getInverteds(String dimension, String value);
+  IndexedInts getBitmapIndex(String dimension, String value);
 
   String getMetricType(String metric);
 

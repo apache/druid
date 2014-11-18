@@ -26,9 +26,9 @@ There are several main parts to a select query:
 |dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |filter|See [Filters](Filters.html)|no|
-|dimensions|The list of dimensions to select. If left empty, all dimensions are returned.|no|
-|metrics|The list of metrics to select. If left empty, all metrics are returned.|no|
-|pagingSpec|A JSON object indicating offsets into different scanned segments. Select query results will return a pagingSpec that can be reused for pagination.|yes|
+|dimensions|A String array of dimensions to select. If left empty, all dimensions are returned.|no|
+|metrics|A String array of metrics to select. If left empty, all metrics are returned.|no|
+|pagingSpec|A JSON object indicating offsets into different scanned segments. Query results will return a `pagingIdentifiers` value that can be reused in the next query for pagination.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 The format of the result is:
@@ -140,4 +140,30 @@ The format of the result is:
 } ]
 ```
 
-The result returns a global pagingSpec that can be reused for the next select query. The offset will need to be increased by 1 on the client side.
+The `threshold` determines how many hits are returned, with each hit indexed by an offset.
+
+The results above include:
+
+```json 
+    "pagingIdentifiers" : {
+      "wikipedia_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9" : 4
+    },
+```
+
+This can be used with the next query's pagingSpec:
+
+```json
+ {
+   "queryType": "select",
+   "dataSource": "wikipedia",
+   "dimensions":[],
+   "metrics":[],
+   "granularity": "all",
+   "intervals": [
+     "2013-01-01/2013-01-02"
+   ],
+   "pagingSpec":{"pagingIdentifiers": {"wikipedia_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9" : 5}, "threshold":5}
+      
+ }
+
+Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 with each new query. When an empty results set is received, the very last page has been returned.

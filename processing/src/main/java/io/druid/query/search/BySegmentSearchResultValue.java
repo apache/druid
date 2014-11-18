@@ -24,28 +24,30 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.Result;
 import io.druid.query.search.search.SearchHit;
+import org.joda.time.Interval;
 
 import java.util.List;
 
 /**
  */
-public class BySegmentSearchResultValue extends SearchResultValue implements BySegmentResultValue<SearchResultValue>
+public class BySegmentSearchResultValue extends SearchResultValue
+    implements BySegmentResultValue<Result<SearchResultValue>>
 {
   private final List<Result<SearchResultValue>> results;
   private final String segmentId;
-  private final String intervalString;
+  private final Interval interval;
 
   public BySegmentSearchResultValue(
       @JsonProperty("results") List<Result<SearchResultValue>> results,
       @JsonProperty("segment") String segmentId,
-      @JsonProperty("interval") String intervalString
+      @JsonProperty("interval") Interval interval
   )
   {
     super(null);
 
     this.results = results;
     this.segmentId = segmentId;
-    this.intervalString = intervalString;
+    this.interval = interval;
   }
 
   @Override
@@ -71,9 +73,9 @@ public class BySegmentSearchResultValue extends SearchResultValue implements ByS
 
   @Override
   @JsonProperty("interval")
-  public String getIntervalString()
+  public Interval getInterval()
   {
-    return intervalString;
+    return interval;
   }
 
   @Override
@@ -82,7 +84,7 @@ public class BySegmentSearchResultValue extends SearchResultValue implements ByS
     return "BySegmentSearchResultValue{" +
            "results=" + results +
            ", segmentId='" + segmentId + '\'' +
-           ", intervalString='" + intervalString + '\'' +
+           ", interval='" + interval.toString() + '\'' +
            '}';
   }
 }

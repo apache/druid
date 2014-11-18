@@ -22,11 +22,12 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import io.druid.db.DbConnectorConfig;
+import io.druid.indexer.partitions.HashedPartitionsSpec;
+import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
-import io.druid.indexer.updater.DbUpdaterJobSpec;
+import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Interval;
@@ -133,7 +134,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testPartitionsSpecAutoDimension()
+  public void testPartitionsSpecAutoDHashed()
   {
     final HadoopIngestionSpec schema;
 
@@ -167,55 +168,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertTrue(
         "partitionSpec",
-        partitionsSpec instanceof SingleDimensionPartitionsSpec
-    );
-  }
-
-  @Test
-  public void testPartitionsSpecSpecificDimensionLegacy()
-  {
-    final HadoopIngestionSpec schema;
-
-    try {
-      schema = jsonReadWriteRead(
-          "{"
-          + "\"partitionsSpec\":{"
-          + "   \"targetPartitionSize\":100,"
-          + "   \"partitionDimension\":\"foo\""
-          + " }"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
-
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        true
-    );
-
-    Assert.assertEquals(
-        "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
-        100
-    );
-
-    Assert.assertEquals(
-        "getMaxPartitionSize",
-        partitionsSpec.getMaxPartitionSize(),
-        150
-    );
-
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
-    Assert.assertEquals(
-        "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
-        "foo"
+        partitionsSpec instanceof HashedPartitionsSpec
     );
   }
 
@@ -274,6 +227,7 @@ public class HadoopIngestionSpecTest
       schema = jsonReadWriteRead(
           "{"
           + "\"partitionsSpec\":{"
+          + "   \"type\":\"dimension\","
           + "   \"targetPartitionSize\":100,"
           + "   \"maxPartitionSize\":200,"
           + "   \"partitionDimension\":\"foo\""
@@ -354,14 +308,13 @@ public class HadoopIngestionSpecTest
         HadoopIngestionSpec.class
     );
 
-    final DbUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
-    final DbConnectorConfig connectorConfig = spec.get();
+    final MetadataStorageUpdaterJobSpec spec = schema.getIOConfig().getMetadataUpdateSpec();
+    final MetadataStorageConnectorConfig connectorConfig = spec.get();
 
     Assert.assertEquals("segments", spec.getSegmentTable());
     Assert.assertEquals("jdbc:mysql://localhost/druid", connectorConfig.getConnectURI());
     Assert.assertEquals("rofl", connectorConfig.getUser());
     Assert.assertEquals("p4ssw0rd", connectorConfig.getPassword());
-    Assert.assertEquals(false, connectorConfig.isUseValidationQuery());
   }
 
   @Test

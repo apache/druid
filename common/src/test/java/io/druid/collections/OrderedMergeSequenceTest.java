@@ -20,6 +20,7 @@
 package io.druid.collections;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.BaseSequence;
@@ -28,7 +29,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.SequenceTestHelper;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.TestSequence;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -53,6 +54,61 @@ public class OrderedMergeSequenceTest
     OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
 
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
+
+    for (TestSequence<Integer> sequence : testSequences) {
+      Assert.assertTrue(sequence.isClosed());
+    }
+  }
+
+  @Test
+  public void testMergeEmptySequence() throws Exception
+  {
+    final ArrayList<TestSequence<Integer>> testSequences = Lists.newArrayList(
+        TestSequence.create(ImmutableList.<Integer>of()),
+        TestSequence.create(2, 8),
+        TestSequence.create(4, 6, 8)
+    );
+
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+
+    SequenceTestHelper.testAll(seq, Arrays.asList(2, 4, 6, 8, 8));
+
+    for (TestSequence<Integer> sequence : testSequences) {
+      Assert.assertTrue(sequence.isClosed());
+    }
+  }
+
+  @Test
+  public void testMergeEmptySequenceAtEnd() throws Exception
+  {
+    final ArrayList<TestSequence<Integer>> testSequences = Lists.newArrayList(
+        TestSequence.create(2, 8),
+        TestSequence.create(4, 6, 8),
+        TestSequence.create(ImmutableList.<Integer>of())
+    );
+
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+
+    SequenceTestHelper.testAll(seq, Arrays.asList(2, 4, 6, 8, 8));
+
+    for (TestSequence<Integer> sequence : testSequences) {
+      Assert.assertTrue(sequence.isClosed());
+    }
+  }
+
+
+  @Test
+  public void testMergeEmptySequenceMiddle() throws Exception
+  {
+    final ArrayList<TestSequence<Integer>> testSequences = Lists.newArrayList(
+        TestSequence.create(2, 8),
+        TestSequence.create(ImmutableList.<Integer>of()),
+        TestSequence.create(4, 6, 8)
+    );
+
+    OrderedMergeSequence<Integer> seq = makeMergedSequence(Ordering.<Integer>natural(), testSequences);
+
+    SequenceTestHelper.testAll(seq, Arrays.asList(2, 4, 6, 8, 8));
 
     for (TestSequence<Integer> sequence : testSequences) {
       Assert.assertTrue(sequence.isClosed());

@@ -11,7 +11,7 @@ The topN metric spec specifies how topN values should be sorted.
 The simplest metric specification is a String value indicating the metric to sort topN results by. They are included in a topN query with:
 
 ```json
-"metric": <metric_value_string>
+"metric": "<metric_name>"
 ```
 
 The metric field can also be given as a JSON object. The grammar for dimension values sorted by numeric value is shown below:
@@ -19,7 +19,7 @@ The metric field can also be given as a JSON object. The grammar for dimension v
 ```json
 "metric": {
     "type": "numeric",
-    "metric": "<metric_value>"
+    "metric": "<metric_name>"
 }
 ```
 

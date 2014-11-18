@@ -55,10 +55,6 @@
             <artifactId>config-magic</artifactId>
         </dependency>
         <dependency>
-            <groupId>it.uniroma3.mat</groupId>
-            <artifactId>extendedset</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
@@ -100,6 +96,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.carrotsearch</groupId>
+            <artifactId>junit-benchmarks</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
             <scope>test</scope>
@@ -107,6 +108,7 @@
         <dependency>
             <groupId>com.google.caliper</groupId>
             <artifactId>caliper</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

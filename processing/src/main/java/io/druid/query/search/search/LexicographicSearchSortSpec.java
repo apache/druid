@@ -41,7 +41,11 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
       @Override
       public int compare(SearchHit searchHit, SearchHit searchHit1)
       {
-        return searchHit.getValue().compareTo(searchHit1.getValue());
+        int retVal = searchHit.getValue().compareTo(searchHit1.getValue());
+        if (retVal == 0) {
+          retVal = searchHit.getDimension().compareTo(searchHit1.getDimension());
+        }
+        return retVal;
       }
     };
   }

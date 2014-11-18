@@ -13,6 +13,15 @@ Druid supports the following types of having clauses.
 The simplest having clause is a numeric filter.
 Numeric filters can be used as the base filters for more complex boolean expressions of filters.
 
+Here's an example of a having-clause numeric filter:
+
+```json
+{
+    "type": "greaterThan",
+    "aggregation": "myAggMetric",
+    "value": 100
+}
+
 #### Equal To
 
 The equalTo filter will match rows with a specific aggregate value.
@@ -21,7 +30,7 @@ The grammar for an `equalTo` filter is as follows:
 ```json
 {
     "type": "equalTo",
-    "aggregation": <aggregate_metric>,
+    "aggregation": "<aggregate_metric>",
     "value": <numeric_value>
 }
 ```
@@ -36,7 +45,7 @@ The grammar for a `greaterThan` filter is as follows:
 ```json
 {
     "type": "greaterThan",
-    "aggregation": <aggregate_metric>,
+    "aggregation": "<aggregate_metric>",
     "value": <numeric_value>
 }
 ```
@@ -51,7 +60,7 @@ The grammar for a `greaterThan` filter is as follows:
 ```json
 {
     "type": "lessThan",
-    "aggregation": <aggregate_metric>,
+    "aggregation": "<aggregate_metric>",
     "value": <numeric_value>
 }
 ```

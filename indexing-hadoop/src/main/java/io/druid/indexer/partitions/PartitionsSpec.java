@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SingleDimensionPartitionsSpec.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HashedPartitionsSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
     @JsonSubTypes.Type(name = "random", value = RandomPartitionsSpec.class),

@@ -41,7 +41,7 @@ $(document).ready(function() {
       }
   });
 
-  $.getJSON("/druid/coordinator/v1/db/datasources?includeDisabled", function(data) {
+  $.getJSON("/druid/coordinator/v1/metadata/datasources?includeDisabled", function(data) {
     $.each(data, function(index, datasource) {
       $('#datasources').append($('<option></option>').val(datasource).text(datasource));
     });

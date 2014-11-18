@@ -48,9 +48,13 @@ CREATE database druid;
 #### Setting up Zookeeper
 
 ```bash
-curl http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz -o zookeeper-3.4.5.tar.gz
-tar xzf zookeeper-3.4.5.tar.gz
-cd zookeeper-3.4.5
+Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
+Install zookeeper.
+
+e.g.
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
+tar xzf zookeeper-3.4.6.tar.gz
+cd zookeeper-3.4.6
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 cd ..
@@ -116,9 +120,9 @@ druid.port=8082
 
 druid.zk.service.host=localhost
 
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
+druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.metadata.storage.connector.user=druid
+druid.metadata.storage.connector.password=diurd
 
 druid.coordinator.startDelay=PT70s
 ```
@@ -246,9 +250,9 @@ druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.160","io.d
 druid.publish.type=noop
 
 # These configs are only required for real hand off
-# druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-# druid.db.connector.user=druid
-# druid.db.connector.password=diurd
+# druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+# druid.metadata.storage.connector.user=druid
+# druid.metadata.storage.connector.password=diurd
 
 druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1

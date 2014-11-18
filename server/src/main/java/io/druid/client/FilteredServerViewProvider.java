@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.inject.Provider;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SingleServerInventoryProvider.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FilteredBatchServerViewProvider.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "legacy", value = FilteredSingleServerViewProvider.class),
     @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerViewProvider.class)
