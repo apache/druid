@@ -203,8 +203,8 @@ public class QueryResource
                     outputStream.close();
                   }
                 },
-                isSmile ? APPLICATION_JSON : APPLICATION_SMILE
-            )
+                isSmile ? APPLICATION_SMILE : APPLICATION_JSON
+        )
             .header("X-Druid-Query-Id", queryId)
             .build();
       }
