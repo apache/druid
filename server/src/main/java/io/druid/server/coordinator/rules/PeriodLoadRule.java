@@ -42,19 +42,11 @@ public class PeriodLoadRule extends LoadRule
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") Period period,
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
-      // The following two vars need to be deprecated
-      @JsonProperty("replicants") int replicants,
-      @JsonProperty("tier") String tier
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
     this.period = period;
-
-    if (tieredReplicants != null) {
-      this.tieredReplicants = tieredReplicants;
-    } else {     // Backwards compatible
-      this.tieredReplicants = ImmutableMap.of(tier, replicants);
-    }
+    this.tieredReplicants = tieredReplicants;
   }
 
   @Override

@@ -133,10 +133,4 @@ public class WebFirehoseFactory implements FirehoseFactory<InputRowParser>
 
     };
   }
-
-  @Override
-  public InputRowParser getParser()
-  {
-    return null;
-  }
 }

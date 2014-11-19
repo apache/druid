@@ -197,8 +197,7 @@ public class TestIndex
                     "\t",
                     "\u0001",
                     Arrays.asList(COLUMNS)
-                ),
-                null, null, null, null
+                )
             );
             boolean runOnce = false;
             int lineCount = 0;

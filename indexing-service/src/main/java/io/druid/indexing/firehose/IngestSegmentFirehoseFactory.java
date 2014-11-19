@@ -219,12 +219,6 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
 
   }
 
-  @Override
-  public InputRowParser getParser()
-  {
-    return null;
-  }
-
   public class IngestSegmentFirehose implements Firehose
   {
     private volatile Yielder<InputRow> rowYielder;

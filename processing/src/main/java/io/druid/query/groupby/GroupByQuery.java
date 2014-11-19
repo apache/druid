@@ -85,9 +85,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
-      @JsonProperty("context") Map<String, Object> context,
-      // Backwards compatible
-      @JsonProperty("orderBy") LimitSpec orderBySpec
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, context);
@@ -97,7 +95,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.aggregatorSpecs = aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
     this.havingSpec = havingSpec;
-    this.limitSpec = (limitSpec == null) ? (orderBySpec == null ? new NoopLimitSpec() : orderBySpec) : limitSpec;
+    this.limitSpec = (limitSpec == null) ?  new NoopLimitSpec() : limitSpec;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Preconditions.checkNotNull(this.aggregatorSpecs, "Must specify at least one aggregator");
@@ -539,8 +537,7 @@ public class GroupByQuery extends BaseQuery<Row>
           postAggregatorSpecs,
           havingSpec,
           theLimitSpec,
-          context,
-          null
+          context
       );
     }
   }

@@ -61,8 +61,7 @@ public class ProtoBufInputRowParserTest
             new TimestampSpec("timestamp", "iso"),
             new DimensionsSpec(Arrays.asList(DIMENSIONS), Arrays.<String>asList(), null)
         ),
-        "prototest.desc",
-        null, null, null, null
+        "prototest.desc"
     );
 
 

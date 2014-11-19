@@ -94,27 +94,6 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/merge")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Deprecated
-  public Response doMerge(final Task task)
-  {
-    // legacy endpoint
-    return doIndex(task);
-  }
-
-  @POST
-  @Path("/index")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Deprecated
-  public Response doIndex(final Task task)
-  {
-    return taskPost(task);
-  }
-
-  @POST
   @Path("/task")
   @Consumes("application/json")
   @Produces("application/json")

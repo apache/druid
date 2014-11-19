@@ -83,12 +83,6 @@ public class YeOldePlumberSchool implements PlumberSchool
   }
 
   @Override
-  public Granularity getSegmentGranularity()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public Plumber findPlumber(
       final DataSchema schema,
       final RealtimeTuningConfig config,

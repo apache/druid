@@ -28,11 +28,20 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.realtime.Schema;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
 import org.joda.time.Period;
 import org.junit.Test;
+
+import java.io.File;
 
 public class TaskAnnouncementTest
 {
@@ -42,15 +51,19 @@ public class TaskAnnouncementTest
     final Task task = new RealtimeIndexTask(
         "theid",
         new TaskResource("rofl", 2),
-        null,
-        new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
-        null,
-        null,
-        new Period("PT10M"),
-        1,
-        Granularity.HOUR,
-        null,
-        null
+        new FireDepartment(
+            new DataSchema("foo", null, new AggregatorFactory[0], null),
+            new RealtimeIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
+            {
+              @Override
+              public Plumber findPlumber(
+                  DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+              )
+              {
+                return null;
+              }
+            }), null
+        )
     );
     final TaskStatus status = TaskStatus.running(task.getId());
     final TaskAnnouncement announcement = TaskAnnouncement.create(task, status);

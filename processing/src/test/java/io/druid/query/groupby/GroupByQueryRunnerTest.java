@@ -1466,7 +1466,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx_subpostagg", "+", Arrays.<PostAggregator>asList(
                     new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
-                    new ConstantPostAggregator("thousand", 1000, 1000)
+                    new ConstantPostAggregator("thousand", 1000)
                 )
                 )
 
@@ -1491,7 +1491,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
-                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                    new ConstantPostAggregator("ten_thousand", 10000)
                 )
                 )
 
@@ -1565,7 +1565,7 @@ public class GroupByQueryRunnerTest
                     "+",
                     Arrays.asList(
                         new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
-                        new ConstantPostAggregator("thousand", 1000, 1000)
+                        new ConstantPostAggregator("thousand", 1000)
                     )
                 )
 
@@ -1607,7 +1607,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
-                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                    new ConstantPostAggregator("ten_thousand", 10000)
                 )
                 )
 
@@ -1686,7 +1686,7 @@ public class GroupByQueryRunnerTest
                     "+",
                     Arrays.asList(
                         new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
-                        new ConstantPostAggregator("thousand", 1000, 1000)
+                        new ConstantPostAggregator("thousand", 1000)
                     )
                 )
 
@@ -1729,7 +1729,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
-                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                    new ConstantPostAggregator("ten_thousand", 10000)
                 )
                 )
 
