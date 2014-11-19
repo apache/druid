@@ -683,7 +683,11 @@ public class IncrementalIndex implements Iterable<Row>
 
     public int getId(String value)
     {
-      return falseIds.get(value);
+      if (value == null) {
+        value = "";
+      }
+      final Integer id = falseIds.get(value);
+      return id == null ? -1 : id;
     }
 
     public String getValue(int id)

@@ -24,6 +24,9 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.IndexedInts;
 
 /**
  */
@@ -52,4 +55,34 @@ public class SelectorFilter implements Filter
   {
     return factory.makeValueMatcher(dimension, value);
   }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory)
+  {
+    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension);
+
+    // Missing columns are treated the same way as selector.getBitmapIndex, always returning false
+    if (dimensionSelector == null) {
+      return new BooleanValueMatcher(false);
+    } else {
+      final int valueId = dimensionSelector.lookupId(value);
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          final IndexedInts row = dimensionSelector.getRow();
+          final int size = row.size();
+          for (int i = 0; i < size; ++i) {
+            if (row.get(i) == valueId) {
+              return true;
+            }
+          }
+          return false;
+        }
+      };
+    }
+  }
+
+
 }

@@ -25,6 +25,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.List;
 
@@ -68,9 +69,23 @@ public class AndFilter implements Filter
     for (int i = 0; i < filters.size(); i++) {
       matchers[i] = filters.get(i).makeMatcher(factory);
     }
+    return makeMatcher(matchers);
+  }
 
-    if (matchers.length == 1) {
-      return matchers[0];
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
+
+    for (int i = 0; i < filters.size(); i++) {
+      matchers[i] = filters.get(i).makeMatcher(factory);
+    }
+    return makeMatcher(matchers);
+  }
+
+  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
+    if (baseMatchers.length == 1) {
+      return baseMatchers[0];
     }
 
     return new ValueMatcher()
@@ -78,7 +93,7 @@ public class AndFilter implements Filter
       @Override
       public boolean matches()
       {
-        for (ValueMatcher matcher : matchers) {
+        for (ValueMatcher matcher : baseMatchers) {
           if (!matcher.matches()) {
             return false;
           }
@@ -87,5 +102,4 @@ public class AndFilter implements Filter
       }
     };
   }
-
 }

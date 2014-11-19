@@ -19,24 +19,18 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
+import io.druid.query.filter.ValueMatcher;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class FilteredBufferAggregator implements BufferAggregator
 {
-  private final DimensionSelector dimSelector;
-  private final IntPredicate predicate;
+  private final ValueMatcher matcher;
   private final BufferAggregator delegate;
 
-  public FilteredBufferAggregator(DimensionSelector dimSelector, IntPredicate predicate, BufferAggregator delegate)
+  public FilteredBufferAggregator(ValueMatcher matcher, BufferAggregator delegate)
   {
-    this.dimSelector = dimSelector;
-    this.predicate = predicate;
+    this.matcher = matcher;
     this.delegate = delegate;
   }
 
@@ -49,13 +43,8 @@ public class FilteredBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final IndexedInts row = dimSelector.getRow();
-    final int size = row.size();
-    for (int i = 0; i < size; ++i) {
-      if (predicate.apply(row.get(i))) {
-        delegate.aggregate(buf, position);
-        break;
-      }
+    if (matcher.matches()) {
+      delegate.aggregate(buf, position);
     }
   }
 
