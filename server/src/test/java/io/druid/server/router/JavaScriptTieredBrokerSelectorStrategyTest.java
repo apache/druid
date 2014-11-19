@@ -28,6 +28,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.topn.TopNQueryBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +37,7 @@ import java.util.LinkedHashMap;
 public class JavaScriptTieredBrokerSelectorStrategyTest
 {
   final TieredBrokerSelectorStrategy jsStrategy = new JavaScriptTieredBrokerSelectorStrategy(
-      "function (config, query) { if (config.getTierToBrokerMap().values().size() > 0 && query.getAggregatorSpecs && query.getAggregatorSpecs().size() <= 2) { return config.getTierToBrokerMap().values().toArray()[0] } else { return config.getDefaultBrokerServiceName() } }"
+      "function (config, query) { if (query.getAggregatorSpecs && query.getDimensionSpec && query.getDimensionSpec().getDimension() == 'bigdim' && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }"
   );
 
   @Test
@@ -57,7 +58,8 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
   {
     final LinkedHashMap<String, String> tierBrokerMap = new LinkedHashMap<>();
     tierBrokerMap.put("fast", "druid/fastBroker");
-    tierBrokerMap.put("slow", "druid/broker");
+    tierBrokerMap.put("fast", "druid/broker");
+    tierBrokerMap.put("slow", "druid/slowBroker");
 
     final TieredBrokerConfig tieredBrokerConfig = new TieredBrokerConfig()
     {
@@ -74,8 +76,11 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
       }
     };
 
-    final Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder().dataSource("test")
+    final TopNQueryBuilder queryBuilder = new TopNQueryBuilder().dataSource("test")
                                         .intervals("2014/2015")
+                                        .dimension("bigdim")
+                                        .metric("count")
+                                        .threshold(1)
                                         .aggregators(
                                             ImmutableList.<AggregatorFactory>of(
                                                 new CountAggregatorFactory("count")
@@ -83,7 +88,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
                                         );
 
     Assert.assertEquals(
-        Optional.of("druid/fastBroker"),
+        Optional.absent(),
         jsStrategy.getBrokerServiceName(
             tieredBrokerConfig,
             queryBuilder.build()
@@ -92,13 +97,29 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
 
 
     Assert.assertEquals(
-        Optional.of("druid/broker"),
+        Optional.absent(),
         jsStrategy.getBrokerServiceName(
             tieredBrokerConfig,
             Druids.newTimeBoundaryQueryBuilder().dataSource("test").bound("maxTime").build()
         )
     );
 
+    Assert.assertEquals(
+        Optional.of("druid/slowBroker"),
+        jsStrategy.getBrokerServiceName(
+            tieredBrokerConfig,
+            queryBuilder.aggregators(
+                ImmutableList.of(
+                    new CountAggregatorFactory("count"),
+                    new LongSumAggregatorFactory("longSum", "a"),
+                    new DoubleSumAggregatorFactory("doubleSum", "b")
+                )
+            ).build()
+        )
+    );
+
+    // in absence of tiers, expect the default
+    tierBrokerMap.clear();
     Assert.assertEquals(
         Optional.of("druid/broker"),
         jsStrategy.getBrokerServiceName(

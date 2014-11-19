@@ -48,7 +48,9 @@ public class JacksonModule implements Module
   @Provides @LazySingleton @Smile
   public ObjectMapper smileMapper()
   {
-    ObjectMapper retVal = new DefaultObjectMapper(new SmileFactory());
+    final SmileFactory smileFactory = new SmileFactory();
+    smileFactory.delegateToTextual(true);
+    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory);
     retVal.getFactory().setCodec(retVal);
     return retVal;
   }

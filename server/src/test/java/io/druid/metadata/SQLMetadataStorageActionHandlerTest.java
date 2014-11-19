@@ -46,13 +46,7 @@ public class SQLMetadataStorageActionHandlerTest
 
   @Before
   public void setUp() throws Exception {
-    MetadataStorageConnectorConfig config = jsonMapper.readValue(
-        "{"
-        + "\"type\" : \"db\",\n"
-        + "\"segmentTable\" : \"segments\"\n"
-        + "}",
-        MetadataStorageConnectorConfig.class
-    );
+    MetadataStorageConnectorConfig config =  new MetadataStorageConnectorConfig();
 
     connector = new TestDerbyConnector(
         Suppliers.ofInstance(config),

@@ -29,6 +29,8 @@ import java.util.List;
  */
 public class ExtensionsConfig
 {
+  public static final String PACKAGE_VERSION = ExtensionsConfig.class.getPackage().getImplementationVersion();
+
   @JsonProperty
   @NotNull
   private boolean searchCurrentClassloader = true;
@@ -36,6 +38,10 @@ public class ExtensionsConfig
   @JsonProperty
   @NotNull
   private List<String> coordinates = ImmutableList.of();
+
+  // default version to use for extensions without version info
+  @JsonProperty
+  private String defaultVersion;
 
   @JsonProperty
   @NotNull
@@ -58,6 +64,11 @@ public class ExtensionsConfig
     return coordinates;
   }
 
+  public String getDefaultVersion()
+  {
+    return defaultVersion != null ? defaultVersion : PACKAGE_VERSION;
+  }
+
   public String getLocalRepository()
   {
     return localRepository;
@@ -74,6 +85,7 @@ public class ExtensionsConfig
     return "ExtensionsConfig{" +
            "searchCurrentClassloader=" + searchCurrentClassloader +
            ", coordinates=" + coordinates +
+           ", defaultVersion='" + getDefaultVersion() + '\'' +
            ", localRepository='" + localRepository + '\'' +
            ", remoteRepositories=" + remoteRepositories +
            '}';

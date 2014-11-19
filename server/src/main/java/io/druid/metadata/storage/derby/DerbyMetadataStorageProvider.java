@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,24 +17,26 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.metadata.storage.derby;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
+import com.google.inject.Inject;
+import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataRuleManagerConfig;
-import io.druid.metadata.MetadataSegmentManagerConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.metadata.MetadataStorageProvider;
 
-public class MetadataDbConfigModule implements Module
+public class DerbyMetadataStorageProvider implements MetadataStorageProvider
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);
-    JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", MetadataStorageConnectorConfig.class);
+  private final DerbyMetadataStorage storage;
 
-    JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
+  @Inject
+  public DerbyMetadataStorageProvider(MetadataStorageConnectorConfig config)
+  {
+    this.storage = new DerbyMetadataStorage(config);
+  }
+
+  @Override
+  public MetadataStorage get()
+  {
+    return storage;
   }
 }

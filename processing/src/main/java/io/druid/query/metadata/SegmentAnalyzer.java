@@ -122,7 +122,7 @@ public class SegmentAnalyzer
         String value = bitmapIndex.getValue(i);
 
         if (value != null) {
-          size += value.getBytes(Charsets.UTF_8).length * bitmapIndex.getConciseSet(value).size();
+          size += value.getBytes(Charsets.UTF_8).length * bitmapIndex.getBitmap(value).size();
         }
       }
 

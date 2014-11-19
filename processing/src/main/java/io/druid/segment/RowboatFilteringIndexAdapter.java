@@ -76,9 +76,9 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getInverteds(String dimension, String value)
+  public IndexedInts getBitmapIndex(String dimension, String value)
   {
-    return baseAdapter.getInverteds(dimension, value);
+    return baseAdapter.getBitmapIndex(dimension, value);
   }
 
   @Override

@@ -50,6 +50,7 @@ import io.druid.server.QueryResource;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import io.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -78,7 +79,9 @@ public class CliBroker extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/broker");
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
+                TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
+            );
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
 
             binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);

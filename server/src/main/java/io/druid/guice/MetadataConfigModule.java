@@ -20,36 +20,21 @@
 package io.druid.guice;
 
 import com.google.inject.Binder;
-import com.google.inject.Key;
-import com.google.inject.Provides;
-import io.druid.metadata.DerbyConnector;
-import io.druid.metadata.MetadataStorageConnector;
-import io.druid.metadata.SQLMetadataConnector;
-import org.skife.jdbi.v2.IDBI;
+import com.google.inject.Module;
+import io.druid.metadata.MetadataRuleManagerConfig;
+import io.druid.metadata.MetadataSegmentManagerConfig;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
 
-public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModule
+public class MetadataConfigModule implements Module
 {
-  public DerbyMetadataStorageDruidModule()
-  {
-    super(TYPE);
-  }
-
-  public static final String TYPE = "derby";
-
   @Override
   public void configure(Binder binder)
   {
-    createBindingChoices(binder, TYPE);
-    super.configure(binder);
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.tables", MetadataStorageTablesConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.storage.connector", MetadataStorageConnectorConfig.class);
 
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
-            .addBinding(TYPE)
-            .to(DerbyConnector.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(SQLMetadataConnector.class))
-            .addBinding(TYPE)
-            .to(DerbyConnector.class)
-            .in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
   }
 }

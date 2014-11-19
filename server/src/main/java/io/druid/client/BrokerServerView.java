@@ -31,6 +31,7 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.Smile;
 import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
@@ -69,7 +70,7 @@ public class BrokerServerView implements TimelineServerView
   public BrokerServerView(
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
-      ObjectMapper smileMapper,
+      @Smile ObjectMapper smileMapper,
       @Client HttpClient httpClient,
       ServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy

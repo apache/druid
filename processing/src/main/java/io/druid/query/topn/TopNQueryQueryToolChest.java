@@ -35,6 +35,8 @@ import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.BySegmentResultValue;
+import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
@@ -154,6 +156,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
     {
       private String dimension = query.getDimensionSpec().getOutputName();
+      final List<PostAggregator> prunedAggs = prunePostAggregators(query);
 
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
@@ -170,7 +173,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
                       values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
                     }
-                    for (PostAggregator postAgg : prunePostAggregators(query)) {
+                    for (PostAggregator postAgg : prunedAggs) {
                       Object calculatedPostAgg = input.getMetric(postAgg.getName());
                       if (calculatedPostAgg != null) {
                         values.put(postAgg.getName(), calculatedPostAgg);
@@ -433,7 +436,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             public Result<TopNResultValue> apply(Result<TopNResultValue> input)
             {
               if (isBySegment) {
-                BySegmentTopNResultValue value = (BySegmentTopNResultValue) input.getValue();
+                BySegmentResultValue<Result<TopNResultValue>> value = (BySegmentResultValue<Result<TopNResultValue>>) input
+                    .getValue();
 
                 return new Result<TopNResultValue>(
                     input.getTimestamp(),
@@ -460,7 +464,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                             }
                         ),
                         value.getSegmentId(),
-                        value.getIntervalString()
+                        value.getInterval()
                     )
                 );
               }

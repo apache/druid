@@ -9,6 +9,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
 import org.joda.time.DateTime;
@@ -63,14 +64,21 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
-          private int numTries = 0;
-          private boolean returnPartialResults = true;
+          @Override
+          public int getNumTries() {
+            return 0;
+          }
 
-          public int numTries() { return numTries; }
-
-          public boolean returnPartialResults() { return returnPartialResults; }
+          @Override
+          public boolean isReturnPartialResults()
+          {
+            return true;
+          }
         },
         jsonMapper
     );
@@ -128,12 +136,15 @@ public class RetryQueryRunnerTest
             }
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 1;
           private boolean returnPartialResults = true;
 
-          public int numTries() { return numTries; }
+          public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
         },
@@ -192,12 +203,15 @@ public class RetryQueryRunnerTest
             }
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 4;
           private boolean returnPartialResults = true;
 
-          public int numTries() { return numTries; }
+          public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
         },
@@ -241,12 +255,15 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            new QueryConfig()
+        ),
         new RetryQueryRunnerConfig()
         {
           private int numTries = 1;
           private boolean returnPartialResults = false;
 
-          public int numTries() { return numTries; }
+          public int getNumTries() { return numTries; }
 
           public boolean returnPartialResults() { return returnPartialResults; }
         },

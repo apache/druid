@@ -36,7 +36,7 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
-import io.druid.guice.DerbyMetadataStorageDruidModule;
+import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;
@@ -45,7 +45,7 @@ import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
-import io.druid.guice.MetadataDbConfigModule;
+import io.druid.guice.MetadataConfigModule;
 import io.druid.guice.ParsersModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
@@ -140,7 +140,7 @@ public class Initialization
     for (String coordinate : config.getCoordinates()) {
       log.info("Loading extension[%s] for class[%s]", coordinate, clazz.getName());
       try {
-        URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate);
+        URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate, config.getDefaultVersion());
 
         final ServiceLoader<T> serviceLoader = ServiceLoader.load(clazz, loader);
 
@@ -160,13 +160,28 @@ public class Initialization
     return retVal;
   }
 
-  public static URLClassLoader getClassLoaderForCoordinates(TeslaAether aether, String coordinate)
+  public static URLClassLoader getClassLoaderForCoordinates(TeslaAether aether, String coordinate, String defaultVersion)
       throws DependencyResolutionException, MalformedURLException
   {
     URLClassLoader loader = loadersMap.get(coordinate);
     if (loader == null) {
       final CollectRequest collectRequest = new CollectRequest();
-      collectRequest.setRoot(new Dependency(new DefaultArtifact(coordinate), JavaScopes.RUNTIME));
+
+      DefaultArtifact versionedArtifact;
+      try {
+        // this will throw an exception if no version is specified
+        versionedArtifact = new DefaultArtifact(coordinate);
+      }
+      catch (IllegalArgumentException e) {
+        // try appending the default version so we can specify artifacts without versions
+        if (defaultVersion != null) {
+          versionedArtifact = new DefaultArtifact(coordinate + ":" + defaultVersion);
+        } else {
+          throw e;
+        }
+      }
+
+      collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
       DependencyRequest dependencyRequest = new DependencyRequest(
           collectRequest,
           DependencyFilterUtils.andFilter(
@@ -333,7 +348,7 @@ public class Initialization
         new QueryRunnerFactoryModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
-        new MetadataDbConfigModule(),
+        new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),

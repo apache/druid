@@ -22,6 +22,7 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.RandomPartitionsSpec;
@@ -133,7 +134,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testPartitionsSpecAutoDimension()
+  public void testPartitionsSpecAutoDHashed()
   {
     final HadoopIngestionSpec schema;
 
@@ -167,55 +168,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertTrue(
         "partitionSpec",
-        partitionsSpec instanceof SingleDimensionPartitionsSpec
-    );
-  }
-
-  @Test
-  public void testPartitionsSpecSpecificDimensionLegacy()
-  {
-    final HadoopIngestionSpec schema;
-
-    try {
-      schema = jsonReadWriteRead(
-          "{"
-          + "\"partitionsSpec\":{"
-          + "   \"targetPartitionSize\":100,"
-          + "   \"partitionDimension\":\"foo\""
-          + " }"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
-
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        true
-    );
-
-    Assert.assertEquals(
-        "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
-        100
-    );
-
-    Assert.assertEquals(
-        "getMaxPartitionSize",
-        partitionsSpec.getMaxPartitionSize(),
-        150
-    );
-
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
-    Assert.assertEquals(
-        "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
-        "foo"
+        partitionsSpec instanceof HashedPartitionsSpec
     );
   }
 
@@ -274,6 +227,7 @@ public class HadoopIngestionSpecTest
       schema = jsonReadWriteRead(
           "{"
           + "\"partitionsSpec\":{"
+          + "   \"type\":\"dimension\","
           + "   \"targetPartitionSize\":100,"
           + "   \"maxPartitionSize\":200,"
           + "   \"partitionDimension\":\"foo\""

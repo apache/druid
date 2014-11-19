@@ -19,10 +19,12 @@
 
 package io.druid.query.topn;
 
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.query.BySegmentResultValueClass;
@@ -47,6 +49,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -167,7 +170,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -231,7 +234,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -296,10 +299,88 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
+
+  @Test
+  public void testTopNBySegment()
+  {
+
+    final HashMap<String, Object> specialContext = new HashMap<String, Object>();
+    specialContext.put("bySegment", "true");
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(marketDimension)
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .context(specialContext)
+        .build();
+
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "index", 5351.814697265625D,
+                        marketDimension, "total_market",
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2,
+                        "rows", 4L
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "index", 4875.669677734375D,
+                        marketDimension, "upfront",
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2,
+                        "rows", 4L
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "index", 2231.8768157958984D,
+                        marketDimension, "spot",
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9,
+                        "rows", 18L
+                    )
+                )
+            )
+        )
+    );
+    Sequence<Result<TopNResultValue>> results = new TopNQueryQueryToolChest(new TopNQueryConfig()).postMergeQueryDecoration(
+        runner
+    ).run(
+        query,
+        specialContext
+    );
+    List<Result<BySegmentTopNResultValue>> resultList = Sequences.toList(
+        Sequences.map(
+            results, new Function<Result<TopNResultValue>, Result<BySegmentTopNResultValue>>()
+            {
+
+              @Nullable
+              @Override
+              public Result<BySegmentTopNResultValue> apply(
+                  Result<TopNResultValue> input
+              )
+              {
+                return new Result<BySegmentTopNResultValue>(
+                    input.getTimestamp(),
+                    (BySegmentTopNResultValue) input.getValue()
+                );
+              }
+            }
+        ),
+        Lists.<Result<BySegmentTopNResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, resultList.get(0).getValue().getResults());
+  }
 
   @Test
   public void testTopN()
@@ -346,7 +427,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -395,7 +476,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -444,7 +525,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -486,7 +567,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -521,7 +602,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -570,7 +651,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -623,7 +704,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -665,7 +746,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -683,7 +764,7 @@ public class TopNQueryRunnerTest
         .aggregators(QueryRunnerTestHelper.commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         Lists.<Result<TopNResultValue>>newArrayList(
             new Result<TopNResultValue>(
@@ -722,7 +803,7 @@ public class TopNQueryRunnerTest
         .aggregators(QueryRunnerTestHelper.commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         Lists.<Result<TopNResultValue>>newArrayList(
             new Result<TopNResultValue>(
@@ -748,7 +829,7 @@ public class TopNQueryRunnerTest
         .aggregators(QueryRunnerTestHelper.commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         Sequences.toList(
             runner.run(
@@ -783,7 +864,7 @@ public class TopNQueryRunnerTest
         .aggregators(QueryRunnerTestHelper.commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         Sequences.toList(
             runner.run(
@@ -843,7 +924,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -892,7 +973,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -948,7 +1029,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -996,7 +1077,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1037,7 +1118,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1078,7 +1159,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1119,7 +1200,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1160,7 +1241,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1212,7 +1293,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1264,7 +1345,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1316,7 +1397,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1361,7 +1442,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1407,7 +1488,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1452,7 +1533,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1501,7 +1582,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1586,7 +1667,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
@@ -1669,7 +1750,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 }

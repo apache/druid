@@ -19,7 +19,6 @@
 
 package io.druid.indexer;
 
-import com.google.inject.Inject;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -29,15 +28,15 @@ import java.util.List;
 public class MetadataStorageUpdaterJob implements Jobby
 {
   private final HadoopDruidIndexerConfig config;
-
-  @Inject
-  private MetadataStorageUpdaterJobHandler handler;
+  private final MetadataStorageUpdaterJobHandler handler;
 
   public MetadataStorageUpdaterJob(
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      MetadataStorageUpdaterJobHandler handler
   )
   {
     this.config = config;
+    this.handler = handler;
   }
 
   @Override

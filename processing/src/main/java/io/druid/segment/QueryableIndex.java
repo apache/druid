@@ -17,7 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment;import io.druid.segment.data.Indexed;
+package io.druid.segment;
+
+import com.metamx.collections.bitmap.BitmapFactory;
+import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -30,6 +33,7 @@ public interface QueryableIndex extends ColumnSelector
   public int getNumRows();
   public Indexed<String> getColumnNames();
   public Indexed<String> getAvailableDimensions();
+  public BitmapFactory getBitmapFactoryForDimensions();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

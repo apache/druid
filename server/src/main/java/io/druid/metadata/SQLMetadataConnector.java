@@ -75,7 +75,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   protected abstract String getSerialType();
 
-  protected abstract boolean tableExists(Handle handle, final String tableName);
+  public String getValidationQuery() { return "SELECT 1"; }
+
+  public abstract boolean tableExists(Handle handle, final String tableName);
 
   protected boolean isTransientException(Throwable e) {
     return false;
@@ -367,7 +369,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     String uri = connectorConfig.getConnectURI();
     dataSource.setUrl(uri);
 
-    dataSource.setValidationQuery(connectorConfig.getValidationQuery());
+    dataSource.setValidationQuery(getValidationQuery());
     dataSource.setTestOnBorrow(true);
 
     return dataSource;
