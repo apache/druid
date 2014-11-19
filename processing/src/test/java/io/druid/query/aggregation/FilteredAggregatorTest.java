@@ -46,7 +46,6 @@ public class FilteredAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
-        "test",
         new DoubleSumAggregatorFactory("billy", "value"),
         new SelectorDimFilter("dim", "a")
     );
@@ -55,7 +54,7 @@ public class FilteredAggregatorTest
      makeColumnSelector(selector)
     );
 
-    Assert.assertEquals("test", agg.getName());
+    Assert.assertEquals("billy", agg.getName());
 
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
@@ -164,7 +163,6 @@ public class FilteredAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
-        "test",
         new DoubleSumAggregatorFactory("billy", "value"),
         new NotDimFilter(new SelectorDimFilter("dim", "b"))
     );
@@ -173,7 +171,7 @@ public class FilteredAggregatorTest
         makeColumnSelector(selector)
     );
 
-    Assert.assertEquals("test", agg.getName());
+    Assert.assertEquals("billy", agg.getName());
 
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;

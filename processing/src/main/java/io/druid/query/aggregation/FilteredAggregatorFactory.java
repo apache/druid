@@ -22,7 +22,6 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.ISE;
-import com.metamx.common.Pair;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -37,12 +36,10 @@ public class FilteredAggregatorFactory implements AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x9;
 
-  private final String name;
   private final AggregatorFactory delegate;
   private final DimFilter filter;
 
   public FilteredAggregatorFactory(
-      @JsonProperty("name") String name,
       @JsonProperty("aggregator") AggregatorFactory delegate,
       @JsonProperty("filter") DimFilter filter
   )
@@ -55,7 +52,6 @@ public class FilteredAggregatorFactory implements AggregatorFactory
         "FilteredAggregator currently only supports filters of type 'selector' and their negation"
     );
 
-    this.name = name;
     this.delegate = delegate;
     this.filter = filter;
   }
@@ -64,22 +60,46 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     final Aggregator aggregator = delegate.factorize(metricFactory);
-    final Pair<DimensionSelector, IntPredicate> selectorPredicatePair = makeFilterPredicate(
-        filter,
-        metricFactory
+    SelectorDimFilter selector = getSelector(filter);
+    final DimensionSelector dimensionSelector = metricFactory.makeDimensionSelector(selector.getDimension());
+    if (dimensionSelector == null) {
+      // dimension does not exist
+      if (filter instanceof NotDimFilter) {
+        // all rows match the not criteria
+        return aggregator;
+      } else {
+        // none row match the selector filter
+        return Aggregators.noopAggregator();
+      }
+    }
+    return new FilteredAggregator(
+        dimensionSelector,
+        makeFilterPredicate(filter, dimensionSelector, selector.getValue()),
+        aggregator
     );
-    return new FilteredAggregator(name, selectorPredicatePair.lhs, selectorPredicatePair.rhs, aggregator);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     final BufferAggregator aggregator = delegate.factorizeBuffered(metricFactory);
-    final Pair<DimensionSelector, IntPredicate> selectorPredicatePair = makeFilterPredicate(
-        filter,
-        metricFactory
+    SelectorDimFilter selector = getSelector(filter);
+    final DimensionSelector dimensionSelector = metricFactory.makeDimensionSelector(selector.getDimension());
+    if (dimensionSelector == null) {
+      // dimension does not exist
+      if (filter instanceof NotDimFilter) {
+        // all rows match the not criteria
+        return aggregator;
+      } else {
+        // none row match the selector filter
+        return Aggregators.noopBufferAggregator();
+      }
+    }
+    return new FilteredBufferAggregator(
+        dimensionSelector,
+        makeFilterPredicate(filter, dimensionSelector, selector.getValue()),
+        aggregator
     );
-    return new FilteredBufferAggregator(selectorPredicatePair.lhs, selectorPredicatePair.rhs, aggregator);
   }
 
   @Override
@@ -116,7 +136,7 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   @Override
   public String getName()
   {
-    return name;
+    return delegate.getName();
   }
 
   @Override
@@ -173,23 +193,13 @@ public class FilteredAggregatorFactory implements AggregatorFactory
     return delegate.getRequiredColumns();
   }
 
-  private static Pair<DimensionSelector, IntPredicate> makeFilterPredicate(
+  private IntPredicate makeFilterPredicate(
       final DimFilter dimFilter,
-      final ColumnSelectorFactory metricFactory
+      final DimensionSelector dimSelector,
+      final String filterValue
   )
   {
-    final SelectorDimFilter selector;
-    if (dimFilter instanceof NotDimFilter) {
-      // we only support NotDimFilter with Selector filter
-      selector = (SelectorDimFilter) ((NotDimFilter) dimFilter).getField();
-    } else if (dimFilter instanceof SelectorDimFilter) {
-      selector = (SelectorDimFilter) dimFilter;
-    } else {
-      throw new ISE("Unsupported DimFilter type [%d]", dimFilter.getClass());
-    }
-
-    final DimensionSelector dimSelector = metricFactory.makeDimensionSelector(selector.getDimension());
-    final int lookupId = dimSelector.lookupId(selector.getValue());
+    final int lookupId = dimSelector.lookupId(filterValue);
     final IntPredicate predicate;
     if (dimFilter instanceof NotDimFilter) {
       predicate = new IntPredicate()
@@ -210,7 +220,59 @@ public class FilteredAggregatorFactory implements AggregatorFactory
         }
       };
     }
-    return Pair.of(dimSelector, predicate);
+    return predicate;
   }
 
+  public static SelectorDimFilter getSelector(DimFilter dimFilter)
+  {
+    final SelectorDimFilter selector;
+    if (dimFilter instanceof NotDimFilter) {
+      // we only support NotDimFilter with Selector filter
+      selector = (SelectorDimFilter) ((NotDimFilter) dimFilter).getField();
+    } else if (dimFilter instanceof SelectorDimFilter) {
+      selector = (SelectorDimFilter) dimFilter;
+    } else {
+      throw new ISE("Unsupported DimFilter type [%d]", dimFilter.getClass());
+    }
+    return selector;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FilteredAggregatorFactory{" +
+           ", delegate=" + delegate +
+           ", filter=" + filter +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    FilteredAggregatorFactory that = (FilteredAggregatorFactory) o;
+
+    if (delegate != null ? !delegate.equals(that.delegate) : that.delegate != null) {
+      return false;
+    }
+    if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = delegate != null ? delegate.hashCode() : 0;
+    result = 31 * result + (filter != null ? filter.hashCode() : 0);
+    return result;
+  }
 }
