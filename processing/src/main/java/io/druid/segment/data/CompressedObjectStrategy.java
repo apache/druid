@@ -33,6 +33,7 @@ import net.jpountz.lz4.LZ4SafeDecompressor;
 
 import java.io.IOException;
 import java.nio.Buffer;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Map;
@@ -163,14 +164,10 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
-      final int maxCopy = Math.min(numBytes, out.remaining());
       final ByteBuffer copyBuffer = in.duplicate();
-      copyBuffer.limit(copyBuffer.position() + maxCopy);
-      out.put(copyBuffer);
-
-      // Setup the buffers properly
-      out.flip();
-      in.position(in.position() + maxCopy);
+      copyBuffer.limit(copyBuffer.position() + numBytes);
+      out.put(copyBuffer).flip();
+      in.position(in.position() + numBytes);
     }
 
     @Override
@@ -215,18 +212,20 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public byte[] compress(byte[] bytes)
     {
-      final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder();
-      LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
-      CloseQuietly.close(encoder);
-
-      return chunk.getData();
+      try(final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
+        LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
+        return chunk.getData();
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
   public static class LZ4Decompressor implements Decompressor
   {
-    private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestJavaInstance().safeDecompressor();
-    private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestJavaInstance().fastDecompressor();
+    private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestInstance().safeDecompressor();
+    private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestInstance().fastDecompressor();
     private static final LZ4Decompressor defaultDecompressor = new LZ4Decompressor();
 
     @Override
@@ -237,7 +236,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
 
       try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
         final byte[] outputBytes = outputBytesHolder.get();
-        final int numDecompressedBytes = lz4Fast.decompress(bytes, 0, outputBytes, 0, outputBytes.length);
+        // Since decompressed size is NOT known, must use lz4Safe
+        final int numDecompressedBytes = lz4Safe.decompress(bytes,outputBytes);
         out.put(outputBytes, 0, numDecompressedBytes);
         out.flip();
       }
@@ -269,8 +269,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static class LZ4Compressor implements Compressor
   {
     private static final LZ4Compressor defaultCompressor = new LZ4Compressor();
-    private static final net.jpountz.lz4.LZ4Compressor lz4Fast = LZ4Factory.fastestJavaInstance().fastCompressor();
-    private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestJavaInstance().highCompressor();
+    private static final net.jpountz.lz4.LZ4Compressor lz4Fast = LZ4Factory.fastestInstance().fastCompressor();
+    private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestInstance().highCompressor();
 
     @Override
     public byte[] compress(byte[] bytes)
