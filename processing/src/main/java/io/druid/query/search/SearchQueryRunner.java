@@ -108,7 +108,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       }
 
       for (String dimension : dimsToSearch) {
-        final Column column = index.getColumn(dimension.toLowerCase());
+        final Column column = index.getColumn(dimension);
         if (column == null) {
           continue;
         }

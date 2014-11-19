@@ -128,7 +128,7 @@ public class DatasourcesResource
       @QueryParam("full") final String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -197,7 +197,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    final DruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();
@@ -258,7 +258,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    final DruidDataSource dataSource = getDataSource(dataSourceName);
     final Interval theInterval = new Interval(interval.replace("_", "/"));
 
     if (dataSource == null) {
@@ -323,7 +323,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -356,7 +356,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
