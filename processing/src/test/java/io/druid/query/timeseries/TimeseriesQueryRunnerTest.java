@@ -32,12 +32,15 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
@@ -1656,6 +1659,195 @@ public class TimeseriesQueryRunnerTest
         runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAgg()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Lists.newArrayList(
+                                          Iterables.concat(
+                                              QueryRunnerTestHelper.commonAggregators,
+                                              Lists.newArrayList(
+                                                  new FilteredAggregatorFactory(
+                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      Druids.newSelectorDimFilterBuilder()
+                                                            .dimension(QueryRunnerTestHelper.providerDimension)
+                                                            .value("spot")
+                                                            .build()
+                                                  )
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "filteredAgg", 18L,
+                    "addRowsIndexConstant", 12486.361190795898d,
+                    "index", 12459.361190795898d,
+                    "uniques", 9.019833517963864d,
+                    "rows", 26L
+                )
+            )
+        )
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAggDimensionNotPresent(){
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Lists.newArrayList(
+                                          Iterables.concat(
+                                              QueryRunnerTestHelper.commonAggregators,
+                                              Lists.newArrayList(
+                                                  new FilteredAggregatorFactory(
+                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      new NotDimFilter(Druids.newSelectorDimFilterBuilder()
+                                                                             .dimension("abraKaDabra")
+                                                                             .value("Lol")
+                                                                             .build())
+                                                  )
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "filteredAgg", 26L,
+                    "addRowsIndexConstant", 12486.361190795898d,
+                    "index", 12459.361190795898d,
+                    "uniques", 9.019833517963864d,
+                    "rows", 26L
+                )
+            )
+        )
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAggValueNotPresent(){
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Lists.newArrayList(
+                                          Iterables.concat(
+                                              QueryRunnerTestHelper.commonAggregators,
+                                              Lists.newArrayList(
+                                                  new FilteredAggregatorFactory(
+                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      new NotDimFilter(Druids.newSelectorDimFilterBuilder()
+                                                                             .dimension(QueryRunnerTestHelper.providerDimension)
+                                                                             .value("LolLol")
+                                                                             .build())
+                                                  )
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "filteredAgg", 26L,
+                    "addRowsIndexConstant", 12486.361190795898d,
+                    "index", 12459.361190795898d,
+                    "uniques", 9.019833517963864d,
+                    "rows", 26L
+                )
+            )
+        )
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAggNullValue(){
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Lists.newArrayList(
+                                          Iterables.concat(
+                                              QueryRunnerTestHelper.commonAggregators,
+                                              Lists.newArrayList(
+                                                  new FilteredAggregatorFactory(
+                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      new NotDimFilter(Druids.newSelectorDimFilterBuilder()
+                                                                             .dimension(QueryRunnerTestHelper.providerDimension)
+                                                                             .value(null)
+                                                                             .build())
+                                                  )
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<TimeseriesResultValue>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "filteredAgg", 26L,
+                    "addRowsIndexConstant", 12486.361190795898d,
+                    "index", 12459.361190795898d,
+                    "uniques", 9.019833517963864d,
+                    "rows", 26L
+                )
+            )
+        )
+    );
+
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 }
