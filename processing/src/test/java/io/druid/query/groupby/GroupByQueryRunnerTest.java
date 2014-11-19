@@ -965,6 +965,66 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByWithSameCaseOrdering()
+  {
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDimensions(
+            Arrays.<DimensionSpec>asList(
+                new DefaultDimensionSpec(
+                    QueryRunnerTestHelper.marketDimension,
+                    "marketalias"
+                )
+            )
+        )
+        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Lists.newArrayList(
+                    new OrderByColumnSpec(
+                        "marketalias",
+                        OrderByColumnSpec.Direction.DESCENDING
+                    )
+                ), 3
+            )
+        )
+        .setAggregatorSpecs(
+            Lists.<AggregatorFactory>newArrayList(
+                QueryRunnerTestHelper.rowsCount
+            )
+        )
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01T00:00:00.000Z",
+            "marketalias",
+            "upfront",
+            "rows",
+            186L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01T00:00:00.000Z",
+            "marketalias",
+            "total_market",
+            "rows",
+            186L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01T00:00:00.000Z",
+            "marketalias",
+            "spot",
+            "rows",
+            837L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+  }
+
+  @Test
   public void testGroupByWithOrderLimit4()
   {
     GroupByQuery query = new GroupByQuery.Builder()
@@ -998,7 +1058,13 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "upfront", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "total_market", "rows", 186L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01T00:00:00.000Z",
+            "market",
+            "total_market",
+            "rows",
+            186L
+        ),
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "spot", "rows", 837L)
     );
 

@@ -82,6 +82,28 @@ public class IncrementalIndexTest
   }
 
   @Test
+  public void testCaseSensitivity() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex index = createCaseInsensitiveIndex(timestamp);
+
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensions());
+    Assert.assertEquals(2, index.size());
+
+    final Iterator<Row> rows = index.iterator();
+    Row row = rows.next();
+    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+
+    row = rows.next();
+    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+  }
+
+  @Test
   public void testConcurrentAdd() throws Exception
   {
     final IncrementalIndex index = new IncrementalIndex(
