@@ -28,14 +28,12 @@ import javax.annotation.Nullable;
 
 public class FilteredAggregator implements Aggregator
 {
-  private final String name;
   private final DimensionSelector dimSelector;
   private final Aggregator delegate;
   private final IntPredicate predicate;
 
-  public FilteredAggregator(String name, DimensionSelector dimSelector, IntPredicate predicate, Aggregator delegate)
+  public FilteredAggregator(DimensionSelector dimSelector, IntPredicate predicate, Aggregator delegate)
   {
-    this.name = name;
     this.dimSelector = dimSelector;
     this.delegate = delegate;
     this.predicate = predicate;
@@ -75,7 +73,7 @@ public class FilteredAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return name;
+    return delegate.getName();
   }
 
   @Override
