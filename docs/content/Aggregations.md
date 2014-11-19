@@ -176,7 +176,6 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
 ```json
 {
   "type" : "filtered",
-  "name" : "aggMatching",
   "filter" : {
     "type" : "selector",
     "dimension" : <dimension>,
