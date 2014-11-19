@@ -25,23 +25,24 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Implements the HyperLogLog cardinality estimator described in:
- * 
+ * <p/>
  * http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
- * 
+ * <p/>
  * Run this code to see a simple indication of expected errors based on different m values:
- * 
+ * <p/>
  * <code>
- *   for (int i = 1; i &lt; 20; ++i) {
- *     System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
- *   }
+ * for (int i = 1; i &lt; 20; ++i) {
+ * System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
+ * }
  * </code>
- *
+ * <p/>
  * This class is *not* multi-threaded.  It can be passed among threads, but it is written with the assumption that
  * only one thread is ever calling methods on it.
- * 
+ * <p/>
  * If you have multiple threads calling methods on this concurrently, I hope you manage to get correct behavior
  */
 public abstract class HyperLogLogCollector implements Comparable<HyperLogLogCollector>
@@ -206,9 +207,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return buffer.remaining() != NUM_BYTES_FOR_BUCKETS;
   }
 
-  private ByteBuffer storageBuffer;
-  private int initPosition;
-  private Double estimatedCardinality;
+  protected ByteBuffer storageBuffer;
+  protected int initPosition;
+  protected Double estimatedCardinality;
 
   public HyperLogLogCollector(ByteBuffer byteBuffer)
   {
@@ -307,7 +308,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     } else if (positionOf1 > (registerOffset + range)) {
       final byte currMax = getMaxOverflowValue();
       if (positionOf1 > currMax) {
-        if(currMax <= (registerOffset + range)) {
+        if (currMax <= (registerOffset + range)) {
           // this could be optimized by having an add without sanity checks
           add(getMaxOverflowRegister(), currMax);
         }
@@ -368,7 +369,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     otherBuffer.position(other.getPayloadBytePosition());
 
     if (isSparse(otherBuffer)) {
-      while(otherBuffer.hasRemaining()) {
+      while (otherBuffer.hasRemaining()) {
         final int payloadStartPosition = otherBuffer.getShort() - other.getNumHeaderBytes();
         numNonZero += mergeAndStoreByteRegister(
             storageBuffer,
@@ -416,25 +417,45 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   public ByteBuffer toByteBuffer()
   {
-    short numNonZeroRegisters = getNumNonZeroRegisters();
+
+    final short numNonZeroRegisters = getNumNonZeroRegisters();
 
     // store sparsely
     if (storageBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
-      ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
+      final ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
       setVersion(retVal);
       setRegisterOffset(retVal, getRegisterOffset());
       setNumNonZeroRegisters(retVal, numNonZeroRegisters);
       setMaxOverflowValue(retVal, getMaxOverflowValue());
       setMaxOverflowRegister(retVal, getMaxOverflowRegister());
 
-      int startPosition = getPayloadBytePosition();
+      final int startPosition = getPayloadBytePosition();
       retVal.position(getPayloadBytePosition(retVal));
-      for (int i = startPosition; i < startPosition + NUM_BYTES_FOR_BUCKETS; i++) {
-        if (storageBuffer.get(i) != 0) {
-          retVal.putShort((short) (0xffff & (i - initPosition)));
-          retVal.put(storageBuffer.get(i));
+
+      final byte[] zipperBuffer = new byte[NUM_BYTES_FOR_BUCKETS];
+      ByteBuffer roStorageBuffer = storageBuffer.asReadOnlyBuffer();
+      roStorageBuffer.position(startPosition);
+      roStorageBuffer.get(zipperBuffer);
+
+      final ByteOrder byteOrder = retVal.order();
+
+      final byte[] tempBuffer = new byte[numNonZeroRegisters * 3];
+      int outBufferPos = 0;
+      for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
+        if (zipperBuffer[i] != 0) {
+          final short val = (short) (0xffff & (i + startPosition - initPosition));
+          if (byteOrder.equals(ByteOrder.LITTLE_ENDIAN)) {
+            tempBuffer[outBufferPos + 0] = (byte) (0xff & val);
+            tempBuffer[outBufferPos + 1] = (byte) (0xff & (val >> 8));
+          } else {
+            tempBuffer[outBufferPos + 1] = (byte) (0xff & val);
+            tempBuffer[outBufferPos + 0] = (byte) (0xff & (val >> 8));
+          }
+          tempBuffer[outBufferPos + 2] = zipperBuffer[i];
+          outBufferPos += 3;
         }
       }
+      retVal.put(tempBuffer);
       retVal.rewind();
       return retVal.asReadOnlyBuffer();
     }
@@ -507,12 +528,12 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       return false;
     }
 
-    if(storageBuffer == null && otherBuffer == null) {
+    if (storageBuffer == null && otherBuffer == null) {
       return true;
     }
 
     final ByteBuffer denseStorageBuffer;
-    if(storageBuffer.remaining() != getNumBytesForDenseStorage()) {
+    if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
       HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer);
       denseCollector.convertToDenseStorage();
       denseStorageBuffer = denseCollector.storageBuffer;
@@ -520,7 +541,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       denseStorageBuffer = storageBuffer;
     }
 
-    if(otherBuffer.remaining() != getNumBytesForDenseStorage()) {
+    if (otherBuffer.remaining() != getNumBytesForDenseStorage()) {
       HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer);
       otherCollector.convertToDenseStorage();
       otherBuffer = otherCollector.storageBuffer;
