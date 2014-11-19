@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
@@ -373,9 +374,11 @@ public class OverlordResource
   )
   {
     try {
-      final Optional<InputSupplier<InputStream>> stream = taskLogStreamer.streamTaskLog(taskid, offset);
+      final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
-        return Response.ok(stream.get().getInput()).build();
+        try(InputStream istream = stream.get().openStream()) {
+          return Response.ok(istream).build();
+        }
       } else {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(
