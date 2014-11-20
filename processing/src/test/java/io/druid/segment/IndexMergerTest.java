@@ -46,7 +46,7 @@ public class IndexMergerTest
   }
 
   @Test
-  public void testPersistCaseInsensitive() throws Exception
+  public void testPersist() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
 
@@ -64,6 +64,65 @@ public class IndexMergerTest
       tempDir.delete();
     }
   }
+
+  @Test
+  public void testPersistMerge() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
+
+    IncrementalIndex toPersist2 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{}, TestQueryRunners.pool);
+
+    toPersist2.add(
+        new MapBasedInputRow(
+            timestamp,
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
+        )
+    );
+
+    toPersist2.add(
+        new MapBasedInputRow(
+            timestamp,
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "5", "dim2", "6")
+        )
+    );
+
+    final File tempDir1 = Files.createTempDir();
+    final File tempDir2 = Files.createTempDir();
+    final File mergedDir = Files.createTempDir();
+    try {
+      QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tempDir1));
+
+      Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+      Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
+      Assert.assertEquals(2, index1.getColumnNames().size());
+
+      QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2));
+
+      Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
+      Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
+      Assert.assertEquals(2, index2.getColumnNames().size());
+
+      QueryableIndex merged = IndexIO.loadIndex(
+          IndexMerger.mergeQueryableIndex(
+              Arrays.asList(index1, index2),
+              new AggregatorFactory[]{},
+              mergedDir
+          )
+      );
+
+      Assert.assertEquals(3, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+      Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
+      Assert.assertEquals(2, merged.getColumnNames().size());
+    }
+    finally {
+      FileUtils.deleteQuietly(tempDir1);
+      FileUtils.deleteQuietly(tempDir2);
+      FileUtils.deleteQuietly(mergedDir);
+    }
+}
 
   @Test
   public void testPersistEmptyColumn() throws Exception
