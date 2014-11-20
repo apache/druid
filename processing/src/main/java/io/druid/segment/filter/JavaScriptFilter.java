@@ -27,6 +27,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.data.Indexed;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -160,4 +161,11 @@ public class JavaScriptFilter implements Filter
       return script.hashCode();
     }
   }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }
