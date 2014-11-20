@@ -42,7 +42,7 @@ import java.util.Random;
 /**
  *
  */
-@RunWith(Parameterized.class)
+//@RunWith(Parameterized.class)
 public class BitmapCreationBenchmark extends AbstractBenchmark
 {
   private static final Logger log = new Logger(BitmapCreationBenchmark.class);
@@ -121,7 +121,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
 
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
-  @Test
+  //@Test
   public void testLinearAddition()
   {
     MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
@@ -132,7 +132,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   }
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 10)
-  @Test
+  //@Test
   public void testRandomAddition()
   {
     MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
@@ -143,7 +143,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   }
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
-  @Test
+  //@Test
   public void testLinearAdditionDescending()
   {
     MutableBitmap mutableBitmap = factory.makeEmptyMutableBitmap();
@@ -155,7 +155,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
 
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
-  @Test
+  //@Test
   public void testToImmutableByteArray()
   {
     ImmutableBitmap immutableBitmap = factory.makeImmutableBitmap(baseMutableBitmap);
@@ -164,7 +164,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
 
 
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
-  @Test
+  //@Test
   public void testFromImmutableByteArray()
   {
     ImmutableBitmap immutableBitmap = factory.mapImmutableBitmap(baseByteBuffer);

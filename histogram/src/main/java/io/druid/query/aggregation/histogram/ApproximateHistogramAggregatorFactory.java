@@ -70,7 +70,7 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   )
   {
     this.name = name;
-    this.fieldName = fieldName.toLowerCase();
+    this.fieldName = fieldName;
     this.resolution = resolution == null ? ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE : resolution;
     this.numBuckets = numBuckets == null ? ApproximateHistogram.DEFAULT_BUCKET_SIZE : numBuckets;
     this.lowerLimit = lowerLimit == null ? Float.NEGATIVE_INFINITY : lowerLimit;

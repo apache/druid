@@ -307,7 +307,7 @@ public class IndexGeneratorJob implements Jobby
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
       for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
-        metricNames.add(factory.getName().toLowerCase());
+        metricNames.add(factory.getName());
       }
 
       parser = config.getParser();

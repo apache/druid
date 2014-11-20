@@ -99,7 +99,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
+    IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
     if (dimDim == null) {
       return 0;
     }
@@ -268,14 +268,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public DimensionSelector makeDimensionSelector(String dimension)
               {
-                final String dimensionName = dimension.toLowerCase();
-                final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimensionName);
+                final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimension);
                 if (dimValLookup == null) {
                   return null;
                 }
 
                 final int maxId = dimValLookup.size();
-                final int dimIndex = index.getDimensionIndex(dimensionName);
+                final int dimIndex = index.getDimensionIndex(dimension);
 
                 return new DimensionSelector()
                 {
@@ -340,8 +339,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public FloatColumnSelector makeFloatColumnSelector(String columnName)
               {
-                final String metricName = columnName.toLowerCase();
-                final Integer metricIndexInt = index.getMetricIndex(metricName);
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
                 if (metricIndexInt == null) {
                   return new FloatColumnSelector()
                   {
@@ -372,9 +370,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public LongColumnSelector makeLongColumnSelector(String columnName)
               {
-                final String metricName = columnName.toLowerCase();
-
-                if(metricName.equals(Column.TIME_COLUMN_NAME)){
+                if(columnName.equals(Column.TIME_COLUMN_NAME)){
                   return new LongColumnSelector()
                   {
                     @Override
@@ -384,7 +380,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     }
                   };
                 }
-                final Integer metricIndexInt = index.getMetricIndex(metricName);
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
                 if (metricIndexInt == null) {
                   return new LongColumnSelector()
                   {
@@ -415,13 +411,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public ObjectColumnSelector makeObjectColumnSelector(String column)
               {
-                final String columnName = column.toLowerCase();
-                final Integer metricIndexInt = index.getMetricIndex(columnName);
+                final Integer metricIndexInt = index.getMetricIndex(column);
 
                 if (metricIndexInt != null) {
                   final int metricIndex = metricIndexInt;
 
-                  final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(columnName));
+                  final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(column));
                   final BufferAggregator agg = index.getAggregator(metricIndex);
                   return new ObjectColumnSelector()
                   {
@@ -442,7 +437,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   };
                 }
 
-                final Integer dimensionIndexInt = index.getDimensionIndex(columnName);
+                final Integer dimensionIndexInt = index.getDimensionIndex(column);
 
                 if (dimensionIndexInt != null) {
                   final int dimensionIndex = dimensionIndexInt;
@@ -528,11 +523,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, String value)
     {
-      Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
+      Integer dimIndexObject = index.getDimensionIndex(dimension);
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
-      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension.toLowerCase());
+      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
       if (!dimDim.contains(value)) {
         if (value == null || "".equals(value)) {
           final int dimIndex = dimIndexObject;
@@ -579,7 +574,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Predicate<String> predicate)
     {
-      Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
+      Integer dimIndexObject = index.getDimensionIndex(dimension);
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
@@ -608,7 +603,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final Bound bound)
     {
-      Integer dimIndexObject = index.getDimensionIndex(dimension.toLowerCase());
+      Integer dimIndexObject = index.getDimensionIndex(dimension);
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(false);
       }
