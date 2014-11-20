@@ -207,9 +207,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     return buffer.remaining() != NUM_BYTES_FOR_BUCKETS;
   }
 
-  protected ByteBuffer storageBuffer;
-  protected int initPosition;
-  protected Double estimatedCardinality;
+  private ByteBuffer storageBuffer;
+  private int initPosition;
+  private Double estimatedCardinality;
+
+
 
   public HyperLogLogCollector(ByteBuffer byteBuffer)
   {
@@ -296,7 +298,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   public void add(short bucket, byte positionOf1)
   {
-    if (storageBuffer.isReadOnly()) {
+    if (getStorageBuffer().isReadOnly()) {
       convertToMutableByteBuffer();
     }
 
@@ -329,15 +331,16 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   public HyperLogLogCollector fold(HyperLogLogCollector other)
   {
-    if (other == null || other.storageBuffer.remaining() == 0) {
+    final ByteBuffer myBuffer = getStorageBuffer();
+    if (other == null || other.getStorageBuffer().remaining() == 0) {
       return this;
     }
 
-    if (storageBuffer.isReadOnly()) {
+    if (myBuffer.isReadOnly()) {
       convertToMutableByteBuffer();
     }
 
-    if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
+    if (myBuffer.remaining() != getNumBytesForDenseStorage()) {
       convertToDenseStorage();
     }
 
@@ -345,16 +348,16 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     if (getRegisterOffset() < other.getRegisterOffset()) {
       // "Swap" the buffers so that we are folding into the one with the higher offset
-      final ByteBuffer tmpBuffer = ByteBuffer.allocate(storageBuffer.remaining());
-      tmpBuffer.put(storageBuffer.asReadOnlyBuffer());
+      final ByteBuffer tmpBuffer = ByteBuffer.allocate(myBuffer.remaining());
+      tmpBuffer.put(myBuffer.asReadOnlyBuffer());
       tmpBuffer.clear();
 
-      storageBuffer.duplicate().put(other.storageBuffer.asReadOnlyBuffer());
+      getStorageBuffer().duplicate().put(other.getStorageBuffer().asReadOnlyBuffer());
 
       other = HyperLogLogCollector.makeCollector(tmpBuffer);
     }
 
-    final ByteBuffer otherBuffer = other.storageBuffer.asReadOnlyBuffer();
+    final ByteBuffer otherBuffer = other.getStorageBuffer().asReadOnlyBuffer();
     final byte otherOffset = other.getRegisterOffset();
 
     byte myOffset = getRegisterOffset();
@@ -372,7 +375,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       while (otherBuffer.hasRemaining()) {
         final int payloadStartPosition = otherBuffer.getShort() - other.getNumHeaderBytes();
         numNonZero += mergeAndStoreByteRegister(
-            storageBuffer,
+            myBuffer,
             myPayloadStart + payloadStartPosition,
             offsetDiff,
             otherBuffer.get()
@@ -387,7 +390,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       int position = getPayloadBytePosition();
       while (otherBuffer.hasRemaining()) {
         numNonZero += mergeAndStoreByteRegister(
-            storageBuffer,
+            myBuffer,
             position,
             offsetDiff,
             otherBuffer.get()
@@ -418,10 +421,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   public ByteBuffer toByteBuffer()
   {
 
+    final ByteBuffer myBuffer = getStorageBuffer();
     final short numNonZeroRegisters = getNumNonZeroRegisters();
 
     // store sparsely
-    if (storageBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
+    if (myBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
       final ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
       setVersion(retVal);
       setRegisterOffset(retVal, getRegisterOffset());
@@ -433,7 +437,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       retVal.position(getPayloadBytePosition(retVal));
 
       final byte[] zipperBuffer = new byte[NUM_BYTES_FOR_BUCKETS];
-      ByteBuffer roStorageBuffer = storageBuffer.asReadOnlyBuffer();
+      ByteBuffer roStorageBuffer = myBuffer.asReadOnlyBuffer();
       roStorageBuffer.position(startPosition);
       roStorageBuffer.get(zipperBuffer);
 
@@ -441,7 +445,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
       for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
         if (zipperBuffer[i] != 0) {
-          final short val = (short) (0xffff & (i + startPosition - initPosition));
+          final short val = (short) (0xffff & (i + startPosition - getInitPosition()));
           retVal.putShort(val);
           retVal.put(zipperBuffer[i]);
         }
@@ -450,7 +454,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       return retVal.asReadOnlyBuffer();
     }
 
-    return storageBuffer.asReadOnlyBuffer();
+    return myBuffer.asReadOnlyBuffer();
   }
 
   @JsonValue
@@ -471,12 +475,13 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       short overflowRegister = getMaxOverflowRegister();
       short overflowPosition = (short) (overflowRegister >>> 1);
       boolean isUpperNibble = ((overflowRegister & 0x1) == 0);
+      final ByteBuffer myBuffer = getStorageBuffer();
 
-      storageBuffer.position(getPayloadBytePosition());
+      myBuffer.position(getPayloadBytePosition());
 
-      if (isSparse(storageBuffer)) {
+      if (isSparse(myBuffer)) {
         estimatedCardinality = estimateSparse(
-            storageBuffer,
+            getStorageBuffer(),
             registerOffset,
             overflowValue,
             overflowPosition,
@@ -484,7 +489,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
         );
       } else {
         estimatedCardinality = estimateDense(
-            storageBuffer,
+            myBuffer,
             registerOffset,
             overflowValue,
             overflowPosition,
@@ -492,7 +497,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
         );
       }
 
-      storageBuffer.position(initPosition);
+      myBuffer.position(getInitPosition());
     }
     return estimatedCardinality;
   }
@@ -512,29 +517,31 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       return false;
     }
 
-    ByteBuffer otherBuffer = ((HyperLogLogCollector) o).storageBuffer;
+    final ByteBuffer myBuffer = getStorageBuffer();
 
-    if (storageBuffer != null ? false : otherBuffer != null) {
+    ByteBuffer otherBuffer = ((HyperLogLogCollector) o).getStorageBuffer();
+
+    if (myBuffer != null ? false : otherBuffer != null) {
       return false;
     }
 
-    if (storageBuffer == null && otherBuffer == null) {
+    if (myBuffer == null && otherBuffer == null) {
       return true;
     }
 
     final ByteBuffer denseStorageBuffer;
-    if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer);
+    if (myBuffer.remaining() != getNumBytesForDenseStorage()) {
+      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(myBuffer);
       denseCollector.convertToDenseStorage();
-      denseStorageBuffer = denseCollector.storageBuffer;
+      denseStorageBuffer = denseCollector.getStorageBuffer();
     } else {
-      denseStorageBuffer = storageBuffer;
+      denseStorageBuffer = myBuffer;
     }
 
     if (otherBuffer.remaining() != getNumBytesForDenseStorage()) {
       HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer);
       otherCollector.convertToDenseStorage();
-      otherBuffer = otherCollector.storageBuffer;
+      otherBuffer = otherCollector.getStorageBuffer();
     }
 
     return denseStorageBuffer.equals(otherBuffer);
@@ -543,8 +550,9 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   @Override
   public int hashCode()
   {
-    int result = storageBuffer != null ? storageBuffer.hashCode() : 0;
-    result = 31 * result + initPosition;
+    final ByteBuffer myBuffer = getStorageBuffer();
+    int result = myBuffer != null ? myBuffer.hashCode() : 0;
+    result = 31 * result + getInitPosition();
     return result;
   }
 
@@ -552,7 +560,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   public String toString()
   {
     return "HyperLogLogCollector{" +
-           "initPosition=" + initPosition +
+           "initPosition=" + getInitPosition() +
            ", version=" + getVersion() +
            ", registerOffset=" + getRegisterOffset() +
            ", numNonZeroRegisters=" + getNumNonZeroRegisters() +
@@ -563,32 +571,35 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
   private short decrementBuckets()
   {
+    final ByteBuffer myBuffer = getStorageBuffer();
     final int startPosition = getPayloadBytePosition();
     short count = 0;
     for (int i = startPosition; i < startPosition + NUM_BYTES_FOR_BUCKETS; i++) {
-      final byte val = (byte) (storageBuffer.get(i) - 0x11);
+      final byte val = (byte) (myBuffer.get(i) - 0x11);
       if ((val & 0xf0) != 0) {
         ++count;
       }
       if ((val & 0x0f) != 0) {
         ++count;
       }
-      storageBuffer.put(i, val);
+      myBuffer.put(i, val);
     }
     return count;
   }
 
   private void convertToMutableByteBuffer()
   {
-    ByteBuffer tmpBuffer = ByteBuffer.allocate(storageBuffer.remaining());
-    tmpBuffer.put(storageBuffer.asReadOnlyBuffer());
+    final ByteBuffer myBuffer = getStorageBuffer();
+    ByteBuffer tmpBuffer = ByteBuffer.allocate(myBuffer.remaining());
+    tmpBuffer.put(myBuffer.asReadOnlyBuffer());
     tmpBuffer.position(0);
-    storageBuffer = tmpBuffer;
+    setStorageBuffer(tmpBuffer);
     initPosition = 0;
   }
 
   private void convertToDenseStorage()
   {
+    final ByteBuffer myBuffer = getStorageBuffer();
     ByteBuffer tmpBuffer = ByteBuffer.allocate(getNumBytesForDenseStorage());
     // put header
     setVersion(tmpBuffer);
@@ -597,19 +608,20 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     setMaxOverflowValue(tmpBuffer, getMaxOverflowValue());
     setMaxOverflowRegister(tmpBuffer, getMaxOverflowRegister());
 
-    storageBuffer.position(getPayloadBytePosition());
+    myBuffer.position(getPayloadBytePosition());
     tmpBuffer.position(getPayloadBytePosition(tmpBuffer));
     // put payload
-    while (storageBuffer.hasRemaining()) {
-      tmpBuffer.put(storageBuffer.getShort(), storageBuffer.get());
+    while (myBuffer.hasRemaining()) {
+      tmpBuffer.put(myBuffer.getShort(), getStorageBuffer().get());
     }
     tmpBuffer.rewind();
-    storageBuffer = tmpBuffer;
+    setStorageBuffer(tmpBuffer);
     initPosition = 0;
   }
 
   private short addNibbleRegister(short bucket, byte positionOf1)
   {
+    final ByteBuffer myBuffer = getStorageBuffer();
     short numNonZeroRegs = getNumNonZeroRegisters();
 
     final int position = getPayloadBytePosition() + (short) (bucket >> 1);
@@ -617,11 +629,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     final byte shiftedPositionOf1 = (isUpperNibble) ? (byte) (positionOf1 << bitsPerBucket) : positionOf1;
 
-    if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
+    if (myBuffer.remaining() != getNumBytesForDenseStorage()) {
       convertToDenseStorage();
     }
 
-    final byte origVal = storageBuffer.get(position);
+    final byte origVal = myBuffer.get(position);
     final byte newValueMask = (isUpperNibble) ? (byte) 0xf0 : (byte) 0x0f;
     final byte originalValueMask = (byte) (newValueMask ^ 0xff);
 
@@ -630,7 +642,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       numNonZeroRegs++;
     }
 
-    storageBuffer.put(
+    myBuffer.put(
         position,
         (byte) (UnsignedBytes.max((byte) (origVal & newValueMask), shiftedPositionOf1) | (origVal & originalValueMask))
     );
@@ -700,5 +712,10 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     } else {
       return Double.compare(lhsOffset, rhsOffset);
     }
+  }
+
+  protected void setStorageBuffer(ByteBuffer storageBuffer)
+  {
+    this.storageBuffer = storageBuffer;
   }
 }

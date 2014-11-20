@@ -66,10 +66,12 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     @Override
     public ByteBuffer toByteBuffer()
     {
+      final ByteBuffer myBuffer = getStorageBuffer();
+      final int initialPosition = getInitPosition();
       short numNonZeroRegisters = getNumNonZeroRegisters();
 
       // store sparsely
-      if (storageBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
+      if (myBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
         ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
         setVersion(retVal);
         setRegisterOffset(retVal, getRegisterOffset());
@@ -80,16 +82,16 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         int startPosition = getPayloadBytePosition();
         retVal.position(getPayloadBytePosition(retVal));
         for (int i = startPosition; i < startPosition + NUM_BYTES_FOR_BUCKETS; i++) {
-          if (storageBuffer.get(i) != 0) {
-            retVal.putShort((short) (0xffff & (i - initPosition)));
-            retVal.put(storageBuffer.get(i));
+          if (myBuffer.get(i) != 0) {
+            retVal.putShort((short) (0xffff & (i - initialPosition)));
+            retVal.put(myBuffer.get(i));
           }
         }
         retVal.rewind();
         return retVal.asReadOnlyBuffer();
       }
 
-      return storageBuffer.asReadOnlyBuffer();
+      return myBuffer.asReadOnlyBuffer();
     }
   }
 
@@ -99,10 +101,12 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     public ByteBuffer toByteBuffer()
     {
 
+      final ByteBuffer myBuffer = getStorageBuffer();
+      final int initialPosition = getInitPosition();
       final short numNonZeroRegisters = getNumNonZeroRegisters();
 
       // store sparsely
-      if (storageBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
+      if (myBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
         final ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
         setVersion(retVal);
         setRegisterOffset(retVal, getRegisterOffset());
@@ -114,7 +118,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         retVal.position(getPayloadBytePosition(retVal));
 
         final byte[] zipperBuffer = new byte[NUM_BYTES_FOR_BUCKETS];
-        ByteBuffer roStorageBuffer = storageBuffer.asReadOnlyBuffer();
+        ByteBuffer roStorageBuffer = myBuffer.asReadOnlyBuffer();
         roStorageBuffer.position(startPosition);
         roStorageBuffer.get(zipperBuffer);
 
@@ -124,7 +128,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         int outBufferPos = 0;
         for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
           if (zipperBuffer[i] != 0) {
-            final short val = (short) (0xffff & (i + startPosition - initPosition));
+            final short val = (short) (0xffff & (i + startPosition - initialPosition));
             if(byteOrder.equals(ByteOrder.LITTLE_ENDIAN)){
               tempBuffer[outBufferPos + 0] = (byte) (0xff & val);
               tempBuffer[outBufferPos + 1] = (byte) (0xff & (val>>8));
@@ -141,7 +145,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         return retVal.asReadOnlyBuffer();
       }
 
-      return storageBuffer.asReadOnlyBuffer();
+      return myBuffer.asReadOnlyBuffer();
     }
   }
 
@@ -151,11 +155,13 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     @Override
     public ByteBuffer toByteBuffer()
     {
+      final ByteBuffer myBuffer = getStorageBuffer();
+      final int initialPosition = getInitPosition();
 
       final short numNonZeroRegisters = getNumNonZeroRegisters();
 
       // store sparsely
-      if (storageBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
+      if (myBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
         final ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
         setVersion(retVal);
         setRegisterOffset(retVal, getRegisterOffset());
@@ -167,7 +173,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         retVal.position(getPayloadBytePosition(retVal));
 
         final byte[] zipperBuffer = new byte[NUM_BYTES_FOR_BUCKETS];
-        ByteBuffer roStorageBuffer = storageBuffer.asReadOnlyBuffer();
+        ByteBuffer roStorageBuffer = myBuffer.asReadOnlyBuffer();
         roStorageBuffer.position(startPosition);
         roStorageBuffer.get(zipperBuffer);
 
@@ -175,7 +181,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
 
         for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
           if (zipperBuffer[i] != 0) {
-            final short val = (short) (0xffff & (i + startPosition - initPosition));
+            final short val = (short) (0xffff & (i + startPosition - initialPosition));
             retVal.putShort(val);
             retVal.put(zipperBuffer[i]);
           }
@@ -184,7 +190,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         return retVal.asReadOnlyBuffer();
       }
 
-      return storageBuffer.asReadOnlyBuffer();
+      return myBuffer.asReadOnlyBuffer();
     }
   }
 
