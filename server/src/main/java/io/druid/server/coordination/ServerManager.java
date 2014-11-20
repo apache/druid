@@ -67,6 +67,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -269,7 +270,14 @@ public class ServerManager implements QuerySegmentWalker
               @Override
               public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
               {
-                return timeline.lookup(input);
+                List<TimelineObjectHolder<String, ReferenceCountingSegment>> lookup = timeline.lookup(input);
+                if (lookup == null) {
+                  throw new ISE(
+                      "Unable to find any timeline entries for interval[%s]. Looks like segments were dropped while queries were still in queue",
+                      input
+                  );
+                }
+                return lookup;
               }
             }
         )
@@ -282,7 +290,9 @@ public class ServerManager implements QuerySegmentWalker
               )
               {
                 if (holder == null) {
-                  return null;
+                  throw new ISE(
+                      "Timeline holder is null! Looks like segments were dropped while queries were still in queue"
+                  );
                 }
 
                 return FunctionalIterable
@@ -359,12 +369,17 @@ public class ServerManager implements QuerySegmentWalker
                 );
 
                 if (entry == null) {
-                  return null;
+                  throw new ISE(
+                      "No segment descriptor found for [%s]! Looks like segments were dropped while queries were still in queue",
+                      input
+                  );
                 }
 
                 final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());
                 if (chunk == null) {
-                  return null;
+                  throw new ISE(
+                      "No segment descriptor chunk found for [%s]! Looks like segments were dropped while queries were still in queue"
+                  );
                 }
 
                 final ReferenceCountingSegment adapter = chunk.getObject();
