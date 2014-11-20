@@ -27,6 +27,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
@@ -75,5 +76,11 @@ class DimensionPredicateFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(dimension, predicate);
+  }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
   }
 }
