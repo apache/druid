@@ -59,7 +59,6 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -240,11 +239,6 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-    final AggregatorFactory[] lowerCaseMetricAggs = new AggregatorFactory[metricAggs.length];
-    for (int i = 0; i < metricAggs.length; i++) {
-      lowerCaseMetricAggs[i] = new ToLowerCaseAggregatorFactory(metricAggs[i]);
-    }
-
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(
             indexes,
@@ -253,24 +247,14 @@ public class IndexMerger
               @Override
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getDimensionNames(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input.toLowerCase();
-                      }
-                    }
-                );
+                return input.getDimensionNames();
               }
             }
         )
     );
     final List<String> mergedMetrics = Lists.transform(
         mergeIndexed(
-            Lists.<Iterable<String>>newArrayList(
+            Lists.newArrayList(
                 FunctionalIterable
                     .create(indexes)
                     .transform(
@@ -279,21 +263,11 @@ public class IndexMerger
                           @Override
                           public Iterable<String> apply(@Nullable IndexableAdapter input)
                           {
-                            return Iterables.transform(
-                                input.getMetricNames(),
-                                new Function<String, String>()
-                                {
-                                  @Override
-                                  public String apply(@Nullable String input)
-                                  {
-                                    return input.toLowerCase();
-                                  }
-                                }
-                            );
+                            return input.getMetricNames();
                           }
                         }
                     )
-                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(lowerCaseMetricAggs)))
+                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(metricAggs)))
             )
         ),
         new Function<String, String>()
@@ -301,17 +275,17 @@ public class IndexMerger
           @Override
           public String apply(@Nullable String input)
           {
-            return input.toLowerCase();
+            return input;
           }
         }
     );
-    if (mergedMetrics.size() != lowerCaseMetricAggs.length) {
-      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), lowerCaseMetricAggs.length);
+    if (mergedMetrics.size() != metricAggs.length) {
+      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), metricAggs.length);
     }
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (int i = 0; i < lowerCaseMetricAggs.length; i++) {
-      AggregatorFactory metricAgg = lowerCaseMetricAggs[i];
+    for (int i = 0; i < metricAggs.length; i++) {
+      AggregatorFactory metricAgg = metricAggs[i];
       sortedMetricAggs[mergedMetrics.indexOf(metricAgg.getName())] = metricAgg;
     }
 
@@ -320,7 +294,7 @@ public class IndexMerger
         throw new IAE(
             "Metric mismatch, index[%d] [%s] != [%s]",
             i,
-            lowerCaseMetricAggs[i].getName(),
+            metricAggs[i].getName(),
             mergedMetrics.get(i)
         );
       }
@@ -378,7 +352,7 @@ public class IndexMerger
                       @Override
                       public String apply(@Nullable String input)
                       {
-                        return input.toLowerCase();
+                        return input;
                       }
                     }
                 );
@@ -401,7 +375,7 @@ public class IndexMerger
                       @Override
                       public String apply(@Nullable String input)
                       {
-                        return input.toLowerCase();
+                        return input;
                       }
                     }
                 );
@@ -604,7 +578,7 @@ public class IndexMerger
       final int[] dimLookup = new int[mergedDimensions.size()];
       int count = 0;
       for (String dim : adapter.getDimensionNames()) {
-        dimLookup[count] = mergedDimensions.indexOf(dim.toLowerCase());
+        dimLookup[count] = mergedDimensions.indexOf(dim);
         count++;
       }
 

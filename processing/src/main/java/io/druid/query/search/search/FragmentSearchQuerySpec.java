@@ -22,8 +22,6 @@ package io.druid.query.search.search;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -41,17 +39,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
       @JsonProperty("values") List<String> values
   )
   {
-    this.values = Lists.transform(
-        values,
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(String s)
-          {
-            return s.toLowerCase();
-          }
-        }
-    );
+    this.values = values;
   }
 
   @JsonProperty
@@ -64,7 +52,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   public boolean accept(String dimVal)
   {
     for (String value : values) {
-      if (dimVal == null || !dimVal.toLowerCase().contains(value)) {
+      if (dimVal == null || !dimVal.toLowerCase().contains(value.toLowerCase())) {
         return false;
       }
     }
@@ -97,19 +85,25 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   public String toString()
   {
     return "FragmentSearchQuerySpec{" +
-             "values=" + values +
+           "values=" + values +
            "}";
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     FragmentSearchQuerySpec that = (FragmentSearchQuerySpec) o;
 
-    if (values != null ? !values.equals(that.values) : that.values != null) return false;
+    if (values != null ? !values.equals(that.values) : that.values != null) {
+      return false;
+    }
 
     return true;
   }

@@ -160,7 +160,7 @@ public class ApproximateHistogramGroupByQueryTest
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec(
                     QueryRunnerTestHelper.marketDimension,
-                    "marKetAlias"
+                    "marketalias"
                 )
             )
         )
@@ -169,7 +169,7 @@ public class ApproximateHistogramGroupByQueryTest
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        "marKetAlias",
+                        "marketalias",
                         OrderByColumnSpec.Direction.DESCENDING
                     )
                 ), 1

@@ -57,7 +57,6 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
@@ -185,7 +184,13 @@ public class IndexMaker
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index, bitmapSerdeFactory.getBitmapFactory())),
+        Arrays.<IndexableAdapter>asList(
+            new IncrementalIndexAdapter(
+                dataInterval,
+                index,
+                bitmapSerdeFactory.getBitmapFactory()
+            )
+        ),
         index.getMetricAggs(),
         outDir,
         progress
@@ -243,11 +248,6 @@ public class IndexMaker
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-    final AggregatorFactory[] lowerCaseMetricAggs = new AggregatorFactory[metricAggs.length];
-    for (int i = 0; i < metricAggs.length; i++) {
-      lowerCaseMetricAggs[i] = new ToLowerCaseAggregatorFactory(metricAggs[i]);
-    }
-
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(
             adapters,
@@ -256,17 +256,7 @@ public class IndexMaker
               @Override
               public Iterable<String> apply(IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getDimensionNames(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(String input)
-                      {
-                        return input.toLowerCase();
-                      }
-                    }
-                );
+                return input.getDimensionNames();
               }
             }
         )
@@ -283,21 +273,11 @@ public class IndexMaker
                           @Override
                           public Iterable<String> apply(IndexableAdapter input)
                           {
-                            return Iterables.transform(
-                                input.getMetricNames(),
-                                new Function<String, String>()
-                                {
-                                  @Override
-                                  public String apply(String input)
-                                  {
-                                    return input.toLowerCase();
-                                  }
-                                }
-                            );
+                            return input.getMetricNames();
                           }
                         }
                     )
-                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(lowerCaseMetricAggs)))
+                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(metricAggs)))
             )
         ),
         new Function<String, String>()
@@ -305,17 +285,17 @@ public class IndexMaker
           @Override
           public String apply(String input)
           {
-            return input.toLowerCase();
+            return input;
           }
         }
     );
-    if (mergedMetrics.size() != lowerCaseMetricAggs.length) {
-      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), lowerCaseMetricAggs.length);
+    if (mergedMetrics.size() != metricAggs.length) {
+      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), metricAggs.length);
     }
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (int i = 0; i < lowerCaseMetricAggs.length; i++) {
-      AggregatorFactory metricAgg = lowerCaseMetricAggs[i];
+    for (int i = 0; i < metricAggs.length; i++) {
+      AggregatorFactory metricAgg = metricAggs[i];
       sortedMetricAggs[mergedMetrics.indexOf(metricAgg.getName())] = metricAgg;
     }
 
@@ -324,7 +304,7 @@ public class IndexMaker
         throw new IAE(
             "Metric mismatch, index[%d] [%s] != [%s]",
             i,
-            lowerCaseMetricAggs[i].getName(),
+            metricAggs[i].getName(),
             mergedMetrics.get(i)
         );
       }
@@ -385,7 +365,7 @@ public class IndexMaker
                       @Override
                       public String apply(String input)
                       {
-                        return input.toLowerCase();
+                        return input;
                       }
                     }
                 );
@@ -408,7 +388,7 @@ public class IndexMaker
                       @Override
                       public String apply(String input)
                       {
-                        return input.toLowerCase();
+                        return input;
                       }
                     }
                 );
@@ -648,7 +628,7 @@ public class IndexMaker
       final int[] dimLookup = new int[mergedDimensions.size()];
       int count = 0;
       for (String dim : adapter.getDimensionNames()) {
-        dimLookup[count] = mergedDimensions.indexOf(dim.toLowerCase());
+        dimLookup[count] = mergedDimensions.indexOf(dim);
         count++;
       }
 

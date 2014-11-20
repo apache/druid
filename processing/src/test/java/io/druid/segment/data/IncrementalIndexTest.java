@@ -54,16 +54,16 @@ public class IncrementalIndexTest
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("Dim1", "DiM2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "DIM1", "3", "dIM2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
         )
     );
 
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("diM1", "dIM2"),
-            ImmutableMap.<String, Object>of("Dim1", "1", "DiM2", "2", "dim1", "3", "dim2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
         )
     );
     return index;
@@ -82,7 +82,7 @@ public class IncrementalIndexTest
   }
 
   @Test
-  public void testCaseInsensitivity() throws Exception
+  public void testCaseSensitivity() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
 
