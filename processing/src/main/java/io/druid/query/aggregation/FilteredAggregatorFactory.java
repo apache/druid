@@ -36,15 +36,17 @@ public class FilteredAggregatorFactory implements AggregatorFactory
 
   private final AggregatorFactory delegate;
   private final DimFilter filter;
+  private final String name;
 
   public FilteredAggregatorFactory(
+      @JsonProperty("name") String name,
       @JsonProperty("aggregator") AggregatorFactory delegate,
       @JsonProperty("filter") DimFilter filter
   )
   {
     Preconditions.checkNotNull(delegate);
     Preconditions.checkNotNull(filter);
-
+    this.name = name == null ? delegate.getName() : name;
     this.delegate = delegate;
     this.filter = filter;
   }
@@ -54,6 +56,7 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   {
     final ValueMatcher valueMatcher = Filters.convertDimensionFilters(filter).makeMatcher(columnSelectorFactory);
       return new FilteredAggregator(
+          name,
           valueMatcher,
           delegate.factorize(columnSelectorFactory)
       );
@@ -104,7 +107,7 @@ public class FilteredAggregatorFactory implements AggregatorFactory
   @Override
   public String getName()
   {
-    return delegate.getName();
+    return name;
   }
 
   @Override

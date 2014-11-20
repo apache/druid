@@ -25,11 +25,13 @@ public class FilteredAggregator implements Aggregator
 {
   private final ValueMatcher matcher;
   private final Aggregator delegate;
+  private final String name;
 
-  public FilteredAggregator(ValueMatcher matcher, Aggregator delegate)
+  public FilteredAggregator(String name, ValueMatcher matcher, Aggregator delegate)
   {
     this.matcher = matcher;
     this.delegate = delegate;
+    this.name = name;
   }
 
   @Override
@@ -61,7 +63,7 @@ public class FilteredAggregator implements Aggregator
   @Override
   public String getName()
   {
-    return delegate.getName();
+    return name;
   }
 
   @Override

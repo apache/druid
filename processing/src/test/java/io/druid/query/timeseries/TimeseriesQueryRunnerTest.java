@@ -57,7 +57,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -1667,7 +1666,8 @@ public class TimeseriesQueryRunnerTest
                                               QueryRunnerTestHelper.commonAggregators,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
-                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      "filteredAgg",
+                                                      new CountAggregatorFactory("dummy"),
                                                       Druids.newSelectorDimFilterBuilder()
                                                             .dimension(QueryRunnerTestHelper.providerDimension)
                                                             .value("spot")
@@ -1715,7 +1715,8 @@ public class TimeseriesQueryRunnerTest
                                               QueryRunnerTestHelper.commonAggregators,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
-                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      "filteredAgg",
+                                                      new CountAggregatorFactory("dummy"),
                                                       Druids.newSelectorDimFilterBuilder()
                                                             .dimension("abraKaDabra")
                                                             .value("Lol")
@@ -1764,7 +1765,8 @@ public class TimeseriesQueryRunnerTest
                                               QueryRunnerTestHelper.commonAggregators,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
-                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      "filteredAgg",
+                                                      new CountAggregatorFactory("dummy"),
                                                       Druids.newSelectorDimFilterBuilder()
                                                             .dimension("abraKaDabra")
                                                             .value(null)
@@ -1813,7 +1815,8 @@ public class TimeseriesQueryRunnerTest
                                               QueryRunnerTestHelper.commonAggregators,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
-                                                      new CountAggregatorFactory("filteredAgg"),
+                                                      "filteredAgg",
+                                                      new CountAggregatorFactory("dummy"),
                                                       new NotDimFilter(
                                                           Druids.newSelectorDimFilterBuilder()
                                                                 .dimension(QueryRunnerTestHelper.providerDimension)
@@ -1863,6 +1866,7 @@ public class TimeseriesQueryRunnerTest
                                               QueryRunnerTestHelper.commonAggregators,
                                               Lists.newArrayList(
                                                   new FilteredAggregatorFactory(
+                                                      null,
                                                       new CountAggregatorFactory("filteredAgg"),
                                                       new NotDimFilter(
                                                           Druids.newSelectorDimFilterBuilder()
