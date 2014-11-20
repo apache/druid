@@ -25,6 +25,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.data.Indexed;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
@@ -77,4 +78,11 @@ public class ExtractionFilter implements Filter
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }

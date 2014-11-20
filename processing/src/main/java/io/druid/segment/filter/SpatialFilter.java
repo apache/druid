@@ -24,6 +24,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.segment.ColumnSelectorFactory;
 
 /**
  */
@@ -55,4 +56,11 @@ public class SpatialFilter implements Filter
         bound
     );
   }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }

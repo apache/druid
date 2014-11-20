@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.segment.ColumnSelectorFactory;
 
 /**
  */
@@ -27,4 +28,5 @@ public interface Filter
 {
   public ImmutableConciseSet goConcise(BitmapIndexSelector selector);
   public ValueMatcher makeMatcher(ValueMatcherFactory factory);
+  public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory);
 }
