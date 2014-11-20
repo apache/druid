@@ -48,12 +48,16 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     return ImmutableList.<Object[]>of(
         (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 10)).toArray(),
         (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 10)).toArray(),
+        (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 10)).toArray(),
         (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 8)).toArray(),
         (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 8)).toArray(),
+        (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 8)).toArray(),
         (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 5)).toArray(),
         (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 5)).toArray(),
+        (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 5)).toArray(),
         (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 2)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 2)).toArray()
+        (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 2)).toArray(),
+    (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 2)).toArray()
     );
   }
 
@@ -133,6 +137,49 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
           }
         }
         retVal.put(tempBuffer);
+        retVal.rewind();
+        return retVal.asReadOnlyBuffer();
+      }
+
+      return storageBuffer.asReadOnlyBuffer();
+    }
+  }
+
+
+  private static final class newByteBufferSerializerWithPuts extends HLLCV1
+  {
+    @Override
+    public ByteBuffer toByteBuffer()
+    {
+
+      final short numNonZeroRegisters = getNumNonZeroRegisters();
+
+      // store sparsely
+      if (storageBuffer.remaining() == getNumBytesForDenseStorage() && numNonZeroRegisters < DENSE_THRESHOLD) {
+        final ByteBuffer retVal = ByteBuffer.wrap(new byte[numNonZeroRegisters * 3 + getNumHeaderBytes()]);
+        setVersion(retVal);
+        setRegisterOffset(retVal, getRegisterOffset());
+        setNumNonZeroRegisters(retVal, numNonZeroRegisters);
+        setMaxOverflowValue(retVal, getMaxOverflowValue());
+        setMaxOverflowRegister(retVal, getMaxOverflowRegister());
+
+        final int startPosition = getPayloadBytePosition();
+        retVal.position(getPayloadBytePosition(retVal));
+
+        final byte[] zipperBuffer = new byte[NUM_BYTES_FOR_BUCKETS];
+        ByteBuffer roStorageBuffer = storageBuffer.asReadOnlyBuffer();
+        roStorageBuffer.position(startPosition);
+        roStorageBuffer.get(zipperBuffer);
+
+        final ByteOrder byteOrder = retVal.order();
+
+        for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
+          if (zipperBuffer[i] != 0) {
+            final short val = (short) (0xffff & (i + startPosition - initPosition));
+            retVal.putShort(val);
+            retVal.put(zipperBuffer[i]);
+          }
+        }
         retVal.rewind();
         return retVal.asReadOnlyBuffer();
       }

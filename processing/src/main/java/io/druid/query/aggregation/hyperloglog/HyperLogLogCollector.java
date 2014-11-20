@@ -29,20 +29,20 @@ import java.nio.ByteOrder;
 
 /**
  * Implements the HyperLogLog cardinality estimator described in:
- * <p/>
+ *
  * http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
- * <p/>
+ *
  * Run this code to see a simple indication of expected errors based on different m values:
- * <p/>
+ *
  * <code>
  * for (int i = 1; i &lt; 20; ++i) {
- * System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
+ *   System.out.printf("i[%,d], val[%,d] =&gt; error[%f%%]%n", i, 2 &lt;&lt; i, 104 / Math.sqrt(2 &lt;&lt; i));
  * }
  * </code>
- * <p/>
+ *
  * This class is *not* multi-threaded.  It can be passed among threads, but it is written with the assumption that
  * only one thread is ever calling methods on it.
- * <p/>
+ *
  * If you have multiple threads calling methods on this concurrently, I hope you manage to get correct behavior
  */
 public abstract class HyperLogLogCollector implements Comparable<HyperLogLogCollector>
@@ -439,23 +439,13 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
       final ByteOrder byteOrder = retVal.order();
 
-      final byte[] tempBuffer = new byte[numNonZeroRegisters * 3];
-      int outBufferPos = 0;
       for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
         if (zipperBuffer[i] != 0) {
           final short val = (short) (0xffff & (i + startPosition - initPosition));
-          if (byteOrder.equals(ByteOrder.LITTLE_ENDIAN)) {
-            tempBuffer[outBufferPos + 0] = (byte) (0xff & val);
-            tempBuffer[outBufferPos + 1] = (byte) (0xff & (val >> 8));
-          } else {
-            tempBuffer[outBufferPos + 1] = (byte) (0xff & val);
-            tempBuffer[outBufferPos + 0] = (byte) (0xff & (val >> 8));
-          }
-          tempBuffer[outBufferPos + 2] = zipperBuffer[i];
-          outBufferPos += 3;
+          retVal.putShort(val);
+          retVal.put(zipperBuffer[i]);
         }
       }
-      retVal.put(tempBuffer);
       retVal.rewind();
       return retVal.asReadOnlyBuffer();
     }
