@@ -27,6 +27,9 @@ import org.joda.time.DateTime;
  */
 public class Result<T> implements Comparable<Result<T>>
 {
+  public static String MISSING_SEGMENTS_KEY = "missingSegments";
+  public static String MISSING_INTERVALS_KEY = "missingIntervals";
+
   private final DateTime timestamp;
   private final T value;
 

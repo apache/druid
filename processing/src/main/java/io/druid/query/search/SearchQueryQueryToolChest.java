@@ -280,7 +280,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     @Override
     public Sequence<Result<SearchResultValue>> run(
         Query<Result<SearchResultValue>> input,
-        Map<String, Object> context
+        Map<String, Object> responseContext
     )
     {
       if (!(input instanceof SearchQuery)) {
@@ -289,13 +289,13 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
       final SearchQuery query = (SearchQuery) input;
       if (query.getLimit() < config.getMaxSearchLimit()) {
-        return runner.run(query, context);
+        return runner.run(query, responseContext);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withLimit(config.getMaxSearchLimit()), context),
+          runner.run(query.withLimit(config.getMaxSearchLimit()), responseContext),
           new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
           {
             @Override

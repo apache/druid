@@ -87,7 +87,7 @@ public class BridgeQuerySegmentWalker implements QuerySegmentWalker
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(Query<T> query, Map<String, Object> context)
+      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
       {
         try {
           Server instance = brokerSelector.pick();

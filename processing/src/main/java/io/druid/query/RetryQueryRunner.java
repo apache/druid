@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -28,15 +29,16 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.segment.SegmentMissingException;
+import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
-  public static String MISSING_SEGMENTS_KEY = "missingSegments";
   private static final EmittingLogger log = new EmittingLogger(RetryQueryRunner.class);
 
   private final QueryRunner<T> baseRunner;
@@ -58,10 +60,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final List<Sequence<T>> listOfSequences = Lists.newArrayList();
-    listOfSequences.add(baseRunner.run(query, context));
+    listOfSequences.add(baseRunner.run(query, responseContext));
 
     return new YieldingSequenceBase<T>()
     {
@@ -70,48 +72,99 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           OutType initValue, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
+        // Try to find missing segments
+        doRetryLogic(
+            responseContext,
+            Result.MISSING_SEGMENTS_KEY,
+            new TypeReference<List<SegmentDescriptor>>()
+            {
+            },
+            new Function<List<SegmentDescriptor>, Query<T>>()
+            {
+              @Override
+              public Query<T> apply(List<SegmentDescriptor> input)
+              {
+                return query.withQuerySegmentSpec(
+                    new MultipleSpecificSegmentSpec(
+                        input
+                    )
+                );
+              }
+            },
+            listOfSequences
+        );
 
-        if (!missingSegments.isEmpty()) {
-          for (int i = 0; i < config.getNumTries(); i++) {
-            log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
-
-            context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
-            final Query<T> retryQuery = query.withQuerySegmentSpec(
-                new MultipleSpecificSegmentSpec(
-                    missingSegments
-                )
-            );
-            Sequence<T> retrySequence = baseRunner.run(retryQuery, context);
-            listOfSequences.add(retrySequence);
-            if (getMissingSegments(context).isEmpty()) {
-              break;
-            }
-          }
-
-          final List<SegmentDescriptor> finalMissingSegs = getMissingSegments(context);
-          if (!config.isReturnPartialResults() && !finalMissingSegs.isEmpty()) {
-            throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
-          }
-        }
+        // Try to find missing intervals
+        doRetryLogic(
+            responseContext,
+            Result.MISSING_INTERVALS_KEY,
+            new TypeReference<List<Interval>>()
+            {
+            },
+            new Function<List<Interval>, Query<T>>()
+            {
+              @Override
+              public Query<T> apply(List<Interval> input)
+              {
+                return query.withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(
+                        input
+                    )
+                );
+              }
+            },
+            listOfSequences
+        );
 
         return toolChest.mergeSequencesUnordered(Sequences.simple(listOfSequences)).toYielder(initValue, accumulator);
       }
     };
   }
 
-  private List<SegmentDescriptor> getMissingSegments(final Map<String, Object> context)
+  private <Type> void doRetryLogic(
+      final Map<String, Object> responseContext,
+      final String key,
+      final TypeReference<List<Type>> typeReference,
+      final Function<List<Type>, Query<T>> function,
+      final List<Sequence<T>> listOfSequences
+  )
   {
-    final Object maybeMissingSegments = context.get(MISSING_SEGMENTS_KEY);
-    if (maybeMissingSegments == null) {
+    final List<Type> missingItems = getMissingItems(responseContext, key, typeReference);
+
+    if (!missingItems.isEmpty()) {
+      for (int i = 0; i < config.getNumTries(); i++) {
+        log.info("[%,d] missing items found. Retry attempt [%,d]", missingItems.size(), i);
+
+        responseContext.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+        final Query<T> retryQuery = function.apply(missingItems);
+        Sequence<T> retrySequence = baseRunner.run(retryQuery, responseContext);
+        listOfSequences.add(retrySequence);
+        if (getMissingItems(responseContext, key, typeReference).isEmpty()) {
+          break;
+        }
+      }
+
+      final List<Type> finalMissingItems = getMissingItems(responseContext, key, typeReference);
+      if (!config.isReturnPartialResults() && !finalMissingItems.isEmpty()) {
+        throw new SegmentMissingException("No results found for items[%s]", finalMissingItems);
+      }
+    }
+  }
+
+  private <Type> List<Type> getMissingItems(
+      final Map<String, Object> context,
+      final String key,
+      final TypeReference<List<Type>> typeReference
+  )
+  {
+    final Object maybeMissing = context.get(key);
+    if (maybeMissing == null) {
       return Lists.newArrayList();
     }
 
     return jsonMapper.convertValue(
-        maybeMissingSegments,
-        new TypeReference<List<SegmentDescriptor>>()
-        {
-        }
+        maybeMissing,
+        typeReference
     );
   }
 }

@@ -21,7 +21,6 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -48,6 +47,8 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ReferenceCountingSegmentQueryRunner;
+import io.druid.query.ReportTimelineMissingIntervalQueryRunner;
+import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.TableDataSource;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
@@ -261,62 +262,71 @@ public class ServerManager implements QuerySegmentWalker
       return new NoopQueryRunner<T>();
     }
 
-    FunctionalIterable<QueryRunner<T>> adapters = FunctionalIterable
+    FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(intervals)
         .transformCat(
-            new Function<Interval, Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>>>()
+            new Function<Interval, Iterable<QueryRunner<T>>>()
             {
               @Override
-              public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
+              public Iterable<QueryRunner<T>> apply(final Interval interval)
               {
-                return timeline.lookup(input);
-              }
-            }
-        )
-        .transformCat(
-            new Function<TimelineObjectHolder<String, ReferenceCountingSegment>, Iterable<QueryRunner<T>>>()
-            {
-              @Override
-              public Iterable<QueryRunner<T>> apply(
-                  @Nullable final TimelineObjectHolder<String, ReferenceCountingSegment> holder
-              )
-              {
-                if (holder == null) {
-                  return null;
+                Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = timeline.lookup(interval);
+
+                if (holders == null) {
+                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingIntervalQueryRunner<T>(interval));
                 }
 
                 return FunctionalIterable
-                    .create(holder.getObject())
-                    .transform(
-                        new Function<PartitionChunk<ReferenceCountingSegment>, QueryRunner<T>>()
+                    .create(holders)
+                    .transformCat(
+                        new Function<TimelineObjectHolder<String, ReferenceCountingSegment>, Iterable<QueryRunner<T>>>()
                         {
                           @Override
-                          public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
+                          public Iterable<QueryRunner<T>> apply(
+                              @Nullable final TimelineObjectHolder<String, ReferenceCountingSegment> holder
+                          )
                           {
-                            return buildAndDecorateQueryRunner(
-                                factory,
-                                toolChest,
-                                input.getObject(),
-                                new SegmentDescriptor(
-                                    holder.getInterval(),
-                                    holder.getVersion(),
-                                    input.getChunkNumber()
-                                )
+                            if (holder == null) {
+                              return Arrays.<QueryRunner<T>>asList(
+                                  new ReportTimelineMissingIntervalQueryRunner<T>(
+                                      interval
+                                  )
+                              );
+                            }
 
-                            );
+                            return FunctionalIterable
+                                .create(holder.getObject())
+                                .transform(
+                                    new Function<PartitionChunk<ReferenceCountingSegment>, QueryRunner<T>>()
+                                    {
+                                      @Override
+                                      public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
+                                      {
+                                        return buildAndDecorateQueryRunner(
+                                            factory,
+                                            toolChest,
+                                            input.getObject(),
+                                            new SegmentDescriptor(
+                                                holder.getInterval(),
+                                                holder.getVersion(),
+                                                input.getChunkNumber()
+                                            )
+
+                                        );
+                                      }
+                                    }
+                                );
                           }
                         }
-                    )
-                    .filter(Predicates.<QueryRunner<T>>notNull());
+                    );
               }
             }
-        )
-        .filter(
-            Predicates.<QueryRunner<T>>notNull()
         );
 
-
-    return new FinalizeResultsQueryRunner<T>(toolChest.mergeResults(factory.mergeRunners(exec, adapters)), toolChest);
+    return new FinalizeResultsQueryRunner<T>(
+        toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
+        toolChest
+    );
   }
 
   private String getDataSourceName(DataSource dataSource)
@@ -345,7 +355,7 @@ public class ServerManager implements QuerySegmentWalker
       return new NoopQueryRunner<T>();
     }
 
-    FunctionalIterable<QueryRunner<T>> adapters = FunctionalIterable
+    FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
         .transformCat(
             new Function<SegmentDescriptor, Iterable<QueryRunner<T>>>()
@@ -359,12 +369,12 @@ public class ServerManager implements QuerySegmentWalker
                 );
 
                 if (entry == null) {
-                  return null;
+                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
                 }
 
                 final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());
                 if (chunk == null) {
-                  return null;
+                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
                 }
 
                 final ReferenceCountingSegment adapter = chunk.getObject();
@@ -373,12 +383,12 @@ public class ServerManager implements QuerySegmentWalker
                 );
               }
             }
-        )
-        .filter(
-            Predicates.<QueryRunner<T>>notNull()
         );
 
-    return new FinalizeResultsQueryRunner<T>(toolChest.mergeResults(factory.mergeRunners(exec, adapters)), toolChest);
+    return new FinalizeResultsQueryRunner<T>(
+        toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
+        toolChest
+    );
   }
 
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(

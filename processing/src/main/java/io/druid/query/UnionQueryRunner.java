@@ -44,7 +44,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
@@ -59,7 +59,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                     {
                       return baseRunner.run(
                           query.withDataSource(singleSource),
-                          context
+                          responseContext
                       );
                     }
                   }
@@ -67,7 +67,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
           )
       );
     } else {
-      return baseRunner.run(query, context);
+      return baseRunner.run(query, responseContext);
     }
   }
 

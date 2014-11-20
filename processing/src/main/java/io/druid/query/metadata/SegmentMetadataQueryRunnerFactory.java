@@ -77,7 +77,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     return new QueryRunner<SegmentAnalysis>()
     {
       @Override
-      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ, Map<String, Object> context)
+      public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ, Map<String, Object> responseContext)
       {
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
 
@@ -138,7 +138,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   @Override
                   public Sequence<SegmentAnalysis> run(
                       final Query<SegmentAnalysis> query,
-                      final Map<String, Object> context
+                      final Map<String, Object> responseContext
                   )
                   {
                     final int priority = query.getContextPriority(0);
@@ -148,7 +148,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                           @Override
                           public Sequence<SegmentAnalysis> call() throws Exception
                           {
-                            return input.run(query, context);
+                            return input.run(query, responseContext);
                           }
                         }
                     );

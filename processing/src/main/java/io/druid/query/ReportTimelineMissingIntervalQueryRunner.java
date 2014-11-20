@@ -19,40 +19,36 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
 
 /**
-*/
-public class ConcatQueryRunner<T> implements QueryRunner<T>
+ */
+public class ReportTimelineMissingIntervalQueryRunner<T> implements QueryRunner<T>
 {
-  private final Sequence<QueryRunner<T>> queryRunners;
+  private final Interval interval;
 
-  public ConcatQueryRunner(
-      Sequence<QueryRunner<T>> queryRunners
-  ) {
-    this.queryRunners = queryRunners;
+  public ReportTimelineMissingIntervalQueryRunner(Interval interval)
+  {
+    this.interval = interval;
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(
+      Query<T> query, Map<String, Object> responseContext
+  )
   {
-    return Sequences.concat(
-        Sequences.map(
-            queryRunners,
-            new Function<QueryRunner<T>, Sequence<T>>()
-            {
-              @Override
-              public Sequence<T> apply(final QueryRunner<T> input)
-              {
-                return input.run(query, responseContext);
-              }
-            }
-        )
-    );
+    List<Interval> missingIntervals = (List<Interval>) responseContext.get(Result.MISSING_INTERVALS_KEY);
+    if (missingIntervals == null) {
+      missingIntervals = Lists.newArrayList();
+      responseContext.put(Result.MISSING_INTERVALS_KEY, missingIntervals);
+    }
+    missingIntervals.add(interval);
+    return Sequences.empty();
   }
 }

@@ -685,9 +685,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> run(Query<T> query, Map<String, Object> context)
+    public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
     {
-      return new BlockingSequence<T>(runner.run(query, context), waitLatch, waitYieldLatch, notifyLatch);
+      return new BlockingSequence<T>(runner.run(query, responseContext), waitLatch, waitYieldLatch, notifyLatch);
     }
   }
 
