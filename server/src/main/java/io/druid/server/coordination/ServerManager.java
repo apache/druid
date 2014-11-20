@@ -47,7 +47,6 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ReferenceCountingSegmentQueryRunner;
-import io.druid.query.ReportTimelineMissingIntervalQueryRunner;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.TableDataSource;
@@ -265,57 +264,47 @@ public class ServerManager implements QuerySegmentWalker
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(intervals)
         .transformCat(
-            new Function<Interval, Iterable<QueryRunner<T>>>()
+            new Function<Interval, Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>>>()
             {
               @Override
-              public Iterable<QueryRunner<T>> apply(final Interval interval)
+              public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
               {
-                Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = timeline.lookup(interval);
-
-                if (holders == null) {
-                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingIntervalQueryRunner<T>(interval));
+                return timeline.lookup(input);
+              }
+            }
+        )
+        .transformCat(
+            new Function<TimelineObjectHolder<String, ReferenceCountingSegment>, Iterable<QueryRunner<T>>>()
+            {
+              @Override
+              public Iterable<QueryRunner<T>> apply(
+                  @Nullable
+                  final TimelineObjectHolder<String, ReferenceCountingSegment> holder
+              )
+              {
+                if (holder == null) {
+                  return null;
                 }
 
                 return FunctionalIterable
-                    .create(holders)
-                    .transformCat(
-                        new Function<TimelineObjectHolder<String, ReferenceCountingSegment>, Iterable<QueryRunner<T>>>()
+                    .create(holder.getObject())
+                    .transform(
+                        new Function<PartitionChunk<ReferenceCountingSegment>, QueryRunner<T>>()
                         {
                           @Override
-                          public Iterable<QueryRunner<T>> apply(
-                              @Nullable final TimelineObjectHolder<String, ReferenceCountingSegment> holder
-                          )
+                          public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
                           {
-                            if (holder == null) {
-                              return Arrays.<QueryRunner<T>>asList(
-                                  new ReportTimelineMissingIntervalQueryRunner<T>(
-                                      interval
-                                  )
-                              );
-                            }
+                            return buildAndDecorateQueryRunner(
+                                factory,
+                                toolChest,
+                                input.getObject(),
+                                new SegmentDescriptor(
+                                    holder.getInterval(),
+                                    holder.getVersion(),
+                                    input.getChunkNumber()
+                                )
 
-                            return FunctionalIterable
-                                .create(holder.getObject())
-                                .transform(
-                                    new Function<PartitionChunk<ReferenceCountingSegment>, QueryRunner<T>>()
-                                    {
-                                      @Override
-                                      public QueryRunner<T> apply(PartitionChunk<ReferenceCountingSegment> input)
-                                      {
-                                        return buildAndDecorateQueryRunner(
-                                            factory,
-                                            toolChest,
-                                            input.getObject(),
-                                            new SegmentDescriptor(
-                                                holder.getInterval(),
-                                                holder.getVersion(),
-                                                input.getChunkNumber()
-                                            )
-
-                                        );
-                                      }
-                                    }
-                                );
+                            );
                           }
                         }
                     );
@@ -349,7 +338,9 @@ public class ServerManager implements QuerySegmentWalker
 
     String dataSourceName = getDataSourceName(query.getDataSource());
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(
+        dataSourceName
+    );
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();

@@ -51,9 +51,9 @@ public class RetryQueryRunnerTest
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeseriesResultValue>> run(Query query, Map responseContext)
+          public Sequence<Result<TimeseriesResultValue>> run(Query query, Map context)
           {
-            ((List) responseContext.get(Result.MISSING_SEGMENTS_KEY)).add(
+            ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                 new SegmentDescriptor(
                     new Interval(
                         178888,
@@ -96,44 +96,6 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return an empty sequence as a result", ((List) actualResults).size() == 0);
   }
 
-  @Test
-  public void testRunWithMissingInterval() throws Exception
-  {
-    Map<String, Object> context = new MapMaker().makeMap();
-    context.put(Result.MISSING_INTERVALS_KEY, Lists.newArrayList());
-    RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
-        new ReportTimelineMissingIntervalQueryRunner<Result<TimeseriesResultValue>>(new Interval("2013/2014")),
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            new QueryConfig()
-        ),
-        new RetryQueryRunnerConfig()
-        {
-          @Override
-          public int getNumTries()
-          {
-            return 0;
-          }
-
-          @Override
-          public boolean isReturnPartialResults()
-          {
-            return true;
-          }
-        },
-        jsonMapper
-    );
-
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-
-    Assert.assertTrue(
-        "Should have one entry in the list of missing segments",
-        ((List) context.get(Result.MISSING_INTERVALS_KEY)).size() == 1
-    );
-    Assert.assertTrue("Should return an empty sequence as a result", ((List) actualResults).size() == 0);
-  }
 
   @Test
   public void testRetry() throws Exception
@@ -147,11 +109,11 @@ public class RetryQueryRunnerTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               Query<Result<TimeseriesResultValue>> query,
-              Map<String, Object> responseContext
+              Map<String, Object> context
           )
           {
-            if ((int) responseContext.get("count") == 0) {
-              ((List) responseContext.get(Result.MISSING_SEGMENTS_KEY)).add(
+            if ((int) context.get("count") == 0) {
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                   new SegmentDescriptor(
                       new Interval(
                           178888,
@@ -159,7 +121,7 @@ public class RetryQueryRunnerTest
                       ), "test", 1
                   )
               );
-              responseContext.put("count", 1);
+              context.put("count", 1);
               return Sequences.empty();
             } else {
               return Sequences.simple(
@@ -214,11 +176,11 @@ public class RetryQueryRunnerTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               Query<Result<TimeseriesResultValue>> query,
-              Map<String, Object> responseContext
+              Map<String, Object> context
           )
           {
-            if ((int) responseContext.get("count") < 3) {
-              ((List) responseContext.get(Result.MISSING_SEGMENTS_KEY)).add(
+            if ((int) context.get("count") < 3) {
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                   new SegmentDescriptor(
                       new Interval(
                           178888,
@@ -226,7 +188,7 @@ public class RetryQueryRunnerTest
                       ), "test", 1
                   )
               );
-              responseContext.put("count", (int) responseContext.get("count") + 1);
+              context.put("count", (int) context.get("count") + 1);
               return Sequences.empty();
             } else {
               return Sequences.simple(
@@ -280,10 +242,10 @@ public class RetryQueryRunnerTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               Query<Result<TimeseriesResultValue>> query,
-              Map<String, Object> responseContext
+              Map<String, Object> context
           )
           {
-            ((List) responseContext.get(Result.MISSING_SEGMENTS_KEY)).add(
+            ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                 new SegmentDescriptor(
                     new Interval(
                         178888,
@@ -299,9 +261,12 @@ public class RetryQueryRunnerTest
         ),
         new RetryQueryRunnerConfig()
         {
-          public int getNumTries() { return 1; }
+          private int numTries = 1;
+          private boolean returnPartialResults = false;
 
-          public boolean returnPartialResults() { return false; }
+          public int getNumTries() { return numTries; }
+
+          public boolean returnPartialResults() { return returnPartialResults; }
         },
         jsonMapper
     );
@@ -314,36 +279,6 @@ public class RetryQueryRunnerTest
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
         ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 1
-    );
-  }
-
-  @Test(expected = SegmentMissingException.class)
-  public void testIntervalMissingCausesException() throws Exception
-  {
-    Map<String, Object> context = new MapMaker().makeMap();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
-        new ReportTimelineMissingIntervalQueryRunner<Result<TimeseriesResultValue>>(new Interval("2013/2014")),
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            new QueryConfig()
-        ),
-        new RetryQueryRunnerConfig()
-        {
-          public int getNumTries() { return 1; }
-
-          public boolean returnPartialResults() { return false; }
-        },
-        jsonMapper
-    );
-
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(query, context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-
-    Assert.assertTrue(
-        "Should have one entry in the list of missing segments",
-        ((List) context.get(Result.MISSING_INTERVALS_KEY)).size() == 1
     );
   }
 }
