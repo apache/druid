@@ -67,7 +67,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -270,14 +269,7 @@ public class ServerManager implements QuerySegmentWalker
               @Override
               public Iterable<TimelineObjectHolder<String, ReferenceCountingSegment>> apply(Interval input)
               {
-                List<TimelineObjectHolder<String, ReferenceCountingSegment>> lookup = timeline.lookup(input);
-                if (lookup == null) {
-                  throw new ISE(
-                      "Unable to find any timeline entries for interval[%s]. Looks like segments were dropped while queries were still in queue",
-                      input
-                  );
-                }
-                return lookup;
+                return timeline.lookup(input);
               }
             }
         )
@@ -290,9 +282,7 @@ public class ServerManager implements QuerySegmentWalker
               )
               {
                 if (holder == null) {
-                  throw new ISE(
-                      "Timeline holder is null! Looks like segments were dropped while queries were still in queue"
-                  );
+                  return null;
                 }
 
                 return FunctionalIterable
