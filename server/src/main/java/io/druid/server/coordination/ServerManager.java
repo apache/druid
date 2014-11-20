@@ -368,7 +368,8 @@ public class ServerManager implements QuerySegmentWalker
                 final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());
                 if (chunk == null) {
                   throw new ISE(
-                      "No segment descriptor chunk found for [%s]! Looks like segments were dropped while queries were still in queue"
+                      "No partition chunk found for [%s]! Looks like segments were dropped while queries were still in queue",
+                      input
                   );
                 }
 
