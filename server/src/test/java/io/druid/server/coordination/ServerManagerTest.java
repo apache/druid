@@ -276,7 +276,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+    queryNotifyLatch.await();
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
