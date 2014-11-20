@@ -437,8 +437,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       roStorageBuffer.position(startPosition);
       roStorageBuffer.get(zipperBuffer);
 
-      final ByteOrder byteOrder = retVal.order();
-
       for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
         if (zipperBuffer[i] != 0) {
           final short val = (short) (0xffff & (i + startPosition - initPosition));
