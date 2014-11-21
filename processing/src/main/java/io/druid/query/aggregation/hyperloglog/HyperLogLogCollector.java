@@ -25,7 +25,6 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * Implements the HyperLogLog cardinality estimator described in:
