@@ -75,7 +75,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
             return LZ4Compressor.defaultCompressor;
           }
         },
-    UNCOMPRESSED((byte) 0x2)
+    UNCOMPRESSED((byte) 0xFF)
         {
           @Override
           public Decompressor getDecompressor()
