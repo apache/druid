@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.logger.Logger;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
@@ -42,6 +43,7 @@ import java.util.Map;
  */
 public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrategy<ResourceHolder<T>>
 {
+  private static final Logger log = new Logger(CompressedObjectStrategy.class);
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
 
   public static enum CompressionStrategy
@@ -191,7 +193,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
         out.flip();
       }
       catch (IOException e) {
-        Throwables.propagate(e);
+        log.error(e, "IOException thrown while closing ChunkEncoder.");
       }
     }
 
@@ -214,7 +216,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
         chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
       }
       catch (IOException e) {
-        // Silently Ignore if error on close
+        log.error(e, "IOException thrown while closing ChunkEncoder.");
       }
       // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never be null
       return null == chunk ? null : chunk.getData();
@@ -241,7 +243,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
         out.flip();
       }
       catch (IOException e) {
-        Throwables.propagate(e);
+        log.error(e, "IOException thrown while closing ChunkEncoder.");
       }
     }
 
@@ -260,7 +262,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
         out.flip();
       }
       catch (IOException e) {
-        Throwables.propagate(e);
+        log.error(e, "IOException thrown while closing ChunkEncoder.");
       }
     }
   }
