@@ -46,49 +46,46 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
 
   public static enum CompressionStrategy
   {
-    LZF((byte) 0x0)
-        {
-          @Override
-          public Decompressor getDecompressor()
-          {
-            return LZFDecompressor.defaultDecompressor;
-          }
+    LZF((byte) 0x0) {
+      @Override
+      public Decompressor getDecompressor()
+      {
+        return LZFDecompressor.defaultDecompressor;
+      }
 
-          @Override
-          public Compressor getCompressor()
-          {
-            return LZFCompressor.defaultCompressor;
-          }
-        },
+      @Override
+      public Compressor getCompressor()
+      {
+        return LZFCompressor.defaultCompressor;
+      }
+    },
 
-    LZ4((byte) 0x1)
-        {
-          @Override
-          public Decompressor getDecompressor()
-          {
-            return LZ4Decompressor.defaultDecompressor;
-          }
+    LZ4((byte) 0x1) {
+      @Override
+      public Decompressor getDecompressor()
+      {
+        return LZ4Decompressor.defaultDecompressor;
+      }
 
-          @Override
-          public Compressor getCompressor()
-          {
-            return LZ4Compressor.defaultCompressor;
-          }
-        },
-    UNCOMPRESSED((byte) 0xFF)
-        {
-          @Override
-          public Decompressor getDecompressor()
-          {
-            return UncompressedDecompressor.defaultDecompressor;
-          }
+      @Override
+      public Compressor getCompressor()
+      {
+        return LZ4Compressor.defaultCompressor;
+      }
+    },
+    UNCOMPRESSED((byte) 0xFF) {
+      @Override
+      public Decompressor getDecompressor()
+      {
+        return UncompressedDecompressor.defaultDecompressor;
+      }
 
-          @Override
-          public Compressor getCompressor()
-          {
-            return UncompressedCompressor.defaultCompressor;
-          }
-        };
+      @Override
+      public Compressor getCompressor()
+      {
+        return UncompressedCompressor.defaultCompressor;
+      }
+    };
 
     final byte id;
 
@@ -212,13 +209,15 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public byte[] compress(byte[] bytes)
     {
-      try(final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
-        LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
-        return chunk.getData();
+      LZFChunk chunk = null;
+      try (final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
+        chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        // Silently Ignore if error on close
       }
+      // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never be null
+      return null == chunk ? null : chunk.getData();
     }
   }
 
@@ -237,7 +236,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
         final byte[] outputBytes = outputBytesHolder.get();
         // Since decompressed size is NOT known, must use lz4Safe
-        final int numDecompressedBytes = lz4Safe.decompress(bytes,outputBytes);
+        final int numDecompressedBytes = lz4Safe.decompress(bytes, outputBytes);
         out.put(outputBytes, 0, numDecompressedBytes);
         out.flip();
       }
