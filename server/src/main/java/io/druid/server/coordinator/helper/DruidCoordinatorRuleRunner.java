@@ -19,6 +19,8 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.api.client.util.Maps;
+import com.google.api.client.util.Sets;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -31,6 +33,8 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -87,6 +91,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
+
+    final Map<String, Set<String>> missingRules = Maps.newHashMap();
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
@@ -99,11 +105,19 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       }
 
       if (!foundMatchingRule) {
-        log.makeAlert("Unable to find a matching rule!")
-           .addData("dataSource", segment.getDataSource())
-           .addData("segment", segment.getIdentifier())
-           .emit();
+        Set<String> missingSegments = missingRules.get(segment.getDataSource());
+        if (missingSegments == null) {
+          missingSegments = Sets.newHashSet();
+          missingRules.put(segment.getDataSource(), missingSegments);
+        }
+        missingSegments.add(segment.getIdentifier());
       }
+    }
+
+    if (!missingRules.isEmpty()) {
+      log.makeAlert("Unable to find a matching rules!")
+         .addData("missingSegments", missingRules)
+         .emit();
     }
 
     return paramsWithReplicationManager.buildFromExisting()
