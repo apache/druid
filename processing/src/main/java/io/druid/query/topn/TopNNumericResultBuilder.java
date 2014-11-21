@@ -118,7 +118,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       Object[] metricVals
   )
   {
-    Preconditions.checkArgument(metricVals.length == aggFactories.size(),"metricVals must be the same length ass aggFactories");
+    Preconditions.checkArgument(metricVals.length == aggFactories.size(),"metricVals must be the same length as aggFactories");
 
     final Map<String, Object> metricValues = new LinkedHashMap<>(metricVals.length + postAggs.size());
 
