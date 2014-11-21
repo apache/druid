@@ -168,31 +168,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
   }
 
-  @Override
-  public long getLastModified(DataSegment segment) throws SegmentLoadingException
-  {
-    final S3Coords coords = new S3Coords(segment);
-    try {
-      final S3Object objDetails = S3Utils.retryS3Operation(
-          new Callable<S3Object>()
-          {
-            @Override
-            public S3Object call() throws Exception
-            {
-              return s3Client.getObjectDetails(new S3Bucket(coords.bucket), coords.path);
-            }
-          }
-      );
-      return objDetails.getLastModifiedDate().getTime();
-    }
-    catch (S3ServiceException | IOException e) {
-      throw new SegmentLoadingException(e, e.getMessage());
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
   private static class S3Coords
   {
     String bucket;

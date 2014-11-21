@@ -55,7 +55,7 @@ public class DruidCoordinatorBalancerProfiler
   Map<String, DataSegment> segments = Maps.newHashMap();
   ServiceEmitter emitter;
   MetadataRuleManager manager;
-  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, 3, "normal");
+  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), ImmutableMap.<String, Integer>of("normal", 3));
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
 
   @Before

@@ -266,9 +266,4 @@ public class RandomFirehoseFactory implements FirehoseFactory<InputRowParser>
     };
   }
 
-  @Override
-  public InputRowParser getParser()
-  {
-    return null;
-  }
 }

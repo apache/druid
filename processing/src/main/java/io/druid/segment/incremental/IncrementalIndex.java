@@ -130,7 +130,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
           new ColumnSelectorFactory()
           {
             @Override
-            public LongColumnSelector makeLongColumnSelector(String columnName)
+            public LongColumnSelector makeLongColumnSelector(final String columnName)
             {
               if(columnName.equals(Column.TIME_COLUMN_NAME)){
                 return new LongColumnSelector()
@@ -142,36 +142,33 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                   }
                 };
               }
-              final String metricName = columnName.toLowerCase();
               return new LongColumnSelector()
               {
                 @Override
                 public long get()
                 {
-                  return in.get().getLongMetric(metricName);
+                  return in.get().getLongMetric(columnName);
                 }
               };
             }
 
             @Override
-            public FloatColumnSelector makeFloatColumnSelector(String columnName)
+            public FloatColumnSelector makeFloatColumnSelector(final String columnName)
             {
-              final String metricName = columnName.toLowerCase();
               return new FloatColumnSelector()
               {
                 @Override
                 public float get()
                 {
-                  return in.get().getFloatMetric(metricName);
+                  return in.get().getFloatMetric(columnName);
                 }
               };
             }
 
             @Override
-            public ObjectColumnSelector makeObjectColumnSelector(String column)
+            public ObjectColumnSelector makeObjectColumnSelector(final String column)
             {
               final String typeName = agg.getTypeName();
-              final String columnName = column.toLowerCase();
 
               final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
               {
@@ -184,7 +181,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                 @Override
                 public Object get()
                 {
-                  return in.get().getRaw(columnName);
+                  return in.get().getRaw(column);
                 }
               };
 
@@ -212,7 +209,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                   @Override
                   public Object get()
                   {
-                    return extractor.extractValue(in.get(), columnName);
+                    return extractor.extractValue(in.get(), column);
                   }
                 };
               }
@@ -221,13 +218,12 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
             @Override
             public DimensionSelector makeDimensionSelector(final String dimension)
             {
-              final String dimensionName = dimension.toLowerCase();
               return new DimensionSelector()
               {
                 @Override
                 public IndexedInts getRow()
                 {
-                  final List<String> dimensionValues = in.get().getDimension(dimensionName);
+                  final List<String> dimensionValues = in.get().getDimension(dimension);
                   final ArrayList<Integer> vals = Lists.newArrayList();
                   if (dimensionValues != null) {
                     for (int i = 0; i < dimensionValues.size(); ++i) {
@@ -266,13 +262,13 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
                 @Override
                 public String lookupName(int id)
                 {
-                  return in.get().getDimension(dimensionName).get(id);
+                  return in.get().getDimension(dimension).get(id);
                 }
 
                 @Override
                 public int lookupId(String name)
                 {
-                  return in.get().getDimension(dimensionName).indexOf(name);
+                  return in.get().getDimension(dimension).indexOf(name);
                 }
               };
             }
@@ -280,7 +276,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       );
       aggPositionOffsets[i] = currAggSize;
       currAggSize += agg.getMaxIntermediateSize();
-      final String metricName = metrics[i].getName().toLowerCase();
+      final String metricName = metrics[i].getName();
       metricNamesBuilder.add(metricName);
       metricIndexesBuilder.put(metricName, i);
       metricTypesBuilder.put(metricName, metrics[i].getTypeName());
@@ -414,7 +410,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     synchronized (dimensionOrder) {
       dims = new String[dimensionOrder.size()][];
       for (String dimension : rowDimensions) {
-        dimension = dimension.toLowerCase();
         List<String> dimensionValues = row.getDimension(dimension);
 
         // Set column capabilities as data is coming in
@@ -842,7 +837,11 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
 
     public int getId(String value)
     {
-      return falseIds.get(value);
+      if (value == null) {
+        value = "";
+      }
+      final Integer id = falseIds.get(value);
+      return id == null ? -1 : id;
     }
 
     public String getValue(int id)

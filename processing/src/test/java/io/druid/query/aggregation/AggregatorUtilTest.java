@@ -43,12 +43,12 @@ public class AggregatorUtilTest
   {
     PostAggregator agg1 = new ArithmeticPostAggregator(
         "abc", "+", Lists.<PostAggregator>newArrayList(
-        new ConstantPostAggregator("1", 1L, 1L), new ConstantPostAggregator("2", 2L, 2L)
+        new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("2", 2L)
     )
     );
     PostAggregator dependency1 = new ArithmeticPostAggregator(
         "dep1", "+", Lists.<PostAggregator>newArrayList(
-        new ConstantPostAggregator("1", 1L, 1L), new ConstantPostAggregator("4", 4L, 4L)
+        new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("4", 4L)
     )
     );
     PostAggregator agg2 = new FieldAccessPostAggregator("def", "def");
@@ -78,12 +78,12 @@ public class AggregatorUtilTest
   {
     PostAggregator agg1 = new ArithmeticPostAggregator(
         "abc", "+", Lists.<PostAggregator>newArrayList(
-        new ConstantPostAggregator("1", 1L, 1L), new ConstantPostAggregator("2", 2L, 2L)
+        new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("2", 2L)
     )
     );
     PostAggregator dependency1 = new ArithmeticPostAggregator(
         "dep1", "+", Lists.<PostAggregator>newArrayList(
-        new ConstantPostAggregator("1", 1L, 1L), new ConstantPostAggregator("4", 4L, 4L)
+        new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("4", 4L)
     )
     );
     PostAggregator agg2 = new FieldAccessPostAggregator("def", "def");

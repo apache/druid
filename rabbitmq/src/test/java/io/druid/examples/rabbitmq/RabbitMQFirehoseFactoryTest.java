@@ -74,18 +74,7 @@ public class RabbitMQFirehoseFactoryTest
 
     RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(
         connectionFactory,
-        config,
-        new StringInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("timestamp", "auto"),
-                new DimensionsSpec(
-                    Arrays.asList("dim"),
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
-                )
-            ),
-            null, null, null, null
-        )
+        config
     );
 
     byte[] bytes = mapper.writeValueAsBytes(factory);
@@ -107,18 +96,7 @@ public class RabbitMQFirehoseFactoryTest
 
     RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(
         connectionFactory,
-        config,
-        new StringInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("timestamp", "auto"),
-                new DimensionsSpec(
-                    Arrays.asList("dim"),
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
-                )
-            ),
-            null, null, null, null
-        )
+        config
     );
 
     byte[] bytes = mapper.writeValueAsBytes(factory);

@@ -46,7 +46,7 @@ public class IndexMergerTest
   }
 
   @Test
-  public void testPersistCaseInsensitive() throws Exception
+  public void testPersist() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
 
@@ -66,7 +66,7 @@ public class IndexMergerTest
   }
 
   @Test
-  public void testPersistMergeCaseInsensitive() throws Exception
+  public void testPersistMerge() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
     IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
@@ -76,16 +76,16 @@ public class IndexMergerTest
     toPersist2.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("DIm1", "DIM2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "DIm1", "10000", "DIM2", "100000000")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
         )
     );
 
     toPersist2.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("dIM1", "dIm2"),
-            ImmutableMap.<String, Object>of("DIm1", "1", "DIM2", "2", "dim1", "5", "dim2", "6")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "5", "dim2", "6")
         )
     );
 
@@ -122,7 +122,7 @@ public class IndexMergerTest
       FileUtils.deleteQuietly(tempDir2);
       FileUtils.deleteQuietly(mergedDir);
     }
-  }
+}
 
   @Test
   public void testPersistEmptyColumn() throws Exception

@@ -57,14 +57,14 @@ public class TestIndex
   public static final String[] COLUMNS = new String[]{
       "ts",
       "market",
-      "quALIty",
-      "plAcEmEnT",
-      "pLacementish",
-      "iNdEx",
-      "qualiTy_Uniques"
+      "quality",
+      "placement",
+      "placementish",
+      "index",
+      "quality_uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"market", "quALIty", "plAcEmEnT", "pLacementish"};
-  public static final String[] METRICS = new String[]{"iNdEx"};
+  public static final String[] DIMENSIONS = new String[]{"market", "quality", "placement", "placementish"};
+  public static final String[] METRICS = new String[]{"index"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -197,8 +197,7 @@ public class TestIndex
                     "\t",
                     "\u0001",
                     Arrays.asList(COLUMNS)
-                ),
-                null, null, null, null
+                )
             );
             boolean runOnce = false;
             int lineCount = 0;

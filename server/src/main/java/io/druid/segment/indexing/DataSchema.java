@@ -85,7 +85,7 @@ public class DataSchema
 
     this.aggregators = aggregators;
     this.granularitySpec = granularitySpec == null
-                           ? new UniformGranularitySpec(null, null, null, null)
+                           ? new UniformGranularitySpec(null, null, null)
                            : granularitySpec;
   }
 

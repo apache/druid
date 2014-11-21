@@ -36,9 +36,7 @@ import org.junit.Test;
    {
      IntervalLoadRule rule = new IntervalLoadRule(
          new Interval("0/3000"),
-         ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 2),
-         null,
-         null
+         ImmutableMap.<String, Integer>of(DruidServer.DEFAULT_TIER, 2)
      );
  
      ObjectMapper jsonMapper = new DefaultObjectMapper();

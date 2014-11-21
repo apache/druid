@@ -50,19 +50,15 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
 
   private final Properties consumerProps;
   private final String feed;
-  private final ByteBufferInputRowParser parser;
 
   @JsonCreator
   public KafkaSevenFirehoseFactory(
       @JsonProperty("consumerProps") Properties consumerProps,
-      @JsonProperty("feed") String feed,
-      // backwards compatible
-      @JsonProperty("parser") ByteBufferInputRowParser parser
+      @JsonProperty("feed") String feed
   )
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
-    this.parser = (parser == null) ? null : parser;
   }
 
   @JsonProperty
@@ -75,12 +71,6 @@ public class KafkaSevenFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   public String getFeed()
   {
     return feed;
-  }
-
-  @JsonProperty
-  public ByteBufferInputRowParser getParser()
-  {
-    return parser;
   }
 
   @Override

@@ -91,7 +91,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return 0;
     }
 
-    Column column = index.getColumn(dimension.toLowerCase());
+    Column column = index.getColumn(dimension);
     if (column == null) {
       return 0;
     }
@@ -267,14 +267,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public DimensionSelector makeDimensionSelector(String dimension)
                     {
-                      final String dimensionName = dimension.toLowerCase();
-
-                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimensionName);
-                      final Column columnDesc = index.getColumn(dimensionName);
+                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
+                      final Column columnDesc = index.getColumn(dimension);
 
                       if (cachedColumn == null && columnDesc != null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
-                        dictionaryColumnCache.put(dimensionName, cachedColumn);
+                        dictionaryColumnCache.put(dimension, cachedColumn);
                       }
 
                       final DictionaryEncodedColumn column = cachedColumn;
@@ -362,15 +360,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)
                     {
-                      final String metricName = columnName.toLowerCase();
-                      GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
+                      GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
-                        Column holder = index.getColumn(metricName);
+                        Column holder = index.getColumn(columnName);
                         if (holder != null && (holder.getCapabilities().getType() == ValueType.FLOAT
                                                || holder.getCapabilities().getType() == ValueType.LONG)) {
                           cachedMetricVals = holder.getGenericColumn();
-                          genericColumnCache.put(metricName, cachedMetricVals);
+                          genericColumnCache.put(columnName, cachedMetricVals);
                         }
                       }
 
@@ -399,15 +396,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public LongColumnSelector makeLongColumnSelector(String columnName)
                     {
-                      final String metricName = columnName.toLowerCase();
-                      GenericColumn cachedMetricVals = genericColumnCache.get(metricName);
+                      GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
-                        Column holder = index.getColumn(metricName);
+                        Column holder = index.getColumn(columnName);
                         if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG
                                                || holder.getCapabilities().getType() == ValueType.FLOAT)) {
                           cachedMetricVals = holder.getGenericColumn();
-                          genericColumnCache.put(metricName, cachedMetricVals);
+                          genericColumnCache.put(columnName, cachedMetricVals);
                         }
                       }
 
@@ -436,12 +432,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     @Override
                     public ObjectColumnSelector makeObjectColumnSelector(String column)
                     {
-                      final String columnName = column.toLowerCase();
-
-                      Object cachedColumnVals = objectColumnCache.get(columnName);
+                      Object cachedColumnVals = objectColumnCache.get(column);
 
                       if (cachedColumnVals == null) {
-                        Column holder = index.getColumn(columnName);
+                        Column holder = index.getColumn(column);
 
                         if (holder != null) {
                           final ColumnCapabilities capabilities = holder.getCapabilities();
@@ -456,7 +450,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
 
                         if (cachedColumnVals != null) {
-                          objectColumnCache.put(columnName, cachedColumnVals);
+                          objectColumnCache.put(column, cachedColumnVals);
                         }
                       }
 

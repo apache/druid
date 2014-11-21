@@ -65,20 +65,6 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller
     }
   }
 
-  @Override
-  public long getLastModified(DataSegment segment) throws SegmentLoadingException
-  {
-    Path path = getPath(segment);
-    FileSystem fs = checkPathAndGetFilesystem(path);
-
-    try {
-      return fs.getFileStatus(path).getModificationTime();
-    }
-    catch (IOException e) {
-      throw new SegmentLoadingException(e, "Problem loading status of path[%s]", path);
-    }
-  }
-
   private Path getPath(DataSegment segment)
   {
     return new Path(String.valueOf(segment.getLoadSpec().get("path")));

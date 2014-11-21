@@ -174,7 +174,7 @@ public class CachingClusteredClientTest
           "*",
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
-              new ConstantPostAggregator("constant", 2, 2)
+              new ConstantPostAggregator("constant", 2)
           )
       ),
       new ArithmeticPostAggregator(
@@ -182,7 +182,7 @@ public class CachingClusteredClientTest
           "/",
           Arrays.<PostAggregator>asList(
               new FieldAccessPostAggregator("avg_imps_per_row", "avg_imps_per_row"),
-              new ConstantPostAggregator("constant", 2, 2)
+              new ConstantPostAggregator("constant", 2)
           )
       )
   );

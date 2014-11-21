@@ -76,32 +76,23 @@ public class IndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(IndexTask.class);
 
-  private static String makeId(String id, IndexIngestionSpec ingestionSchema, String dataSource)
+  private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
     if (id == null) {
-      return String.format("index_%s_%s", makeDataSource(ingestionSchema, dataSource), new DateTime().toString());
+      return String.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime().toString());
     }
 
     return id;
   }
 
-  private static String makeDataSource(IndexIngestionSpec ingestionSchema, String dataSource)
+  private static String makeDataSource(IndexIngestionSpec ingestionSchema)
   {
-    if (ingestionSchema != null) {
-      return ingestionSchema.getDataSchema().getDataSource();
-    } else { // Backwards compatible
-      return dataSource;
-    }
+    return ingestionSchema.getDataSchema().getDataSource();
   }
 
-  private static Interval makeInterval(IndexIngestionSpec ingestionSchema, GranularitySpec granularitySpec)
+  private static Interval makeInterval(IndexIngestionSpec ingestionSchema)
   {
-    GranularitySpec spec;
-    if (ingestionSchema != null) {
-      spec = ingestionSchema.getDataSchema().getGranularitySpec();
-    } else {
-      spec = granularitySpec;
-    }
+    GranularitySpec spec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     return new Interval(
         spec.bucketIntervals().get().first().getStart(),
@@ -118,38 +109,18 @@ public class IndexTask extends AbstractFixedIntervalTask
   public IndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("schema") IndexIngestionSpec ingestionSchema,
-      // Backwards Compatible
-      @JsonProperty("dataSource") final String dataSource,
-      @JsonProperty("granularitySpec") final GranularitySpec granularitySpec,
-      @JsonProperty("aggregators") final AggregatorFactory[] aggregators,
-      @JsonProperty("indexGranularity") final QueryGranularity indexGranularity,
-      @JsonProperty("targetPartitionSize") final int targetPartitionSize,
-      @JsonProperty("firehose") final FirehoseFactory firehoseFactory,
-      @JsonProperty("rowFlushBoundary") final int rowFlushBoundary,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(
         // _not_ the version, just something uniqueish
-        makeId(id, ingestionSchema, dataSource),
-        makeDataSource(ingestionSchema, dataSource),
-        makeInterval(ingestionSchema, granularitySpec)
+        makeId(id, ingestionSchema),
+        makeDataSource(ingestionSchema),
+        makeInterval(ingestionSchema)
     );
 
-    if (ingestionSchema != null) {
-      this.ingestionSchema = ingestionSchema;
-    } else { // Backwards Compatible
-      this.ingestionSchema = new IndexIngestionSpec(
-          new DataSchema(
-              dataSource,
-              firehoseFactory.getParser(),
-              aggregators,
-              granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
-          ),
-          new IndexIOConfig(firehoseFactory),
-          new IndexTuningConfig(targetPartitionSize, 0, null)
-      );
-    }
+
+    this.ingestionSchema = ingestionSchema;
     this.jsonMapper = jsonMapper;
   }
 

@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
-import io.druid.indexer.partitions.RandomPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
@@ -45,12 +44,15 @@ public class HadoopIngestionSpecTest
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + " \"granularitySpec\":{"
-          + "   \"type\":\"uniform\","
-          + "   \"gran\":\"hour\","
-          + "   \"intervals\":[\"2012-01-01/P1D\"]"
-          + " }"
+          "{\n"
+          + "    \"dataSchema\": {\n"
+          + "     \"metricsSpec\": [],\n"
+          + "        \"granularitySpec\": {\n"
+          + "                \"type\": \"uniform\",\n"
+          + "                \"segmentGranularity\": \"hour\",\n"
+          + "                \"intervals\": [\"2012-01-01/P1D\"]\n"
+          + "        }\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );
@@ -75,75 +77,19 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testGranularitySpecLegacy()
-  {
-    // Deprecated and replaced by granularitySpec, but still supported
-    final HadoopIngestionSpec schema;
-
-    try {
-      schema = jsonReadWriteRead(
-          "{"
-          + "\"segmentGranularity\":\"day\","
-          + "\"intervals\":[\"2012-02-01/P1D\"]"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    final UniformGranularitySpec granularitySpec = (UniformGranularitySpec) schema.getDataSchema().getGranularitySpec();
-
-    Assert.assertEquals(
-        "getIntervals",
-        Lists.newArrayList(new Interval("2012-02-01/P1D")),
-        granularitySpec.getIntervals().get()
-    );
-
-    Assert.assertEquals(
-        "getSegmentGranularity",
-        "DAY",
-        granularitySpec.getSegmentGranularity().toString()
-    );
-  }
-
-  @Test
-  public void testInvalidGranularityCombination()
-  {
-    boolean thrown = false;
-    try {
-      final HadoopIngestionSpec schema = jsonReadWriteRead(
-          "{"
-          + "\"segmentGranularity\":\"day\","
-          + "\"intervals\":[\"2012-02-01/P1D\"],"
-          + "\"granularitySpec\":{"
-          + "   \"type\":\"uniform\","
-          + "   \"gran\":\"hour\","
-          + "   \"intervals\":[\"2012-01-01/P1D\"]"
-          + " }"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      thrown = true;
-    }
-
-    Assert.assertTrue("Exception thrown", thrown);
-  }
-
-  @Test
-  public void testPartitionsSpecAutoDHashed()
+  public void testPartitionsSpecAutoHashed()
   {
     final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + "\"partitionsSpec\":{"
-          + "   \"targetPartitionSize\":100"
-          + " }"
+          "{\n"
+          + "    \"tuningConfig\": {\n"
+          + "        \"type\": \"hadoop\",\n"
+          + "        \"partitionsSpec\": {\n"
+          + "            \"targetPartitionSize\": 100\n"
+          + "        }\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );
@@ -173,65 +119,23 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testPartitionsSpecLegacy()
-  {
-    final HadoopIngestionSpec schema;
-
-    try {
-      schema = jsonReadWriteRead(
-          "{"
-          + "\"targetPartitionSize\":100,"
-          + "\"partitionDimension\":\"foo\""
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
-
-    Assert.assertEquals(
-        "isDeterminingPartitions",
-        partitionsSpec.isDeterminingPartitions(),
-        true
-    );
-
-    Assert.assertEquals(
-        "getTargetPartitionSize",
-        partitionsSpec.getTargetPartitionSize(),
-        100
-    );
-
-    Assert.assertEquals(
-        "getMaxPartitionSize",
-        partitionsSpec.getMaxPartitionSize(),
-        150
-    );
-
-    Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof SingleDimensionPartitionsSpec);
-    Assert.assertEquals(
-        "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec)partitionsSpec).getPartitionDimension(),
-        "foo"
-    );
-  }
-
-  @Test
   public void testPartitionsSpecMaxPartitionSize()
   {
     final HadoopIngestionSpec schema;
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + "\"partitionsSpec\":{"
-          + "   \"type\":\"dimension\","
-          + "   \"targetPartitionSize\":100,"
-          + "   \"maxPartitionSize\":200,"
-          + "   \"partitionDimension\":\"foo\""
-          + " }"
+
+          "{\n"
+          + "    \"tuningConfig\": {\n"
+          + "        \"type\": \"hadoop\",\n"
+          + "        \"partitionsSpec\": {\n"
+          + "            \"type\": \"dimension\",\n"
+          + "            \"targetPartitionSize\": 100,\n"
+          + "            \"maxPartitionSize\" : 200,\n"
+          + "            \"partitionDimension\" : \"foo\"\n"
+          + "        }\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );
@@ -269,41 +173,22 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testInvalidPartitionsCombination()
-  {
-    boolean thrown = false;
-    try {
-      final HadoopIngestionSpec schema = jsonReadWriteRead(
-          "{"
-          + "\"targetPartitionSize\":100,"
-          + "\"partitionsSpec\":{"
-          + "   \"targetPartitionSize\":100"
-          + " }"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      thrown = true;
-    }
-
-    Assert.assertTrue("Exception thrown", thrown);
-  }
-
-  @Test
   public void testDbUpdaterJobSpec() throws Exception
   {
     final HadoopIngestionSpec schema;
 
     schema = jsonReadWriteRead(
-        "{"
-        + "\"updaterJobSpec\":{\n"
-        + "    \"type\" : \"db\",\n"
-        + "    \"connectURI\" : \"jdbc:mysql://localhost/druid\",\n"
-        + "    \"user\" : \"rofl\",\n"
-        + "    \"password\" : \"p4ssw0rd\",\n"
-        + "    \"segmentTable\" : \"segments\"\n"
-        + "  }"
+        "{\n"
+        + "    \"ioConfig\": {\n"
+        + "        \"type\": \"hadoop\",\n"
+        + "        \"metadataUpdateSpec\": {\n"
+        + "            \"type\": \"db\",\n"
+        + "            \"connectURI\": \"jdbc:mysql://localhost/druid\",\n"
+        + "            \"user\": \"rofl\",\n"
+        + "            \"password\": \"p4ssw0rd\",\n"
+        + "            \"segmentTable\": \"segments\"\n"
+        + "        }\n"
+        + "    }\n"
         + "}",
         HadoopIngestionSpec.class
     );
@@ -358,7 +243,12 @@ public class HadoopIngestionSpecTest
 
     try {
       schema = jsonReadWriteRead(
-          "{\"cleanupOnFailure\":false}",
+          "{\n"
+          + "    \"tuningConfig\" : {\n"
+          + "        \"type\" : \"hadoop\", \n"
+          + "        \"cleanupOnFailure\" : \"false\"\n"
+          + "    }\n"
+          + "}",
           HadoopIngestionSpec.class
       );
     }
@@ -383,46 +273,4 @@ public class HadoopIngestionSpecTest
     }
   }
 
-  public void testRandomPartitionsSpec() throws Exception{
-    {
-      final HadoopIngestionSpec schema;
-
-      try {
-        schema = jsonReadWriteRead(
-            "{"
-            + "\"partitionsSpec\":{"
-            + "   \"targetPartitionSize\":100,"
-            + "   \"type\":\"random\""
-            + " }"
-            + "}",
-            HadoopIngestionSpec.class
-        );
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
-      final PartitionsSpec partitionsSpec = schema.getTuningConfig().getPartitionsSpec();
-
-      Assert.assertEquals(
-          "isDeterminingPartitions",
-          partitionsSpec.isDeterminingPartitions(),
-          true
-      );
-
-      Assert.assertEquals(
-          "getTargetPartitionSize",
-          partitionsSpec.getTargetPartitionSize(),
-          100
-      );
-
-      Assert.assertEquals(
-          "getMaxPartitionSize",
-          partitionsSpec.getMaxPartitionSize(),
-          150
-      );
-
-      Assert.assertTrue("partitionsSpec" , partitionsSpec instanceof RandomPartitionsSpec);
-    }
-  }
 }
