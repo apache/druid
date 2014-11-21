@@ -54,15 +54,15 @@
         <module>server</module>
         <module>services</module>
         <!-- Non-default modules -->
-        <module>cassandra-storage</module>
-        <module>hdfs-storage</module>
-        <module>s3-extensions</module>
-        <module>kafka-seven</module>
-        <module>kafka-eight</module>
-        <module>rabbitmq</module>
-        <module>histogram</module>
-        <module>mysql-metadata-storage</module>
-        <module>postgresql-metadata-storage</module>
+        <module>extensions/cassandra-storage</module>
+        <module>extensions/hdfs-storage</module>
+        <module>extensions/s3-extensions</module>
+        <module>extensions/kafka-seven</module>
+        <module>extensions/kafka-eight</module>
+        <module>extensions/rabbitmq</module>
+        <module>extensions/histogram</module>
+        <module>extensions/mysql-metadata-storage</module>
+        <module>extensions/postgresql-metadata-storage</module>
     </modules>
 
     <dependencyManagement>

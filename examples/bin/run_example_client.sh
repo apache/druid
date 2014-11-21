@@ -45,7 +45,7 @@ for delay in 5 30 30 30 30 30 30 30 30 30 30
    echo "sleep for $delay seconds..."
    echo " " 
    sleep $delay
-   curl -X POST 'http://localhost:8083/druid/v2/?w' -H 'content-type: application/json'  -d "`cat ${QUERY_FILE}`"
+   curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d "`cat ${QUERY_FILE}`"
    echo " "
    echo " "
 done

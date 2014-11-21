@@ -108,7 +108,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("schema") IndexIngestionSpec ingestionSchema,
+      @JsonProperty("spec") IndexIngestionSpec ingestionSchema,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -130,7 +130,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     return "index";
   }
 
-  @JsonProperty("schema")
+  @JsonProperty("spec")
   public IndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;

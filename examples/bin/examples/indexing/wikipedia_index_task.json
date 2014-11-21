@@ -1,39 +1,76 @@
 {
-  "type" : "index",
-  "dataSource" : "wikipedia",
-  "granularitySpec" : {
-    "type" : "uniform",
-    "gran" : "DAY",
-    "intervals" : [ "2013-08-31/2013-09-01" ]
-  },
-  "aggregators" : [{
-     "type" : "count",
-     "name" : "count"
-    }, {
-     "type" : "doubleSum",
-     "name" : "added",
-     "fieldName" : "added"
-    }, {
-     "type" : "doubleSum",
-     "name" : "deleted",
-     "fieldName" : "deleted"
-    }, {
-     "type" : "doubleSum",
-     "name" : "delta",
-     "fieldName" : "delta"
-  }],
-  "firehose" : {
-    "type" : "local",
-    "baseDir" : "examples/indexing/",
-    "filter" : "wikipedia_data.json",
-    "parser" : {
-      "timestampSpec" : {
-        "column" : "timestamp"
+  "type": "index",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "wikipedia",
+      "parser": {
+        "type": "string",
+        "parseSpec": {
+          "format": "json",
+          "timestampSpec": {
+            "column": "timestamp",
+            "format": "auto"
+          },
+          "dimensionsSpec": {
+            "dimensions": [
+              "page",
+              "language",
+              "user",
+              "unpatrolled",
+              "newPage",
+              "robot",
+              "anonymous",
+              "namespace",
+              "continent",
+              "country",
+              "region",
+              "city"
+            ],
+            "dimensionExclusions": [],
+            "spatialDimensions": []
+          }
+        }
       },
-      "data" : {
-        "format" : "json",
-        "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "count"
+        },
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "NONE",
+        "intervals": ["2013-08-31/2013-09-01"]
       }
+    },
+    "ioConfig": {
+      "type": "index",
+      "firehose": {
+        "type": "local",
+        "baseDir": "/MyPath/druid-services-0.6.160/examples/indexing/",
+        "filter": "wikipedia_data.json"
+      }
+    },
+    "tuningConfig": {
+      "type": "index",
+      "targetPartitionSize": 0,
+      "rowFlushBoundary": 0
     }
   }
 }

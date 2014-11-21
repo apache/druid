@@ -76,28 +76,31 @@ class WikipediaIrcDecoder implements IrcDecoder
   final Map<String, Map<String, String>> namespaces;
   final String geoIpDatabase;
 
-  public WikipediaIrcDecoder( Map<String, Map<String, String>> namespaces) {
+  public WikipediaIrcDecoder(Map<String, Map<String, String>> namespaces)
+  {
     this(namespaces, null);
   }
 
   @JsonCreator
-  public WikipediaIrcDecoder(@JsonProperty("namespaces") Map<String, Map<String, String>> namespaces,
-                             @JsonProperty("geoIpDatabase") String geoIpDatabase)
+  public WikipediaIrcDecoder(
+      @JsonProperty("namespaces") Map<String, Map<String, String>> namespaces,
+      @JsonProperty("geoIpDatabase") String geoIpDatabase
+  )
   {
-    if(namespaces == null) {
+    if (namespaces == null) {
       namespaces = Maps.newHashMap();
     }
     this.namespaces = namespaces;
     this.geoIpDatabase = geoIpDatabase;
 
     File geoDb;
-    if(geoIpDatabase != null) {
+    if (geoIpDatabase != null) {
       geoDb = new File(geoIpDatabase);
     } else {
       try {
         String tmpDir = System.getProperty("java.io.tmpdir");
         geoDb = new File(tmpDir, this.getClass().getCanonicalName() + ".GeoLite2-City.mmdb");
-        if(!geoDb.exists()) {
+        if (!geoDb.exists()) {
           log.info("Downloading geo ip database to [%s]", geoDb);
 
           FileUtils.copyInputStreamToFile(
@@ -107,13 +110,15 @@ class WikipediaIrcDecoder implements IrcDecoder
               geoDb
           );
         }
-      } catch(IOException e) {
+      }
+      catch (IOException e) {
         throw new RuntimeException("Unable to download geo ip database [%s]", e);
       }
     }
     try {
       geoLookup = new DatabaseReader(geoDb);
-    } catch(IOException e) {
+    }
+    catch (IOException e) {
       throw new RuntimeException("Unable to open geo ip lookup database", e);
     }
   }
@@ -137,12 +142,12 @@ class WikipediaIrcDecoder implements IrcDecoder
     final Map<String, Float> metrics = Maps.newHashMap();
 
     Matcher m = pattern.matcher(msg);
-    if(!m.matches()) {
+    if (!m.matches()) {
       throw new IllegalArgumentException("Invalid input format");
     }
 
     Matcher shortname = shortnamePattern.matcher(channel);
-    if(shortname.matches()) {
+    if (shortname.matches()) {
       dimensions.put("language", shortname.group(1));
     }
 
@@ -154,7 +159,7 @@ class WikipediaIrcDecoder implements IrcDecoder
     String user = m.group(4);
     Matcher ipMatch = ipPattern.matcher(user);
     boolean anonymous = ipMatch.matches();
-    if(anonymous) {
+    if (anonymous) {
       try {
         final InetAddress ip = InetAddress.getByName(ipMatch.group());
         final Omni lookup = geoLookup.omni(ip);
@@ -163,11 +168,14 @@ class WikipediaIrcDecoder implements IrcDecoder
         dimensions.put("country", lookup.getCountry().getName());
         dimensions.put("region", lookup.getMostSpecificSubdivision().getName());
         dimensions.put("city", lookup.getCity().getName());
-      } catch(UnknownHostException e) {
+      }
+      catch (UnknownHostException e) {
         log.error(e, "invalid ip [%s]", ipMatch.group());
-      } catch(IOException e) {
+      }
+      catch (IOException e) {
         log.error(e, "error looking up geo ip");
-      } catch(GeoIp2Exception e) {
+      }
+      catch (GeoIp2Exception e) {
         log.error(e, "error looking up geo ip");
       }
     }
@@ -181,15 +189,14 @@ class WikipediaIrcDecoder implements IrcDecoder
     dimensions.put("anonymous", Boolean.toString(anonymous));
 
     String[] parts = page.split(":");
-    if(parts.length > 1 && !parts[1].startsWith(" ")) {
+    if (parts.length > 1 && !parts[1].startsWith(" ")) {
       Map<String, String> channelNamespaces = namespaces.get(channel);
-      if(channelNamespaces != null && channelNamespaces.containsKey(parts[0])) {
+      if (channelNamespaces != null && channelNamespaces.containsKey(parts[0])) {
         dimensions.put("namespace", channelNamespaces.get(parts[0]));
       } else {
         dimensions.put("namespace", "wikipedia");
       }
-    }
-    else {
+    } else {
       dimensions.put("namespace", "article");
     }
 
@@ -222,7 +229,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       public List<String> getDimension(String dimension)
       {
         final String value = dimensions.get(dimension);
-        if(value != null) {
+        if (value != null) {
           return ImmutableList.of(value);
         } else {
           return ImmutableList.of();
@@ -230,7 +237,8 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
 
       @Override
-      public Object getRaw(String dimension) {
+      public Object getRaw(String dimension)
+      {
         return dimensions.get(dimension);
       }
 
