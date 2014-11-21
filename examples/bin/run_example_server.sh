@@ -58,7 +58,7 @@ DRUID_CP=${EXAMPLE_LOC}
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/../config/realtime
 #For the kit
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/lib/*
-DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/_global
+DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/_common
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/realtime
 
 echo "Running command:"
