@@ -35,10 +35,10 @@ fi
 
 branch=druid-$version
 if [ "$version" == "latest" ]; then
-  branch=master
+  branch=0.6.x
 fi
 
-if [ -z "$(git tag -l "$branch")" ] && [ "$branch" != "master" ]; then
+if [ -z "$(git tag -l "$branch")" ] && [ "$branch" != "0.6.x" ]; then
   echo "Version tag does not exist: druid-$version"
   exit 1;
 fi
@@ -60,7 +60,7 @@ if [ -n "$opt_docs" ] ; then
   rsync -a --delete "$src/docs/content/" $target/docs/$version
 fi
 
-# generate javadocs for releases (not for master)
+# generate javadocs for releases (only for tagged releases)
 if [ "$version" != "latest" ] && [ -n "$opt_api" ] ; then
   (cd $src && mvn javadoc:aggregate)
   mkdir -p $target/api/$version
