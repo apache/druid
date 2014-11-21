@@ -111,6 +111,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   }
 
   private static final int LOOP_UNROLL_COUNT = 8;
+
   @Override
   public TopNNumericResultBuilder addEntry(
       String dimName,
@@ -118,7 +119,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       Object[] metricVals
   )
   {
-    Preconditions.checkArgument(metricVals.length == aggFactories.size(),"metricVals must be the same length as aggFactories");
+    Preconditions.checkArgument(
+        metricVals.length == aggFactories.size(),
+        "metricVals must be the same length as aggFactories"
+    );
 
     final Map<String, Object> metricValues = new LinkedHashMap<>(metricVals.length + postAggs.size());
 
@@ -126,7 +130,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
     final int extra = metricVals.length % LOOP_UNROLL_COUNT;
 
-    switch(extra){
+    switch (extra) {
       case 7:
         metricValues.put(aggFactories.get(6).getName(), metricVals[6]);
       case 6:
@@ -142,15 +146,15 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       case 1:
         metricValues.put(aggFactories.get(0).getName(), metricVals[0]);
     }
-    for(int i = extra; i < metricVals.length; i+=LOOP_UNROLL_COUNT){
-      metricValues.put(aggFactories.get(i+0).getName(), metricVals[i+0]);
-      metricValues.put(aggFactories.get(i+1).getName(), metricVals[i+1]);
-      metricValues.put(aggFactories.get(i+2).getName(), metricVals[i+2]);
-      metricValues.put(aggFactories.get(i+3).getName(), metricVals[i+3]);
-      metricValues.put(aggFactories.get(i+4).getName(), metricVals[i+4]);
-      metricValues.put(aggFactories.get(i+5).getName(), metricVals[i+5]);
-      metricValues.put(aggFactories.get(i+6).getName(), metricVals[i+6]);
-      metricValues.put(aggFactories.get(i+7).getName(), metricVals[i+7]);
+    for (int i = extra; i < metricVals.length; i += LOOP_UNROLL_COUNT) {
+      metricValues.put(aggFactories.get(i + 0).getName(), metricVals[i + 0]);
+      metricValues.put(aggFactories.get(i + 1).getName(), metricVals[i + 1]);
+      metricValues.put(aggFactories.get(i + 2).getName(), metricVals[i + 2]);
+      metricValues.put(aggFactories.get(i + 3).getName(), metricVals[i + 3]);
+      metricValues.put(aggFactories.get(i + 4).getName(), metricVals[i + 4]);
+      metricValues.put(aggFactories.get(i + 5).getName(), metricVals[i + 5]);
+      metricValues.put(aggFactories.get(i + 6).getName(), metricVals[i + 6]);
+      metricValues.put(aggFactories.get(i + 7).getName(), metricVals[i + 7]);
     }
 
     for (PostAggregator postAgg : postAggs) {
