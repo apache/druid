@@ -166,7 +166,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           public InputStream nextElement()
           {
             try {
-              return queue.poll(1, TimeUnit.MINUTES);
+              return queue.poll(10, TimeUnit.SECONDS);
             }
             catch (InterruptedException e) {
               throw Throwables.propagate(e);
@@ -174,7 +174,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         };
         @Override
-        public ClientResponse<SequenceInputStream> handleResponse(HttpResponse response)
+        public synchronized ClientResponse<SequenceInputStream> handleResponse(HttpResponse response)
         {
           log.debug("Initial response from url[%s]", url);
           startTime = System.currentTimeMillis();
@@ -196,19 +196,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         }
 
         @Override
-        public ClientResponse<SequenceInputStream> handleChunk(
+        public synchronized ClientResponse<SequenceInputStream> handleChunk(
             ClientResponse<SequenceInputStream> clientResponse, HttpChunk chunk
         )
         {
           final ChannelBuffer channelBuffer = chunk.getContent();
-          queue.offer(new ChannelBufferInputStream(channelBuffer));
           final int bytes = channelBuffer.readableBytes();
-          byteCount.addAndGet(bytes);
+          if(bytes>0) {
+            queue.offer(new ChannelBufferInputStream(channelBuffer));
+            byteCount.addAndGet(bytes);
+          }
           return clientResponse;
         }
 
         @Override
-        public ClientResponse<InputStream> done(ClientResponse<SequenceInputStream> clientResponse)
+        public synchronized ClientResponse<InputStream> done(ClientResponse<SequenceInputStream> clientResponse)
         {
           long stopTime = System.currentTimeMillis();
           log.debug(
