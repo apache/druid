@@ -36,7 +36,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BySegmentResultValue;
-import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
@@ -79,6 +78,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   )
   {
     this.config = config;
+  }
+
+  protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories){
+    return Lists.transform(
+        aggregatorFactories, new Function<AggregatorFactory, String>()
+        {
+          @Nullable
+          @Override
+          public String apply(@Nullable AggregatorFactory input)
+          {
+            return input.getName();
+          }
+        }
+    ).toArray(new String[0]);
   }
 
   private static List<PostAggregator> prunePostAggregators(TopNQuery query)
@@ -160,17 +173,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private final List<PostAggregator> prunedAggs = prunePostAggregators(query);
       private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
                                                                    .toArray(new AggregatorFactory[0]);
-      private final String[] aggFactoryNames = Lists.transform(
-          query.getAggregatorSpecs(), new Function<AggregatorFactory, String>()
-          {
-            @Nullable
-            @Override
-            public String apply(@Nullable AggregatorFactory input)
-            {
-              return input.getName();
-            }
-          }
-      ).toArray(new String[0]);
+      private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
 
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
@@ -229,17 +232,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       private String dimension = query.getDimensionSpec().getOutputName();
       private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
                                                                    .toArray(new AggregatorFactory[0]);
-      private final String[] aggFactoryNames = Lists.transform(
-          query.getAggregatorSpecs(), new Function<AggregatorFactory, String>()
-          {
-            @Nullable
-            @Override
-            public String apply(@Nullable AggregatorFactory input)
-            {
-              return input.getName();
-            }
-          }
-      ).toArray(new String[0]);
+      private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
       private final PostAggregator[] postAggregators = query.getPostAggregatorSpecs().toArray(new PostAggregator[0]);
 
       @Override
@@ -349,17 +342,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       {
         return new Function<Result<TopNResultValue>, Object>()
         {
-          private final String[] aggFactoryNames = Lists.transform(
-              query.getAggregatorSpecs(), new Function<AggregatorFactory, String>()
-              {
-                @Nullable
-                @Override
-                public String apply(@Nullable AggregatorFactory input)
-                {
-                  return input.getName();
-                }
-              }
-          ).toArray(new String[0]);
+          private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
 
           @Override
           public Object apply(final Result<TopNResultValue> input)
