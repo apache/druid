@@ -22,6 +22,7 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
@@ -29,8 +30,10 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,10 +50,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String metricName;
-  private final List<AggregatorFactory> aggFactories;
   private final List<PostAggregator> postAggs;
   private final PriorityQueue<DimValHolder> pQueue;
   private final Comparator<DimValHolder> dimValComparator;
+  private final String[] aggFactories;
   private static final Comparator<String> dimNameComparator = new Comparator<String>()
   {
     @Override
@@ -87,7 +90,19 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     this.timestamp = timestamp;
     this.dimSpec = dimSpec;
     this.metricName = metricName;
-    this.aggFactories = aggFactories;
+    this.aggFactories = (String[]) Lists.<AggregatorFactory, String>transform(
+        aggFactories, new Function<AggregatorFactory, String>()
+        {
+
+          @Nullable
+          @Override
+          public String apply(AggregatorFactory input)
+          {
+            return input.getName();
+          }
+        }
+    ).toArray(new String[0]);
+
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
     this.metricComparator = comparator;
@@ -120,11 +135,11 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   )
   {
     Preconditions.checkArgument(
-        metricVals.length == aggFactories.size(),
+        metricVals.length == aggFactories.length,
         "metricVals must be the same length as aggFactories"
     );
 
-    final Map<String, Object> metricValues = new LinkedHashMap<>(metricVals.length + postAggs.size());
+    final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + postAggs.size() + 1);
 
     metricValues.put(dimSpec.getOutputName(), dimName);
 
@@ -132,31 +147,32 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
     switch (extra) {
       case 7:
-        metricValues.put(aggFactories.get(6).getName(), metricVals[6]);
+        metricValues.put(aggFactories[6], metricVals[6]);
       case 6:
-        metricValues.put(aggFactories.get(5).getName(), metricVals[5]);
+        metricValues.put(aggFactories[5], metricVals[5]);
       case 5:
-        metricValues.put(aggFactories.get(4).getName(), metricVals[4]);
+        metricValues.put(aggFactories[4], metricVals[4]);
       case 4:
-        metricValues.put(aggFactories.get(3).getName(), metricVals[3]);
+        metricValues.put(aggFactories[3], metricVals[3]);
       case 3:
-        metricValues.put(aggFactories.get(2).getName(), metricVals[2]);
+        metricValues.put(aggFactories[2], metricVals[2]);
       case 2:
-        metricValues.put(aggFactories.get(1).getName(), metricVals[1]);
+        metricValues.put(aggFactories[1], metricVals[1]);
       case 1:
-        metricValues.put(aggFactories.get(0).getName(), metricVals[0]);
+        metricValues.put(aggFactories[0], metricVals[0]);
     }
     for (int i = extra; i < metricVals.length; i += LOOP_UNROLL_COUNT) {
-      metricValues.put(aggFactories.get(i + 0).getName(), metricVals[i + 0]);
-      metricValues.put(aggFactories.get(i + 1).getName(), metricVals[i + 1]);
-      metricValues.put(aggFactories.get(i + 2).getName(), metricVals[i + 2]);
-      metricValues.put(aggFactories.get(i + 3).getName(), metricVals[i + 3]);
-      metricValues.put(aggFactories.get(i + 4).getName(), metricVals[i + 4]);
-      metricValues.put(aggFactories.get(i + 5).getName(), metricVals[i + 5]);
-      metricValues.put(aggFactories.get(i + 6).getName(), metricVals[i + 6]);
-      metricValues.put(aggFactories.get(i + 7).getName(), metricVals[i + 7]);
+      metricValues.put(aggFactories[i + 0], metricVals[i + 0]);
+      metricValues.put(aggFactories[i + 1], metricVals[i + 1]);
+      metricValues.put(aggFactories[i + 2], metricVals[i + 2]);
+      metricValues.put(aggFactories[i + 3], metricVals[i + 3]);
+      metricValues.put(aggFactories[i + 4], metricVals[i + 4]);
+      metricValues.put(aggFactories[i + 5], metricVals[i + 5]);
+      metricValues.put(aggFactories[i + 6], metricVals[i + 6]);
+      metricValues.put(aggFactories[i + 7], metricVals[i + 7]);
     }
 
+    // Order matters here, do not unroll
     for (PostAggregator postAgg : postAggs) {
       metricValues.put(postAgg.getName(), postAgg.compute(metricValues));
     }
