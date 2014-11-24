@@ -1,10 +1,7 @@
 {
-   "queryType":"groupBy",
+   "queryType":"timeseries",
    "dataSource":"wikipedia",
    "granularity":"minute",
-   "dimensions":[
-      "page"
-   ],
    "aggregations":[
       {
          "type":"count",

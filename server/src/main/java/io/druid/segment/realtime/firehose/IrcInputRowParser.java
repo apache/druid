@@ -30,15 +30,50 @@ import io.druid.data.input.impl.ParseSpec;
 import org.joda.time.DateTime;
 
 /**
+ * <p><b>Example Usage</b></p>
+ * <p/>
+ * <p>Decoder definition: <code>wikipedia-decoder.json</code></p>
+ * <pre>{@code
+ * <p/>
+ * {
+ *   "type": "wikipedia",
+ *   "namespaces": {
+ *     "#en.wikipedia": {
+ *       "": "main",
+ *       "Category": "category",
+ *       "Template talk": "template talk",
+ *       "Help talk": "help talk",
+ *       "Media": "media",
+ *       "MediaWiki talk": "mediawiki talk",
+ *       "File talk": "file talk",
+ *       "MediaWiki": "mediawiki",
+ *       "User": "user",
+ *       "File": "file",
+ *       "User talk": "user talk",
+ *       "Template": "template",
+ *       "Help": "help",
+ *       "Special": "special",
+ *       "Talk": "talk",
+ *       "Category talk": "category talk"
+ *     }
+ *   },
+ *   "geoIpDatabase": "path/to/GeoLite2-City.mmdb"
+ * }
+ * }</pre>
  */
-@JsonTypeName("protoBuf")
-public class IrcParser implements InputRowParser<Pair<DateTime, ChannelPrivMsg>>
+@JsonTypeName("irc")
+public class IrcInputRowParser implements InputRowParser<Pair<DateTime, ChannelPrivMsg>>
 {
+  private final ParseSpec parseSpec;
   private final IrcDecoder decoder;
 
   @JsonCreator
-  public IrcParser(@JsonProperty("decoder") IrcDecoder decoder)
+  public IrcInputRowParser(
+      @JsonProperty("parseSpec") ParseSpec parseSpec,
+      @JsonProperty("decoder") IrcDecoder decoder
+  )
   {
+    this.parseSpec = parseSpec;
     this.decoder = decoder;
   }
 
@@ -54,15 +89,16 @@ public class IrcParser implements InputRowParser<Pair<DateTime, ChannelPrivMsg>>
     return decoder.decodeMessage(msg.lhs, msg.rhs.getChannelName(), msg.rhs.getText());
   }
 
+  @JsonProperty
   @Override
   public ParseSpec getParseSpec()
   {
-    return null;
+    return parseSpec;
   }
 
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    throw new UnsupportedOperationException();
+    return new IrcInputRowParser(parseSpec, decoder);
   }
 }
