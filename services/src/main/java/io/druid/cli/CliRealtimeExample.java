@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.DruidServer;
@@ -63,6 +64,9 @@ public class CliRealtimeExample extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/realtime");
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
+
             binder.bind(DataSegmentPusher.class).to(NoopDataSegmentPusher.class).in(LazySingleton.class);
             binder.bind(DataSegmentAnnouncer.class).to(NoopDataSegmentAnnouncer.class).in(LazySingleton.class);
             binder.bind(InventoryView.class).to(NoopInventoryView.class).in(LazySingleton.class);
