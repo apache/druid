@@ -90,7 +90,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     DateTime now = new DateTime();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
 
-    final List<String> segmentsWithMissingRules = Lists.newArrayListWithCapacity(10);
+    final List<String> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
