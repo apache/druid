@@ -556,7 +556,7 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> context
+              Query<Row> query, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
@@ -566,7 +566,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
+            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
           }
         }
     );
@@ -752,7 +752,7 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> context
+              Query<Row> query, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
@@ -762,7 +762,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
+            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
           }
         }
     );
@@ -1109,7 +1109,7 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> context
+              Query<Row> query, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
@@ -1119,7 +1119,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
+            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
           }
         }
     );

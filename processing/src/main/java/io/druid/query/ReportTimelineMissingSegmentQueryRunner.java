@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
@@ -27,32 +27,27 @@ import java.util.List;
 import java.util.Map;
 
 /**
-*/
-public class ConcatQueryRunner<T> implements QueryRunner<T>
+ */
+public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T>
 {
-  private final Sequence<QueryRunner<T>> queryRunners;
+  private final SegmentDescriptor descriptor;
 
-  public ConcatQueryRunner(
-      Sequence<QueryRunner<T>> queryRunners
-  ) {
-    this.queryRunners = queryRunners;
+  public ReportTimelineMissingSegmentQueryRunner(SegmentDescriptor descriptor)
+  {
+    this.descriptor = descriptor;
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  public Sequence<T> run(
+      Query<T> query, Map<String, Object> responseContext
+  )
   {
-    return Sequences.concat(
-        Sequences.map(
-            queryRunners,
-            new Function<QueryRunner<T>, Sequence<T>>()
-            {
-              @Override
-              public Sequence<T> apply(final QueryRunner<T> input)
-              {
-                return input.run(query, responseContext);
-              }
-            }
-        )
-    );
+    List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
+    if (missingSegments == null) {
+      missingSegments = Lists.newArrayList();
+      responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
+    }
+    missingSegments.add(descriptor);
+    return Sequences.empty();
   }
 }

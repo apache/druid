@@ -46,14 +46,14 @@ public class RetryQueryRunnerTest
   public void testRunWithMissingSegments() throws Exception
   {
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(Query query, Map context)
           {
-            ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).add(
+            ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                 new SegmentDescriptor(
                     new Interval(
                         178888,
@@ -70,7 +70,8 @@ public class RetryQueryRunnerTest
         new RetryQueryRunnerConfig()
         {
           @Override
-          public int getNumTries() {
+          public int getNumTries()
+          {
             return 0;
           }
 
@@ -90,7 +91,7 @@ public class RetryQueryRunnerTest
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
-        ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).size() == 1
+        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 1
     );
     Assert.assertTrue("Should return an empty sequence as a result", ((List) actualResults).size() == 0);
   }
@@ -101,7 +102,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new MapMaker().makeMap();
     context.put("count", 0);
-    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -112,7 +113,7 @@ public class RetryQueryRunnerTest
           )
           {
             if ((int) context.get("count") == 0) {
-              ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                   new SegmentDescriptor(
                       new Interval(
                           178888,
@@ -159,7 +160,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).size() == 0
+        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
     );
   }
 
@@ -168,7 +169,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new MapMaker().makeMap();
     context.put("count", 0);
-    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -179,7 +180,7 @@ public class RetryQueryRunnerTest
           )
           {
             if ((int) context.get("count") < 3) {
-              ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).add(
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                   new SegmentDescriptor(
                       new Interval(
                           178888,
@@ -226,7 +227,7 @@ public class RetryQueryRunnerTest
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
         "Should have nothing in missingSegment list",
-        ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).size() == 0
+        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
     );
   }
 
@@ -234,7 +235,7 @@ public class RetryQueryRunnerTest
   public void testException() throws Exception
   {
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -244,7 +245,7 @@ public class RetryQueryRunnerTest
               Map<String, Object> context
           )
           {
-            ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).add(
+            ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
                 new SegmentDescriptor(
                     new Interval(
                         178888,
@@ -277,7 +278,7 @@ public class RetryQueryRunnerTest
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
-        ((List) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY)).size() == 1
+        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 1
     );
   }
 }

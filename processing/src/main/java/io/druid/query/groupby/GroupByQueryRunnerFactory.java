@@ -108,7 +108,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                   return new QueryRunner<Row>()
                   {
                     @Override
-                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> context)
+                    public Sequence<Row> run(final Query<Row> query, final Map<String, Object> responseContext)
                     {
                       final GroupByQuery queryParam = (GroupByQuery) query;
                       final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper
@@ -128,13 +128,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                             public Void call() throws Exception
                             {
                               if (bySegment) {
-                                input.run(queryParam, context)
+                                input.run(queryParam, responseContext)
                                      .accumulate(
                                          bySegmentAccumulatorPair.lhs,
                                          bySegmentAccumulatorPair.rhs
                                      );
                               } else {
-                                input.run(query, context)
+                                input.run(query, responseContext)
                                      .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
@@ -203,7 +203,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
     }
 
     @Override
-    public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
+    public Sequence<Row> run(Query<Row> input, Map<String, Object> responseContext)
     {
       if (!(input instanceof GroupByQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
