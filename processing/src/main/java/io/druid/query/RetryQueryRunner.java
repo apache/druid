@@ -36,7 +36,6 @@ import java.util.Map;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
 {
-  public static String MISSING_SEGMENTS_KEY = "missingSegments";
   private static final EmittingLogger log = new EmittingLogger(RetryQueryRunner.class);
 
   private final QueryRunner<T> baseRunner;
@@ -76,7 +75,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           for (int i = 0; i < config.getNumTries(); i++) {
             log.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), i);
 
-            context.put(MISSING_SEGMENTS_KEY, Lists.newArrayList());
+            context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
             final Query<T> retryQuery = query.withQuerySegmentSpec(
                 new MultipleSpecificSegmentSpec(
                     missingSegments
@@ -102,7 +101,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
   private List<SegmentDescriptor> getMissingSegments(final Map<String, Object> context)
   {
-    final Object maybeMissingSegments = context.get(MISSING_SEGMENTS_KEY);
+    final Object maybeMissingSegments = context.get(Result.MISSING_SEGMENTS_KEY);
     if (maybeMissingSegments == null) {
       return Lists.newArrayList();
     }
@@ -115,4 +114,3 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     );
   }
 }
-

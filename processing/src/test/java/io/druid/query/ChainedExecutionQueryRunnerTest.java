@@ -279,7 +279,7 @@ public class ChainedExecutionQueryRunnerTest
     }
 
     @Override
-    public Sequence<Integer> run(Query<Integer> query, Map<String, Object> context)
+    public Sequence<Integer> run(Query<Integer> query, Map<String, Object> responseContext)
     {
       hasStarted = true;
       start.countDown();
