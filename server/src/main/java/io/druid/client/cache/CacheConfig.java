@@ -31,10 +31,10 @@ public class CacheConfig
   public static final String POPULATE_CACHE = "populateCache";
 
   @JsonProperty
-  private boolean useCache = true;
+  private boolean useCache = false;
 
   @JsonProperty
-  private boolean populateCache = true;
+  private boolean populateCache = false;
 
   @JsonProperty
   private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
