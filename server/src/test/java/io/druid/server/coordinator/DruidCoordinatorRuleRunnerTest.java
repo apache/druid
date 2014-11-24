@@ -444,7 +444,7 @@ public class DruidCoordinatorRuleRunnerTest
   {
     mockCoordinator();
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall().times(availableSegments.size());
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(emitter);
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
