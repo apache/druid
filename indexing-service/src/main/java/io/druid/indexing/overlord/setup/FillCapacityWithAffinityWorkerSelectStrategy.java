@@ -21,9 +21,9 @@ package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
