@@ -32,9 +32,17 @@
   </parent>
 
   <dependencies>
+    <!-- include druid-common to prevent older versions of dependencies
+    from being pulled in by airline and dependencies of druid-server -->
     <dependency>
-      <groupId>io.airlift</groupId>
-      <artifactId>airline</artifactId>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-common</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
     </dependency>
     <dependency>
       <groupId>io.druid</groupId>
@@ -47,9 +55,8 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-server</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>io.airlift</groupId>
+      <artifactId>airline</artifactId>
     </dependency>
   </dependencies>
 
