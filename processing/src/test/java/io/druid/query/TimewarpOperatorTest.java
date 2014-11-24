@@ -82,7 +82,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               Query<Result<TimeseriesResultValue>> query,
-              Map<String, Object> context
+              Map<String, Object> responseContext
           )
           {
             return Sequences.simple(
@@ -144,7 +144,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeBoundaryResultValue>> run(
               Query<Result<TimeBoundaryResultValue>> query,
-              Map<String, Object> context
+              Map<String, Object> responseContext
           )
           {
             return Sequences.simple(
@@ -194,7 +194,7 @@ public class TimewarpOperatorTest
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
               Query<Result<TimeseriesResultValue>> query,
-              Map<String, Object> context
+              Map<String, Object> responseContext
           )
           {
             return Sequences.simple(

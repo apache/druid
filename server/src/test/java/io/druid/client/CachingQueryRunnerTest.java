@@ -124,7 +124,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map context)
+          public Sequence run(Query query, Map responseContext)
           {
             return resultSeq;
           }
@@ -214,7 +214,7 @@ public class CachingQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map context)
+          public Sequence run(Query query, Map responseContext)
           {
             return Sequences.empty();
           }

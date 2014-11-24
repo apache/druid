@@ -117,7 +117,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
@@ -319,13 +319,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               List<Interval> intervals = segmentSpec.getIntervals();
 
               if (!server.isAssignable() || !populateCache || isBySegment) {
-                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), context);
+                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
               } else {
                 // this could be more efficient, since we only need to reorder results
                 // for batches of segments with the same segment start time.
                 resultSeqToAdd = toolChest.mergeSequencesUnordered(
                     Sequences.map(
-                        clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec), context),
+                        clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec), responseContext),
                         new Function<Object, Sequence<T>>()
                         {
                           private final Function<T, Object> cacheFn = strategy.prepareForCache();

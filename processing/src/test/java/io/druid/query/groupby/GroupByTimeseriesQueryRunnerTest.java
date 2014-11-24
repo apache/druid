@@ -95,7 +95,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         QueryRunner timeseriesRunner = new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map metadata)
+          public Sequence run(Query query, Map responseContext)
           {
             TimeseriesQuery tsQuery = (TimeseriesQuery) query;
 
@@ -109,7 +109,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                         .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
                         .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
                         .build(),
-                    metadata
+                    responseContext
                 ),
                 new Function<Row, Result<TimeseriesResultValue>>()
                 {

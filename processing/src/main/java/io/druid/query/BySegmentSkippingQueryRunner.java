@@ -37,13 +37,13 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(Query<T> query, Map<String, Object> context)
+  public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
   {
     if (query.getContextBySegment(false)) {
-      return baseRunner.run(query, context);
+      return baseRunner.run(query, responseContext);
     }
 
-    return doRun(baseRunner, query, context);
+    return doRun(baseRunner, query, responseContext);
   }
 
   protected abstract Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, Object> context);
