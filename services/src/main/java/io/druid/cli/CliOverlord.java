@@ -35,6 +35,7 @@ import io.druid.client.indexing.IndexingServiceSelectorConfig;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
+import io.druid.guice.JacksonConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -67,6 +68,8 @@ import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementStrategy;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.http.RedirectFilter;
@@ -196,6 +199,9 @@ public class CliOverlord extends ServerRunnable
 
             biddy.addBinding("remote").to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+            JacksonConfigProvider.bind(binder, WorkerSetupData.CONFIG_KEY, WorkerSetupData.class, null);
+            JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
           }
 
           private void configureAutoscale(Binder binder)

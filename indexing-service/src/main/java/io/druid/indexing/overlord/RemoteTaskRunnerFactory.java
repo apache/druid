@@ -27,7 +27,7 @@ import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
-import io.druid.indexing.overlord.setup.WorkerBehaviourConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -50,7 +50,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
       final ZkPathsConfig zkPaths,
       final ObjectMapper jsonMapper,
       @Global final HttpClient httpClient,
-      final Supplier<WorkerBehaviourConfig> workerBehaviourConfigSupplier
+      final Supplier<WorkerBehaviorConfig> workerBehaviourConfigSupplier
   )
   {
     this.curator = curator;
@@ -60,9 +60,9 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
     this.httpClient = httpClient;
     if (workerBehaviourConfigSupplier != null) {
       // Backwards compatibility
-      final WorkerBehaviourConfig workerBehaviourConfig = workerBehaviourConfigSupplier.get();
-      if (workerBehaviourConfig != null) {
-        this.strategy = workerBehaviourConfig.getSelectStrategy();
+      final WorkerBehaviorConfig workerBehaviorConfig = workerBehaviourConfigSupplier.get();
+      if (workerBehaviorConfig != null) {
+        this.strategy = workerBehaviorConfig.getSelectStrategy();
       } else {
         this.strategy = new FillCapacityWorkerSelectStrategy();
       }

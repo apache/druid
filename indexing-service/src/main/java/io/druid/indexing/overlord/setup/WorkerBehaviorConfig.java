@@ -25,7 +25,7 @@ import io.druid.indexing.overlord.autoscaling.AutoScaler;
 
 /**
  */
-public class WorkerBehaviourConfig
+public class WorkerBehaviorConfig
 {
   public static final String CONFIG_KEY = "worker.config";
 
@@ -33,7 +33,7 @@ public class WorkerBehaviourConfig
   private final AutoScaler autoScaler;
 
   @JsonCreator
-  public WorkerBehaviourConfig(
+  public WorkerBehaviorConfig(
       @JsonProperty("selectStrategy") WorkerSelectStrategy selectStrategy,
       @JsonProperty("autoScaler") AutoScaler autoScaler
   )
@@ -64,7 +64,7 @@ public class WorkerBehaviourConfig
       return false;
     }
 
-    WorkerBehaviourConfig that = (WorkerBehaviourConfig) o;
+    WorkerBehaviorConfig that = (WorkerBehaviorConfig) o;
 
     if (autoScaler != null ? !autoScaler.equals(that.autoScaler) : that.autoScaler != null) {
       return false;

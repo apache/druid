@@ -32,7 +32,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
-import io.druid.indexing.overlord.setup.WorkerBehaviourConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
@@ -59,7 +59,7 @@ public class SimpleResourceManagementStrategyTest
   private Task testTask;
   private SimpleResourceManagementConfig simpleResourceManagementConfig;
   private SimpleResourceManagementStrategy simpleResourceManagementStrategy;
-  private AtomicReference<WorkerBehaviourConfig> workerConfig;
+  private AtomicReference<WorkerBehaviorConfig> workerConfig;
 
   @Before
   public void setUp() throws Exception
@@ -93,7 +93,7 @@ public class SimpleResourceManagementStrategyTest
         .setWorkerVersion("");
 
     workerConfig = new AtomicReference<>(
-        new WorkerBehaviourConfig(
+        new WorkerBehaviorConfig(
             null,
             autoScaler
         )

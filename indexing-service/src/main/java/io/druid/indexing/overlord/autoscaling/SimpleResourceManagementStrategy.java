@@ -34,7 +34,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
-import io.druid.indexing.overlord.setup.WorkerBehaviourConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -49,7 +49,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   private static final EmittingLogger log = new EmittingLogger(SimpleResourceManagementStrategy.class);
 
   private final SimpleResourceManagementConfig config;
-  private final Supplier<WorkerBehaviourConfig> workerConfigRef;
+  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
   private final ScalingStats scalingStats;
 
   private final Object lock = new Object();
@@ -63,7 +63,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   @Inject
   public SimpleResourceManagementStrategy(
       SimpleResourceManagementConfig config,
-      Supplier<WorkerBehaviourConfig> workerConfigRef
+      Supplier<WorkerBehaviorConfig> workerConfigRef
   )
   {
     this.config = config;
@@ -76,7 +76,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   {
     synchronized (lock) {
       boolean didProvision = false;
-      final WorkerBehaviourConfig workerConfig = workerConfigRef.get();
+      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       if (workerConfig == null) {
         log.warn("No workerConfig available, cannot provision new workers.");
         return false;
@@ -142,7 +142,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
   {
     synchronized (lock) {
-      final WorkerBehaviourConfig workerConfig = workerConfigRef.get();
+      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       if (workerConfig == null) {
         log.warn("No workerConfig available, cannot terminate workers.");
         return false;
@@ -279,7 +279,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   private void updateTargetWorkerCount(
-      final WorkerBehaviourConfig workerConfig,
+      final WorkerBehaviorConfig workerConfig,
       final Collection<RemoteTaskRunnerWorkItem> pendingTasks,
       final Collection<ZkWorker> zkWorkers
   )

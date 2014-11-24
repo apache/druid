@@ -42,7 +42,7 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
-import io.druid.indexing.overlord.setup.WorkerBehaviourConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.metadata.EntryExistsException;
 import io.druid.tasklogs.TaskLogStreamer;
@@ -78,7 +78,7 @@ public class OverlordResource
   private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
 
-  private AtomicReference<WorkerBehaviourConfig> workerConfigRef = null;
+  private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
 
   @Deprecated
   private AtomicReference<WorkerSetupData> workerSetupDataRef = null;
@@ -195,7 +195,7 @@ public class OverlordResource
   public Response getWorkerConfig()
   {
     if (workerConfigRef == null) {
-      workerConfigRef = configManager.watch(WorkerBehaviourConfig.CONFIG_KEY, WorkerBehaviourConfig.class);
+      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
     }
 
     return Response.ok(workerConfigRef.get()).build();
@@ -205,14 +205,14 @@ public class OverlordResource
   @Path("/worker")
   @Consumes("application/json")
   public Response setWorkerConfig(
-      final WorkerBehaviourConfig workerBehaviourConfig
+      final WorkerBehaviorConfig workerBehaviorConfig
   )
   {
-    if (!configManager.set(WorkerBehaviourConfig.CONFIG_KEY, workerBehaviourConfig)) {
+    if (!configManager.set(WorkerBehaviorConfig.CONFIG_KEY, workerBehaviorConfig)) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
-    log.info("Updating Worker configs: %s", workerBehaviourConfig);
+    log.info("Updating Worker configs: %s", workerBehaviorConfig);
 
     return Response.ok().build();
   }

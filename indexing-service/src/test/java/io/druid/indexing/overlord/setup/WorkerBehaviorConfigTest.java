@@ -34,12 +34,12 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-public class WorkerBehaviourConfigTest
+public class WorkerBehaviorConfigTest
 {
   @Test
   public void testSerde() throws Exception
   {
-    WorkerBehaviourConfig config = new WorkerBehaviourConfig(
+    WorkerBehaviorConfig config = new WorkerBehaviorConfig(
         new FillCapacityWithAffinityWorkerSelectStrategy(
             new FillCapacityWithAffinityConfig(
                 ImmutableMap.of("foo", Arrays.asList("localhost"))
@@ -82,6 +82,6 @@ public class WorkerBehaviourConfigTest
           }
         }
     );
-    Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsBytes(config), WorkerBehaviourConfig.class));
+    Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsBytes(config), WorkerBehaviorConfig.class));
   }
 }
