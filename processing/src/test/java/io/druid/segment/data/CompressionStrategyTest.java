@@ -83,12 +83,6 @@ public class CompressionStrategyTest
     random.nextBytes(originalData);
   }
 
-  @Before
-  public void setup()
-  {
-    // NOOP
-  }
-
   @Test
   public void testBasicOperations()
   {
