@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.setup;
+package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -100,5 +100,51 @@ public class EC2NodeData
            ", securityGroupIds=" + securityGroupIds +
            ", keyName='" + keyName + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    EC2NodeData that = (EC2NodeData) o;
+
+    if (maxInstances != that.maxInstances) {
+      return false;
+    }
+    if (minInstances != that.minInstances) {
+      return false;
+    }
+    if (amiId != null ? !amiId.equals(that.amiId) : that.amiId != null) {
+      return false;
+    }
+    if (instanceType != null ? !instanceType.equals(that.instanceType) : that.instanceType != null) {
+      return false;
+    }
+    if (keyName != null ? !keyName.equals(that.keyName) : that.keyName != null) {
+      return false;
+    }
+    if (securityGroupIds != null ? !securityGroupIds.equals(that.securityGroupIds) : that.securityGroupIds != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = amiId != null ? amiId.hashCode() : 0;
+    result = 31 * result + (instanceType != null ? instanceType.hashCode() : 0);
+    result = 31 * result + minInstances;
+    result = 31 * result + maxInstances;
+    result = 31 * result + (securityGroupIds != null ? securityGroupIds.hashCode() : 0);
+    result = 31 * result + (keyName != null ? keyName.hashCode() : 0);
+    return result;
   }
 }
