@@ -84,7 +84,8 @@ public class IndexTaskTest
                         ),
                         null,
                         Arrays.asList("ts", "dim", "val")
-                    )
+                    ),
+                    null, null, null, null
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("val", "val")
@@ -92,7 +93,8 @@ public class IndexTaskTest
                 new UniformGranularitySpec(
                     Granularity.DAY,
                     QueryGranularity.MINUTE,
-                    Arrays.asList(new Interval("2014/2015"))
+                    Arrays.asList(new Interval("2014/2015")),
+                    null
                 )
             ),
             new IndexTask.IndexIOConfig(
@@ -108,6 +110,7 @@ public class IndexTaskTest
                 null
             )
         ),
+        null, null, null, null, 0, null, 0,
         new DefaultObjectMapper()
     );
 
