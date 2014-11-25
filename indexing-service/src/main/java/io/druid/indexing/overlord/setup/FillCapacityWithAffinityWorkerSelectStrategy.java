@@ -59,7 +59,9 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
 
   @Override
   public Optional<ImmutableZkWorker> findWorkerForTask(
-      RemoteTaskRunnerConfig config, ImmutableMap<String, ImmutableZkWorker> zkWorkers, Task task
+      final RemoteTaskRunnerConfig config,
+      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+      final Task task
   )
   {
     // don't run other datasources on affinity workers; we only want our configured datasources to run on them

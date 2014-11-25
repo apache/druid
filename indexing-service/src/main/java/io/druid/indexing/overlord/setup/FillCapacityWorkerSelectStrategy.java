@@ -36,7 +36,9 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 {
   @Override
   public Optional<ImmutableZkWorker> findWorkerForTask(
-      RemoteTaskRunnerConfig config, ImmutableMap<String, ImmutableZkWorker> zkWorkers, Task task
+      final RemoteTaskRunnerConfig config,
+      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+      final Task task
   )
   {
     TreeSet<ImmutableZkWorker> sortedWorkers = Sets.newTreeSet(
