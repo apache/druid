@@ -58,8 +58,9 @@ public class DerbyConnector extends SQLMetadataConnector
   @Override
   public boolean tableExists(Handle handle, String tableName)
   {
-    return !handle.createQuery("select * from SYS.SYSTABLES where tablename = :tableName")
-                  .bind("tableName", tableName.toUpperCase())
+    return !handle.createQuery(
+        String.format("select * from SYS.SYSTABLES where tablename = '%s'", tableName.toUpperCase())
+    )
                   .list()
                   .isEmpty();
   }
