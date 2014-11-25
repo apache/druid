@@ -159,7 +159,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public boolean hasMoreElements()
           {
-            return !done.get() || !queue.isEmpty();
+            // Done is always true until the last stream has be put in the queue.
+            // Then the stream should be spouting good InputStreams, but sometimes
+            // has a null input stream at the end.
+            return !done.get() || (!queue.isEmpty() && null != queue.peek());
           }
 
           @Override
