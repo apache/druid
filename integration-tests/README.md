@@ -1,25 +1,9 @@
 Integration Testing
 =========================
 
-Install Docker (Mac)
+Installing Docker and Running -
+refer instruction at https://github.com/druid-io/docker-druid/blob/master/Tutorial.md
 
-Install Homebrew
-
-ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
-Install Cask
-
-brew install caskroom/cask/brew-cask
-Install Virtualbox
-
-brew update
-brew cask install virtualbox
-Boot2Docker
-
-brew update
-brew install boot2docker
-boot2docker init
-boot2docker up
-export DOCKER_HOST=$(boot2docker socket 2>/dev/null)
 export DOCKER_IP=$(boot2docker ip 2>/dev/null)
 
 Is it running?

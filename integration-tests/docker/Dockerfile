@@ -48,7 +48,6 @@ RUN /etc/init.d/mysql start && cat sample-data.sql | mysql -u root druid && /etc
 
 # Setup supervisord
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-RUN perl -pi -e "s/\\\$DRUID_VERSION/$DRUID_VERSION/" /etc/supervisor/conf.d/supervisord.conf
 
 # Clean up
 RUN apt-get clean && rm -rf /tmp/* /var/tmp/*

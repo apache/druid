@@ -1,6 +1,5 @@
 # Add druid jar
 cp ./target/druid-integration-tests-*-selfcontained.jar docker/
-DRUID_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | grep -v '\['`
 
 # Build Druid Cluster Image
 docker build -t druid/cluster docker/
