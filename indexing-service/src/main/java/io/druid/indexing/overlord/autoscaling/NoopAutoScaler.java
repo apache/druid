@@ -17,8 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.indexing.overlord.autoscaling;
 
+import com.metamx.common.UOE;
 import com.metamx.emitter.EmittingLogger;
 
 import java.util.List;
@@ -26,9 +27,27 @@ import java.util.List;
 /**
  * This class just logs when scaling should occur.
  */
-public class NoopAutoScalingStrategy implements AutoScalingStrategy
+public class NoopAutoScaler<Void> implements AutoScaler<Void>
 {
-  private static final EmittingLogger log = new EmittingLogger(NoopAutoScalingStrategy.class);
+  private static final EmittingLogger log = new EmittingLogger(NoopAutoScaler.class);
+
+  @Override
+  public int getMinNumWorkers()
+  {
+    return 0;
+  }
+
+  @Override
+  public int getMaxNumWorkers()
+  {
+    return 0;
+  }
+
+  @Override
+  public Void getEnvConfig()
+  {
+    throw new UOE("No config for Noop!");
+  }
 
   @Override
   public AutoScalingData provision()

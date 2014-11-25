@@ -407,7 +407,7 @@ public class RemoteTaskRunnerTest
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
-        new FillCapacityWorkerSelectStrategy(config)
+        new FillCapacityWorkerSelectStrategy()
     );
 
     remoteTaskRunner.start();

@@ -17,34 +17,36 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.indexing.overlord.scaling;
+package io.druid.indexing.overlord.autoscaling;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.List;
+import com.metamx.common.logger.Logger;
 
 /**
  */
-public class AutoScalingData
+public class NoopResourceManagementScheduler extends ResourceManagementScheduler
 {
-  private final List<String> nodeIds;
+  private static final Logger log = new Logger(NoopResourceManagementScheduler.class);
 
-  public AutoScalingData(List<String> nodeIds)
+  public NoopResourceManagementScheduler()
   {
-    this.nodeIds = nodeIds;
-  }
-
-  @JsonProperty
-  public List<String> getNodeIds()
-  {
-    return nodeIds;
+    super(null, null, null, null);
   }
 
   @Override
-  public String toString()
+  public void start()
   {
-    return "AutoScalingData{" +
-           "nodeIds=" + nodeIds +
-           '}';
+    log.info("Autoscaling is disabled.");
+  }
+
+  @Override
+  public void stop()
+  {
+    // do nothing
+  }
+
+  @Override
+  public ScalingStats getStats()
+  {
+    return new ScalingStats(0);
   }
 }
