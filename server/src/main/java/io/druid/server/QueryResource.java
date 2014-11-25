@@ -122,6 +122,7 @@ public class QueryResource
     String queryId = null;
 
     final boolean isSmile = APPLICATION_SMILE.equals(req.getContentType());
+    final String contentType = isSmile ? APPLICATION_SMILE : APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     final ObjectWriter jsonWriter = req.getParameter("pretty") == null
@@ -203,7 +204,7 @@ public class QueryResource
                     outputStream.close();
                   }
                 },
-                isSmile ? APPLICATION_SMILE : APPLICATION_JSON
+                contentType
         )
             .header("X-Druid-Query-Id", queryId)
             .build();
@@ -242,10 +243,10 @@ public class QueryResource
       catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
-      return Response.serverError().entity(
-          jsonWriter.writeValueAsString(
+      return Response.serverError().type(contentType).entity(
+          jsonWriter.writeValueAsBytes(
               ImmutableMap.of(
-                  "error", e.getMessage()
+                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )
           )
       ).build();
@@ -278,8 +279,8 @@ public class QueryResource
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return Response.serverError().entity(
-          jsonWriter.writeValueAsString(
+      return Response.serverError().type(contentType).entity(
+          jsonWriter.writeValueAsBytes(
               ImmutableMap.of(
                   "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )
