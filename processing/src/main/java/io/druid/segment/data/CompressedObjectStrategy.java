@@ -211,15 +211,16 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public byte[] compress(byte[] bytes)
     {
-      LZFChunk chunk = null;
+
       try (final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
-        chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
+        final LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
+        return chunk.getData();
       }
       catch (IOException e) {
         log.error(e, "IOException thrown while closing ChunkEncoder.");
       }
-      // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never be null
-      return null == chunk ? null : chunk.getData();
+      // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never happen
+      return null;
     }
   }
 
