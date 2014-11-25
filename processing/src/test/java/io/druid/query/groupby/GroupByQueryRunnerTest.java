@@ -556,7 +556,7 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> context
+              Query<Row> query, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
@@ -566,7 +566,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
+            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
           }
         }
     );
@@ -752,7 +752,7 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> context
+              Query<Row> query, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
@@ -762,7 +762,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
+            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
           }
         }
     );
@@ -965,7 +965,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithMixedCasingOrdering()
+  public void testGroupByWithSameCaseOrdering()
   {
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -974,7 +974,7 @@ public class GroupByQueryRunnerTest
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec(
                     QueryRunnerTestHelper.marketDimension,
-                    "MarketAlias"
+                    "marketalias"
                 )
             )
         )
@@ -983,7 +983,7 @@ public class GroupByQueryRunnerTest
             new DefaultLimitSpec(
                 Lists.newArrayList(
                     new OrderByColumnSpec(
-                        "marketALIAS",
+                        "marketalias",
                         OrderByColumnSpec.Direction.DESCENDING
                     )
                 ), 3
@@ -1058,7 +1058,13 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "upfront", "rows", 186L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "total_market", "rows", 186L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "1970-01-01T00:00:00.000Z",
+            "market",
+            "total_market",
+            "rows",
+            186L
+        ),
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "market", "spot", "rows", 837L)
     );
 
@@ -1103,7 +1109,7 @@ public class GroupByQueryRunnerTest
         {
           @Override
           public Sequence<Row> run(
-              Query<Row> query, Map<String, Object> context
+              Query<Row> query, Map<String, Object> responseContext
           )
           {
             // simulate two daily segments
@@ -1113,7 +1119,7 @@ public class GroupByQueryRunnerTest
             final Query query2 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
             );
-            return Sequences.concat(runner.run(query1, context), runner.run(query2, context));
+            return Sequences.concat(runner.run(query1, responseContext), runner.run(query2, responseContext));
           }
         }
     );
@@ -1466,7 +1472,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx_subpostagg", "+", Arrays.<PostAggregator>asList(
                     new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
-                    new ConstantPostAggregator("thousand", 1000, 1000)
+                    new ConstantPostAggregator("thousand", 1000)
                 )
                 )
 
@@ -1491,7 +1497,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
-                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                    new ConstantPostAggregator("ten_thousand", 10000)
                 )
                 )
 
@@ -1565,7 +1571,7 @@ public class GroupByQueryRunnerTest
                     "+",
                     Arrays.asList(
                         new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
-                        new ConstantPostAggregator("thousand", 1000, 1000)
+                        new ConstantPostAggregator("thousand", 1000)
                     )
                 )
 
@@ -1607,7 +1613,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
-                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                    new ConstantPostAggregator("ten_thousand", 10000)
                 )
                 )
 
@@ -1686,7 +1692,7 @@ public class GroupByQueryRunnerTest
                     "+",
                     Arrays.asList(
                         new FieldAccessPostAggregator("the_idx_subagg", "idx_subagg"),
-                        new ConstantPostAggregator("thousand", 1000, 1000)
+                        new ConstantPostAggregator("thousand", 1000)
                     )
                 )
 
@@ -1729,7 +1735,7 @@ public class GroupByQueryRunnerTest
                 new ArithmeticPostAggregator(
                     "idx", "+", Arrays.asList(
                     new FieldAccessPostAggregator("the_idx_agg", "idx"),
-                    new ConstantPostAggregator("ten_thousand", 10000, 10000)
+                    new ConstantPostAggregator("ten_thousand", 10000)
                 )
                 )
 

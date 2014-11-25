@@ -73,7 +73,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   @Override
   public Sequence<Result<SearchResultValue>> run(
       final Query<Result<SearchResultValue>> input,
-      Map<String, Object> context
+      Map<String, Object> responseContext
   )
   {
     if (!(input instanceof SearchQuery)) {
@@ -108,7 +108,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       }
 
       for (String dimension : dimsToSearch) {
-        final Column column = index.getColumn(dimension.toLowerCase());
+        final Column column = index.getColumn(dimension);
         if (column == null) {
           continue;
         }

@@ -81,7 +81,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+      public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
       {
         final long offset = computeOffset(now);
 
@@ -93,7 +93,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         return Sequences.map(
             baseRunner.run(
                 query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Arrays.asList(modifiedInterval))),
-                context
+                responseContext
             ),
             new Function<T, T>()
             {

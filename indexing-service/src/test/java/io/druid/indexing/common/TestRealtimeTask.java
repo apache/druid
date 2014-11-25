@@ -22,12 +22,22 @@ package io.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.metamx.common.Granularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.realtime.Schema;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.timeline.partition.NoneShardSpec;
+
+import java.io.File;
 
 /**
  */
@@ -47,15 +57,20 @@ public class TestRealtimeTask extends RealtimeIndexTask
     super(
         id,
         taskResource,
-        null,
-        new Schema(dataSource, null, new AggregatorFactory[]{}, QueryGranularity.NONE, new NoneShardSpec()),
-        null,
-        null,
-        null,
-        1,
-        null,
-        null,
-        null
+        new FireDepartment(
+            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null), new RealtimeIOConfig(
+            new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
+        {
+          @Override
+          public Plumber findPlumber(
+              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+          )
+          {
+            return null;
+          }
+        }
+        ), null
+        )
     );
     this.status = status;
   }

@@ -111,16 +111,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input, Map<String, Object> context)
+      public Sequence<Row> run(Query<Row> input, Map<String, Object> responseContext)
       {
         if (input.getContextBySegment(false)) {
-          return runner.run(input, context);
+          return runner.run(input, responseContext);
         }
 
         if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner, context);
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner,
+                                     responseContext
+          );
         }
-        return runner.run(input, context);
+        return runner.run(input, responseContext);
       }
     };
   }

@@ -31,6 +31,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteSource;
+import com.google.common.io.ByteStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -88,7 +90,7 @@ import java.util.concurrent.TimeUnit;
  * <p/>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
- * For example, {@link io.druid.indexing.overlord.scaling.ResourceManagementScheduler} can take care of these duties.
+ * For example, {@link io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler} can take care of these duties.
  * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the worker.
  * <p/>
@@ -374,7 +376,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(final String taskId, final long offset)
+  public Optional<ByteSource> streamTaskLog(final String taskId, final long offset)
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
@@ -384,11 +386,11 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     } else {
       // Worker is still running this task
       final URL url = makeWorkerURL(zkWorker.getWorker(), String.format("/task/%s/log?offset=%d", taskId, offset));
-      return Optional.<InputSupplier<InputStream>>of(
-          new InputSupplier<InputStream>()
+      return Optional.<ByteSource>of(
+          new ByteSource()
           {
             @Override
-            public InputStream getInput() throws IOException
+            public InputStream openStream() throws IOException
             {
               try {
                 return httpClient.get(url)
@@ -530,6 +532,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
       final Optional<ImmutableZkWorker> immutableZkWorker = strategy.findWorkerForTask(
+          config,
           ImmutableMap.copyOf(
               Maps.transformEntries(
                   zkWorkers,

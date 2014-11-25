@@ -15,11 +15,11 @@
             <outputDirectory>config</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/_global</directory>
+            <directory>../examples/config/_common</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/_global</outputDirectory>
+            <outputDirectory>config/_common</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/config/broker</directory>

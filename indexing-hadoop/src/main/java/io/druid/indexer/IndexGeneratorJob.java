@@ -307,7 +307,7 @@ public class IndexGeneratorJob implements Jobby
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
       for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
-        metricNames.add(factory.getName().toLowerCase());
+        metricNames.add(factory.getName());
       }
 
       parser = config.getParser();
@@ -322,7 +322,6 @@ public class IndexGeneratorJob implements Jobby
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
-      //final DataRollupSpec rollupSpec = config.getRollupSpec();
       final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
 
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs);

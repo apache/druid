@@ -27,7 +27,7 @@ Forever load rules are of the form:
 }
 ```
 
-* `type` - this should always be "loadByInterval"
+* `type` - this should always be "loadForever"
 * `tieredReplicants` - A JSON Object where the keys are the tier names and values are the number of replicas for that tier.
 
 
@@ -86,7 +86,7 @@ Forever drop rules are of the form:
 }
 ```
 
-* `type` - this should always be "dropByPeriod"
+* `type` - this should always be "dropForever"
 
 All segments that match this rule are dropped from the cluster.
 

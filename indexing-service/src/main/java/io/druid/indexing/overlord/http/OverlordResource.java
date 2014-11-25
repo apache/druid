@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
@@ -36,14 +37,15 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
-import io.druid.metadata.EntryExistsException;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.metadata.EntryExistsException;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -77,6 +79,9 @@ public class OverlordResource
   private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
 
+  private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
+
+  @Deprecated
   private AtomicReference<WorkerSetupData> workerSetupDataRef = null;
 
   @Inject
@@ -91,27 +96,6 @@ public class OverlordResource
     this.taskStorageQueryAdapter = taskStorageQueryAdapter;
     this.taskLogStreamer = taskLogStreamer;
     this.configManager = configManager;
-  }
-
-  @POST
-  @Path("/merge")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Deprecated
-  public Response doMerge(final Task task)
-  {
-    // legacy endpoint
-    return doIndex(task);
-  }
-
-  @POST
-  @Path("/index")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Deprecated
-  public Response doIndex(final Task task)
-  {
-    return taskPost(task);
   }
 
   @POST
@@ -186,6 +170,36 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/worker")
+  @Produces("application/json")
+  public Response getWorkerConfig()
+  {
+    if (workerConfigRef == null) {
+      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
+    }
+
+    return Response.ok(workerConfigRef.get()).build();
+  }
+
+  @POST
+  @Path("/worker")
+  @Consumes("application/json")
+  public Response setWorkerConfig(
+      final WorkerBehaviorConfig workerBehaviorConfig
+  )
+  {
+    if (!configManager.set(WorkerBehaviorConfig.CONFIG_KEY, workerBehaviorConfig)) {
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    log.info("Updating Worker configs: %s", workerBehaviorConfig);
+
+    return Response.ok().build();
+  }
+
+
+  @Deprecated
+  @GET
   @Path("/worker/setup")
   @Produces("application/json")
   public Response getWorkerSetupData()
@@ -197,6 +211,7 @@ public class OverlordResource
     return Response.ok(workerSetupDataRef.get()).build();
   }
 
+  @Deprecated
   @POST
   @Path("/worker/setup")
   @Consumes("application/json")
@@ -394,9 +409,11 @@ public class OverlordResource
   )
   {
     try {
-      final Optional<InputSupplier<InputStream>> stream = taskLogStreamer.streamTaskLog(taskid, offset);
+      final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
-        return Response.ok(stream.get().getInput()).build();
+        try(InputStream istream = stream.get().openStream()) {
+          return Response.ok(istream).build();
+        }
       } else {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(

@@ -111,13 +111,4 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   {
     return queryGranularity;
   }
-
-  @Override
-  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
-  {
-    return new ArbitraryGranularitySpec(
-        queryGranularity,
-        Lists.newArrayList(intervals)
-    );
-  }
 }

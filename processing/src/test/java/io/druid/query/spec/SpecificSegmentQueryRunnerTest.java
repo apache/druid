@@ -69,7 +69,7 @@ public class SpecificSegmentQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map context)
+          public Sequence run(Query query, Map responseContext)
           {
             return new Sequence()
             {
@@ -112,7 +112,7 @@ public class SpecificSegmentQueryRunnerTest
     );
     Sequences.toList(results, Lists.newArrayList());
 
-    Object missingSegments = responseContext.get(RetryQueryRunner.MISSING_SEGMENTS_KEY);
+    Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
 
     Assert.assertTrue(missingSegments != null);
     Assert.assertTrue(missingSegments instanceof List);
@@ -149,7 +149,7 @@ public class SpecificSegmentQueryRunnerTest
         new QueryRunner()
         {
           @Override
-          public Sequence run(Query query, Map context)
+          public Sequence run(Query query, Map responseContext)
           {
             return Sequences.withEffect(
                 Sequences.simple(Arrays.asList(value)),
@@ -196,7 +196,7 @@ public class SpecificSegmentQueryRunnerTest
 
     Assert.assertTrue(1L == theVal.getValue().getLongMetric("rows"));
 
-    Object missingSegments = responseContext.get(RetryQueryRunner.MISSING_SEGMENTS_KEY);
+    Object missingSegments = responseContext.get(Result.MISSING_SEGMENTS_KEY);
 
     Assert.assertTrue(missingSegments != null);
     Assert.assertTrue(missingSegments instanceof List);

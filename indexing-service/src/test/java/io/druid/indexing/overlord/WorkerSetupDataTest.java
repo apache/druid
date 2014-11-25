@@ -21,15 +21,16 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Charsets;
 import io.druid.indexing.common.TestUtils;
-import io.druid.indexing.overlord.setup.EC2UserData;
-import io.druid.indexing.overlord.setup.GalaxyEC2UserData;
-import io.druid.indexing.overlord.setup.StringEC2UserData;
+import io.druid.indexing.overlord.autoscaling.ec2.EC2UserData;
+import io.druid.indexing.overlord.autoscaling.ec2.GalaxyEC2UserData;
+import io.druid.indexing.overlord.autoscaling.ec2.StringEC2UserData;
 import org.apache.commons.codec.binary.Base64;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 
+@Deprecated
 public class WorkerSetupDataTest
 {
   @Test

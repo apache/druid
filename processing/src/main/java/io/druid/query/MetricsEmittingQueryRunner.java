@@ -84,7 +84,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final ServiceMetricEvent.Builder builder = builderFn.apply(query);
     String queryId = query.getId();
@@ -102,7 +102,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
         long startTime = System.currentTimeMillis();
         try {
-          retVal = queryRunner.run(query, context).accumulate(outType, accumulator);
+          retVal = queryRunner.run(query, responseContext).accumulate(outType, accumulator);
         }
         catch (RuntimeException e) {
           builder.setUser10("failed");
@@ -132,7 +132,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 
         long startTime = System.currentTimeMillis();
         try {
-          retVal = queryRunner.run(query, context).toYielder(initValue, accumulator);
+          retVal = queryRunner.run(query, responseContext).toYielder(initValue, accumulator);
         }
         catch (RuntimeException e) {
           builder.setUser10("failed");

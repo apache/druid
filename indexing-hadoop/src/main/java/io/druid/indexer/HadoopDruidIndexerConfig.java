@@ -114,17 +114,12 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    //backwards compatibility
-    if (argSpec.containsKey("schema")) {
-      return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
-    } else {
       return new HadoopDruidIndexerConfig(
           HadoopDruidIndexerConfig.jsonMapper.convertValue(
               argSpec,
               HadoopIngestionSpec.class
           )
       );
-    }
   }
 
   @SuppressWarnings("unchecked")

@@ -156,6 +156,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
     {
       private String dimension = query.getDimensionSpec().getOutputName();
+      final List<PostAggregator> prunedAggs = prunePostAggregators(query);
 
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
@@ -172,7 +173,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
                       values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
                     }
-                    for (PostAggregator postAgg : prunePostAggregators(query)) {
+                    for (PostAggregator postAgg : prunedAggs) {
                       Object calculatedPostAgg = input.getMetric(postAgg.getName());
                       if (calculatedPostAgg != null) {
                         values.put(postAgg.getName(), calculatedPostAgg);
@@ -413,7 +414,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     @Override
     public Sequence<Result<TopNResultValue>> run(
         Query<Result<TopNResultValue>> input,
-        Map<String, Object> context
+        Map<String, Object> responseContext
     )
     {
       if (!(input instanceof TopNQuery)) {
@@ -422,13 +423,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       final TopNQuery query = (TopNQuery) input;
       if (query.getThreshold() > minTopNThreshold) {
-        return runner.run(query, context);
+        return runner.run(query, responseContext);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withThreshold(minTopNThreshold), context),
+          runner.run(query.withThreshold(minTopNThreshold), responseContext),
           new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
           {
             @Override

@@ -44,8 +44,7 @@ public class DataSchemaTest
             new JSONParseSpec(
                 new TimestampSpec("time", "auto"),
                 new DimensionsSpec(ImmutableList.of("dimB", "dimA"), null, null)
-            ),
-            null, null, null, null
+            )
         ),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -69,8 +68,7 @@ public class DataSchemaTest
             new JSONParseSpec(
                 new TimestampSpec("time", "auto"),
                 new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "col2"), ImmutableList.of("dimC"), null)
-            ),
-            null, null, null, null
+            )
         ),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),

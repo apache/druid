@@ -51,7 +51,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public Indexed<String> getDimensionValues(String dimension)
   {
-    final Column columnDesc = index.getColumn(dimension.toLowerCase());
+    final Column columnDesc = index.getColumn(dimension);
     if (columnDesc == null || !columnDesc.getCapabilities().isDictionaryEncoded()) {
       return null;
     }
@@ -112,7 +112,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public ImmutableBitmap getBitmapIndex(String dimension, String value)
   {
-    final Column column = index.getColumn(dimension.toLowerCase());
+    final Column column = index.getColumn(dimension);
     if (column == null) {
       return bitmapFactory.makeEmptyImmutableBitmap();
     }
@@ -126,7 +126,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public ImmutableBitmap getBitmapIndex(String dimension, int idx)
   {
-    final Column column = index.getColumn(dimension.toLowerCase());
+    final Column column = index.getColumn(dimension);
     if (column == null || column.getCapabilities() == null) {
       bitmapFactory.makeEmptyImmutableBitmap();
     }
@@ -143,7 +143,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public ImmutableRTree getSpatialIndex(String dimension)
   {
-    final Column column = index.getColumn(dimension.toLowerCase());
+    final Column column = index.getColumn(dimension);
     if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
       return new ImmutableRTree();
     }
