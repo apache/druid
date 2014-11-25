@@ -270,7 +270,6 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static class LZ4Compressor implements Compressor
   {
     private static final LZ4Compressor defaultCompressor = new LZ4Compressor();
-    private static final net.jpountz.lz4.LZ4Compressor lz4Fast = LZ4Factory.fastestInstance().fastCompressor();
     private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestInstance().highCompressor();
 
     @Override
