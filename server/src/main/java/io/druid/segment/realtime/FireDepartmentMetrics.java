@@ -21,6 +21,8 @@ package io.druid.segment.realtime;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Preconditions;
+
 /**
  */
 public class FireDepartmentMetrics
@@ -79,4 +81,19 @@ public class FireDepartmentMetrics
     retVal.rowOutputCount.set(rowOutputCount.get());
     return retVal;
   }
+  
+  /**
+   * merge other FireDepartmentMetrics, will modify this object's data
+   * @return this object
+   */
+	public FireDepartmentMetrics merge(FireDepartmentMetrics other)
+	{
+		Preconditions.checkNotNull(other, "Cannot merge a null FireDepartmentMetrics");
+		FireDepartmentMetrics otherSnapshot = other.snapshot();
+		processedCount.addAndGet(otherSnapshot.processed());
+		thrownAwayCount.addAndGet(otherSnapshot.thrownAway());
+		rowOutputCount.addAndGet(otherSnapshot.rowOutput());
+		unparseableCount.addAndGet(otherSnapshot.unparseable());
+		return this;
+	}
 }

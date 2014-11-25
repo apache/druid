@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -33,6 +34,7 @@ import com.metamx.emitter.EmittingLogger;
 
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.Processing;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -55,7 +57,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -65,20 +67,24 @@ public class RealtimeManager implements QuerySegmentWalker
 
   private final List<FireDepartment> fireDepartments;
   private final QueryRunnerFactoryConglomerate conglomerate;
+  private ExecutorService executorService;
 
-  /**
-   * key=data source name,value=FireChiefs of all partition of that data source  
-   */
-  private final Map<String, List<FireChief>> chiefs;
+	/**
+	 * key=data source name,value=FireChiefs of all partition of that data source
+	 */
+	private final Map<String, List<FireChief>> chiefs;
+
 
   @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
-      QueryRunnerFactoryConglomerate conglomerate
+      QueryRunnerFactoryConglomerate conglomerate,
+      @JacksonInject @Processing ExecutorService executorService
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
+		this.executorService = executorService;
 
     this.chiefs = Maps.newHashMap();
   }
@@ -89,60 +95,77 @@ public class RealtimeManager implements QuerySegmentWalker
     for (final FireDepartment fireDepartment : fireDepartments) {
       DataSchema schema = fireDepartment.getDataSchema();
 
-      final FireChief chief = new FireChief(fireDepartment);
-      List<FireChief> chiefsOfDataSource = chiefs.get(schema.getDataSource());
-      if (chiefsOfDataSource == null){
-          chiefsOfDataSource = new ArrayList<RealtimeManager.FireChief>();
-          chiefs.put(schema.getDataSource(), chiefsOfDataSource);
-      }
-      chiefsOfDataSource.add(chief);
+			final FireChief chief = new FireChief(fireDepartment);
+			List<FireChief> chiefs = this.chiefs.get(schema.getDataSource());
+			if (chiefs == null)
+			{
+				chiefs = new ArrayList<RealtimeManager.FireChief>();
+				this.chiefs.put(schema.getDataSource(), chiefs);
+			}
+			chiefs.add(chief);
 
-      chief.setName(String.format("chief-%s", schema.getDataSource()));
-      chief.setDaemon(true);
-      chief.init();
-      chief.start();
+			chief.setName(String.format("chief-%s", schema.getDataSource()));
+			chief.setDaemon(true);
+			chief.init();
+			chief.start();
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    for (Iterable<FireChief> chiefOfDatasource : chiefs.values()) {
-        for (FireChief chief: chiefOfDatasource) {
-            CloseQuietly.close(chief);
-        }
-    }
+		for (Iterable<FireChief> chiefs : this.chiefs.values())
+		{
+			for (FireChief chief : chiefs)
+			{
+				CloseQuietly.close(chief);
+			}
+		}
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
-  {
-    List<FireChief> chiefsOfDatasource = chiefs.get(datasource);
-    if (chiefsOfDatasource == null || chiefsOfDatasource.size() == 0) {
-      return null;
-    }
-    return chiefsOfDatasource.get(0).getMetrics();
+	{
+		List<FireChief> chiefs = this.chiefs.get(datasource);
+		if (chiefs == null)
+		{
+			return null;
+		}
+		FireDepartmentMetrics snapshot = null;
+		for (FireChief chief : chiefs)
+		{
+			if (snapshot == null)
+			{
+				snapshot = chief.getMetrics().snapshot();
+			} else
+			{
+				snapshot.merge(chief.getMetrics());
+			}
+		}
+		return snapshot;
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, Iterable<Interval> intervals)
-  {
-      return getQueryRunnerForSegments(query, null);
+	{
+		return getQueryRunnerForSegments(query, null);
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
-  {
-    QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    Iterable<FireChief> chiefsOfDataSource = chiefs.get(getDataSourceName(query));
-    // the SindleThreadExecutor is only used to submit sub queries, instead of run them. 'cause can't find decent way to referrence the QueryExecutorService
-    return chiefsOfDataSource == null? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
-            factory.mergeRunners(Executors.newSingleThreadExecutor(),
-                    Iterables.transform(chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>() {
-                        @Override
-                        public QueryRunner<T> apply(FireChief input) {
-                            return input.getQueryRunner(query);
-                        }})));
-  }
+	{
+		QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+		Iterable<FireChief> chiefsOfDataSource = chiefs.get(getDataSourceName(query));
+		return chiefsOfDataSource == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
+		    factory.mergeRunners(executorService,
+		        Iterables.transform(chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
+		        {
+			        @Override
+			        public QueryRunner<T> apply(FireChief input)
+			        {
+				        return input.getQueryRunner(query);
+			        }
+		        })));
+	}
 
   private <T> String getDataSourceName(Query<T> query)
   {
