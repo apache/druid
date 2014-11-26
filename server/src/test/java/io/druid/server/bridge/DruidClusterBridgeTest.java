@@ -129,7 +129,7 @@ public class DruidClusterBridgeTest
         8080
     );
 
-    AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>(new LeaderLatch(localCf, "test"));
+    AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>(new LeaderLatch(localCf, "/test"));
 
     ZkPathsConfig zkPathsConfig = new ZkPathsConfig()
     {
