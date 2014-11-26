@@ -26,7 +26,9 @@ import io.druid.collections.StupidPool;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
-
+/**
+ * Uses Direct allocation of byte buffers.
+ */
 public class OffheapBufferPool extends StupidPool<ByteBuffer>
 {
   private static final Logger log = new Logger(OffheapBufferPool.class);

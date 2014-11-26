@@ -24,7 +24,7 @@ import com.metamx.common.logger.Logger;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -38,7 +38,7 @@ import java.util.Map;
 
 /**
  */
-public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrategy<ResourceHolder<T>>
+public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrategy<ResourcePool.ResourceHolder<T>>
 {
   private static final Logger log = new Logger(CompressedObjectStrategy.class);
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
@@ -183,7 +183,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       final byte[] bytes = new byte[numBytes];
       in.get(bytes);
 
-      try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
+      try (final ResourcePool.ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
         final byte[] outputBytes = outputBytesHolder.get();
         final int numDecompressedBytes = LZFDecoder.decode(bytes, outputBytes);
         out.put(outputBytes, 0, numDecompressedBytes);
@@ -209,7 +209,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     public byte[] compress(byte[] bytes)
     {
 
-      try (final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
+      try (final ResourcePool.ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
         final LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
         return chunk.getData();
       }
@@ -276,21 +276,21 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
 
   @Override
   @SuppressWarnings("unchecked")
-  public Class<? extends ResourceHolder<T>> getClazz()
+  public Class<? extends ResourcePool.ResourceHolder<T>> getClazz()
   {
-    return (Class) ResourceHolder.class;
+    return (Class) ResourcePool.ResourceHolder.class;
   }
 
   @Override
-  public ResourceHolder<T> fromByteBuffer(ByteBuffer buffer, int numBytes)
+  public ResourcePool.ResourceHolder<T> fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
-    final ResourceHolder<ByteBuffer> bufHolder = CompressedPools.getByteBuf(order);
+    final ResourcePool.ResourceHolder<ByteBuffer> bufHolder = CompressedPools.getByteBuf(order);
     final ByteBuffer buf = bufHolder.get();
     buf.position(0);
     buf.limit(buf.capacity());
 
     decompress(buffer, numBytes, buf);
-    return new ResourceHolder<T>()
+    return new ResourcePool.ResourceHolder<T>()
     {
       @Override
       public T get()
@@ -316,7 +316,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   }
 
   @Override
-  public byte[] toBytes(ResourceHolder<T> holder)
+  public byte[] toBytes(ResourcePool.ResourceHolder<T> holder)
   {
     T val = holder.get();
     ByteBuffer buf = bufferFor(val);
@@ -330,7 +330,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   }
 
   @Override
-  public int compare(ResourceHolder<T> o1, ResourceHolder<T> o2)
+  public int compare(ResourcePool.ResourceHolder<T> o1, ResourcePool.ResourceHolder<T> o2)
   {
     return converter.compare(o1.get(), o2.get());
   }

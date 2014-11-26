@@ -25,7 +25,7 @@ import com.google.common.base.Predicates;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -46,9 +46,9 @@ public class TopNQueryEngine
 {
   private static final Logger log = new Logger(TopNQueryEngine.class);
 
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final ResourcePool<ByteBuffer> bufferPool;
 
-  public TopNQueryEngine(StupidPool<ByteBuffer> bufferPool)
+  public TopNQueryEngine(ResourcePool<ByteBuffer> bufferPool)
   {
     this.bufferPool = bufferPool;
   }

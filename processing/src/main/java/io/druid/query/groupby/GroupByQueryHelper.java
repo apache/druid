@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
@@ -43,7 +43,7 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
-      StupidPool<ByteBuffer> bufferPool
+      final ResourcePool<ByteBuffer> bufferPool
 
   )
   {

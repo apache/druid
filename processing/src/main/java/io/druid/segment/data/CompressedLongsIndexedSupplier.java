@@ -26,7 +26,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.segment.CompressedPools;
 
@@ -48,13 +48,13 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
   private final int totalSize;
   private final int sizePer;
-  private final GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers;
+  private final GenericIndexed<ResourcePool.ResourceHolder<LongBuffer>> baseLongBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
   CompressedLongsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers,
+      GenericIndexed<ResourcePool.ResourceHolder<LongBuffer>> baseLongBuffers,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
@@ -123,7 +123,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
   /**
    * For testing.  Do not use unless you like things breaking
    */
-  GenericIndexed<ResourceHolder<LongBuffer>> getBaseLongBuffers()
+  GenericIndexed<ResourcePool.ResourceHolder<LongBuffer>> getBaseLongBuffers()
   {
     return baseLongBuffers;
   }
@@ -174,12 +174,12 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
         buffer.remaining(),
         chunkFactor,
         GenericIndexed.fromIterable(
-            new Iterable<ResourceHolder<LongBuffer>>()
+            new Iterable<ResourcePool.ResourceHolder<LongBuffer>>()
             {
               @Override
-              public Iterator<ResourceHolder<LongBuffer>> iterator()
+              public Iterator<ResourcePool.ResourceHolder<LongBuffer>> iterator()
               {
-                return new Iterator<ResourceHolder<LongBuffer>>()
+                return new Iterator<ResourcePool.ResourceHolder<LongBuffer>>()
                 {
                   LongBuffer myBuffer = buffer.asReadOnlyBuffer();
 
@@ -190,7 +190,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
                   }
 
                   @Override
-                  public ResourceHolder<LongBuffer> next()
+                  public ResourcePool.ResourceHolder<LongBuffer> next()
                   {
                     LongBuffer retVal = myBuffer.asReadOnlyBuffer();
 
@@ -219,7 +219,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
   private class CompressedIndexedLongs implements IndexedLongs
   {
     int currIndex = -1;
-    ResourceHolder<LongBuffer> holder;
+    ResourcePool.ResourceHolder<LongBuffer> holder;
     LongBuffer buffer;
 
     @Override

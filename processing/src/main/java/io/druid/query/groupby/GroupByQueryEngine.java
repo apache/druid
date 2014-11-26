@@ -35,8 +35,7 @@ import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.parsers.CloseableIterator;
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -69,12 +68,12 @@ import java.util.TreeMap;
 public class GroupByQueryEngine
 {
   private final Supplier<GroupByQueryConfig> config;
-  private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
+  private final ResourcePool<ByteBuffer> intermediateResultsBufferPool;
 
   @Inject
   public GroupByQueryEngine(
       Supplier<GroupByQueryConfig> config,
-      @Global StupidPool<ByteBuffer> intermediateResultsBufferPool
+      @Global ResourcePool<ByteBuffer> intermediateResultsBufferPool
   )
   {
     this.config = config;
@@ -100,7 +99,7 @@ public class GroupByQueryEngine
         query.getGranularity()
     );
 
-    final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
+    final ResourcePool.ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     return Sequences.concat(
         Sequences.withBaggage(

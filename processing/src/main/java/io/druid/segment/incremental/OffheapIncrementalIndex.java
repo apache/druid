@@ -22,9 +22,8 @@ package io.druid.segment.incremental;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
+import io.druid.collections.ResourcePool;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -69,7 +68,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     }
   }
 
-  private final ResourceHolder<ByteBuffer> bufferHolder;
+  private final ResourcePool.ResourceHolder<ByteBuffer> bufferHolder;
 
   private final DB db;
   private final DB factsDb;
@@ -82,7 +81,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   public OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
-      StupidPool<ByteBuffer> bufferPool,
+      ResourcePool<ByteBuffer> bufferPool,
       boolean deserializeComplexMetrics,
       int maxTotalBufferSize
   )
@@ -127,7 +126,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       long minTimestamp,
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
-      StupidPool<ByteBuffer> bufferPool,
+      ResourcePool<ByteBuffer> bufferPool,
       boolean deserializeComplexMetrics,
       int maxTotalBufferSize
   )

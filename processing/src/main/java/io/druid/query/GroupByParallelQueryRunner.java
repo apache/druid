@@ -36,6 +36,7 @@ import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.query.groupby.GroupByQuery;
@@ -60,13 +61,13 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
   private final ListeningExecutorService exec;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final ResourcePool<ByteBuffer> bufferPool;
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
-      StupidPool<ByteBuffer> bufferPool,
+      ResourcePool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<T>> queryables
   )
   {

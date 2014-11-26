@@ -26,7 +26,7 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.segment.CompressedPools;
 
@@ -47,13 +47,13 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   private final int totalSize;
   private final int sizePer;
-  private final GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers;
+  private final GenericIndexed<ResourcePool.ResourceHolder<FloatBuffer>> baseFloatBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
   CompressedFloatsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<FloatBuffer>> baseFloatBuffers,
+      GenericIndexed<ResourcePool.ResourceHolder<FloatBuffer>> baseFloatBuffers,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
@@ -122,7 +122,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
   /**
    * For testing. Do not depend on unless you like things breaking.
    */
-  GenericIndexed<ResourceHolder<FloatBuffer>> getBaseFloatBuffers()
+  GenericIndexed<ResourcePool.ResourceHolder<FloatBuffer>> getBaseFloatBuffers()
   {
     return baseFloatBuffers;
   }
@@ -189,12 +189,12 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
         buffer.remaining(),
         chunkFactor,
         GenericIndexed.fromIterable(
-            new Iterable<ResourceHolder<FloatBuffer>>()
+            new Iterable<ResourcePool.ResourceHolder<FloatBuffer>>()
             {
               @Override
-              public Iterator<ResourceHolder<FloatBuffer>> iterator()
+              public Iterator<ResourcePool.ResourceHolder<FloatBuffer>> iterator()
               {
-                return new Iterator<ResourceHolder<FloatBuffer>>()
+                return new Iterator<ResourcePool.ResourceHolder<FloatBuffer>>()
                 {
                   FloatBuffer myBuffer = buffer.asReadOnlyBuffer();
 
@@ -205,7 +205,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
                   }
 
                   @Override
-                  public ResourceHolder<FloatBuffer> next()
+                  public ResourcePool.ResourceHolder<FloatBuffer> next()
                   {
                     final FloatBuffer retVal = myBuffer.asReadOnlyBuffer();
 
@@ -234,7 +234,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
   private class CompressedIndexedFloats implements IndexedFloats
   {
     int currIndex = -1;
-    ResourceHolder<FloatBuffer> holder;
+    ResourcePool.ResourceHolder<FloatBuffer> holder;
     FloatBuffer buffer;
 
     @Override

@@ -32,12 +32,12 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.cache.CacheConfig;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
-import io.druid.offheap.OffheapBufferPool;
+import io.druid.offheap.MappedBufferPool;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
@@ -102,7 +102,7 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public ResourcePool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     try {
       long maxDirectMemory = VMUtils.getMaxDirectMemory();
@@ -124,7 +124,7 @@ public class DruidProcessingModule implements Module
       log.info(e.getMessage());
     }
 
-    return new OffheapBufferPool(config.intermediateComputeSizeBytes());
+    return new MappedBufferPool(config.intermediateComputeSizeBytes());
   }
 
 

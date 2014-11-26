@@ -22,7 +22,7 @@ package io.druid.segment;
 import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
 import com.ning.compress.lzf.ChunkEncoder;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidPool;
 
 import java.nio.ByteBuffer;
@@ -36,7 +36,7 @@ public class CompressedPools
   private static final Logger log = new Logger(CompressedPools.class);
 
   public static final int BUFFER_SIZE = 0x10000;
-  private static final StupidPool<ChunkEncoder> chunkEncoderPool = new StupidPool<ChunkEncoder>(
+  private static final ResourcePool<ChunkEncoder> chunkEncoderPool = new StupidPool<ChunkEncoder>(
       new Supplier<ChunkEncoder>()
       {
         private final AtomicLong counter = new AtomicLong(0);
@@ -50,12 +50,12 @@ public class CompressedPools
       }
   );
 
-  public static ResourceHolder<ChunkEncoder> getChunkEncoder()
+  public static ResourcePool.ResourceHolder<ChunkEncoder> getChunkEncoder()
   {
     return chunkEncoderPool.take();
   }
 
-  private static final StupidPool<byte[]> outputBytesPool = new StupidPool<byte[]>(
+  private static final ResourcePool<byte[]> outputBytesPool = new StupidPool<byte[]>(
       new Supplier<byte[]>()
       {
         private final AtomicLong counter = new AtomicLong(0);
@@ -69,7 +69,7 @@ public class CompressedPools
       }
   );
 
-  public static ResourceHolder<byte[]> getOutputBytes()
+  public static ResourcePool.ResourceHolder<byte[]> getOutputBytes()
   {
     return outputBytesPool.take();
   }
@@ -88,7 +88,7 @@ public class CompressedPools
       }
   );
 
-  private static final StupidPool<ByteBuffer> littleEndByteBufPool = new StupidPool<ByteBuffer>(
+  private static final ResourcePool<ByteBuffer> littleEndByteBufPool = new StupidPool<ByteBuffer>(
       new Supplier<ByteBuffer>()
       {
         private final AtomicLong counter = new AtomicLong(0);
@@ -102,7 +102,7 @@ public class CompressedPools
       }
   );
 
-  public static ResourceHolder<ByteBuffer> getByteBuf(ByteOrder order)
+  public static ResourcePool.ResourceHolder<ByteBuffer> getByteBuf(ByteOrder order)
   {
     if (order == ByteOrder.LITTLE_ENDIAN) {
       return littleEndByteBufPool.take();

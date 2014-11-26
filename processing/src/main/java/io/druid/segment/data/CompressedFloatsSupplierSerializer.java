@@ -22,7 +22,7 @@ package io.druid.segment.data;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidResourceHolder;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class CompressedFloatsSupplierSerializer
   {
     final CompressedFloatsSupplierSerializer retVal = new CompressedFloatsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
+        new GenericIndexedWriter<ResourcePool.ResourceHolder<FloatBuffer>>(
             ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
         ),
         compression
@@ -56,7 +56,7 @@ public class CompressedFloatsSupplierSerializer
   }
 
   private final int sizePer;
-  private final GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener;
+  private final GenericIndexedWriter<ResourcePool.ResourceHolder<FloatBuffer>> flattener;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
   private int numInserted = 0;
@@ -65,7 +65,7 @@ public class CompressedFloatsSupplierSerializer
 
   public CompressedFloatsSupplierSerializer(
       int sizePer,
-      GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener,
+      GenericIndexedWriter<ResourcePool.ResourceHolder<FloatBuffer>> flattener,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {

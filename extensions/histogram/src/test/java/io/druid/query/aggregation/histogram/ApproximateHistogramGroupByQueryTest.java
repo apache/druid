@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
@@ -65,7 +66,7 @@ public class ApproximateHistogramGroupByQueryTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
-    final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
+    final ResourcePool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
         new Supplier<ByteBuffer>()
         {
           @Override
