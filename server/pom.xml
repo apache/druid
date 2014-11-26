@@ -127,7 +127,7 @@
       <artifactId>antlr4-runtime</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.code.simple-spring-memcached</groupId>
+      <groupId>net.spy</groupId>
       <artifactId>spymemcached</artifactId>
     </dependency>
     <dependency>

@@ -22,13 +22,17 @@ package io.druid.client.cache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.CachedData;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.MemcachedClientIF;
+import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.internal.BulkGetCompletionListener;
+import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 import net.spy.memcached.transcoders.Transcoder;
@@ -43,6 +47,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -185,9 +190,23 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
+  public Future<Boolean> append(String s, Object o)
+  {
+    return null;
+  }
+
+  @Override
   public <T> Future<Boolean> append(long cas, String key, T val, Transcoder<T> tc)
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> Future<Boolean> append(
+      String s, T t, Transcoder<T> tTranscoder
+  )
+  {
+    return null;
   }
 
   @Override
@@ -197,9 +216,23 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
+  public Future<Boolean> prepend(String s, Object o)
+  {
+    return null;
+  }
+
+  @Override
   public <T> Future<Boolean> prepend(long cas, String key, T val, Transcoder<T> tc)
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> Future<Boolean> prepend(
+      String s, T t, Transcoder<T> tTranscoder
+  )
+  {
+    return null;
   }
 
   @Override
@@ -215,6 +248,22 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
+  public Future<CASResponse> asyncCAS(
+      String s, long l, int i, Object o
+  )
+  {
+    return null;
+  }
+
+  @Override
+  public <T> OperationFuture<CASResponse> asyncCAS(
+      String s, long l, int i, T t, Transcoder<T> tTranscoder
+  )
+  {
+    return null;
+  }
+
+  @Override
   public <T> CASResponse cas(String key, long casId, int exp, T value, Transcoder<T> tc)
   {
     throw new UnsupportedOperationException("not implemented");
@@ -224,6 +273,20 @@ class MockMemcachedClient implements MemcachedClientIF
   public CASResponse cas(String key, long casId, Object value)
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public CASResponse cas(String s, long l, int i, Object o)
+  {
+    return null;
+  }
+
+  @Override
+  public <T> CASResponse cas(
+      String s, long l, T t, Transcoder<T> tTranscoder
+  )
+  {
+    return null;
   }
 
   @Override
@@ -438,6 +501,18 @@ class MockMemcachedClient implements MemcachedClientIF
       }
 
       @Override
+      public Future<Map<String, T>> addListener(BulkGetCompletionListener bulkGetCompletionListener)
+      {
+        return null;
+      }
+
+      @Override
+      public Future<Map<String, T>> removeListener(BulkGetCompletionListener bulkGetCompletionListener)
+      {
+        return null;
+      }
+
+      @Override
       public boolean cancel(boolean b)
       {
         return false;
@@ -623,6 +698,30 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
+  public Future<Long> asyncIncr(String s, long l, long l2, int i)
+  {
+    return null;
+  }
+
+  @Override
+  public Future<Long> asyncIncr(String s, int i, long l, int i2)
+  {
+    return null;
+  }
+
+  @Override
+  public Future<Long> asyncDecr(String s, long l, long l2, int i)
+  {
+    return null;
+  }
+
+  @Override
+  public Future<Long> asyncDecr(String s, int i, long l, int i2)
+  {
+    return null;
+  }
+
+  @Override
   public Future<Long> asyncIncr(String key, long by)
   {
     throw new UnsupportedOperationException("not implemented");
@@ -671,9 +770,39 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
+  public Future<Long> asyncIncr(String s, long l, long l2)
+  {
+    return null;
+  }
+
+  @Override
+  public Future<Long> asyncIncr(String s, int i, long l)
+  {
+    return null;
+  }
+
+  @Override
+  public Future<Long> asyncDecr(String s, long l, long l2)
+  {
+    return null;
+  }
+
+  @Override
+  public Future<Long> asyncDecr(String s, int i, long l)
+  {
+    return null;
+  }
+
+  @Override
   public Future<Boolean> delete(String key)
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public Future<Boolean> delete(String s, long l)
+  {
+    return null;
   }
 
   @Override
@@ -716,6 +845,20 @@ class MockMemcachedClient implements MemcachedClientIF
   public boolean removeObserver(ConnectionObserver obs)
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public CountDownLatch broadcastOp(BroadcastOpFactory broadcastOpFactory)
+  {
+    return null;
+  }
+
+  @Override
+  public CountDownLatch broadcastOp(
+      BroadcastOpFactory broadcastOpFactory, Collection<MemcachedNode> memcachedNodes
+  )
+  {
+    return null;
   }
 
   @Override
