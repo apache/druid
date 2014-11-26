@@ -40,7 +40,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetricUtil;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.query.RetryQueryRunner;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
@@ -59,7 +58,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
