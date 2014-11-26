@@ -41,6 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
         <apache.curator.version>2.7.0</apache.curator.version>
+        <jetty.version>9.2.5.v20141112</jetty.version>
         <druid.api.version>0.2.14.1</druid.api.version>
     </properties>
 
@@ -329,22 +330,22 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-proxy</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
