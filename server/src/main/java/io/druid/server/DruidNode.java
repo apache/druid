@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.name.Named;
+import com.metamx.common.IAE;
 import io.druid.common.utils.SocketUtil;
 
 import javax.validation.constraints.Max;
@@ -34,8 +35,6 @@ import javax.validation.constraints.NotNull;
 public class DruidNode
 {
   public static final String DEFAULT_HOST = "localhost";
-
-  private String hostNoPort;
 
   @JsonProperty("service")
   @NotNull
@@ -59,43 +58,43 @@ public class DruidNode
     init(serviceName, host, port);
   }
 
+  /**
+   * host = "abc:123", port = null -> host = abc, port = 123
+   * host = "abc:fff", port = null -> host = abc, port = -1
+   * host = "abc"    , port = null -> host = abc, port = _auto_
+   * host = null     , port = null -> host = _default_, port = -1
+   * host = "abc:123 , port = 456  -> throw IAE
+   * host = "abc:fff , port = 456  -> throw IAE
+   * host = "abc:123 , port = 123  -> host = abc, port = 123
+   * host = "abc"    , port = 123  -> host = abc, port = 123
+   * host = null     , port = 123  -> host = _default_, port = 123
+   */
   private void init(String serviceName, String host, Integer port)
   {
     this.serviceName = serviceName;
 
-    if (port == null) {
-      if (host == null) {
-        setHostAndPort(DEFAULT_HOST, -1, DEFAULT_HOST);
+    if (host != null && host.contains(":")) {
+      final String[] hostParts = host.split(":");
+      int parsedPort = -1;
+      try {
+        parsedPort = Integer.parseInt(hostParts[1]);
       }
-      else if (host.contains(":")) {
-        final String[] hostParts = host.split(":");
-        try {
-          setHostAndPort(host, Integer.parseInt(hostParts[1]), hostParts[0]);
-        }
-        catch (NumberFormatException e) {
-          setHostAndPort(host, -1, hostParts[0]);
-        }
+      catch (NumberFormatException e) {
+        // leave -1
       }
-      else {
-        final int openPort = SocketUtil.findOpenPort(8080);
-        setHostAndPort(String.format("%s:%d", host, openPort), openPort, host);
+      if (port != null && port != parsedPort) {
+        throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, port);
       }
+      host = hostParts[0];
+      port = parsedPort;
     }
-    else {
-      if (host == null || host.contains(":")) {
-        setHostAndPort(host == null ? DEFAULT_HOST : host, port, host == null ? DEFAULT_HOST : host.split(":")[0]);
-      }
-      else {
-        setHostAndPort(String.format("%s:%d", host, port), port, host);
-      }
-    }
-  }
 
-  private void setHostAndPort(String host, int port, String hostNoPort)
-  {
-    this.host = host;
-    this.port = port;
-    this.hostNoPort = hostNoPort;
+    if (port == null && host != null) {
+      port = SocketUtil.findOpenPort(8080);
+    }
+
+    this.port = port != null ? port : -1;
+    this.host = host != null ? host : DEFAULT_HOST;
   }
 
   public String getServiceName()
@@ -113,9 +112,8 @@ public class DruidNode
     return port;
   }
 
-  public String getHostNoPort()
-  {
-    return hostNoPort;
+  public String getHostAndPort() {
+    return String.format("%s:%d", host, port);
   }
 
   @Override

@@ -60,8 +60,8 @@ public class DruidServer implements Comparable
   )
   {
     this(
-        node.getHost(),
-        node.getHost(),
+        node.getHostAndPort(),
+        node.getHostAndPort(),
         config.getMaxSize(),
         type,
         config.getTier(),

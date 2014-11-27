@@ -167,7 +167,7 @@ public class DruidClusterBridgeTest
 
     Announcer announcer = new Announcer(remoteCf, Executors.newSingleThreadExecutor());
     announcer.start();
-    announcer.announce(zkPathsConfig.getAnnouncementsPath() + "/" + me.getHost(), jsonMapper.writeValueAsBytes(me));
+    announcer.announce(zkPathsConfig.getAnnouncementsPath() + "/" + me.getHostAndPort(), jsonMapper.writeValueAsBytes(me));
 
     BatchDataSegmentAnnouncer batchDataSegmentAnnouncer = EasyMock.createMock(BatchDataSegmentAnnouncer.class);
     BatchServerInventoryView batchServerInventoryView = EasyMock.createMock(BatchServerInventoryView.class);
