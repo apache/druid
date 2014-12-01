@@ -159,15 +159,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   byteCount += response.getContent().readableBytes();
 
                   try {
-                    final Map<String, Object> responseContext = objectMapper.readValue(
-                        response.headers().get("X-Druid-Response-Context"), new TypeReference<Map<String, Object>>()
-                        {
-                        }
-                    );
-                    context.putAll(responseContext);
+                    final String responseContext = response.headers().get("X-Druid-Response-Context");
+                    // context may be null in case of error or query timeout
+                    if (responseContext != null) {
+                      context.putAll(
+                          objectMapper.<Map<String, Object>>readValue(
+                              responseContext, new TypeReference<Map<String, Object>>()
+                              {
+                              }
+                          )
+                      );
+                    }
                   }
                   catch (IOException e) {
-                    e.printStackTrace();
+                    log.error(e, "Unable to parse response context from url[%s]", url);
                   }
 
                   return super.handleResponse(response);
