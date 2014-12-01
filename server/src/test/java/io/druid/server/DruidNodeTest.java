@@ -41,11 +41,11 @@ public class DruidNodeTest
     Assert.assertEquals("abc:123", node.getHostAndPort());
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", null);
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
     Assert.assertTrue(8080 <= node.getPort());
 
     node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]", null);
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
     Assert.assertTrue(8080 <= node.getPort());
 
     node = new DruidNode(service, "abc", null);
@@ -63,17 +63,17 @@ public class DruidNodeTest
     Assert.assertEquals("abc:123", node.getHostAndPort());
 
     node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]:123", null);
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
     Assert.assertEquals(123, node.getPort());
     Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", 123);
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
     Assert.assertEquals(123, node.getPort());
     Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]", 123);
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
     Assert.assertEquals(123, node.getPort());
     Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
