@@ -29,6 +29,8 @@ import io.druid.common.utils.SocketUtil;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  */
@@ -48,6 +50,22 @@ public class DruidNode
   @Min(0) @Max(0xffff)
   private int port = -1;
 
+  /**
+   * host = null     , port = null -> host = _default_, port = -1
+   * host = "abc:123", port = null -> host = abc, port = 123
+   * host = "abc:fff", port = null -> throw IAE (invalid ipv6 host)
+   * host = "2001:db8:85a3::8a2e:370:7334", port = null -> host = [2001:db8:85a3::8a2e:370:7334], port = _auto_
+   * host = "[2001:db8:85a3::8a2e:370:7334]", port = null -> host = [2001:db8:85a3::8a2e:370:7334], port = _auto_
+   * host = "abc"    , port = null -> host = abc, port = _auto_
+   * host = "abc"    , port = 123  -> host = abc, port = 123
+   * host = "abc:123 , port = 123  -> host = abc, port = 123
+   * host = "abc:123 , port = 456  -> throw IAE (conflicting port)
+   * host = "abc:fff , port = 456  -> throw IAE (invalid ipv6 host)
+   * host = "[2001:db8:85a3::8a2e:370:7334]:123", port = null -> host = [2001:db8:85a3::8a2e:370:7334], port = 123
+   * host = "[2001:db8:85a3::8a2e:370:7334]", port = 123 -> host = [2001:db8:85a3::8a2e:370:7334], port = 123
+   * host = "2001:db8:85a3::8a2e:370:7334", port = 123 -> host = [2001:db8:85a3::8a2e:370:7334], port = 123
+   * host = null     , port = 123  -> host = _default_, port = 123
+   */
   @JsonCreator
   public DruidNode(
       @JacksonInject @Named("serviceName") @JsonProperty("service") String serviceName,
@@ -58,43 +76,53 @@ public class DruidNode
     init(serviceName, host, port);
   }
 
-  /**
-   * host = "abc:123", port = null -> host = abc, port = 123
-   * host = "abc:fff", port = null -> host = abc, port = -1
-   * host = "abc"    , port = null -> host = abc, port = _auto_
-   * host = null     , port = null -> host = _default_, port = -1
-   * host = "abc:123 , port = 456  -> throw IAE
-   * host = "abc:fff , port = 456  -> throw IAE
-   * host = "abc:123 , port = 123  -> host = abc, port = 123
-   * host = "abc"    , port = 123  -> host = abc, port = 123
-   * host = null     , port = 123  -> host = _default_, port = 123
-   */
+
   private void init(String serviceName, String host, Integer port)
   {
     this.serviceName = serviceName;
 
-    if (host != null && host.contains(":")) {
-      final String[] hostParts = host.split(":");
-      int parsedPort = -1;
+    int parsedPort = -1;
+    if (host != null) {
       try {
-        parsedPort = Integer.parseInt(hostParts[1]);
+        // try host:port parsing (necessary for IPv6)
+        final URI uri = new URI(null, host, null, null, null);
+        // host is null if authority cannot be parsed into host and port
+        if(uri.getHost() != null) {
+          parsedPort = uri.getPort();
+          host = uri.getHost();
+        } else {
+          throw new IllegalArgumentException();
+        }
       }
-      catch (NumberFormatException e) {
-        // leave -1
+      catch (IllegalArgumentException | URISyntaxException ee) {
+        // try host alone
+        try {
+          final URI uri = new URI(null, host, null, null);
+          host = uri.getHost();
+        } catch(URISyntaxException e) {
+          throw new IllegalArgumentException(e);
+        }
       }
-      if (port != null && port != parsedPort) {
+      if (port != null && parsedPort != -1 && port != parsedPort) {
         throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, port);
       }
-      host = hostParts[0];
-      port = parsedPort;
     }
 
-    if (port == null && host != null) {
-      port = SocketUtil.findOpenPort(8080);
+    if (port == null) {
+      if (parsedPort == -1 && host != null) {
+        port = SocketUtil.findOpenPort(8080);
+      } else {
+        port = parsedPort;
+      }
     }
 
     this.port = port != null ? port : -1;
     this.host = host != null ? host : DEFAULT_HOST;
+    try {
+      new URI(null, null, this.host, this.port, null, null, null).getAuthority();
+    } catch(URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 
   public String getServiceName()
@@ -112,8 +140,16 @@ public class DruidNode
     return port;
   }
 
+  /**
+   * Returns host and port together as something that can be used as part of a URI.
+   */
   public String getHostAndPort() {
-    return String.format("%s:%d", host, port);
+    try {
+      return new URI(null, null, host, port, null, null, null).getAuthority();
+    } catch(URISyntaxException e) {
+      // should never happen, since we tried it in init already
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

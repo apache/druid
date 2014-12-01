@@ -30,32 +30,52 @@ public class DruidNodeTest
     final String service = "test/service";
 
     DruidNode node;
+
+    node = new DruidNode(service, null, null);
+    Assert.assertEquals(DruidNode.DEFAULT_HOST, node.getHost());
+    Assert.assertEquals(-1, node.getPort());
+
     node = new DruidNode(service, "abc:123", null);
     Assert.assertEquals("abc", node.getHost());
     Assert.assertEquals(123, node.getPort());
     Assert.assertEquals("abc:123", node.getHostAndPort());
 
-    node = new DruidNode(service, "abc:fff", null);
-    Assert.assertEquals("abc", node.getHost());
-    Assert.assertEquals(-1, node.getPort());
+    node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", null);
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertTrue(8080 <= node.getPort());
+
+    node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]", null);
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertTrue(8080 <= node.getPort());
 
     node = new DruidNode(service, "abc", null);
     Assert.assertEquals("abc", node.getHost());
     Assert.assertTrue(8080 <= node.getPort());
 
-    node = new DruidNode(service, null, null);
-    Assert.assertEquals(DruidNode.DEFAULT_HOST, node.getHost());
-    Assert.assertEquals(-1, node.getPort());
+    node = new DruidNode(service, "abc", 123);
+    Assert.assertEquals("abc", node.getHost());
+    Assert.assertEquals(123, node.getPort());
+    Assert.assertEquals("abc:123", node.getHostAndPort());
 
     node = new DruidNode(service, "abc:123", 123);
     Assert.assertEquals("abc", node.getHost());
     Assert.assertEquals(123, node.getPort());
     Assert.assertEquals("abc:123", node.getHostAndPort());
 
-    node = new DruidNode(service, "abc", 123);
-    Assert.assertEquals("abc", node.getHost());
+    node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]:123", null);
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
     Assert.assertEquals(123, node.getPort());
-    Assert.assertEquals("abc:123", node.getHostAndPort());
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
+
+    node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", 123);
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals(123, node.getPort());
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
+
+    node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]", 123);
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHost());
+    Assert.assertEquals(123, node.getPort());
+    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, null, 123);
     Assert.assertEquals(DruidNode.DEFAULT_HOST, node.getHost());
@@ -69,8 +89,20 @@ public class DruidNodeTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testConflictingPortsNonsense() throws Exception
+  public void testInvalidIPv6WithPort() throws Exception
+  {
+    new DruidNode("test/service", "[abc:fff]:123", 456);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidIPv6() throws Exception
   {
     new DruidNode("test/service", "abc:fff", 456);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testConflictingPortsNonsense() throws Exception
+  {
+    new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", 456);
   }
 }
