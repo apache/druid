@@ -91,12 +91,6 @@ public class DruidClusterBridgeTest
     DruidClusterBridgeConfig config = new DruidClusterBridgeConfig()
     {
       @Override
-      public String getTier()
-      {
-        return DruidServer.DEFAULT_TIER;
-      }
-
-      @Override
       public Duration getStartDelay()
       {
         return new Duration(0);
@@ -106,18 +100,6 @@ public class DruidClusterBridgeTest
       public Duration getPeriod()
       {
         return new Duration(Long.MAX_VALUE);
-      }
-
-      @Override
-      public String getBrokerServiceName()
-      {
-        return "testz0rz";
-      }
-
-      @Override
-      public int getPriority()
-      {
-        return 0;
       }
     };
 
@@ -134,7 +116,7 @@ public class DruidClusterBridgeTest
     ZkPathsConfig zkPathsConfig = new ZkPathsConfig()
     {
       @Override
-      public String getZkBasePath()
+      public String getBase()
       {
         return "/druid";
       }
@@ -195,6 +177,8 @@ public class DruidClusterBridgeTest
     DruidClusterBridge bridge = new DruidClusterBridge(
         jsonMapper,
         config,
+        zkPathsConfig,
+        metadata,
         factory,
         me,
         localCf,

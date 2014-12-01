@@ -31,7 +31,7 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import io.druid.curator.announcement.Announcer;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
@@ -63,7 +63,7 @@ public class WorkerCuratorCoordinator
   @Inject
   public WorkerCuratorCoordinator(
       ObjectMapper jsonMapper,
-      ZkPathsConfig zkPaths,
+      IndexerZkConfig indexerZkConfig,
       RemoteTaskRunnerConfig config,
       CuratorFramework curatorFramework,
       Worker worker
@@ -76,9 +76,9 @@ public class WorkerCuratorCoordinator
 
     this.announcer = new Announcer(curatorFramework, MoreExecutors.sameThreadExecutor());
 
-    this.baseAnnouncementsPath = getPath(Arrays.asList(zkPaths.getIndexerAnnouncementPath(), worker.getHost()));
-    this.baseTaskPath = getPath(Arrays.asList(zkPaths.getIndexerTaskPath(), worker.getHost()));
-    this.baseStatusPath = getPath(Arrays.asList(zkPaths.getIndexerStatusPath(), worker.getHost()));
+    this.baseAnnouncementsPath = getPath(Arrays.asList(indexerZkConfig.getAnnouncementsPath(), worker.getHost()));
+    this.baseTaskPath = getPath(Arrays.asList(indexerZkConfig.getTasksPath(), worker.getHost()));
+    this.baseStatusPath = getPath(Arrays.asList(indexerZkConfig.getStatus(), worker.getHost()));
   }
 
   @LifecycleStart

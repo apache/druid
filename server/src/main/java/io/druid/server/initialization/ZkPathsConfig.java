@@ -19,85 +19,105 @@
 
 package io.druid.server.initialization;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.curator.utils.ZKPaths;
-import org.skife.config.Config;
 
-public abstract class ZkPathsConfig
+public class ZkPathsConfig
 {
-  @Config("druid.zk.paths.base")
-  public String getZkBasePath()
+  @JsonProperty
+  private
+  String base = "druid";
+  @JsonProperty
+  private
+  String propertiesPath;
+  @JsonProperty
+  private
+  String announcementsPath;
+  @JsonProperty
+  private
+  String servedSegmentsPath;
+  @JsonProperty
+  private
+  String liveSegmentsPath;
+  @JsonProperty
+  private
+  String coordinatorPath;
+  @JsonProperty
+  private
+  String loadQueuePath;
+  @JsonProperty
+  private
+  String connectorPath;
+
+  public String getBase()
   {
-    return "druid";
+    return base;
   }
 
-  @Config("druid.zk.paths.propertiesPath")
   public String getPropertiesPath()
   {
-    return defaultPath("properties");
+    return (null == propertiesPath) ? defaultPath("properties") : propertiesPath;
   }
 
-  @Config("druid.zk.paths.announcementsPath")
   public String getAnnouncementsPath()
   {
-    return defaultPath("announcements");
+    return (null == announcementsPath) ? defaultPath("announcements") : announcementsPath;
   }
 
-  @Config("druid.zk.paths.servedSegmentsPath")
   public String getServedSegmentsPath()
   {
-    return defaultPath("servedSegments");
+    return (null == servedSegmentsPath) ?  defaultPath("servedSegments") : servedSegmentsPath;
   }
 
-  @Config("druid.zk.paths.liveSegmentsPath")
   public String getLiveSegmentsPath()
   {
-    return defaultPath("segments");
+    return (null == liveSegmentsPath) ? defaultPath("segments") : liveSegmentsPath;
   }
 
-  @Config("druid.zk.paths.loadQueuePath")
-  public String getLoadQueuePath()
-  {
-    return defaultPath("loadQueue");
-  }
-
-  @Config("druid.zk.paths.coordinatorPath")
   public String getCoordinatorPath()
   {
-    return defaultPath("coordinator");
+    return (null == coordinatorPath) ?  defaultPath("coordinator") : coordinatorPath;
   }
 
-  @Config("druid.zk.paths.connectorPath")
+  public String getLoadQueuePath()
+  {
+    return (null == loadQueuePath) ?  defaultPath("loadQueue") : loadQueuePath;
+  }
+
   public String getConnectorPath()
   {
-    return defaultPath("connector");
+    return (null == connectorPath) ?  defaultPath("connector") : connectorPath;
   }
 
-  @Config("druid.zk.paths.indexer.announcementsPath")
-  public String getIndexerAnnouncementPath()
+  protected String defaultPath(final String subPath)
   {
-    return defaultPath("indexer/announcements");
+    return ZKPaths.makePath(getBase(), subPath);
   }
 
-  @Config("druid.zk.paths.indexer.tasksPath")
-  public String getIndexerTaskPath()
-  {
-    return defaultPath("indexer/tasks");
-  }
-
-  @Config("druid.zk.paths.indexer.statusPath")
-  public String getIndexerStatusPath()
-  {
-    return defaultPath("indexer/status");
-  }
-
-  @Config("druid.zk.paths.indexer.leaderLatchPath")
-  public String getIndexerLeaderLatchPath()
-  {
-    return defaultPath("indexer/leaderLatchPath");
-  }
-
-  private String defaultPath(final String subPath)
-  {
-    return ZKPaths.makePath(getZkBasePath(), subPath);
+  @Override
+  public boolean equals(Object other){
+    if(null == other){
+      return false;
+    }
+    if(this == other){
+      return true;
+    }
+    if(!(other instanceof ZkPathsConfig)){
+      return false;
+    }
+    ZkPathsConfig otherConfig = (ZkPathsConfig) other;
+    if(
+        this.getBase().equals(otherConfig.getBase()) &&
+        this.getAnnouncementsPath().equals(otherConfig.getAnnouncementsPath()) &&
+        this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
+        this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
+        this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
+        this.getLoadQueuePath().equals(otherConfig.getLoadQueuePath()) &&
+        this.getPropertiesPath().equals(otherConfig.getPropertiesPath()) &&
+        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())
+        ){
+      return true;
+    }
+    return false;
   }
 }

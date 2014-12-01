@@ -29,6 +29,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
+import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -38,7 +39,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
 {
   private final CuratorFramework curator;
   private final RemoteTaskRunnerConfig remoteTaskRunnerConfig;
-  private final ZkPathsConfig zkPaths;
+  private final IndexerZkConfig zkPaths;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final WorkerSelectStrategy strategy;
@@ -47,7 +48,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
   public RemoteTaskRunnerFactory(
       final CuratorFramework curator,
       final RemoteTaskRunnerConfig remoteTaskRunnerConfig,
-      final ZkPathsConfig zkPaths,
+      final IndexerZkConfig zkPaths,
       final ObjectMapper jsonMapper,
       @Global final HttpClient httpClient,
       final Supplier<WorkerBehaviorConfig> workerBehaviourConfigSupplier
