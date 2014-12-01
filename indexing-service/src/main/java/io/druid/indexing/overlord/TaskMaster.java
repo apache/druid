@@ -177,7 +177,7 @@ public class TaskMaster
         }
     );
 
-    leaderSelector.setId(node.getHost());
+    leaderSelector.setId(node.getHostAndPort());
     leaderSelector.autoRequeue();
   }
 

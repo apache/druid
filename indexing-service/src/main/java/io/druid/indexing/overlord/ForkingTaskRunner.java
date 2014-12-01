@@ -160,7 +160,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
 
                               final List<String> command = Lists.newArrayList();
-                              final String childHost = String.format("%s:%d", node.getHostNoPort(), childPort);
+                              final String childHost = node.getHost();
                               final String taskClasspath;
                               if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
                                 taskClasspath = Joiner.on(File.pathSeparator).join(
