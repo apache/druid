@@ -26,8 +26,8 @@ import org.joda.time.DateTime;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-                  @JsonSubTypes.Type(name = "wikipedia", value = WikipediaIrcDecoder.class)
-              })
+    @JsonSubTypes.Type(name = "wikipedia", value = WikipediaIrcDecoder.class)
+})
 public interface IrcDecoder
 {
   public InputRow decodeMessage(DateTime timestamp, String channel, String msg);

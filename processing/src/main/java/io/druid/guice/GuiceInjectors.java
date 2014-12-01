@@ -38,7 +38,7 @@ public class GuiceInjectors
     return Guice.createInjector(
         new DruidGuiceExtensions(),
         new JacksonModule(),
-        new PropertiesModule(Arrays.asList("global.runtime.properties", "runtime.properties")),
+        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
         new ConfigModule(),
         new Module()
         {
@@ -57,7 +57,7 @@ public class GuiceInjectors
     List<Module> theModules = Lists.newArrayList();
     theModules.add(new DruidGuiceExtensions());
     theModules.add(new JacksonModule());
-    theModules.add(new PropertiesModule(Arrays.asList("global.runtime.properties", "runtime.properties")));
+    theModules.add(new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")));
     theModules.add(new ConfigModule());
     theModules.add(
         new Module()

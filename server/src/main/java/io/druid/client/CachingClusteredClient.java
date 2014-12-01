@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -45,7 +44,6 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
-import io.druid.common.utils.JodaUtils;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
@@ -62,7 +60,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -117,7 +114,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     final CacheStrategy<T, Object, Query<T>> strategy = toolChest.getCacheStrategy(query);
@@ -319,13 +316,13 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               List<Interval> intervals = segmentSpec.getIntervals();
 
               if (!server.isAssignable() || !populateCache || isBySegment) {
-                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), context);
+                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
               } else {
                 // this could be more efficient, since we only need to reorder results
                 // for batches of segments with the same segment start time.
                 resultSeqToAdd = toolChest.mergeSequencesUnordered(
                     Sequences.map(
-                        clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec), context),
+                        clientQueryable.run(rewrittenQuery.withQuerySegmentSpec(segmentSpec), responseContext),
                         new Function<Object, Sequence<T>>()
                         {
                           private final Function<T, Object> cacheFn = strategy.prepareForCache();

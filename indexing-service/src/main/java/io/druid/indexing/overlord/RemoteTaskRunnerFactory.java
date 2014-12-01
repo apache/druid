@@ -20,11 +20,14 @@
 package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.guice.annotations.Global;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -47,7 +50,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
       final ZkPathsConfig zkPaths,
       final ObjectMapper jsonMapper,
       @Global final HttpClient httpClient,
-      final WorkerSelectStrategy strategy
+      final Supplier<WorkerBehaviorConfig> workerBehaviourConfigSupplier
   )
   {
     this.curator = curator;
@@ -55,7 +58,17 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
     this.zkPaths = zkPaths;
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    this.strategy = strategy;
+    if (workerBehaviourConfigSupplier != null) {
+      // Backwards compatibility
+      final WorkerBehaviorConfig workerBehaviorConfig = workerBehaviourConfigSupplier.get();
+      if (workerBehaviorConfig != null) {
+        this.strategy = workerBehaviorConfig.getSelectStrategy();
+      } else {
+        this.strategy = new FillCapacityWorkerSelectStrategy();
+      }
+    } else {
+      this.strategy = new FillCapacityWorkerSelectStrategy();
+    }
   }
 
   @Override

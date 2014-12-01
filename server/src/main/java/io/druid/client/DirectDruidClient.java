@@ -150,12 +150,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     try {
       log.debug("Querying url[%s]", url);
 
-      final HttpResponseHandler<SequenceInputStream, InputStream> responseHandler = new HttpResponseHandler<SequenceInputStream, InputStream>(){
+      final HttpResponseHandler<SequenceInputStream, InputStream> responseHandler = new HttpResponseHandler<SequenceInputStream, InputStream>()
+      {
         long startTime;
         AtomicLong byteCount = new AtomicLong(0);
         private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
-        private final Enumeration<InputStream> enumeration = new Enumeration<InputStream>(){
+        private final Enumeration<InputStream> enumeration = new Enumeration<InputStream>()
+        {
           @Override
           public boolean hasMoreElements()
           {
@@ -176,6 +178,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             }
           }
         };
+
         @Override
         public synchronized ClientResponse<SequenceInputStream> handleResponse(HttpResponse response)
         {
@@ -183,16 +186,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           startTime = System.currentTimeMillis();
           byteCount.addAndGet(response.getContent().readableBytes());
           try {
-            final Map<String, Object> responseContext = objectMapper.readValue(
-                response.headers().get("X-Druid-Response-Context"), new TypeReference<Map<String, Object>>()
-                {
-                }
-            );
-            context.putAll(responseContext);
+            final String responseContext = response.headers().get("X-Druid-Response-Context");
+            // context may be null in case of error or query timeout
+            if (responseContext != null) {
+              context.putAll(
+                  objectMapper.<Map<String, Object>>readValue(
+                      responseContext, new TypeReference<Map<String, Object>>()
+                      {
+                      }
+                  )
+              );
+            }
             queue.put(new ChannelBufferInputStream(response.getContent()));
           }
           catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            log.error(e, "Unable to parse response context from url[%s]", url);
           }
           final SequenceInputStream sequenceInputStream = new SequenceInputStream(enumeration);
           return ClientResponse.finished(sequenceInputStream);
@@ -205,7 +213,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           final ChannelBuffer channelBuffer = chunk.getContent();
           final int bytes = channelBuffer.readableBytes();
-          if(bytes>0) {
+          if (bytes > 0) {
             queue.offer(new ChannelBufferInputStream(channelBuffer));
             byteCount.addAndGet(bytes);
           }
@@ -231,7 +239,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         public void exceptionCaught(ClientResponse<SequenceInputStream> clientResponse, Throwable e)
         {
           this.done.set(true);
-          log.error(e,"Exception caught");
+          log.error(e, "Exception caught");
         }
       };
       future = httpClient
@@ -372,7 +380,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       if (jp == null) {
         try {
           jp = objectMapper.getFactory().createParser(future.get());
-          if(null == jp.getInputSource()){
+          if (null == jp.getInputSource()) {
             log.warn("JSON parser has a NULL input source");
           }
           final JsonToken nextToken = jp.nextToken();

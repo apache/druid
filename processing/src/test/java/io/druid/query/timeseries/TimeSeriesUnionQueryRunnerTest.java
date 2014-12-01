@@ -146,7 +146,8 @@ public class TimeSeriesUnionQueryRunnerTest
             {
               @Override
               public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query,
-                                                                 Map<String, Object> context)
+                                                                 Map<String, Object> responseContext
+              )
               {
                 if (query.getDataSource().equals(new TableDataSource("ds1"))) {
                   return Sequences.simple(

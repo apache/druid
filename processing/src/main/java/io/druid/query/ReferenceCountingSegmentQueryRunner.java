@@ -45,11 +45,11 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
     final Closeable closeable = adapter.increment();
     try {
-      final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, context);
+      final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);
 
       return new ResourceClosingSequence<T>(baseSequence, closeable);
     }

@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import io.druid.examples.rand.RandomFirehoseFactory;
 import io.druid.examples.twitter.TwitterSpritzerFirehoseFactory;
-import io.druid.examples.web.WebFirehoseFactory;
 import io.druid.initialization.DruidModule;
 
 import java.util.Arrays;
@@ -41,9 +39,7 @@ public class ExamplesDruidModule implements DruidModule
     return Arrays.<Module>asList(
         new SimpleModule("ExamplesModule")
             .registerSubtypes(
-                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"),
-                new NamedType(RandomFirehoseFactory.class, "rand"),
-                new NamedType(WebFirehoseFactory.class, "webstream")
+                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer")
             )
     );
   }

@@ -212,7 +212,7 @@ public class DruidClusterBridge
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(config.getConnectorPath(), BRIDGE_OWNER_NODE), self.getHost()
+        curator, ZKPaths.makePath(config.getConnectorPath(), BRIDGE_OWNER_NODE), self.getHostAndPort()
     );
 
     newLeaderLatch.addListener(
@@ -305,8 +305,8 @@ public class DruidClusterBridge
                     log.warn("No servers founds!");
                   } else {
                     DruidServerMetadata me = new DruidServerMetadata(
-                        self.getHost(),
-                        self.getHost(),
+                        self.getHostAndPort(),
+                        self.getHostAndPort(),
                         totalMaxSize,
                         NODE_TYPE,
                         config.getTier(),
@@ -314,8 +314,8 @@ public class DruidClusterBridge
                     );
 
                     try {
-                      final String path = ZKPaths.makePath(config.getAnnouncementsPath(), self.getHost());
-                      log.info("Updating [%s] to have a maxSize of[%,d] bytes", self.getHost(), totalMaxSize);
+                      final String path = ZKPaths.makePath(config.getAnnouncementsPath(), self.getHostAndPort());
+                      log.info("Updating [%s] to have a maxSize of[%,d] bytes", self.getHostAndPort(), totalMaxSize);
                       announcer.update(path, jsonMapper.writeValueAsBytes(me));
                     }
                     catch (Exception e) {

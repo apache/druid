@@ -24,6 +24,7 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
 /**
  */
@@ -59,4 +60,11 @@ public class SpatialFilter implements Filter
         bound
     );
   }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }

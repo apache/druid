@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.data.input.ProtoBufInputRowParser;
 import io.druid.initialization.DruidModule;
-import io.druid.segment.realtime.firehose.IrcParser;
+import io.druid.segment.realtime.firehose.IrcInputRowParser;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +46,7 @@ public class ParsersModule implements DruidModule
         new SimpleModule("ParsersModule")
             .registerSubtypes(
                 new NamedType(ProtoBufInputRowParser.class, "protobuf"),
-                new NamedType(IrcParser.class, "irc")
+                new NamedType(IrcInputRowParser.class, "irc")
             )
     );
   }

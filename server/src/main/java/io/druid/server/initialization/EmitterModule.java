@@ -79,7 +79,7 @@ public class EmitterModule implements Module
   public ServiceEmitter getServiceEmitter(@Self Supplier<DruidNode> configSupplier, Emitter emitter)
   {
     final DruidNode config = configSupplier.get();
-    final ServiceEmitter retVal = new ServiceEmitter(config.getServiceName(), config.getHost(), emitter);
+    final ServiceEmitter retVal = new ServiceEmitter(config.getServiceName(), config.getHostAndPort(), emitter);
     EmittingLogger.registerEmitter(retVal);
     return retVal;
   }

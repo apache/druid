@@ -40,7 +40,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryMetricUtil;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.query.RetryQueryRunner;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
@@ -59,7 +58,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -126,6 +124,7 @@ public class QueryResource
     String queryId = null;
 
     final boolean isSmile = APPLICATION_SMILE.equals(req.getContentType());
+    final String contentType = isSmile ? APPLICATION_SMILE : APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     final ObjectWriter jsonWriter = req.getParameter("pretty") == null
@@ -209,7 +208,7 @@ public class QueryResource
                     outputStream.close();
                   }
                 },
-                isSmile ? APPLICATION_SMILE : APPLICATION_JSON
+                contentType
         )
             .header("X-Druid-Query-Id", queryId)
             .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(responseContext))
@@ -249,10 +248,10 @@ public class QueryResource
       catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
-      return Response.serverError().entity(
-          jsonWriter.writeValueAsString(
+      return Response.serverError().type(contentType).entity(
+          jsonWriter.writeValueAsBytes(
               ImmutableMap.of(
-                  "error", e.getMessage()
+                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )
           )
       ).build();
@@ -285,8 +284,8 @@ public class QueryResource
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return Response.serverError().entity(
-          jsonWriter.writeValueAsString(
+      return Response.serverError().type(contentType).entity(
+          jsonWriter.writeValueAsBytes(
               ImmutableMap.of(
                   "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )
