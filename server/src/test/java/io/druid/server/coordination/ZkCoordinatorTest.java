@@ -101,7 +101,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     final ZkPathsConfig zkPaths = new ZkPathsConfig()
     {
       @Override
-      public String getZkBasePath()
+      public String getBase()
       {
         return "/druid";
       }
