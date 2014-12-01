@@ -43,6 +43,8 @@ import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.util.ByteArrayMapper;
+import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -85,7 +87,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 Ordering.natural()
             );
 
-            final ResultIterator<Map<String, Object>> dbSegments =
+            final ResultIterator<byte[]> dbSegments =
                 handle.createQuery(
                     String.format(
                         "SELECT payload FROM %s WHERE used = true AND dataSource = :dataSource",
@@ -93,14 +95,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                     )
                 )
                       .bind("dataSource", dataSource)
+                      .map(ByteArrayMapper.FIRST)
                       .iterator();
 
             while (dbSegments.hasNext()) {
-
-              final Map<String, Object> dbSegment = dbSegments.next();
+              final byte[] payload = dbSegments.next();
 
               DataSegment segment = jsonMapper.readValue(
-                  (String) dbSegment.get("payload"),
+                  payload,
                   DataSegment.class
               );
 
@@ -211,18 +213,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return true;
   }
 
-  private boolean segmentExists(final Handle handle, final DataSegment segment) {
-    final List<Map<String, Object>> exists = handle.createQuery(
-        String.format(
-            "SELECT id FROM %s WHERE id = :identifier",
-            dbTables.getSegmentsTable()
-        )
-    ).bind(
-        "identifier",
-        segment.getIdentifier()
-    ).list();
-
-    return !exists.isEmpty();
+  private boolean segmentExists(final Handle handle, final DataSegment segment)
+  {
+    return !handle
+        .createQuery(
+            String.format(
+                "SELECT id FROM %s WHERE id = :identifier",
+                dbTables.getSegmentsTable()
+            )
+        ).bind("identifier", segment.getIdentifier())
+        .map(StringMapper.FIRST)
+        .list()
+        .isEmpty();
   }
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
@@ -294,43 +296,39 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public List<DataSegment> withHandle(Handle handle) throws IOException, SQLException
           {
-            return handle.createQuery(
-                String.format(
-                    "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
-                    dbTables.getSegmentsTable()
+            return handle
+                .createQuery(
+                    String.format(
+                        "SELECT payload FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false",
+                        dbTables.getSegmentsTable()
+                    )
                 )
-            )
-                         .bind("dataSource", dataSource)
-                         .bind("start", interval.getStart().toString())
-                         .bind("end", interval.getEnd().toString())
-                         .fold(
-                             Lists.<DataSegment>newArrayList(),
-                             new Folder3<List<DataSegment>, Map<String, Object>>()
-                             {
-                               @Override
-                               public List<DataSegment> fold(
-                                   List<DataSegment> accumulator,
-                                   Map<String, Object> stringObjectMap,
-                                   FoldController foldController,
-                                   StatementContext statementContext
-                               ) throws SQLException
-                               {
-                                 try {
-                                   DataSegment segment = jsonMapper.readValue(
-                                       (String) stringObjectMap.get("payload"),
-                                       DataSegment.class
-                                   );
-
-                                   accumulator.add(segment);
-
-                                   return accumulator;
-                                 }
-                                 catch (Exception e) {
-                                   throw Throwables.propagate(e);
-                                 }
-                               }
-                             }
-                         );
+                .bind("dataSource", dataSource)
+                .bind("start", interval.getStart().toString())
+                .bind("end", interval.getEnd().toString())
+                .map(ByteArrayMapper.FIRST)
+                .fold(
+                    Lists.<DataSegment>newArrayList(),
+                    new Folder3<List<DataSegment>, byte[]>()
+                    {
+                      @Override
+                      public List<DataSegment> fold(
+                          List<DataSegment> accumulator,
+                          byte[] payload,
+                          FoldController foldController,
+                          StatementContext statementContext
+                      ) throws SQLException
+                      {
+                        try {
+                          accumulator.add(jsonMapper.readValue(payload, DataSegment.class));
+                          return accumulator;
+                        }
+                        catch (Exception e) {
+                          throw Throwables.propagate(e);
+                        }
+                      }
+                    }
+                );
           }
         }
     );
