@@ -93,7 +93,7 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", "localhost", -1)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", "localhost", 0)
                 );
               }
             }
