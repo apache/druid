@@ -131,7 +131,11 @@ public class DruidNode
    * Returns host and port together as something that can be used as part of a URI.
    */
   public String getHostAndPort() {
-    return HostAndPort.fromParts(host, port).toString();
+    if(port < 0) {
+      return HostAndPort.fromString(host).toString();
+    } else {
+      return HostAndPort.fromParts(host, port).toString();
+    }
   }
 
   @Override
