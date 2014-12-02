@@ -53,6 +53,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -108,7 +109,7 @@ public class SpatialFilterBonusTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new IncrementalIndex(
+    IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                             .withQueryGranularity(QueryGranularity.DAY)
                                             .withMetrics(METRIC_AGGS)
@@ -124,7 +125,6 @@ public class SpatialFilterBonusTest
                                                     )
                                                 )
                                             ).build(),
-        TestQueryRunners.pool,
         false
     );
     theIndex.add(
@@ -239,7 +239,7 @@ public class SpatialFilterBonusTest
   private static QueryableIndex makeMergedQueryableIndex()
   {
     try {
-      IncrementalIndex first = new IncrementalIndex(
+      IncrementalIndex first = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
@@ -256,10 +256,9 @@ public class SpatialFilterBonusTest
                                                   )
 
                                               ).build(),
-          TestQueryRunners.pool,
           false
       );
-      IncrementalIndex second = new IncrementalIndex(
+      IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
@@ -275,10 +274,9 @@ public class SpatialFilterBonusTest
                                                       )
                                                   )
                                               ).build(),
-          TestQueryRunners.pool,
           false
       );
-      IncrementalIndex third = new IncrementalIndex(
+      IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
@@ -295,7 +293,6 @@ public class SpatialFilterBonusTest
                                                   )
 
                                               ).build(),
-          TestQueryRunners.pool,
           false
       );
 

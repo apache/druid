@@ -27,6 +27,7 @@ import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -46,9 +47,8 @@ public class IncrementalIndexTest
 
   public static IncrementalIndex createCaseInsensitiveIndex(long timestamp)
   {
-    IncrementalIndex index = new IncrementalIndex(
-        0L, QueryGranularity.NONE, new AggregatorFactory[]{},
-        TestQueryRunners.pool
+    IncrementalIndex index = new OnheapIncrementalIndex(
+        0L, QueryGranularity.NONE, new AggregatorFactory[]{}
     );
 
     index.add(
@@ -106,11 +106,10 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = new IncrementalIndex(
+    final IncrementalIndex index = new OnheapIncrementalIndex(
         0L,
         QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        TestQueryRunners.pool
+        new AggregatorFactory[]{new CountAggregatorFactory("count")}
     );
     final int threadCount = 10;
     final int elementsPerThread = 200;

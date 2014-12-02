@@ -19,9 +19,7 @@
 
 package io.druid.segment.incremental;
 
-
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -33,15 +31,14 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -58,34 +55,25 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.mapdb.BTreeKeySerializer;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
-import org.mapdb.Serializer;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.Serializable;
-import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class OffheapIncrementalIndex implements IncrementalIndex
+/**
+ */
+public class OnheapIncrementalIndex implements IncrementalIndex
 {
   private final long minTimestamp;
   private final QueryGranularity gran;
@@ -94,33 +82,27 @@ public class OffheapIncrementalIndex implements IncrementalIndex
   private final Map<String, Integer> metricIndexes;
   private final Map<String, String> metricTypes;
   private final ImmutableList<String> metricNames;
-  private final BufferAggregator[] aggs;
-  private final int[] aggPositionOffsets;
-  private final int totalAggSize;
   private final LinkedHashMap<String, Integer> dimensionOrder;
   protected final CopyOnWriteArrayList<String> dimensions;
   private final DimensionHolder dimValues;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
-  private final ResourceHolder<ByteBuffer> bufferHolder;
-  private final DB db;
-  private final DB factsDb;
+  private final List<Aggregator[]> aggList;
   private volatile AtomicInteger numEntries = new AtomicInteger();
   // This is modified on add() in a critical section.
   private ThreadLocal<InputRow> in = new ThreadLocal<>();
+  private final boolean deserializeComplexMetrics;
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
    *
    * @param incrementalIndexSchema
-   * @param bufferPool
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    */
-  public OffheapIncrementalIndex(
+  public OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
-      StupidPool<ByteBuffer> bufferPool,
       final boolean deserializeComplexMetrics
   )
   {
@@ -132,171 +114,18 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
     final ImmutableMap.Builder<String, String> metricTypesBuilder = ImmutableMap.builder();
-    this.aggs = new BufferAggregator[metrics.length];
-    this.aggPositionOffsets = new int[metrics.length];
-    int currAggSize = 0;
+    this.aggList = Lists.newArrayList();
+
     for (int i = 0; i < metrics.length; i++) {
-      final AggregatorFactory agg = metrics[i];
-      aggs[i] = agg.factorizeBuffered(
-          new ColumnSelectorFactory()
-          {
-            @Override
-            public LongColumnSelector makeLongColumnSelector(final String columnName)
-            {
-              if(columnName.equals(Column.TIME_COLUMN_NAME)){
-                return new LongColumnSelector()
-                {
-                  @Override
-                  public long get()
-                  {
-                    return in.get().getTimestampFromEpoch();
-                  }
-                };
-              }
-              return new LongColumnSelector()
-              {
-                @Override
-                public long get()
-                {
-                  return in.get().getLongMetric(columnName);
-                }
-              };
-            }
-
-            @Override
-            public FloatColumnSelector makeFloatColumnSelector(final String columnName)
-            {
-              return new FloatColumnSelector()
-              {
-                @Override
-                public float get()
-                {
-                  return in.get().getFloatMetric(columnName);
-                }
-              };
-            }
-
-            @Override
-            public ObjectColumnSelector makeObjectColumnSelector(final String column)
-            {
-              final String typeName = agg.getTypeName();
-
-              final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
-              {
-                @Override
-                public Class classOfObject()
-                {
-                  return Object.class;
-                }
-
-                @Override
-                public Object get()
-                {
-                  return in.get().getRaw(column);
-                }
-              };
-
-              if (!deserializeComplexMetrics) {
-                return rawColumnSelector;
-              } else {
-                if (typeName.equals("float")) {
-                  return rawColumnSelector;
-                }
-
-                final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-                if (serde == null) {
-                  throw new ISE("Don't know how to handle type[%s]", typeName);
-                }
-
-                final ComplexMetricExtractor extractor = serde.getExtractor();
-                return new ObjectColumnSelector()
-                {
-                  @Override
-                  public Class classOfObject()
-                  {
-                    return extractor.extractedClass();
-                  }
-
-                  @Override
-                  public Object get()
-                  {
-                    return extractor.extractValue(in.get(), column);
-                  }
-                };
-              }
-            }
-
-            @Override
-            public DimensionSelector makeDimensionSelector(final String dimension)
-            {
-              return new DimensionSelector()
-              {
-                @Override
-                public IndexedInts getRow()
-                {
-                  final List<String> dimensionValues = in.get().getDimension(dimension);
-                  final ArrayList<Integer> vals = Lists.newArrayList();
-                  if (dimensionValues != null) {
-                    for (int i = 0; i < dimensionValues.size(); ++i) {
-                      vals.add(i);
-                    }
-                  }
-
-                  return new IndexedInts()
-                  {
-                    @Override
-                    public int size()
-                    {
-                      return vals.size();
-                    }
-
-                    @Override
-                    public int get(int index)
-                    {
-                      return vals.get(index);
-                    }
-
-                    @Override
-                    public Iterator<Integer> iterator()
-                    {
-                      return vals.iterator();
-                    }
-                  };
-                }
-
-                @Override
-                public int getValueCardinality()
-                {
-                  throw new UnsupportedOperationException("value cardinality is unknown in incremental index");
-                }
-
-                @Override
-                public String lookupName(int id)
-                {
-                  return in.get().getDimension(dimension).get(id);
-                }
-
-                @Override
-                public int lookupId(String name)
-                {
-                  return in.get().getDimension(dimension).indexOf(name);
-                }
-              };
-            }
-          }
-      );
-      aggPositionOffsets[i] = currAggSize;
-      currAggSize += agg.getMaxIntermediateSize();
       final String metricName = metrics[i].getName();
       metricNamesBuilder.add(metricName);
       metricIndexesBuilder.put(metricName, i);
       metricTypesBuilder.put(metricName, metrics[i].getTypeName());
     }
+
     metricNames = metricNamesBuilder.build();
     metricIndexes = metricIndexesBuilder.build();
     metricTypes = metricTypesBuilder.build();
-
-    this.totalAggSize = currAggSize;
 
     this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<>();
@@ -331,28 +160,41 @@ public class OffheapIncrementalIndex implements IncrementalIndex
       capabilities.setHasSpatialIndexes(true);
       columnCapabilities.put(spatialDimension.getDimName(), capabilities);
     }
-    this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-      final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
-                                     .transactionDisable()
-                                     .asyncWriteEnable()
-                                     .cacheSoftRefEnable();
-      factsDb = dbMaker.make();
-      db = dbMaker.make();
-    final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
-    this.facts = factsDb.createTreeMap("__facts" + UUID.randomUUID())
-                  .keySerializer(timeAndDimsSerializer)
-                  .comparator(timeAndDimsSerializer.getComparator())
-                  .valueSerializer(Serializer.INTEGER)
-                  .make();
+    this.facts = createFactsTable();
+    this.deserializeComplexMetrics = deserializeComplexMetrics;
   }
 
+  protected ConcurrentNavigableMap<TimeAndDims, Integer> createFactsTable() {
+    return new ConcurrentSkipListMap<>();
+  }
 
-  public OffheapIncrementalIndex(
+  public OnheapIncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      final AggregatorFactory[] metrics
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .build(),
+        true
+    );
+  }
+
+  public OnheapIncrementalIndex(
+      IncrementalIndexSchema incrementalIndexSchema
+  )
+  {
+    this(incrementalIndexSchema, true);
+  }
+
+  public OnheapIncrementalIndex(
       long minTimestamp,
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
-      StupidPool<ByteBuffer> bufferPool,
       boolean deserializeComplexMetrics
   )
   {
@@ -361,7 +203,6 @@ public class OffheapIncrementalIndex implements IncrementalIndex
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
                                             .build(),
-        bufferPool,
         deserializeComplexMetrics
     );
   }
@@ -446,25 +287,172 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
     Integer rowOffset;
     synchronized (this) {
-      rowOffset = totalAggSize * numEntries.get();
+      rowOffset =  numEntries.get();
       final Integer prev = facts.putIfAbsent(key, rowOffset);
       if (prev != null) {
         rowOffset = prev;
       } else {
-        if (rowOffset + totalAggSize > bufferHolder.get().limit()) {
-          facts.remove(key);
-          throw new ISE("Buffer full, cannot add more rows! Current rowSize[%,d].", numEntries.get());
+        Aggregator[] aggs = new Aggregator[metrics.length];
+        for (int i = 0; i < metrics.length; i++) {
+          final AggregatorFactory agg = metrics[i];
+          aggs[i] = agg.factorize(
+              new ColumnSelectorFactory()
+              {
+                @Override
+                public LongColumnSelector makeLongColumnSelector(final String columnName)
+                {
+                  if(columnName.equals(Column.TIME_COLUMN_NAME)){
+                    return new LongColumnSelector()
+                    {
+                      @Override
+                      public long get()
+                      {
+                        return in.get().getTimestampFromEpoch();
+                      }
+                    };
+                  }
+                  return new LongColumnSelector()
+                  {
+                    @Override
+                    public long get()
+                    {
+                      return in.get().getLongMetric(columnName);
+                    }
+                  };
+                }
+
+                @Override
+                public FloatColumnSelector makeFloatColumnSelector(final String columnName)
+                {
+                  return new FloatColumnSelector()
+                  {
+                    @Override
+                    public float get()
+                    {
+                      return in.get().getFloatMetric(columnName);
+                    }
+                  };
+                }
+
+                @Override
+                public ObjectColumnSelector makeObjectColumnSelector(final String column)
+                {
+                  final String typeName = agg.getTypeName();
+
+                  final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
+                  {
+                    @Override
+                    public Class classOfObject()
+                    {
+                      return Object.class;
+                    }
+
+                    @Override
+                    public Object get()
+                    {
+                      return in.get().getRaw(column);
+                    }
+                  };
+
+                  if (!deserializeComplexMetrics) {
+                    return rawColumnSelector;
+                  } else {
+                    if (typeName.equals("float")) {
+                      return rawColumnSelector;
+                    }
+
+                    final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+                    if (serde == null) {
+                      throw new ISE("Don't know how to handle type[%s]", typeName);
+                    }
+
+                    final ComplexMetricExtractor extractor = serde.getExtractor();
+                    return new ObjectColumnSelector()
+                    {
+                      @Override
+                      public Class classOfObject()
+                      {
+                        return extractor.extractedClass();
+                      }
+
+                      @Override
+                      public Object get()
+                      {
+                        return extractor.extractValue(in.get(), column);
+                      }
+                    };
+                  }
+                }
+
+                @Override
+                public DimensionSelector makeDimensionSelector(final String dimension)
+                {
+                  return new DimensionSelector()
+                  {
+                    @Override
+                    public IndexedInts getRow()
+                    {
+                      final List<String> dimensionValues = in.get().getDimension(dimension);
+                      final ArrayList<Integer> vals = Lists.newArrayList();
+                      if (dimensionValues != null) {
+                        for (int i = 0; i < dimensionValues.size(); ++i) {
+                          vals.add(i);
+                        }
+                      }
+
+                      return new IndexedInts()
+                      {
+                        @Override
+                        public int size()
+                        {
+                          return vals.size();
+                        }
+
+                        @Override
+                        public int get(int index)
+                        {
+                          return vals.get(index);
+                        }
+
+                        @Override
+                        public Iterator<Integer> iterator()
+                        {
+                          return vals.iterator();
+                        }
+                      };
+                    }
+
+                    @Override
+                    public int getValueCardinality()
+                    {
+                      throw new UnsupportedOperationException("value cardinality is unknown in incremental index");
+                    }
+
+                    @Override
+                    public String lookupName(int id)
+                    {
+                      return in.get().getDimension(dimension).get(id);
+                    }
+
+                    @Override
+                    public int lookupId(String name)
+                    {
+                      return in.get().getDimension(dimension).indexOf(name);
+                    }
+                  };
+                }
+              }
+          );
         }
+        aggList.add(aggs);
         numEntries.incrementAndGet();
-        for (int i = 0; i < aggs.length; i++) {
-          aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
-        }
       }
     }
     in.set(row);
+    Aggregator[] aggs = aggList.get(rowOffset);
     for (int i = 0; i < aggs.length; i++) {
       synchronized (aggs[i]) {
-        aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
+        aggs[i].aggregate();
       }
     }
     in.set(null);
@@ -479,6 +467,24 @@ public class OffheapIncrementalIndex implements IncrementalIndex
   public int size()
   {
     return numEntries.get();
+  }
+
+  @Override
+  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  {
+    return aggList.get(rowOffset)[aggOffset].getFloat();
+  }
+
+  @Override
+  public long getMetricLongValue(int rowOffset, int aggOffset)
+  {
+    return aggList.get(rowOffset)[aggOffset].getLong();
+  }
+
+  @Override
+  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  {
+    return aggList.get(rowOffset)[aggOffset].get();
   }
 
   public long getMinTimeMillis()
@@ -569,27 +575,9 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     return metricIndexes.get(metricName);
   }
 
-  private int getMetricPosition(int rowOffset, int metricIndex)
+  Aggregator getAggregator(int rowOffset, int metricIndex)
   {
-    return rowOffset + aggPositionOffsets[metricIndex];
-  }
-
-  @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
-  {
-    return aggs[aggOffset].getFloat(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
-  }
-
-  @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
-  {
-    return aggs[aggOffset].getLong(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
-  }
-
-  @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
-  {
-    return aggs[aggOffset].get(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
+    return aggList.get(rowOffset)[metricIndex];
   }
 
   public ColumnCapabilities getCapabilities(String column)
@@ -639,9 +627,9 @@ public class OffheapIncrementalIndex implements IncrementalIndex
                     theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
                   }
                 }
-
+                Aggregator[] aggs = aggList.get(rowOffset);
                 for (int i = 0; i < aggs.length; ++i) {
-                  theVals.put(metrics[i].getName(), aggs[i].get(bufferHolder.get(), getMetricPosition(rowOffset, i)));
+                  theVals.put(metrics[i].getName(), aggs[i].get());
                 }
 
                 if (postAggs != null) {
@@ -661,12 +649,6 @@ public class OffheapIncrementalIndex implements IncrementalIndex
   @Override
   public void close()
   {
-    try {
-      bufferHolder.close();
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   class DimensionHolder
@@ -687,7 +669,7 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     {
       DimDim holder = dimensions.get(dimension);
       if (holder == null) {
-        holder = new OffheapDimDim(dimension);
+        holder = new DimDimImpl();
         dimensions.put(dimension, holder);
       } else {
         throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
@@ -701,122 +683,37 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     }
   }
 
-  public static class TimeAndDimsSerializer extends BTreeKeySerializer<TimeAndDims> implements Serializable
-  {
-    private final TimeAndDimsComparator comparator;
-    private final transient OffheapIncrementalIndex incrementalIndex;
-
-    TimeAndDimsSerializer(OffheapIncrementalIndex incrementalIndex)
-    {
-      this.comparator = new TimeAndDimsComparator();
-      this.incrementalIndex = incrementalIndex;
-    }
-
-    @Override
-    public void serialize(DataOutput out, int start, int end, Object[] keys) throws IOException
-    {
-      for (int i = start; i < end; i++) {
-        TimeAndDims timeAndDim = (TimeAndDims) keys[i];
-        out.writeLong(timeAndDim.getTimestamp());
-        out.writeInt(timeAndDim.getDims().length);
-        int index = 0;
-        for (String[] dims : timeAndDim.getDims()) {
-          if (dims == null) {
-            out.write(-1);
-          } else {
-            DimDim dimDim = incrementalIndex.getDimension(incrementalIndex.dimensions.get(index));
-            out.writeInt(dims.length);
-            for (String value : dims) {
-              out.writeInt(dimDim.getId(value));
-            }
-          }
-          index++;
-        }
-      }
-    }
-
-    @Override
-    public Object[] deserialize(DataInput in, int start, int end, int size) throws IOException
-    {
-      Object[] ret = new Object[size];
-      for (int i = start; i < end; i++) {
-        final long timeStamp = in.readLong();
-        final String[][] dims = new String[in.readInt()][];
-        for (int k = 0; k < dims.length; k++) {
-          int len = in.readInt();
-          if (len != -1) {
-            DimDim dimDim = incrementalIndex.getDimension(incrementalIndex.dimensions.get(k));
-            String[] col = new String[len];
-            for (int l = 0; l < col.length; l++) {
-              col[l] = dimDim.get(dimDim.getValue(in.readInt()));
-            }
-            dims[k] = col;
-          }
-        }
-        ret[i] = new TimeAndDims(timeStamp, dims);
-      }
-      return ret;
-    }
-
-    @Override
-    public Comparator<TimeAndDims> getComparator()
-    {
-      return comparator;
-    }
-  }
-
-  public static class TimeAndDimsComparator implements Comparator, Serializable
-  {
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return ((TimeAndDims) o1).compareTo((TimeAndDims) o2);
-    }
-  }
-
-  private class OffheapDimDim implements DimDim
-  {
+  private static class DimDimImpl implements DimDim{
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
-    private final WeakHashMap<String, WeakReference<String>> cache =
-        new WeakHashMap();
     private volatile String[] sortedVals = null;
-    // size on MapDB is slow so maintain a count here
-    private volatile int size = 0;
+    final ConcurrentMap<String, String> poorMansInterning = Maps.newConcurrentMap();
 
-    public OffheapDimDim(String dimension)
+
+    public DimDimImpl()
     {
-      falseIds = db.createHashMap(dimension)
-                   .keySerializer(Serializer.STRING)
-                   .valueSerializer(Serializer.INTEGER)
-                   .make();
-      falseIdsReverse = db.createHashMap(dimension + "_inverse")
-                          .keySerializer(Serializer.INTEGER)
-                          .valueSerializer(Serializer.STRING)
-                          .make();
+      BiMap<String, Integer> biMap = Maps.synchronizedBiMap(HashBiMap.<String, Integer>create());
+      falseIds = biMap;
+      falseIdsReverse = biMap.inverse();
     }
 
     /**
      * Returns the interned String value to allow fast comparisons using `==` instead of `.equals()`
-     *
      * @see io.druid.segment.incremental.IncrementalIndexStorageAdapter.EntryHolderValueMatcherFactory#makeValueMatcher(String, String)
      */
     public String get(String str)
     {
-      final WeakReference<String> cached = cache.get(str);
-      if (cached != null) {
-        final String value = cached.get();
-        if (value != null) {
-          return value;
-        }
-      }
-      cache.put(str, new WeakReference(str));
-      return str;
+      String prev = poorMansInterning.putIfAbsent(str, str);
+      return prev != null ? prev : str;
     }
 
     public int getId(String value)
     {
-      return falseIds.get(value);
+      if (value == null) {
+        value = "";
+      }
+      final Integer id = falseIds.get(value);
+      return id == null ? -1 : id;
     }
 
     public String getValue(int id)
@@ -831,14 +728,13 @@ public class OffheapIncrementalIndex implements IncrementalIndex
 
     public int size()
     {
-      return size;
+      return falseIds.size();
     }
 
     public synchronized int add(String value)
     {
-      int id = size++;
+      int id = falseIds.size();
       falseIds.put(value, id);
-      falseIdsReverse.put(id, value);
       return id;
     }
 
@@ -876,8 +772,7 @@ public class OffheapIncrementalIndex implements IncrementalIndex
 
     public boolean compareCannonicalValues(String s1, String s2)
     {
-      return s1.equals(s2);
+      return s1 ==s2;
     }
   }
-
 }

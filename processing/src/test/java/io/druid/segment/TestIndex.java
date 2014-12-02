@@ -39,6 +39,7 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -164,12 +165,12 @@ public class TestIndex
     if (useOffheap) {
       retVal = new OffheapIncrementalIndex(
           schema,
-          TestQueryRunners.pool
+          TestQueryRunners.pool,
+          true
       );
     } else {
-      retVal = new IncrementalIndex(
-          schema,
-          TestQueryRunners.pool
+      retVal = new OnheapIncrementalIndex(
+          schema
       );
     }
 

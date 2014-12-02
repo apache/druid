@@ -28,6 +28,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -48,11 +49,10 @@ public class EmptyIndexTest
     }
     tmpDir.deleteOnExit();
 
-    IncrementalIndex emptyIndex = new IncrementalIndex(
+    IncrementalIndex emptyIndex = new OnheapIncrementalIndex(
         0,
         QueryGranularity.NONE,
-        new AggregatorFactory[0],
-        TestQueryRunners.pool
+        new AggregatorFactory[0]
     );
     IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
         new Interval("2012-08-01/P3D"),

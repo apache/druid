@@ -65,6 +65,12 @@ public class CountAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return count;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

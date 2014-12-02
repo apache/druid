@@ -80,6 +80,12 @@ public class LongSumAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return sum;
+  }
+
+  @Override
   public String getName()
   {
     return name;

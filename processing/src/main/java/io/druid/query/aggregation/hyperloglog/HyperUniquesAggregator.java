@@ -67,6 +67,12 @@ public class HyperUniquesAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public String getName()
   {
     return name;

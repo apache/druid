@@ -81,6 +81,12 @@ public class DoubleSumAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return (long) sum;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

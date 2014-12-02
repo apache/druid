@@ -63,9 +63,8 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testSanity() throws Exception
   {
-    IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        TestQueryRunners.pool
+    IncrementalIndex index = new OnheapIncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
     );
 
     index.add(
@@ -111,8 +110,8 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testObjectColumnSelectorOnVaryingColumnSchema() throws Exception
   {
-    IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, TestQueryRunners.pool
+    IncrementalIndex index = new OnheapIncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
     );
 
     index.add(
@@ -197,9 +196,8 @@ public class IncrementalIndexStorageAdapterTest
 
   @Test
   public void testResetSanity() {
-    IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        TestQueryRunners.pool
+    IncrementalIndex index = new OnheapIncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
     );
 
 
@@ -250,9 +248,8 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testSingleValueTopN()
   {
-    IncrementalIndex index = new IncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        TestQueryRunners.pool
+    IncrementalIndex index = new OnheapIncrementalIndex(
+        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
     );
 
     DateTime t = DateTime.now();
@@ -306,9 +303,8 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testFilterByNull() throws Exception
   {
-    IncrementalIndex index = new IncrementalIndex(
-         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-         TestQueryRunners.pool
+    IncrementalIndex index = new OnheapIncrementalIndex(
+         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
      );
 
     index.add(

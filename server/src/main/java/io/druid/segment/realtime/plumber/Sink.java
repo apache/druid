@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
@@ -191,12 +192,12 @@ public class Sink implements Iterable<FireHydrant>
     if (config.isIngestOffheap()) {
       newIndex = new OffheapIncrementalIndex(
           indexSchema,
-          new OffheapBufferPool(bufferSize)
+          new OffheapBufferPool(bufferSize),
+          true
       );
     } else {
-      newIndex = new IncrementalIndex(
-          indexSchema,
-          new OffheapBufferPool(bufferSize)
+      newIndex = new OnheapIncrementalIndex(
+          indexSchema
       );
     }
 

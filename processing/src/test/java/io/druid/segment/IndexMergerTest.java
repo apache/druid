@@ -30,6 +30,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import junit.framework.Assert;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
@@ -71,7 +72,7 @@ public class IndexMergerTest
     final long timestamp = System.currentTimeMillis();
     IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
 
-    IncrementalIndex toPersist2 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{}, TestQueryRunners.pool);
+    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
 
     toPersist2.add(
         new MapBasedInputRow(
@@ -127,8 +128,8 @@ public class IndexMergerTest
   @Test
   public void testPersistEmptyColumn() throws Exception
   {
-    final IncrementalIndex toPersist1 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{}, TestQueryRunners.pool);
-    final IncrementalIndex toPersist2 = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{}, TestQueryRunners.pool);
+    final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
     final File tmpDir1 = Files.createTempDir();
     final File tmpDir2 = Files.createTempDir();
     final File tmpDir3 = Files.createTempDir();

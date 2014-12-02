@@ -59,6 +59,12 @@ public class FilteredAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return delegate.getLong();
+  }
+
+  @Override
   public String getName()
   {
     return delegate.getName();

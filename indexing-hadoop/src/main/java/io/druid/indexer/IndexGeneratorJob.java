@@ -46,6 +46,7 @@ import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
@@ -645,12 +646,12 @@ public class IndexGeneratorJob implements Jobby
       if (tuningConfig.isIngestOffheap()) {
         return new OffheapIncrementalIndex(
             indexSchema,
-            new OffheapBufferPool(bufferSize)
+            new OffheapBufferPool(bufferSize),
+            true
         );
       } else {
-        return new IncrementalIndex(
-            indexSchema,
-            new OffheapBufferPool(bufferSize)
+        return new OnheapIncrementalIndex(
+            indexSchema
         );
       }
     }
