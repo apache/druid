@@ -25,14 +25,18 @@ import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import junit.framework.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -42,15 +46,72 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexTest
 {
-
-  public static IncrementalIndex createCaseInsensitiveIndex(long timestamp)
+  interface IndexCreator
   {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0L, QueryGranularity.NONE, new AggregatorFactory[]{}
-    );
+    public IncrementalIndex createIndex();
+  }
 
+  private final IndexCreator indexCreator;
+
+  public IncrementalIndexTest(
+      IndexCreator indexCreator
+  )
+  {
+    this.indexCreator = indexCreator;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex()
+                  {
+                    return createCaseInsensitiveIndex(true);
+                  }
+                }
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex()
+                  {
+                    return createCaseInsensitiveIndex(false);
+                  }
+                }
+            }
+
+        }
+    );
+  }
+
+  public static IncrementalIndex createCaseInsensitiveIndex(boolean offheap)
+  {
+    if (offheap) {
+      return new OffheapIncrementalIndex(
+          0L,
+          QueryGranularity.NONE,
+          new AggregatorFactory[]{},
+          TestQueryRunners.pool,
+          true
+      );
+    } else {
+      return new OnheapIncrementalIndex(
+          0L, QueryGranularity.NONE, new AggregatorFactory[]{}
+      );
+    }
+  }
+
+  public static void populateIndex(long timestamp, IncrementalIndex index)
+  {
     index.add(
         new MapBasedInputRow(
             timestamp,
@@ -66,7 +127,6 @@ public class IncrementalIndexTest
             ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
         )
     );
-    return index;
   }
 
   public static MapBasedInputRow getRow(long timestamp, int rowID, int dimensionCount)
@@ -84,10 +144,9 @@ public class IncrementalIndexTest
   @Test
   public void testCaseSensitivity() throws Exception
   {
-    final long timestamp = System.currentTimeMillis();
-
-    IncrementalIndex index = createCaseInsensitiveIndex(timestamp);
-
+    long timestamp = System.currentTimeMillis();
+    IncrementalIndex index = indexCreator.createIndex();
+    populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensions());
     Assert.assertEquals(2, index.size());
 
@@ -106,11 +165,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = new OnheapIncrementalIndex(
-        0L,
-        QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
+    final IncrementalIndex index = indexCreator.createIndex();
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;

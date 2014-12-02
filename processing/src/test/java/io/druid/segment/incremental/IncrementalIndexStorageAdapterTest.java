@@ -49,24 +49,78 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexStorageAdapterTest
 {
+  interface IndexCreator
+  {
+    public IncrementalIndex createIndex();
+  }
+  private final IndexCreator indexCreator;
+
+  public IncrementalIndexStorageAdapterTest(
+      IndexCreator IndexCreator
+  )
+  {
+    this.indexCreator = IndexCreator;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {   new IndexCreator()
+            {
+              @Override
+              public IncrementalIndex createIndex()
+              {
+                return new OnheapIncrementalIndex(
+                    0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+                );
+              }
+            }
+
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex()
+                  {
+                    return new OffheapIncrementalIndex(
+                        0,
+                        QueryGranularity.MINUTE,
+                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+                        TestQueryRunners.pool,
+                        true
+                    );
+                  }
+                }
+            }
+
+        }
+    );
+  }
+
   @Test
   public void testSanity() throws Exception
   {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
-    );
-
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             new DateTime().minus(1).getMillis(),
@@ -110,10 +164,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testObjectColumnSelectorOnVaryingColumnSchema() throws Exception
   {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
-    );
-
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             new DateTime("2014-09-01T00:00:00"),
@@ -196,11 +247,8 @@ public class IncrementalIndexStorageAdapterTest
 
   @Test
   public void testResetSanity() {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
-    );
 
-
+    IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTime.now();
     Interval interval = new Interval(t.minusMinutes(1), t.plusMinutes(1));
 
@@ -248,10 +296,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testSingleValueTopN()
   {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
-    );
-
+    IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTime.now();
     index.add(
         new MapBasedInputRow(
@@ -303,10 +348,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testFilterByNull() throws Exception
   {
-    IncrementalIndex index = new OnheapIncrementalIndex(
-         0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
-     );
-
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             new DateTime().minus(1).getMillis(),

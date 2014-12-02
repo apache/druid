@@ -51,7 +51,8 @@ public class IndexMergerTest
   {
     final long timestamp = System.currentTimeMillis();
 
-    IncrementalIndex toPersist = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
+    IncrementalIndex toPersist = IncrementalIndexTest.createCaseInsensitiveIndex(true);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
     final File tempDir = Files.createTempDir();
     try {
@@ -70,7 +71,8 @@ public class IndexMergerTest
   public void testPersistMerge() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(timestamp);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(true);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
 
