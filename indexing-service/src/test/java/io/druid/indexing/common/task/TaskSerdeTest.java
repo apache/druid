@@ -29,6 +29,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
+import io.druid.indexer.path.StaticPathSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -372,6 +373,8 @@ public class TaskSerdeTest
   @Test
   public void testHadoopIndexTaskSerde() throws Exception
   {
+    final StaticPathSpec pathSpec = new StaticPathSpec();
+    pathSpec.paths = "bar";
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
         new HadoopIngestionSpec(
@@ -381,7 +384,7 @@ public class TaskSerdeTest
                 null,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             )
-            ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
+            ), new HadoopIOConfig(pathSpec, null, null), null
         ),
         null,
         null,

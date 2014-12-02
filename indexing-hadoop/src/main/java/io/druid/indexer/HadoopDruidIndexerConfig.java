@@ -48,6 +48,10 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.IOConfig;
+import io.druid.segment.indexing.IngestionSpec;
+import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
@@ -143,13 +147,7 @@ public class HadoopDruidIndexerConfig
   public static HadoopDruidIndexerConfig fromString(String str)
   {
     try {
-      return fromMap(
-          (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
-              str, new TypeReference<Map<String, Object>>()
-          {
-          }
-          )
-      );
+      return HadoopDruidIndexerConfig.jsonMapper.readValue(str, HadoopDruidIndexerConfig.class);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -171,11 +169,11 @@ public class HadoopDruidIndexerConfig
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
-      final @JsonProperty("schema") HadoopIngestionSpec schema
+      final @JsonProperty("spec") HadoopIngestionSpec schema
   )
   {
     this.schema = schema;
-    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+    this.pathSpec = schema.getIOConfig().getPathSpec();
     for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : schema.getTuningConfig().getShardSpecs().entrySet()) {
       if (entry.getValue() == null || entry.getValue().isEmpty()) {
         continue;
@@ -202,7 +200,7 @@ public class HadoopDruidIndexerConfig
     this.rollupGran = schema.getDataSchema().getGranularitySpec().getQueryGranularity();
   }
 
-  @JsonProperty
+  @JsonProperty(value="spec")
   public HadoopIngestionSpec getSchema()
   {
     return schema;
