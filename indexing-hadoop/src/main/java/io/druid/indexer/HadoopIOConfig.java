@@ -19,6 +19,7 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.indexer.updater.DbUpdaterJobSpec;
@@ -35,6 +36,7 @@ public class HadoopIOConfig implements IOConfig
   private final DbUpdaterJobSpec metadataUpdateSpec;
   private final String segmentOutputPath;
 
+  @JsonCreator
   public HadoopIOConfig(
       final @JsonProperty("inputSpec") Map<String, Object> pathSpec,
       final @JsonProperty("metadataUpdateSpec") DbUpdaterJobSpec metadataUpdateSpec,
