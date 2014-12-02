@@ -132,8 +132,7 @@ public class QueryResource
                                     : objectMapper.writerWithDefaultPrettyPrinter();
 
     try {
-      requestQuery = ByteStreams.toByteArray(req.getInputStream());
-      query = objectMapper.readValue(requestQuery, Query.class);
+      query = objectMapper.readValue(req.getInputStream(), Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();

@@ -14,6 +14,30 @@ There are three JVM parameters that we set on all of our processes:
 2.  `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs.
 3.  `-Djava.io.tmpdir=<a path>` Various parts of the system that interact with the file system do it via temporary files, and these files can get somewhat large. Many production systems are set up to have small (but fast) `/tmp` directories, which can be problematic with Druid so we recommend pointing the JVM’s tmp directory to something with a little more meat.
 
+## CLI specific
+
+Some of the CLI options have configurations that only apply in that particular CLI functionality
+
+### Server Historical
+
+|Property|Description|Allowed Values|Default|
+|--------|-----------|--------------|-------|
+|`druid.cache.type`|Set the caching type.|`local`, `memcached`|`local`|
+|`druid.historical.cache.useCache`|Allow cache to be used. Cache will NOT be used unless this is set.|`true`,`false`|`false`|
+|`druid.historical.cache.populateCache`|Allow cache to be populated. Cache will NOT be populated unless this is set.|`true`,`false`|`false`|
+|`druid.historical.cache.unCacheable`|Do not attempt to cache queries whose types are in this array|array of valid values for queryType|`["groupBy","select"]`|
+|`druid.historical.cache.numBackgroundThreads`|Number of background threads in the thread pool to use for eventual-consistency caching results if caching is used. It is recommended to set this value greater or equal to the number of processing threads. To force caching to execute in the same thread as the query (query results are blocked on caching completion), use a thread count of 0. Setups who use a Druid backend in programatic settings (sub-second re-querying) should consider setting this to 0 to prevent eventual consistency from biting overall performance in the ass. If this is you, please experiment to find out what setting works best. |Non-negative integer|`0`|
+
+### Server Broker
+
+|Property|Description|Allowed Values|Default|
+|--------|-----------|--------------|-------|
+|`druid.cache.type`|Set the caching type if caching is enabled.| `local`, `memcached`|`local`|
+|`druid.broker.cache.useCache`|Allow cache to be used. Cache will NOT be used unless this is set.|`true`,`false`|`false`|
+|`druid.broker.cache.populateCache`|Allow cache to be populated. Cache will NOT be populated unless this is set.|`true`,`false`|`false`|
+|`druid.broker.cache.unCacheable`|Do not attempt to cache queries whose types are in this array|array of valid values for queryType|`["groupBy","select"]`|
+|`druid.broker.cache.numBackgroundThreads`|Number of background threads in the thread pool to use for eventual-consistency caching results if caching is used. It is recommended to set this value greater or equal to the number of processing threads. To force caching to execute in the same thread as the query (query results are blocked on caching completion), use a thread count of 0. Setups who use a Druid backend in programatic settings (sub-second re-querying) should consider setting this to 0 to prevent eventual consistency from biting overall performance in the ass. If this is you, please experiment to find out what setting works best. |Non-negative integer|`0`|
+
 ## Modules
 
 As of Druid v0.6, most core Druid functionality has been compartmentalized into modules. There are a set of default modules that may apply to any node type, and there are specific modules for the different node types. Default modules are __lazily instantiated__. Each module has its own set of configuration. 

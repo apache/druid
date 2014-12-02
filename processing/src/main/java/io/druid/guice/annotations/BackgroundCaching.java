@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,24 +17,21 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query;
+package io.druid.guice.annotations;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
-*/
-public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
+ *
+ */
+@BindingAnnotation
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface BackgroundCaching
 {
-  public byte[] computeCacheKey(QueryType query);
-
-  public TypeReference<CacheType> getCacheObjectClazz();
-
-  // Resultant function must be THREAD SAFE
-  public Function<T, CacheType> prepareForCache();
-
-  public Function<CacheType, T> pullFromCache();
-
-  public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences);
 }

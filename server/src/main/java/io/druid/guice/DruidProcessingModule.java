@@ -20,6 +20,8 @@
 package io.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -29,8 +31,10 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.cache.CacheConfig;
 import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
+import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.offheap.OffheapBufferPool;
@@ -40,6 +44,7 @@ import io.druid.query.PrioritizedExecutorService;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  */
@@ -52,6 +57,27 @@ public class DruidProcessingModule implements Module
   {
     ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
+  }
+
+  @Provides
+  @BackgroundCaching
+  @LazySingleton
+  public ExecutorService getBackgroundExecutorService(
+      CacheConfig cacheConfig
+  )
+  {
+    if (cacheConfig.getNumBackgroundThreads() > 0) {
+      return Executors.newFixedThreadPool(
+          cacheConfig.getNumBackgroundThreads(),
+          new ThreadFactoryBuilder()
+              .setNameFormat("background-cacher-%d")
+              .setDaemon(true)
+              .setPriority(Thread.MIN_PRIORITY)
+              .build()
+      );
+    } else {
+      return MoreExecutors.sameThreadExecutor();
+    }
   }
 
   @Provides
