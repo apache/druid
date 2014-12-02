@@ -22,15 +22,11 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.collections.ResourceHolder;
@@ -63,8 +59,6 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
 
-import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -80,7 +74,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -143,7 +136,7 @@ public class OffheapIncrementalIndex implements IncrementalIndex
             @Override
             public LongColumnSelector makeLongColumnSelector(final String columnName)
             {
-              if(columnName.equals(Column.TIME_COLUMN_NAME)){
+              if (columnName.equals(Column.TIME_COLUMN_NAME)) {
                 return new LongColumnSelector()
                 {
                   @Override
@@ -333,18 +326,18 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     }
     this.bufferHolder = bufferPool.take();
     this.dimValues = new DimensionHolder();
-      final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
-                                     .transactionDisable()
-                                     .asyncWriteEnable()
-                                     .cacheSoftRefEnable();
-      factsDb = dbMaker.make();
-      db = dbMaker.make();
+    final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
+                                   .transactionDisable()
+                                   .asyncWriteEnable()
+                                   .cacheSoftRefEnable();
+    factsDb = dbMaker.make();
+    db = dbMaker.make();
     final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
     this.facts = factsDb.createTreeMap("__facts" + UUID.randomUUID())
-                  .keySerializer(timeAndDimsSerializer)
-                  .comparator(timeAndDimsSerializer.getComparator())
-                  .valueSerializer(Serializer.INTEGER)
-                  .make();
+                        .keySerializer(timeAndDimsSerializer)
+                        .comparator(timeAndDimsSerializer.getComparator())
+                        .valueSerializer(Serializer.INTEGER)
+                        .make();
   }
 
 
@@ -366,6 +359,7 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     );
   }
 
+  @Override
   public InputRow formatRow(InputRow row)
   {
     for (Function<InputRow, InputRow> rowTransformer : rowTransformers) {
@@ -390,6 +384,7 @@ public class OffheapIncrementalIndex implements IncrementalIndex
    *
    * @return the number of rows in the data set after adding the InputRow
    */
+  @Override
   public int add(InputRow row)
   {
     row = formatRow(row);
@@ -471,22 +466,24 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     return numEntries.get();
   }
 
+  @Override
   public boolean isEmpty()
   {
     return numEntries.get() == 0;
   }
 
+  @Override
   public int size()
   {
     return numEntries.get();
   }
 
-  public long getMinTimeMillis()
+  private long getMinTimeMillis()
   {
     return facts.firstKey().getTimestamp();
   }
 
-  public long getMaxTimeMillis()
+  private long getMaxTimeMillis()
   {
     return facts.lastKey().getTimestamp();
   }
@@ -509,61 +506,61 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     return retVal;
   }
 
+  @Override
   public AggregatorFactory[] getMetricAggs()
   {
     return metrics;
   }
 
+  @Override
   public List<String> getDimensions()
   {
     return dimensions;
   }
 
+  @Override
   public String getMetricType(String metric)
   {
     return metricTypes.get(metric);
   }
 
-  public long getMinTimestamp()
-  {
-    return minTimestamp;
-  }
-
-  public QueryGranularity getGranularity()
-  {
-    return gran;
-  }
-
+  @Override
   public Interval getInterval()
   {
     return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.next(getMaxTimeMillis()));
   }
 
+  @Override
   public DateTime getMinTime()
   {
     return isEmpty() ? null : new DateTime(getMinTimeMillis());
   }
 
+  @Override
   public DateTime getMaxTime()
   {
     return isEmpty() ? null : new DateTime(getMaxTimeMillis());
   }
 
+  @Override
   public DimDim getDimension(String dimension)
   {
     return isEmpty() ? null : dimValues.get(dimension);
   }
 
+  @Override
   public Integer getDimensionIndex(String dimension)
   {
     return dimensionOrder.get(dimension);
   }
 
+  @Override
   public List<String> getMetricNames()
   {
     return metricNames;
   }
 
+  @Override
   public Integer getMetricIndex(String metricName)
   {
     return metricIndexes.get(metricName);
@@ -592,16 +589,19 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     return aggs[aggOffset].get(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
   }
 
+  @Override
   public ColumnCapabilities getCapabilities(String column)
   {
     return columnCapabilities.get(column);
   }
 
+  @Override
   public ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
   {
     return facts;
   }
 
+  @Override
   public ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end)
   {
     return facts.subMap(start, end);
@@ -676,11 +676,6 @@ public class OffheapIncrementalIndex implements IncrementalIndex
     DimensionHolder()
     {
       dimensions = Maps.newConcurrentMap();
-    }
-
-    void reset()
-    {
-      dimensions.clear();
     }
 
     DimDim add(String dimension)

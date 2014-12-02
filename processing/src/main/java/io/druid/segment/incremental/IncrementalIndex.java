@@ -62,7 +62,7 @@ public interface IncrementalIndex extends Iterable<Row>, Closeable
 
   boolean isEmpty();
 
-  ConcurrentNavigableMap<TimeAndDims,Integer> getSubMap(TimeAndDims start, TimeAndDims end);
+  ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end);
 
   Integer getMetricIndex(String columnName);
 

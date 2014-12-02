@@ -84,13 +84,13 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getFloat()");
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getFloat()");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getLong()");
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getLong()");
   }
 
   @Override

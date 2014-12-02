@@ -27,11 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -56,9 +53,6 @@ import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.io.Closeable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -161,12 +155,8 @@ public class OnheapIncrementalIndex implements IncrementalIndex
       columnCapabilities.put(spatialDimension.getDimName(), capabilities);
     }
     this.dimValues = new DimensionHolder();
-    this.facts = createFactsTable();
+    this.facts = new ConcurrentSkipListMap<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
-  }
-
-  protected ConcurrentNavigableMap<TimeAndDims, Integer> createFactsTable() {
-    return new ConcurrentSkipListMap<>();
   }
 
   public OnheapIncrementalIndex(
@@ -207,6 +197,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     );
   }
 
+  @Override
   public InputRow formatRow(InputRow row)
   {
     for (Function<InputRow, InputRow> rowTransformer : rowTransformers) {
@@ -231,6 +222,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
    *
    * @return the number of rows in the data set after adding the InputRow
    */
+  @Override
   public int add(InputRow row)
   {
     row = formatRow(row);
@@ -287,7 +279,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
     Integer rowOffset;
     synchronized (this) {
-      rowOffset =  numEntries.get();
+      rowOffset = numEntries.get();
       final Integer prev = facts.putIfAbsent(key, rowOffset);
       if (prev != null) {
         rowOffset = prev;
@@ -301,7 +293,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
                 @Override
                 public LongColumnSelector makeLongColumnSelector(final String columnName)
                 {
-                  if(columnName.equals(Column.TIME_COLUMN_NAME)){
+                  if (columnName.equals(Column.TIME_COLUMN_NAME)) {
                     return new LongColumnSelector()
                     {
                       @Override
@@ -459,11 +451,13 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     return numEntries.get();
   }
 
+  @Override
   public boolean isEmpty()
   {
     return numEntries.get() == 0;
   }
 
+  @Override
   public int size()
   {
     return numEntries.get();
@@ -487,12 +481,12 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     return aggList.get(rowOffset)[aggOffset].get();
   }
 
-  public long getMinTimeMillis()
+  private long getMinTimeMillis()
   {
     return facts.firstKey().getTimestamp();
   }
 
-  public long getMaxTimeMillis()
+  private long getMaxTimeMillis()
   {
     return facts.lastKey().getTimestamp();
   }
@@ -515,29 +509,22 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     return retVal;
   }
 
+  @Override
   public AggregatorFactory[] getMetricAggs()
   {
     return metrics;
   }
 
+  @Override
   public List<String> getDimensions()
   {
     return dimensions;
   }
 
+  @Override
   public String getMetricType(String metric)
   {
     return metricTypes.get(metric);
-  }
-
-  public long getMinTimestamp()
-  {
-    return minTimestamp;
-  }
-
-  public QueryGranularity getGranularity()
-  {
-    return gran;
   }
 
   public Interval getInterval()
@@ -575,11 +562,6 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     return metricIndexes.get(metricName);
   }
 
-  Aggregator getAggregator(int rowOffset, int metricIndex)
-  {
-    return aggList.get(rowOffset)[metricIndex];
-  }
-
   public ColumnCapabilities getCapabilities(String column)
   {
     return columnCapabilities.get(column);
@@ -601,6 +583,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     return iterableWithPostAggregations(null).iterator();
   }
 
+  @Override
   public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs)
   {
     return new Iterable<Row>()
@@ -649,6 +632,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
   @Override
   public void close()
   {
+    // Nothing to close
   }
 
   class DimensionHolder
@@ -658,11 +642,6 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     DimensionHolder()
     {
       dimensions = Maps.newConcurrentMap();
-    }
-
-    void reset()
-    {
-      dimensions.clear();
     }
 
     DimDim add(String dimension)
@@ -683,7 +662,8 @@ public class OnheapIncrementalIndex implements IncrementalIndex
     }
   }
 
-  private static class DimDimImpl implements DimDim{
+  private static class DimDimImpl implements DimDim
+  {
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
     private volatile String[] sortedVals = null;
@@ -699,6 +679,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
 
     /**
      * Returns the interned String value to allow fast comparisons using `==` instead of `.equals()`
+     *
      * @see io.druid.segment.incremental.IncrementalIndexStorageAdapter.EntryHolderValueMatcherFactory#makeValueMatcher(String, String)
      */
     public String get(String str)
@@ -772,7 +753,7 @@ public class OnheapIncrementalIndex implements IncrementalIndex
 
     public boolean compareCannonicalValues(String s1, String s2)
     {
-      return s1 ==s2;
+      return s1 == s2;
     }
   }
 }
