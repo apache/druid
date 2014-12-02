@@ -114,12 +114,21 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-      return new HadoopDruidIndexerConfig(
-          HadoopDruidIndexerConfig.jsonMapper.convertValue(
-              argSpec,
-              HadoopIngestionSpec.class
-          )
+    // Eventually PathSpec needs to get rid of its Hadoop dependency, then maybe this can be ingested directly without
+    // the Map<> intermediary
+    
+    if(argSpec.containsKey("spec")){
+      return HadoopDruidIndexerConfig.jsonMapper.convertValue(
+          argSpec,
+          HadoopDruidIndexerConfig.class
       );
+    }
+    return new HadoopDruidIndexerConfig(
+        HadoopDruidIndexerConfig.jsonMapper.convertValue(
+            argSpec,
+            HadoopIngestionSpec.class
+        )
+    );
   }
 
   @SuppressWarnings("unchecked")
@@ -142,12 +151,13 @@ public class HadoopDruidIndexerConfig
   @SuppressWarnings("unchecked")
   public static HadoopDruidIndexerConfig fromString(String str)
   {
+    // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
           (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
               str, new TypeReference<Map<String, Object>>()
-          {
-          }
+              {
+              }
           )
       );
     }
@@ -171,7 +181,7 @@ public class HadoopDruidIndexerConfig
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
-      final @JsonProperty("schema") HadoopIngestionSpec schema
+      final @JsonProperty("spec") HadoopIngestionSpec schema
   )
   {
     this.schema = schema;
@@ -202,7 +212,7 @@ public class HadoopDruidIndexerConfig
     this.rollupGran = schema.getDataSchema().getGranularitySpec().getQueryGranularity();
   }
 
-  @JsonProperty
+  @JsonProperty(value="spec")
   public HadoopIngestionSpec getSchema()
   {
     return schema;
