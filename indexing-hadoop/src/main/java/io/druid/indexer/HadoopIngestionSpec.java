@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 

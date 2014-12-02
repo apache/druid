@@ -27,6 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.indexer.path.PathSpec;
+import io.druid.indexer.path.StaticPathSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -160,6 +162,8 @@ public class HadoopDruidIndexerConfigTest
     for (int i = 0; i < partitionCount; i++) {
       specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, new DefaultObjectMapper()), i));
     }
+    final StaticPathSpec pathSpec = new StaticPathSpec();
+    pathSpec.paths = "bar";
 
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
         new DataSchema(
@@ -168,7 +172,7 @@ public class HadoopDruidIndexerConfigTest
             QueryGranularity.MINUTE,
             ImmutableList.of(new Interval("2010-01-01/P1D"))
         )
-        ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
+        ), new HadoopIOConfig(pathSpec, null, null),
         new HadoopTuningConfig(
             null,
             null,
