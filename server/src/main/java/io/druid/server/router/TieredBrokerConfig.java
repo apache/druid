@@ -34,8 +34,8 @@ import java.util.List;
  */
 public class TieredBrokerConfig
 {
-  public static final String DEFAULT_COORDINATOR_SERVICE_NAME = "druid:coordinator";
-  public static final String DEFAULT_BROKER_SERVICE_NAME = "druid:broker";
+  public static final String DEFAULT_COORDINATOR_SERVICE_NAME = "druid/coordinator";
+  public static final String DEFAULT_BROKER_SERVICE_NAME = "druid/broker";
 
   @JsonProperty
   @NotNull

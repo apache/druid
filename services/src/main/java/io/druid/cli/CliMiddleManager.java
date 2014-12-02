@@ -103,7 +103,7 @@ public class CliMiddleManager extends ServerRunnable
           public Worker getWorker(@Self DruidNode node, WorkerConfig config)
           {
             return new Worker(
-                node.getHost(),
+                node.getHostAndPort(),
                 config.getIp(),
                 config.getCapacity(),
                 config.getVersion()
