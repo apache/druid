@@ -61,6 +61,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -231,6 +232,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               stopTime - startTime,
               byteCount.get() / (0.0001 * (stopTime - startTime))
           );
+          try {
+            // An empty byte array is put at the end to give the SequenceInputStream.close() something to close out
+            // after done is set to true, regardless of the rest of the stream's state.
+            queue.put(new ByteArrayInputStream(new byte[0]));
+          }
+          catch (InterruptedException e) {
+            log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
+          }
           done.set(true);
           return ClientResponse.<InputStream>finished(clientResponse.getObj());
         }
