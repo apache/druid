@@ -67,7 +67,7 @@ public class PullDependencies implements Runnable
     try {
       final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
       for (final String coordinate : allCoordinates) {
-        Initialization.getClassLoaderForCoordinates(aetherClient, coordinate);
+        Initialization.getClassLoaderForCoordinates(aetherClient, coordinate, extensionsConfig.getDefaultVersion());
       }
     }
     catch (Exception e) {

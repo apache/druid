@@ -25,6 +25,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -36,20 +37,22 @@ import java.nio.LongBuffer;
 public class CompressedLongsSupplierSerializer
 {
   public static CompressedLongsSupplierSerializer create(
-      IOPeon ioPeon, final String filenameBase, final ByteOrder order
+      IOPeon ioPeon, final String filenameBase, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
     final CompressedLongsSupplierSerializer retVal = new CompressedLongsSupplierSerializer(
-        0xFFFF / Longs.BYTES,
+        CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
         new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
-            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order)
-        )
+            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER)
+        ),
+        compression
     );
     return retVal;
   }
 
   private final int sizePer;
   private final GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   private int numInserted = 0;
 
@@ -57,11 +60,13 @@ public class CompressedLongsSupplierSerializer
 
   public CompressedLongsSupplierSerializer(
       int sizePer,
-      GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener
+      GenericIndexedWriter<ResourceHolder<LongBuffer>> flattener,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.sizePer = sizePer;
     this.flattener = flattener;
+    this.compression = compression;
 
     endBuffer = LongBuffer.allocate(sizePer);
     endBuffer.mark();
@@ -103,6 +108,7 @@ public class CompressedLongsSupplierSerializer
       out.write(CompressedLongsIndexedSupplier.version);
       out.write(Ints.toByteArray(numInserted));
       out.write(Ints.toByteArray(sizePer));
+      out.write(new byte[]{compression.getId()});
       ByteStreams.copy(flattener.combineStreams(), out);
     }
   }

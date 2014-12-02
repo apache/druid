@@ -33,7 +33,7 @@ import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,13 +60,13 @@ import java.util.TreeSet;
 public class DatasourcesResource
 {
   private final InventoryView serverInventoryView;
-  private final DatabaseSegmentManager databaseSegmentManager;
+  private final MetadataSegmentManager databaseSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DatasourcesResource(
       InventoryView serverInventoryView,
-      DatabaseSegmentManager databaseSegmentManager,
+      MetadataSegmentManager databaseSegmentManager,
       @Nullable IndexingServiceClient indexingServiceClient
   )
   {
@@ -128,7 +128,7 @@ public class DatasourcesResource
       @QueryParam("full") final String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -197,7 +197,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    final DruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();
@@ -258,7 +258,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    final DruidDataSource dataSource = getDataSource(dataSourceName);
     final Interval theInterval = new Interval(interval.replace("_", "/"));
 
     if (dataSource == null) {
@@ -323,7 +323,7 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -356,7 +356,7 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = getDataSource(dataSourceName.toLowerCase());
+    DruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
       return Response.noContent().build();
     }

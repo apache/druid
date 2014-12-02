@@ -33,6 +33,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.IncrementalIndexSegment;
@@ -43,6 +44,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
 
 public class TimeseriesQueryRunnerBonusTest
@@ -51,7 +53,8 @@ public class TimeseriesQueryRunnerBonusTest
   public void testOneRowAtATime() throws Exception
   {
     final IncrementalIndex oneRowIndex = new IncrementalIndex(
-        new DateTime("2012-01-01T00:00:00Z").getMillis(), QueryGranularity.NONE, new AggregatorFactory[]{}
+        new DateTime("2012-01-01T00:00:00Z").getMillis(), QueryGranularity.NONE, new AggregatorFactory[]{},
+        TestQueryRunners.pool
     );
 
     List<Result<TimeseriesResultValue>> results;
@@ -110,9 +113,9 @@ public class TimeseriesQueryRunnerBonusTest
                                       )
                                   )
                                   .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     return Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
   }

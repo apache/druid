@@ -19,7 +19,6 @@
 
 package io.druid.guice;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -34,13 +33,13 @@ import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
+import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -99,31 +98,8 @@ public class DruidProcessingModule implements Module
       log.info(e.getMessage());
     }
 
-    return new IntermediateProcessingBufferPool(config.intermediateComputeSizeBytes());
+    return new OffheapBufferPool(config.intermediateComputeSizeBytes());
   }
 
-  private static class IntermediateProcessingBufferPool extends StupidPool<ByteBuffer>
-  {
-    private static final Logger log = new Logger(IntermediateProcessingBufferPool.class);
 
-    public IntermediateProcessingBufferPool(final int computationBufferSize)
-    {
-      super(
-          new Supplier<ByteBuffer>()
-          {
-            final AtomicLong count = new AtomicLong(0);
-
-            @Override
-            public ByteBuffer get()
-            {
-              log.info(
-                  "Allocating new intermediate processing buffer[%,d] of size[%,d]",
-                  count.getAndIncrement(), computationBufferSize
-              );
-              return ByteBuffer.allocateDirect(computationBufferSize);
-            }
-          }
-      );
-    }
-  }
 }

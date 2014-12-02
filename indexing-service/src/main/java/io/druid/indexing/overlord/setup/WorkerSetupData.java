@@ -21,9 +21,12 @@ package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.indexing.overlord.autoscaling.ec2.EC2NodeData;
+import io.druid.indexing.overlord.autoscaling.ec2.EC2UserData;
 
 /**
  */
+@Deprecated
 public class WorkerSetupData
 {
   public static final String CONFIG_KEY = "worker.setup";

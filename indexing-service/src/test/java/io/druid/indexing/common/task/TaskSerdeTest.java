@@ -25,19 +25,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
-import io.druid.data.input.impl.JSONDataSpec;
-import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
+import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
-import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import io.druid.segment.realtime.Schema;
+import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
@@ -56,19 +61,20 @@ public class TaskSerdeTest
   {
     final IndexTask task = new IndexTask(
         null,
-        null,
-        "foo",
-        new UniformGranularitySpec(
-            Granularity.DAY,
-            null,
-            ImmutableList.of(new Interval("2010-01-01/P2D")),
-            Granularity.DAY
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularity.DAY,
+                    null,
+                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                )
+            ),
+            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
+            new IndexTask.IndexTuningConfig(10000, -1, -1)
         ),
-        new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-        QueryGranularity.NONE,
-        10000,
-        new LocalFirehoseFactory(new File("lol"), "rofl", null),
-        -1,
         jsonMapper
     );
 
@@ -196,18 +202,40 @@ public class TaskSerdeTest
   @Test
   public void testRealtimeIndexTaskSerde() throws Exception
   {
+
     final RealtimeIndexTask task = new RealtimeIndexTask(
         null,
         new TaskResource("rofl", 2),
-        null,
-        new Schema("foo", null, new AggregatorFactory[0], QueryGranularity.NONE, new NoneShardSpec()),
-        null,
-        null,
-        new Period("PT10M"),
-        1,
-        Granularity.HOUR,
-        null,
-        null
+        new FireDepartment(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[0],
+                new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
+            ),
+            new RealtimeIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
+            {
+              @Override
+              public Plumber findPlumber(
+                  DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+              )
+              {
+                return null;
+              }
+            }),
+            new RealtimeTuningConfig(
+                1,
+                new Period("PT10M"),
+                null,
+                null,
+                null,
+                null,
+                1,
+                new NoneShardSpec(),
+                false,
+                false
+            )
+        )
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -241,51 +269,6 @@ public class TaskSerdeTest
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
         task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
-  }
-
-  @Test
-  public void testDeleteTaskSerde() throws Exception
-  {
-    final DeleteTask task = new DeleteTask(
-        null,
-        "foo",
-        new Interval("2010-01-01/P1D")
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final DeleteTask task2 = (DeleteTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-  }
-
-  @Test
-  public void testDeleteTaskFromJson() throws Exception
-  {
-    final DeleteTask task = (DeleteTask) jsonMapper.readValue(
-        "{\"type\":\"delete\",\"dataSource\":\"foo\",\"interval\":\"2010-01-01/P1D\"}",
-        Task.class
-    );
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final DeleteTask task2 = (DeleteTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertNotNull(task.getId());
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
   }
 
   @Test
@@ -336,7 +319,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
   }
-
 
   @Test
   public void testRestoreTaskSerde() throws Exception
@@ -392,38 +374,14 @@ public class TaskSerdeTest
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
-        null,
         new HadoopIngestionSpec(
-            null, null, null,
-            "foo",
-            new TimestampSpec("timestamp", "auto"),
-            new JSONDataSpec(ImmutableList.of("foo"), null),
-            new UniformGranularitySpec(
+            new DataSchema(
+                "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
                 Granularity.DAY,
                 null,
-                ImmutableList.of(new Interval("2010-01-01/P1D")),
-                Granularity.DAY
-            ),
-            ImmutableMap.<String, Object>of("paths", "bar"),
-            null,
-            null,
-            null,
-            null,
-            false,
-            true,
-            null,
-            false,
-            new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.NONE),
-            null,
-            false,
-            ImmutableMap.of("foo", "bar"),
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
+                ImmutableList.of(new Interval("2010-01-01/P1D"))
+            )
+            ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
         ),
         null,
         null,

@@ -136,7 +136,7 @@ public class RealtimePlumberSchoolTest
           }
         },
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);
@@ -165,6 +165,8 @@ public class RealtimePlumberSchoolTest
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,
+        null,
+        null,
         null
     );
 
@@ -175,14 +177,7 @@ public class RealtimePlumberSchoolTest
         announcer,
         segmentPublisher,
         serverView,
-        MoreExecutors.sameThreadExecutor(),
-        new Period("PT10m"),
-        tmpDir,
-        Granularity.HOUR,
-        new IntervalStartVersioningPolicy(),
-        rejectionPolicy,
-        null,
-        0
+        MoreExecutors.sameThreadExecutor()
     );
 
     plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, new FireDepartmentMetrics());

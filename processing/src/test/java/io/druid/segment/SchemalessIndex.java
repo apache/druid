@@ -33,6 +33,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -133,7 +134,7 @@ public class SchemalessIndex
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new IncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS);
+          theIndex = new IncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS, TestQueryRunners.pool);
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -330,7 +331,7 @@ public class SchemalessIndex
           }
 
           final IncrementalIndex rowIndex = new IncrementalIndex(
-              timestamp, QueryGranularity.MINUTE, METRIC_AGGS
+              timestamp, QueryGranularity.MINUTE, METRIC_AGGS, TestQueryRunners.pool
           );
 
           rowIndex.add(
@@ -360,7 +361,7 @@ public class SchemalessIndex
     log.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new IncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs
+        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs, TestQueryRunners.pool
     );
 
     try {

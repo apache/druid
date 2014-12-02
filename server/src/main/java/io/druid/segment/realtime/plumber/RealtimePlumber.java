@@ -33,6 +33,7 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
@@ -56,6 +57,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -93,6 +95,7 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService persistExecutor = null;
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
+
 
   public RealtimePlumber(
       DataSchema schema,
@@ -248,7 +251,19 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
-                                            return factory.createRunner(input.getSegment());
+                                            // Prevent the underlying segment from closing when its being iterated
+                                            final Closeable closeable = input.getSegment().increment();
+                                            try {
+                                              return factory.createRunner(input.getSegment());
+                                            }
+                                            finally {
+                                              try {
+                                                closeable.close();
+                                              }
+                                              catch (IOException e) {
+                                                throw Throwables.propagate(e);
+                                              }
+                                            }
                                           }
                                         }
                                     )
@@ -310,7 +325,13 @@ public class RealtimePlumber implements Plumber
           {
             final Interval interval = sink.getInterval();
 
-            // use a file to indicate that pushing has completed
+            // Bail out if this sink has been abandoned by a previously-executed task.
+            if (sinks.get(truncatedTime) != sink) {
+              log.info("Sink[%s] was abandoned, bailing out of persist-n-merge.", sink);
+              return;
+            }
+
+            // Use a file to indicate that pushing has completed.
             final File persistDir = computePersistDir(schema, interval);
             final File mergedTarget = new File(persistDir, "merged");
             final File isPushedMarker = new File(persistDir, "isPushedMarker");
@@ -345,11 +366,20 @@ public class RealtimePlumber implements Plumber
                 indexes.add(queryableIndex);
               }
 
-              final File mergedFile = IndexMerger.mergeQueryableIndex(
-                  indexes,
-                  schema.getAggregators(),
-                  mergedTarget
-              );
+              final File mergedFile;
+              if (config.isPersistInHeap()) {
+                mergedFile = IndexMaker.mergeQueryableIndex(
+                    indexes,
+                    schema.getAggregators(),
+                    mergedTarget
+                );
+              } else {
+                mergedFile = IndexMerger.mergeQueryableIndex(
+                    indexes,
+                    schema.getAggregators(),
+                    mergedTarget
+                );
+              }
 
               QueryableIndex index = IndexIO.loadIndex(mergedFile);
 
@@ -729,10 +759,18 @@ public class RealtimePlumber implements Plumber
       try {
         int numRows = indexToPersist.getIndex().size();
 
-        File persistedFile = IndexMerger.persist(
-            indexToPersist.getIndex(),
-            new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
-        );
+        final File persistedFile;
+        if (config.isPersistInHeap()) {
+          persistedFile = IndexMaker.persist(
+              indexToPersist.getIndex(),
+              new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
+          );
+        } else {
+          persistedFile = IndexMerger.persist(
+              indexToPersist.getIndex(),
+              new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount()))
+          );
+        }
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
@@ -740,7 +778,6 @@ public class RealtimePlumber implements Plumber
                 IndexIO.loadIndex(persistedFile)
             )
         );
-
         return numRows;
       }
       catch (IOException e) {

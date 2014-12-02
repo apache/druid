@@ -29,23 +29,23 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultiset;
-import com.google.common.primitives.Ints;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
+import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
-import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
 import io.druid.segment.indexing.IngestionSpec;
@@ -59,7 +59,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
-import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -67,7 +66,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -76,32 +74,43 @@ public class IndexTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(IndexTask.class);
 
-  private static String makeId(String id, IndexIngestionSpec ingestionSchema, String dataSource)
+  private static HashFunction hashFunction = Hashing.murmur3_128();
+
+  /**
+   * Should we index this inputRow? Decision is based on our interval and shardSpec.
+   *
+   * @param inputRow the row to check
+   *
+   * @return true or false
+   */
+  private static boolean shouldIndex(
+      final ShardSpec shardSpec,
+      final Interval interval,
+      final InputRow inputRow,
+      final QueryGranularity rollupGran
+  )
+  {
+    return interval.contains(inputRow.getTimestampFromEpoch())
+           && shardSpec.isInChunk(rollupGran.truncate(inputRow.getTimestampFromEpoch()), inputRow);
+  }
+
+  private static String makeId(String id, IndexIngestionSpec ingestionSchema)
   {
     if (id == null) {
-      return String.format("index_%s_%s", makeDataSource(ingestionSchema, dataSource), new DateTime().toString());
+      return String.format("index_%s_%s", makeDataSource(ingestionSchema), new DateTime().toString());
     }
 
     return id;
   }
 
-  private static String makeDataSource(IndexIngestionSpec ingestionSchema, String dataSource)
+  private static String makeDataSource(IndexIngestionSpec ingestionSchema)
   {
-    if (ingestionSchema != null) {
-      return ingestionSchema.getDataSchema().getDataSource();
-    } else { // Backwards compatible
-      return dataSource;
-    }
+    return ingestionSchema.getDataSchema().getDataSource();
   }
 
-  private static Interval makeInterval(IndexIngestionSpec ingestionSchema, GranularitySpec granularitySpec)
+  private static Interval makeInterval(IndexIngestionSpec ingestionSchema)
   {
-    GranularitySpec spec;
-    if (ingestionSchema != null) {
-      spec = ingestionSchema.getDataSchema().getGranularitySpec();
-    } else {
-      spec = granularitySpec;
-    }
+    GranularitySpec spec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     return new Interval(
         spec.bucketIntervals().get().first().getStart(),
@@ -117,39 +126,19 @@ public class IndexTask extends AbstractFixedIntervalTask
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("schema") IndexIngestionSpec ingestionSchema,
-      // Backwards Compatible
-      @JsonProperty("dataSource") final String dataSource,
-      @JsonProperty("granularitySpec") final GranularitySpec granularitySpec,
-      @JsonProperty("aggregators") final AggregatorFactory[] aggregators,
-      @JsonProperty("indexGranularity") final QueryGranularity indexGranularity,
-      @JsonProperty("targetPartitionSize") final int targetPartitionSize,
-      @JsonProperty("firehose") final FirehoseFactory firehoseFactory,
-      @JsonProperty("rowFlushBoundary") final int rowFlushBoundary,
+      @JsonProperty("spec") IndexIngestionSpec ingestionSchema,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(
         // _not_ the version, just something uniqueish
-        makeId(id, ingestionSchema, dataSource),
-        makeDataSource(ingestionSchema, dataSource),
-        makeInterval(ingestionSchema, granularitySpec)
+        makeId(id, ingestionSchema),
+        makeDataSource(ingestionSchema),
+        makeInterval(ingestionSchema)
     );
 
-    if (ingestionSchema != null) {
-      this.ingestionSchema = ingestionSchema;
-    } else { // Backwards Compatible
-      this.ingestionSchema = new IndexIngestionSpec(
-          new DataSchema(
-              dataSource,
-              firehoseFactory.getParser(),
-              aggregators,
-              granularitySpec.withQueryGranularity(indexGranularity == null ? QueryGranularity.NONE : indexGranularity)
-          ),
-          new IndexIOConfig(firehoseFactory),
-          new IndexTuningConfig(targetPartitionSize, rowFlushBoundary, null)
-      );
-    }
+
+    this.ingestionSchema = ingestionSchema;
     this.jsonMapper = jsonMapper;
   }
 
@@ -159,7 +148,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     return "index";
   }
 
-  @JsonProperty("schema")
+  @JsonProperty("spec")
   public IndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
@@ -182,7 +171,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     for (final Interval bucket : validIntervals) {
       final List<ShardSpec> shardSpecs;
       if (targetPartitionSize > 0) {
-        shardSpecs = determinePartitions(bucket, targetPartitionSize);
+        shardSpecs = determinePartitions(bucket, targetPartitionSize, granularitySpec.getQueryGranularity());
       } else {
         int numShards = ingestionSchema.getTuningConfig().getNumShards();
         if (numShards > 0) {
@@ -229,7 +218,8 @@ public class IndexTask extends AbstractFixedIntervalTask
 
   private List<ShardSpec> determinePartitions(
       final Interval interval,
-      final int targetPartitionSize
+      final int targetPartitionSize,
+      final QueryGranularity queryGranularity
   ) throws IOException
   {
     log.info("Determining partitions for interval[%s] with targetPartitionSize[%d]", interval, targetPartitionSize);
@@ -237,113 +227,49 @@ public class IndexTask extends AbstractFixedIntervalTask
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
     // The implementation of this determine partitions stuff is less than optimal.  Should be done better.
-
-    // Blacklist dimensions that have multiple values per row
-    final Set<String> unusableDimensions = com.google.common.collect.Sets.newHashSet();
-    // Track values of all non-blacklisted dimensions
-    final Map<String, TreeMultiset<String>> dimensionValueMultisets = Maps.newHashMap();
+    // Use HLL to estimate number of rows
+    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
     // Load data
     try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         if (interval.contains(inputRow.getTimestampFromEpoch())) {
-          // Extract dimensions from event
-          for (final String dim : inputRow.getDimensions()) {
-            final List<String> dimValues = inputRow.getDimension(dim);
-            if (!unusableDimensions.contains(dim)) {
-              if (dimValues.size() == 1) {
-                // Track this value
-                TreeMultiset<String> dimensionValueMultiset = dimensionValueMultisets.get(dim);
-                if (dimensionValueMultiset == null) {
-                  dimensionValueMultiset = TreeMultiset.create();
-                  dimensionValueMultisets.put(dim, dimensionValueMultiset);
-                }
-                dimensionValueMultiset.add(dimValues.get(0));
-              } else {
-                // Only single-valued dimensions can be used for partitions
-                unusableDimensions.add(dim);
-                dimensionValueMultisets.remove(dim);
-              }
-            }
-          }
+          final List<Object> groupKey = Rows.toGroupKey(
+              queryGranularity.truncate(inputRow.getTimestampFromEpoch()),
+              inputRow
+          );
+          collector.add(
+              hashFunction.hashBytes(HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(groupKey))
+                          .asBytes()
+          );
         }
       }
     }
 
+    final double numRows = collector.estimateCardinality();
+    log.info("Estimated approximately [%,f] rows of data.", numRows);
+
+    int numberOfShards = (int) Math.ceil(numRows / targetPartitionSize);
+    if ((double) numberOfShards > numRows) {
+      numberOfShards = (int) numRows;
+    }
+    log.info("Will require [%,d] shard(s).", numberOfShards);
+
     // ShardSpecs we will return
     final List<ShardSpec> shardSpecs = Lists.newArrayList();
 
-    // Select highest-cardinality dimension
-    Ordering<Map.Entry<String, TreeMultiset<String>>> byCardinalityOrdering = new Ordering<Map.Entry<String, TreeMultiset<String>>>()
-    {
-      @Override
-      public int compare(
-          Map.Entry<String, TreeMultiset<String>> left,
-          Map.Entry<String, TreeMultiset<String>> right
-      )
-      {
-        return Ints.compare(left.getValue().elementSet().size(), right.getValue().elementSet().size());
-      }
-    };
-
-    if (dimensionValueMultisets.isEmpty()) {
-      // No suitable partition dimension. We'll make one big segment and hope for the best.
-      log.info("No suitable partition dimension found");
+    if (numberOfShards == 1) {
       shardSpecs.add(new NoneShardSpec());
     } else {
-      // Find best partition dimension (heuristic: highest cardinality).
-      final Map.Entry<String, TreeMultiset<String>> partitionEntry =
-          byCardinalityOrdering.max(dimensionValueMultisets.entrySet());
-
-      final String partitionDim = partitionEntry.getKey();
-      final TreeMultiset<String> partitionDimValues = partitionEntry.getValue();
-
-      log.info(
-          "Partitioning on dimension[%s] with cardinality[%d] over rows[%d]",
-          partitionDim,
-          partitionDimValues.elementSet().size(),
-          partitionDimValues.size()
-      );
-
-      // Iterate over unique partition dimension values in sorted order
-      String currentPartitionStart = null;
-      int currentPartitionSize = 0;
-      for (final String partitionDimValue : partitionDimValues.elementSet()) {
-        currentPartitionSize += partitionDimValues.count(partitionDimValue);
-        if (currentPartitionSize >= targetPartitionSize) {
-          final ShardSpec shardSpec = new SingleDimensionShardSpec(
-              partitionDim,
-              currentPartitionStart,
-              partitionDimValue,
-              shardSpecs.size()
-          );
-
-          log.info("Adding shard: %s", shardSpec);
-          shardSpecs.add(shardSpec);
-
-          currentPartitionSize = partitionDimValues.count(partitionDimValue);
-          currentPartitionStart = partitionDimValue;
-        }
-      }
-
-      if (currentPartitionSize > 0) {
-        // One last shard to go
-        final ShardSpec shardSpec;
-
-        if (shardSpecs.isEmpty()) {
-          shardSpec = new NoneShardSpec();
-        } else {
-          shardSpec = new SingleDimensionShardSpec(
-              partitionDim,
-              currentPartitionStart,
-              null,
-              shardSpecs.size()
-          );
-        }
-
-        log.info("Adding shard: %s", shardSpec);
-        shardSpecs.add(shardSpec);
+      for (int i = 0; i < numberOfShards; ++i) {
+        shardSpecs.add(
+            new HashBasedNumberedShardSpec(
+                i,
+                numberOfShards,
+                HadoopDruidIndexerConfig.jsonMapper
+            )
+        );
       }
     }
 
@@ -401,7 +327,11 @@ public class IndexTask extends AbstractFixedIntervalTask
         version,
         wrappedDataSegmentPusher,
         tmpDir
-    ).findPlumber(schema, new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec), metrics);
+    ).findPlumber(
+        schema,
+        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec, null, null),
+        metrics
+    );
 
     // rowFlushBoundary for this job
     final int myRowFlushBoundary = rowFlushBoundary > 0
@@ -460,24 +390,6 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     // We expect a single segment to have been created.
     return Iterables.getOnlyElement(pushedSegments);
-  }
-
-  /**
-   * Should we index this inputRow? Decision is based on our interval and shardSpec.
-   *
-   * @param inputRow the row to check
-   *
-   * @return true or false
-   */
-  private static boolean shouldIndex(
-      final ShardSpec shardSpec,
-      final Interval interval,
-      final InputRow inputRow,
-      final QueryGranularity rollupGran
-  )
-  {
-    return interval.contains(inputRow.getTimestampFromEpoch())
-           && shardSpec.isInChunk(rollupGran.truncate(inputRow.getTimestampFromEpoch()), inputRow);
   }
 
   public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>
@@ -557,7 +469,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
         @JsonProperty("numShards") @Nullable Integer numShards
-        )
+    )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
       this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;

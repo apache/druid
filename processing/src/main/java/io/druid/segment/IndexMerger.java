@@ -19,9 +19,11 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -32,6 +34,12 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
@@ -48,11 +56,16 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.ToLowerCaseAggregatorFactory;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
@@ -67,8 +80,6 @@ import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.serde.ComplexMetricColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -99,6 +110,27 @@ public class IndexMerger
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
 
+  private static final ObjectMapper mapper;
+  private static final BitmapSerdeFactory bitmapSerdeFactory;
+
+  static {
+    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
+              }
+            }
+        )
+    );
+    mapper = injector.getInstance(ObjectMapper.class);
+    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
+  }
+
+
   public static File persist(final IncrementalIndex index, File outDir) throws IOException
   {
     return persist(index, index.getInterval(), outDir);
@@ -113,11 +145,12 @@ public class IndexMerger
    * @param outDir       the directory to persist the data to
    *
    * @return the index output directory
+   *
    * @throws java.io.IOException if an IO error occurs persisting the index
    */
   public static File persist(final IncrementalIndex index, final Interval dataInterval, File outDir) throws IOException
   {
-    return persist(index, dataInterval, outDir, new NoopProgressIndicator());
+    return persist(index, dataInterval, outDir, new BaseProgressIndicator());
   }
 
   public static File persist(
@@ -148,7 +181,13 @@ public class IndexMerger
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Arrays.<IndexableAdapter>asList(new IncrementalIndexAdapter(dataInterval, index)),
+        Arrays.<IndexableAdapter>asList(
+            new IncrementalIndexAdapter(
+                dataInterval,
+                index,
+                bitmapSerdeFactory.getBitmapFactory()
+            )
+        ),
         index.getMetricAggs(),
         outDir,
         progress
@@ -159,7 +198,7 @@ public class IndexMerger
       List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return mergeQueryableIndex(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return mergeQueryableIndex(indexes, metricAggs, outDir, new BaseProgressIndicator());
   }
 
   public static File mergeQueryableIndex(
@@ -188,7 +227,7 @@ public class IndexMerger
       List<IndexableAdapter> indexes, final AggregatorFactory[] metricAggs, File outDir
   ) throws IOException
   {
-    return merge(indexes, metricAggs, outDir, new NoopProgressIndicator());
+    return merge(indexes, metricAggs, outDir, new BaseProgressIndicator());
   }
 
   public static File merge(
@@ -200,11 +239,6 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-    final AggregatorFactory[] lowerCaseMetricAggs = new AggregatorFactory[metricAggs.length];
-    for (int i = 0; i < metricAggs.length; i++) {
-      lowerCaseMetricAggs[i] = new ToLowerCaseAggregatorFactory(metricAggs[i]);
-    }
-
     final List<String> mergedDimensions = mergeIndexed(
         Lists.transform(
             indexes,
@@ -213,24 +247,14 @@ public class IndexMerger
               @Override
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getAvailableDimensions(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input.toLowerCase();
-                      }
-                    }
-                );
+                return input.getDimensionNames();
               }
             }
         )
     );
     final List<String> mergedMetrics = Lists.transform(
         mergeIndexed(
-            Lists.<Iterable<String>>newArrayList(
+            Lists.newArrayList(
                 FunctionalIterable
                     .create(indexes)
                     .transform(
@@ -239,21 +263,11 @@ public class IndexMerger
                           @Override
                           public Iterable<String> apply(@Nullable IndexableAdapter input)
                           {
-                            return Iterables.transform(
-                                input.getAvailableMetrics(),
-                                new Function<String, String>()
-                                {
-                                  @Override
-                                  public String apply(@Nullable String input)
-                                  {
-                                    return input.toLowerCase();
-                                  }
-                                }
-                            );
+                            return input.getMetricNames();
                           }
                         }
                     )
-                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(lowerCaseMetricAggs)))
+                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(metricAggs)))
             )
         ),
         new Function<String, String>()
@@ -261,17 +275,17 @@ public class IndexMerger
           @Override
           public String apply(@Nullable String input)
           {
-            return input.toLowerCase();
+            return input;
           }
         }
     );
-    if (mergedMetrics.size() != lowerCaseMetricAggs.length) {
-      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), lowerCaseMetricAggs.length);
+    if (mergedMetrics.size() != metricAggs.length) {
+      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), metricAggs.length);
     }
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
-    for (int i = 0; i < lowerCaseMetricAggs.length; i++) {
-      AggregatorFactory metricAgg = lowerCaseMetricAggs[i];
+    for (int i = 0; i < metricAggs.length; i++) {
+      AggregatorFactory metricAgg = metricAggs[i];
       sortedMetricAggs[mergedMetrics.indexOf(metricAgg.getName())] = metricAgg;
     }
 
@@ -280,7 +294,7 @@ public class IndexMerger
         throw new IAE(
             "Metric mismatch, index[%d] [%s] != [%s]",
             i,
-            lowerCaseMetricAggs[i].getName(),
+            metricAggs[i].getName(),
             mergedMetrics.get(i)
         );
       }
@@ -311,7 +325,7 @@ public class IndexMerger
       List<IndexableAdapter> indexes, File outDir
   ) throws IOException
   {
-    return append(indexes, outDir, new NoopProgressIndicator());
+    return append(indexes, outDir, new BaseProgressIndicator());
   }
 
   public static File append(
@@ -332,13 +346,13 @@ public class IndexMerger
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
                 return Iterables.transform(
-                    input.getAvailableDimensions(),
+                    input.getDimensionNames(),
                     new Function<String, String>()
                     {
                       @Override
                       public String apply(@Nullable String input)
                       {
-                        return input.toLowerCase();
+                        return input;
                       }
                     }
                 );
@@ -355,13 +369,13 @@ public class IndexMerger
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
                 return Iterables.transform(
-                    input.getAvailableMetrics(),
+                    input.getMetricNames(),
                     new Function<String, String>()
                     {
                       @Override
                       public String apply(@Nullable String input)
                       {
-                        return input.toLowerCase();
+                        return input;
                       }
                     }
                 );
@@ -396,12 +410,34 @@ public class IndexMerger
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
   ) throws IOException
   {
-    Map<String, String> metricTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+    final Map<String, ValueType> valueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+    final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+    final Map<String, ColumnCapabilitiesImpl> columnCapabilities = Maps.newHashMap();
+
     for (IndexableAdapter adapter : indexes) {
-      for (String metric : adapter.getAvailableMetrics()) {
-        metricTypes.put(metric, adapter.getMetricType(metric));
+      for (String dimension : adapter.getDimensionNames()) {
+        ColumnCapabilitiesImpl mergedCapabilities = columnCapabilities.get(dimension);
+        ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
+        if (mergedCapabilities == null) {
+          mergedCapabilities = new ColumnCapabilitiesImpl();
+          mergedCapabilities.setType(ValueType.STRING);
+        }
+        columnCapabilities.put(dimension, mergedCapabilities.merge(capabilities));
+      }
+      for (String metric : adapter.getMetricNames()) {
+        ColumnCapabilitiesImpl mergedCapabilities = columnCapabilities.get(metric);
+        ColumnCapabilities capabilities = adapter.getCapabilities(metric);
+        if (mergedCapabilities == null) {
+          mergedCapabilities = new ColumnCapabilitiesImpl();
+        }
+        columnCapabilities.put(metric, mergedCapabilities.merge(capabilities));
+
+        valueTypes.put(metric, capabilities.getType());
+        metricTypeNames.put(metric, adapter.getMetricType(metric));
       }
     }
+
+
     final Interval dataInterval;
     File v8OutDir = new File(outDir, "v8-tmp");
     v8OutDir.mkdirs();
@@ -431,6 +467,7 @@ public class IndexMerger
 
       dataInterval = new Interval(minTime, maxTime);
       serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
+      serializerUtils.writeString(channel, mapper.writeValueAsString(bitmapSerdeFactory));
     }
     finally {
       CloseQuietly.close(channel);
@@ -540,14 +577,14 @@ public class IndexMerger
 
       final int[] dimLookup = new int[mergedDimensions.size()];
       int count = 0;
-      for (String dim : adapter.getAvailableDimensions()) {
-        dimLookup[count] = mergedDimensions.indexOf(dim.toLowerCase());
+      for (String dim : adapter.getDimensionNames()) {
+        dimLookup[count] = mergedDimensions.indexOf(dim);
         count++;
       }
 
       final int[] metricLookup = new int[mergedMetrics.size()];
       count = 0;
-      for (String metric : adapter.getAvailableMetrics()) {
+      for (String metric : adapter.getMetricNames()) {
         metricLookup[count] = mergedMetrics.indexOf(metric);
         count++;
       }
@@ -579,8 +616,7 @@ public class IndexMerger
                           input.getTimestamp(),
                           newDims,
                           newMetrics,
-                          input.getRowNum(),
-                          input.getDescriptions()
+                          input.getRowNum()
                       );
                     }
                   }
@@ -593,7 +629,7 @@ public class IndexMerger
     Iterable<Rowboat> theRows = rowMergerFn.apply(boats);
 
     CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
-        ioPeon, "little_end_time", IndexIO.BYTE_ORDER
+        ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
     );
 
     timeWriter.open();
@@ -606,21 +642,30 @@ public class IndexMerger
     }
 
     ArrayList<MetricColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    for (Map.Entry<String, String> entry : metricTypes.entrySet()) {
-      String metric = entry.getKey();
-      String typeName = entry.getValue();
-      if ("float".equals(typeName)) {
-        metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
-      } else {
-        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+    for (String metric : mergedMetrics) {
+      ValueType type = valueTypes.get(metric);
+      switch (type) {
+        case LONG:
+          metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case FLOAT:
+          metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case COMPLEX:
+          final String typeName = metricTypeNames.get(metric);
+          ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
 
-        if (serde == null) {
-          throw new ISE("Unknown type[%s]", typeName);
-        }
+          if (serde == null) {
+            throw new ISE("Unknown type[%s]", typeName);
+          }
 
-        metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+          metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+          break;
+        default:
+          throw new ISE("Unknown type[%s]", type);
       }
     }
+
     for (MetricColumnSerializer metWriter : metWriters) {
       metWriter.open();
     }
@@ -634,7 +679,6 @@ public class IndexMerger
       rowNumConversions.add(IntBuffer.wrap(arr));
     }
 
-    final Map<String, String> descriptions = Maps.newHashMap();
     for (Rowboat theRow : theRows) {
       progress.progress();
       timeWriter.add(theRow.getTimestamp());
@@ -669,8 +713,6 @@ public class IndexMerger
         );
         time = System.currentTimeMillis();
       }
-
-      descriptions.putAll(theRow.getDescriptions());
     }
 
     for (IntBuffer rowNumConversion : rowNumConversions) {
@@ -724,21 +766,22 @@ public class IndexMerger
       Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.stringStrategy);
       log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
-      GenericIndexedWriter<ImmutableConciseSet> writer = new GenericIndexedWriter<ImmutableConciseSet>(
-          ioPeon, dimension, ConciseCompressedIndexedInts.objectStrategy
+      GenericIndexedWriter<ImmutableBitmap> writer = new GenericIndexedWriter<>(
+          ioPeon, dimension, bitmapSerdeFactory.getObjectStrategy()
       );
       writer.open();
 
-      boolean isSpatialDim = "spatial".equals(descriptions.get(dimension));
+      boolean isSpatialDim = columnCapabilities.get(dimension).hasSpatialIndexes();
       ByteBufferWriter<ImmutableRTree> spatialWriter = null;
       RTree tree = null;
       IOPeon spatialIoPeon = new TmpFileIOPeon();
       if (isSpatialDim) {
+        BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
         spatialWriter = new ByteBufferWriter<ImmutableRTree>(
-            spatialIoPeon, dimension, IndexedRTree.objectStrategy
+            spatialIoPeon, dimension, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory)
         );
         spatialWriter.open();
-        tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50));
+        tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
       }
 
       for (String dimVal : IndexedIterable.create(dimVals)) {
@@ -747,12 +790,12 @@ public class IndexMerger
         for (int j = 0; j < indexes.size(); ++j) {
           convertedInverteds.add(
               new ConvertingIndexedInts(
-                  indexes.get(j).getInverteds(dimension, dimVal), rowNumConversions.get(j)
+                  indexes.get(j).getBitmapIndex(dimension, dimVal), rowNumConversions.get(j)
               )
           );
         }
 
-        ConciseSet bitset = new ConciseSet();
+        MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
         for (Integer row : CombiningIterable.createSplatted(
             convertedInverteds,
             Ordering.<Integer>natural().nullsFirst()
@@ -762,7 +805,9 @@ public class IndexMerger
           }
         }
 
-        writer.write(ImmutableConciseSet.newImmutableFromMutable(bitset));
+        writer.write(
+            bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(bitset)
+        );
 
         if (isSpatialDim && dimVal != null) {
           List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
@@ -873,6 +918,9 @@ public class IndexMerger
       availableMetrics.writeToChannel(channel);
       serializerUtils.writeString(
           channel, String.format("%s/%s", dataInterval.getStart(), dataInterval.getEnd())
+      );
+      serializerUtils.writeString(
+          channel, mapper.writeValueAsString(bitmapSerdeFactory)
       );
     }
     finally {
@@ -1067,8 +1115,7 @@ public class IndexMerger
                   input.getTimestamp(),
                   newDims,
                   input.getMetrics(),
-                  input.getRowNum(),
-                  input.getDescriptions()
+                  input.getRowNum()
               );
 
               retVal.addRow(indexNumber, input.getRowNum());
@@ -1148,8 +1195,7 @@ public class IndexMerger
           lhs.getTimestamp(),
           lhs.getDims(),
           metrics,
-          lhs.getRowNum(),
-          lhs.getDescriptions()
+          lhs.getRowNum()
       );
 
       for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
@@ -1162,16 +1208,5 @@ public class IndexMerger
 
       return retVal;
     }
-  }
-
-  public static interface ProgressIndicator
-  {
-    public void progress();
-  }
-
-  private static class NoopProgressIndicator implements ProgressIndicator
-  {
-    @Override
-    public void progress() {}
   }
 }

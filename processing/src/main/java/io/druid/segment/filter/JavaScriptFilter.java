@@ -21,13 +21,14 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.guava.FunctionalIterable;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.data.Indexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
@@ -46,39 +47,42 @@ public class JavaScriptFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
+  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
     final Context cx = Context.enter();
     try {
       final Indexed<String> dimValues = selector.getDimensionValues(dimension);
-      ImmutableConciseSet conciseSet;
+      ImmutableBitmap bitmap;
       if (dimValues == null) {
-        conciseSet = new ImmutableConciseSet();
+        bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
       } else {
-        conciseSet = ImmutableConciseSet.union(
+        bitmap = selector.getBitmapFactory().union(
             FunctionalIterable.create(dimValues)
-                .filter(new Predicate<String>()
-                {
-                  @Override
-                  public boolean apply(@Nullable String input)
-                  {
-                    return predicate.applyInContext(cx, input);
-                  }
-                })
-                .transform(
-                    new com.google.common.base.Function<String, ImmutableConciseSet>()
-                    {
-                      @Override
-                      public ImmutableConciseSet apply(@Nullable String input)
-                      {
-                        return selector.getConciseInvertedIndex(dimension, input);
-                      }
-                    }
-                )
+                              .filter(
+                                  new Predicate<String>()
+                                  {
+                                    @Override
+                                    public boolean apply(@Nullable String input)
+                                    {
+                                      return predicate.applyInContext(cx, input);
+                                    }
+                                  }
+                              )
+                              .transform(
+                                  new com.google.common.base.Function<String, ImmutableBitmap>()
+                                  {
+                                    @Override
+                                    public ImmutableBitmap apply(@Nullable String input)
+                                    {
+                                      return selector.getBitmapIndex(dimension, input);
+                                    }
+                                  }
+                              )
         );
       }
-      return conciseSet;
-    } finally {
+      return bitmap;
+    }
+    finally {
       Context.exit();
     }
   }
@@ -107,7 +111,8 @@ public class JavaScriptFilter implements Filter
         scope = cx.initStandardObjects();
 
         fnApply = cx.compileFunction(scope, script, "script", 1, null);
-      } finally {
+      }
+      finally {
         Context.exit();
       }
     }
@@ -119,7 +124,8 @@ public class JavaScriptFilter implements Filter
       final Context cx = Context.enter();
       try {
         return applyInContext(cx, input);
-      } finally {
+      }
+      finally {
         Context.exit();
       }
 
@@ -155,4 +161,11 @@ public class JavaScriptFilter implements Filter
       return script.hashCode();
     }
   }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }

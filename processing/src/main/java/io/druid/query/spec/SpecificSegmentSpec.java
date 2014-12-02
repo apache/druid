@@ -52,6 +52,8 @@ public class SpecificSegmentSpec implements QuerySegmentSpec
     return walker.getQueryRunnerForSegments(query, Arrays.asList(descriptor));
   }
 
+  public SegmentDescriptor getDescriptor() { return descriptor; }
+
   @Override
   public boolean equals(Object o)
   {

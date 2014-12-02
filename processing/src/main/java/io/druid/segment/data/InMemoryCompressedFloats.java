@@ -37,6 +37,7 @@ import java.util.List;
  */
 public class InMemoryCompressedFloats implements IndexedFloats
 {
+  public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
   private final CompressedFloatBufferObjectStrategy strategy;
   private final int sizePer;
 
@@ -56,7 +57,11 @@ public class InMemoryCompressedFloats implements IndexedFloats
   )
   {
     this.sizePer = sizePer;
-    strategy = CompressedFloatBufferObjectStrategy.getBufferForOrder(order);
+    strategy = CompressedFloatBufferObjectStrategy.getBufferForOrder(
+        order,
+        COMPRESSION,
+        sizePer
+    );
 
     endBuffer = FloatBuffer.allocate(sizePer);
     endBuffer.mark();
@@ -184,7 +189,8 @@ public class InMemoryCompressedFloats implements IndexedFloats
                 Arrays.<ResourceHolder<FloatBuffer>>asList(StupidResourceHolder.create(endBufCopy))
             ),
             strategy
-        )
+        ),
+        COMPRESSION
     );
   }
 

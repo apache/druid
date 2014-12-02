@@ -50,6 +50,10 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     this.queryGranularity = queryGranularity;
     this.intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
 
+    if (inputIntervals == null) {
+      inputIntervals = Lists.newArrayList();
+    }
+
     // Insert all intervals
     for (final Interval inputInterval : inputIntervals) {
       intervals.add(inputInterval);
@@ -106,14 +110,5 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   public QueryGranularity getQueryGranularity()
   {
     return queryGranularity;
-  }
-
-  @Override
-  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
-  {
-    return new ArbitraryGranularitySpec(
-        queryGranularity,
-        Lists.newArrayList(intervals)
-    );
   }
 }

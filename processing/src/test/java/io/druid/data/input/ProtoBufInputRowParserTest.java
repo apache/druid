@@ -61,8 +61,7 @@ public class ProtoBufInputRowParserTest
             new TimestampSpec("timestamp", "iso"),
             new DimensionsSpec(Arrays.asList(DIMENSIONS), Arrays.<String>asList(), null)
         ),
-        "prototest.desc",
-        null, null, null, null
+        "prototest.desc"
     );
 
 
@@ -85,6 +84,7 @@ public class ProtoBufInputRowParserTest
 
     InputRow row = parser.parse(ByteBuffer.wrap(out.toByteArray()));
     System.out.println(row);
+    Arrays.sort(DIMENSIONS);
     assertEquals(Arrays.asList(DIMENSIONS), row.getDimensions());
     assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 

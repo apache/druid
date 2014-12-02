@@ -44,6 +44,9 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
+  private static final boolean defaultPersistInHeap = false;
+  private static final boolean defaultIngestOffheap = false;
+
 
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig()
@@ -56,7 +59,9 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultVersioningPolicy,
         defaultRejectionPolicyFactory,
         defaultMaxPendingPersists,
-        defaultShardSpec
+        defaultShardSpec,
+        defaultPersistInHeap,
+        defaultIngestOffheap
     );
   }
 
@@ -68,6 +73,8 @@ public class RealtimeTuningConfig implements TuningConfig
   private final RejectionPolicyFactory rejectionPolicyFactory;
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
+  private final boolean persistInHeap;
+  private final boolean ingestOffheap;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -78,7 +85,9 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
-      @JsonProperty("shardSpec") ShardSpec shardSpec
+      @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("persistInHeap") Boolean persistInHeap,
+      @JsonProperty("ingestOffheap") Boolean ingestOffheap
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -93,6 +102,8 @@ public class RealtimeTuningConfig implements TuningConfig
                                   : rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
+    this.persistInHeap = persistInHeap == null ? defaultPersistInHeap : persistInHeap;
+    this.ingestOffheap = ingestOffheap == null ? defaultIngestOffheap : ingestOffheap;
   }
 
   @JsonProperty
@@ -143,6 +154,17 @@ public class RealtimeTuningConfig implements TuningConfig
     return shardSpec;
   }
 
+  @JsonProperty
+  public boolean isPersistInHeap()
+  {
+    return persistInHeap;
+  }
+
+  @JsonProperty
+  public boolean isIngestOffheap(){
+    return ingestOffheap;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -153,7 +175,9 @@ public class RealtimeTuningConfig implements TuningConfig
         policy,
         rejectionPolicyFactory,
         maxPendingPersists,
-        shardSpec
+        shardSpec,
+        persistInHeap,
+        ingestOffheap
     );
   }
 
@@ -167,7 +191,9 @@ public class RealtimeTuningConfig implements TuningConfig
         versioningPolicy,
         rejectionPolicyFactory,
         maxPendingPersists,
-        shardSpec
+        shardSpec,
+        persistInHeap,
+        ingestOffheap
     );
   }
 }

@@ -17,10 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.guice;;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.io.Closeables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.guava.CloseQuietly;
@@ -33,7 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -42,11 +43,11 @@ public class PropertiesModule implements Module
 {
   private static final Logger log = new Logger(PropertiesModule.class);
 
-  private final String propertiesFile;
+  private final List<String> propertiesFiles;
 
-  public PropertiesModule(String propertiesFile)
+  public PropertiesModule(List<String> propertiesFiles)
   {
-    this.propertiesFile = propertiesFile;
+    this.propertiesFiles = propertiesFiles;
   }
 
   @Override
@@ -58,30 +59,32 @@ public class PropertiesModule implements Module
     Properties props = new Properties(fileProps);
     props.putAll(systemProps);
 
-    InputStream stream = ClassLoader.getSystemResourceAsStream(propertiesFile);
-    try {
-      if (stream == null) {
-        File workingDirectoryFile = new File(systemProps.getProperty("druid.properties.file", propertiesFile));
-        if (workingDirectoryFile.exists()) {
-          stream = new BufferedInputStream(new FileInputStream(workingDirectoryFile));
+    for (String propertiesFile : propertiesFiles) {
+      InputStream stream = ClassLoader.getSystemResourceAsStream(propertiesFile);
+      try {
+        if (stream == null) {
+          File workingDirectoryFile = new File(systemProps.getProperty("druid.properties.file", propertiesFile));
+          if (workingDirectoryFile.exists()) {
+            stream = new BufferedInputStream(new FileInputStream(workingDirectoryFile));
+          }
         }
-      }
 
-      if (stream != null) {
-        log.info("Loading properties from %s", propertiesFile);
-        try(Reader reader = new InputStreamReader(stream, Charsets.UTF_8)) {
-          fileProps.load(reader);
-        }
-        catch (IOException e) {
-          throw Throwables.propagate(e);
+        if (stream != null) {
+          log.info("Loading properties from %s", propertiesFile);
+          try {
+            fileProps.load(new InputStreamReader(stream, Charsets.UTF_8));
+          }
+          catch (IOException e) {
+            throw Throwables.propagate(e);
+          }
         }
       }
-    }
-    catch (FileNotFoundException e) {
-      log.wtf(e, "This can only happen if the .exists() call lied.  That's f'd up.");
-    }
-    finally {
-      CloseQuietly.close(stream);
+      catch (FileNotFoundException e) {
+        log.wtf(e, "This can only happen if the .exists() call lied.  That's f'd up.");
+      }
+      finally {
+        CloseQuietly.close(stream);
+      }
     }
 
     binder.bind(Properties.class).toInstance(props);

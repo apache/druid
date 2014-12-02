@@ -31,6 +31,8 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.segment.Segment;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -88,7 +90,10 @@ public class SelectQueryRunnerFactory
     }
 
     @Override
-    public Sequence<Result<SelectResultValue>> run(Query<Result<SelectResultValue>> input)
+    public Sequence<Result<SelectResultValue>> run(
+        Query<Result<SelectResultValue>> input,
+        Map<String, Object> responseContext
+    )
     {
       if (!(input instanceof SelectQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SelectQuery.class);

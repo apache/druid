@@ -48,7 +48,6 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
-import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
@@ -94,7 +93,7 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", "localhost", -1)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null)
                 );
               }
             }
@@ -115,17 +114,12 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    //backwards compatibility
-    if (argSpec.containsKey("schema")) {
-      return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
-    } else {
       return new HadoopDruidIndexerConfig(
           HadoopDruidIndexerConfig.jsonMapper.convertValue(
               argSpec,
               HadoopIngestionSpec.class
           )
       );
-    }
   }
 
   @SuppressWarnings("unchecked")
@@ -392,6 +386,11 @@ public class HadoopDruidIndexerConfig
     } else {
       return Optional.absent();
     }
+  }
+
+  public boolean isPersistInHeap()
+  {
+    return schema.getTuningConfig().isPersistInHeap();
   }
 
   /******************************************

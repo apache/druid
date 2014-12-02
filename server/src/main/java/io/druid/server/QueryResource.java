@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.MapMaker;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
@@ -57,6 +58,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -122,6 +124,7 @@ public class QueryResource
     String queryId = null;
 
     final boolean isSmile = APPLICATION_SMILE.equals(req.getContentType());
+    final String contentType = isSmile ? APPLICATION_SMILE : APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     final ObjectWriter jsonWriter = req.getParameter("pretty") == null
@@ -149,7 +152,8 @@ public class QueryResource
         log.debug("Got query [%s]", query);
       }
 
-      Sequence res = query.run(texasRanger);
+      final Map<String, Object> responseContext = new MapMaker().makeMap();
+      final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
       if (res == null) {
         results = Sequences.empty();
@@ -172,6 +176,7 @@ public class QueryResource
 
       try {
         long requestTime = System.currentTimeMillis() - start;
+
         emitter.emit(
             QueryMetricUtil.makeRequestTimeMetric(jsonMapper, query, req.getRemoteAddr())
                            .build("request/time", requestTime)
@@ -203,9 +208,10 @@ public class QueryResource
                     outputStream.close();
                   }
                 },
-                isSmile ? APPLICATION_JSON : APPLICATION_SMILE
-            )
+                contentType
+        )
             .header("X-Druid-Query-Id", queryId)
+            .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(responseContext))
             .build();
       }
       catch (Exception e) {
@@ -242,10 +248,10 @@ public class QueryResource
       catch (Exception e2) {
         log.error(e2, "Unable to log query [%s]!", query);
       }
-      return Response.serverError().entity(
-          jsonWriter.writeValueAsString(
+      return Response.serverError().type(contentType).entity(
+          jsonWriter.writeValueAsBytes(
               ImmutableMap.of(
-                  "error", e.getMessage()
+                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )
           )
       ).build();
@@ -278,8 +284,8 @@ public class QueryResource
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return Response.serverError().entity(
-          jsonWriter.writeValueAsString(
+      return Response.serverError().type(contentType).entity(
+          jsonWriter.writeValueAsBytes(
               ImmutableMap.of(
                   "error", e.getMessage() == null ? "null exception" : e.getMessage()
               )

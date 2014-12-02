@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -45,21 +46,24 @@ public class IncrementalIndexTest
 
   public static IncrementalIndex createCaseInsensitiveIndex(long timestamp)
   {
-    IncrementalIndex index = new IncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    IncrementalIndex index = new IncrementalIndex(
+        0L, QueryGranularity.NONE, new AggregatorFactory[]{},
+        TestQueryRunners.pool
+    );
 
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("Dim1", "DiM2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "DIM1", "3", "dIM2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
         )
     );
 
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("diM1", "dIM2"),
-            ImmutableMap.<String, Object>of("Dim1", "1", "DiM2", "2", "dim1", "3", "dim2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
         )
     );
     return index;
@@ -78,7 +82,7 @@ public class IncrementalIndexTest
   }
 
   @Test
-  public void testCaseInsensitivity() throws Exception
+  public void testCaseSensitivity() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
 
@@ -105,7 +109,8 @@ public class IncrementalIndexTest
     final IncrementalIndex index = new IncrementalIndex(
         0L,
         QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        TestQueryRunners.pool
     );
     final int threadCount = 10;
     final int elementsPerThread = 200;

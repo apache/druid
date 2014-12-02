@@ -62,24 +62,22 @@ public class FireDepartmentTest
                         null,
                         null
                     )
-                ),
-                null, null, null, null
+                )
             ),
             new AggregatorFactory[]{
                 new CountAggregatorFactory("count")
             },
-            new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null, Granularity.HOUR)
+            new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null)
         ),
         new RealtimeIOConfig(
             null,
             new RealtimePlumberSchool(
-                null, null, null, null, null, null, null, null, null, null, null, null, null, 0
+                null, null, null, null, null, null, null
             )
         ),
         new RealtimeTuningConfig(
-            null, null, null, null, null, null, null, null
-        ),
-        null, null, null, null
+            null, null, null, null, null, null, null, null, false, false
+        )
     );
 
     String json = jsonMapper.writeValueAsString(schema);

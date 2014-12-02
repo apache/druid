@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -27,27 +29,29 @@ import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import java.util.Iterator;
 
 /**
-*/
+ */
 public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 {
+  private final BitmapFactory bitmapFactory;
   private final ColumnSelector index;
 
   public ColumnSelectorBitmapIndexSelector(
+      final BitmapFactory bitmapFactory,
       final ColumnSelector index
   )
   {
+    this.bitmapFactory = bitmapFactory;
     this.index = index;
   }
 
   @Override
   public Indexed<String> getDimensionValues(String dimension)
   {
-    final Column columnDesc = index.getColumn(dimension.toLowerCase());
+    final Column columnDesc = index.getColumn(dimension);
     if (columnDesc == null || !columnDesc.getCapabilities().isDictionaryEncoded()) {
       return null;
     }
@@ -91,7 +95,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   {
     GenericColumn column = null;
     try {
-      column = index.getTimeColumn().getGenericColumn();
+      column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
       return column.length();
     }
     finally {
@@ -100,39 +104,46 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   }
 
   @Override
-  public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value)
+  public BitmapFactory getBitmapFactory()
   {
-    final Column column = index.getColumn(dimension.toLowerCase());
-    if (column == null) {
-      return new ImmutableConciseSet();
-    }
-    if (!column.getCapabilities().hasBitmapIndexes()) {
-      return new ImmutableConciseSet();
-    }
-
-    return column.getBitmapIndex().getConciseSet(value);
+    return bitmapFactory;
   }
 
   @Override
-  public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx)
+  public ImmutableBitmap getBitmapIndex(String dimension, String value)
   {
-    final Column column = index.getColumn(dimension.toLowerCase());
+    final Column column = index.getColumn(dimension);
     if (column == null) {
-      return new ImmutableConciseSet();
+      return bitmapFactory.makeEmptyImmutableBitmap();
     }
     if (!column.getCapabilities().hasBitmapIndexes()) {
-      return new ImmutableConciseSet();
+      bitmapFactory.makeEmptyImmutableBitmap();
     }
+
+    return column.getBitmapIndex().getBitmap(value);
+  }
+
+  @Override
+  public ImmutableBitmap getBitmapIndex(String dimension, int idx)
+  {
+    final Column column = index.getColumn(dimension);
+    if (column == null || column.getCapabilities() == null) {
+      bitmapFactory.makeEmptyImmutableBitmap();
+    }
+    if (!column.getCapabilities().hasBitmapIndexes()) {
+      bitmapFactory.makeEmptyImmutableBitmap();
+    }
+
     // This is a workaround given the current state of indexing, I feel shame
     final int index1 = column.getBitmapIndex().hasNulls() ? idx + 1 : idx;
 
-    return column.getBitmapIndex().getConciseSet(index1);
+    return column.getBitmapIndex().getBitmap(index1);
   }
 
   @Override
   public ImmutableRTree getSpatialIndex(String dimension)
   {
-    final Column column = index.getColumn(dimension.toLowerCase());
+    final Column column = index.getColumn(dimension);
     if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
       return new ImmutableRTree();
     }

@@ -21,13 +21,14 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.guava.FunctionalIterable;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.data.Indexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 import javax.annotation.Nullable;
 
@@ -48,23 +49,23 @@ class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public ImmutableConciseSet goConcise(final BitmapIndexSelector selector)
+  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
     Indexed<String> dimValues = selector.getDimensionValues(dimension);
     if (dimValues == null || dimValues.size() == 0 || predicate == null) {
-      return new ImmutableConciseSet();
+      return selector.getBitmapFactory().makeEmptyImmutableBitmap();
     }
 
-    return ImmutableConciseSet.union(
+    return selector.getBitmapFactory().union(
         FunctionalIterable.create(dimValues)
                           .filter(predicate)
                           .transform(
-                              new Function<String, ImmutableConciseSet>()
+                              new Function<String, ImmutableBitmap>()
                               {
                                 @Override
-                                public ImmutableConciseSet apply(@Nullable String input)
+                                public ImmutableBitmap apply(@Nullable String input)
                                 {
-                                  return selector.getConciseInvertedIndex(dimension, input);
+                                  return selector.getBitmapIndex(dimension, input);
                                 }
                               }
                           )
@@ -75,5 +76,11 @@ class DimensionPredicateFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(dimension, predicate);
+  }
+
+  @Override
+  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException();
   }
 }

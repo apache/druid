@@ -41,6 +41,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 public class SegmentMetadataQueryTest
 {
@@ -73,9 +75,9 @@ public class SegmentMetadataQueryTest
                                        .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
                                        .merge(true)
                                        .build();
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<SegmentAnalysis> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<SegmentAnalysis>newArrayList()
     );
     SegmentAnalysis val = results.iterator().next();

@@ -29,6 +29,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.guice.ExtensionsConfig;
@@ -38,6 +39,7 @@ import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.Jobby;
+import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -63,16 +65,14 @@ public class HadoopIndexTask extends AbstractTask
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final ExtensionsConfig extensionsConfig;
 
+  final static Injector injector = GuiceInjectors.makeStartupInjector();
   static {
-    extensionsConfig = GuiceInjectors.makeStartupInjector().getInstance(ExtensionsConfig.class);
+    extensionsConfig = injector.getInstance(ExtensionsConfig.class);
   }
 
-  private static String getTheDataSource(HadoopIngestionSpec spec, HadoopIngestionSpec config)
+  private static String getTheDataSource(HadoopIngestionSpec spec)
   {
-    if (spec != null) {
       return spec.getDataSchema().getDataSource();
-    }
-    return config.getDataSchema().getDataSource();
   }
 
   @JsonIgnore
@@ -96,19 +96,18 @@ public class HadoopIndexTask extends AbstractTask
   public HadoopIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("spec") HadoopIngestionSpec spec,
-      @JsonProperty("config") HadoopIngestionSpec config, // backwards compat
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
       @JsonProperty("classpathPrefix") String classpathPrefix
   )
   {
     super(
-        id != null ? id : String.format("index_hadoop_%s_%s", getTheDataSource(spec, config), new DateTime()),
-        getTheDataSource(spec, config)
+        id != null ? id : String.format("index_hadoop_%s_%s", getTheDataSource(spec), new DateTime()),
+        getTheDataSource(spec)
     );
 
 
-    this.spec = spec == null ? config : spec;
+    this.spec = spec;
 
     // Some HadoopIngestionSpec stuff doesn't make sense in the context of the indexing service
     Preconditions.checkArgument(
@@ -116,7 +115,10 @@ public class HadoopIndexTask extends AbstractTask
         "segmentOutputPath must be absent"
     );
     Preconditions.checkArgument(this.spec.getTuningConfig().getWorkingPath() == null, "workingPath must be absent");
-    Preconditions.checkArgument(this.spec.getIOConfig().getMetadataUpdateSpec() == null, "updaterJobSpec must be absent");
+    Preconditions.checkArgument(
+        this.spec.getIOConfig().getMetadataUpdateSpec() == null,
+        "updaterJobSpec must be absent"
+    );
 
     if (hadoopDependencyCoordinates != null) {
       this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
@@ -184,7 +186,7 @@ public class HadoopIndexTask extends AbstractTask
     final List<URL> extensionURLs = Lists.newArrayList();
     for (String coordinate : extensionsConfig.getCoordinates()) {
       final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
-          aetherClient, coordinate
+          aetherClient, coordinate, extensionsConfig.getDefaultVersion()
       );
       extensionURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
     }
@@ -197,7 +199,7 @@ public class HadoopIndexTask extends AbstractTask
     // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
     for (String hadoopDependencyCoordinate : finalHadoopDependencyCoordinates) {
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-          aetherClient, hadoopDependencyCoordinate
+          aetherClient, hadoopDependencyCoordinate, extensionsConfig.getDefaultVersion()
       );
       driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
     }
@@ -288,7 +290,10 @@ public class HadoopIndexTask extends AbstractTask
               .withTuningConfig(theSchema.getTuningConfig().withVersion(version))
       );
 
-      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config);
+      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(
+          config,
+          injector.getInstance(MetadataStorageUpdaterJobHandler.class)
+      );
 
       log.info("Starting a hadoop index generator job...");
       if (job.run()) {

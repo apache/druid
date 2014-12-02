@@ -36,7 +36,7 @@ public class TableDataSource implements DataSource
   @JsonCreator
   public TableDataSource(@JsonProperty("name") String name)
   {
-    this.name = (name == null ? null : name.toLowerCase());
+    this.name = (name == null ? null : name);
   }
 
   @JsonProperty

@@ -19,6 +19,8 @@
 
 package io.druid.server.coordinator.rules;
 
+import com.google.common.collect.ImmutableMap;
+import io.druid.client.DruidServer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -42,9 +44,7 @@ public class PeriodLoadRuleTest
     DateTime now = new DateTime("2013-01-01");
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P5000Y"),
-        null,
-        0,
-        ""
+        ImmutableMap.<String, Integer>of("", 0)
     );
 
     Assert.assertTrue(rule.appliesTo(builder.interval(new Interval("2012-01-01/2012-12-31")).build(), now));
@@ -58,9 +58,7 @@ public class PeriodLoadRuleTest
     DateTime now = new DateTime("2012-12-31T01:00:00");
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P1M"),
-        null,
-        0,
-        ""
+        ImmutableMap.<String, Integer>of("", 0)
     );
 
     Assert.assertTrue(rule.appliesTo(builder.interval(new Interval(now.minusWeeks(1), now)).build(), now));

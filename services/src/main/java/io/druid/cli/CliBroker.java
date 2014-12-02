@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Command;
 import io.druid.client.BrokerServerView;
@@ -42,12 +43,14 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
+import io.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -76,6 +79,11 @@ public class CliBroker extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
+            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
+                TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
+            );
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
+
             binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
@@ -87,6 +95,7 @@ public class CliBroker extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
             JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
+            JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 

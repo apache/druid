@@ -32,22 +32,26 @@ public class HadoopDruidIndexerJob implements Jobby
 {
   private static final Logger log = new Logger(HadoopDruidIndexerJob.class);
   private final HadoopDruidIndexerConfig config;
-  private final DbUpdaterJob dbUpdaterJob;
+  private final MetadataStorageUpdaterJob metadataStorageUpdaterJob;
   private IndexGeneratorJob indexJob;
   private volatile List<DataSegment> publishedSegments = null;
 
   @Inject
   public HadoopDruidIndexerJob(
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      MetadataStorageUpdaterJobHandler handler
   )
   {
     config.verify();
     this.config = config;
 
     if (config.isUpdaterJobSpecSet()) {
-      dbUpdaterJob = new DbUpdaterJob(config);
+      metadataStorageUpdaterJob = new MetadataStorageUpdaterJob(
+          config,
+          handler
+      );
     } else {
-      dbUpdaterJob = null;
+      metadataStorageUpdaterJob = null;
     }
   }
 
@@ -57,24 +61,30 @@ public class HadoopDruidIndexerJob implements Jobby
     List<Jobby> jobs = Lists.newArrayList();
     JobHelper.ensurePaths(config);
 
-    indexJob = new IndexGeneratorJob(config);
+    if (config.isPersistInHeap()) {
+      indexJob = new IndexGeneratorJob(config);
+    } else {
+      indexJob = new LegacyIndexGeneratorJob(config);
+    }
     jobs.add(indexJob);
 
-    if (dbUpdaterJob != null) {
-      jobs.add(dbUpdaterJob);
+    if (metadataStorageUpdaterJob != null) {
+      jobs.add(metadataStorageUpdaterJob);
     } else {
       log.info("No updaterJobSpec set, not uploading to database");
     }
 
-    jobs.add(new Jobby()
-    {
-      @Override
-      public boolean run()
-      {
-        publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
-        return true;
-      }
-    });
+    jobs.add(
+        new Jobby()
+        {
+          @Override
+          public boolean run()
+          {
+            publishedSegments = IndexGeneratorJob.getPublishedSegments(config);
+            return true;
+          }
+        }
+    );
 
 
     JobHelper.runJobs(jobs, config);

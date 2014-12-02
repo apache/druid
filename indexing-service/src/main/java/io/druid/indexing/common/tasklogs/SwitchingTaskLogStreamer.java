@@ -21,6 +21,7 @@ package io.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import io.druid.tasklogs.TaskLogStreamer;
@@ -43,10 +44,10 @@ public class SwitchingTaskLogStreamer implements TaskLogStreamer
   }
 
   @Override
-  public Optional<InputSupplier<InputStream>> streamTaskLog(String taskid, long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException
   {
     for (TaskLogStreamer provider : providers) {
-      final Optional<InputSupplier<InputStream>> stream = provider.streamTaskLog(taskid, offset);
+      final Optional<ByteSource> stream = provider.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
         return stream;
       }

@@ -29,10 +29,10 @@ import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
-import io.druid.db.DatabaseSegmentManager;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.segment.realtime.DbSegmentPublisher;
+import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -129,7 +129,7 @@ public class DruidClusterBridgeTest
         8080
     );
 
-    AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>(new LeaderLatch(localCf, "test"));
+    AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>(new LeaderLatch(localCf, "/test"));
 
     ZkPathsConfig zkPathsConfig = new ZkPathsConfig()
     {
@@ -147,9 +147,9 @@ public class DruidClusterBridgeTest
         DruidServer.DEFAULT_TIER,
         0
     );
-    DbSegmentPublisher dbSegmentPublisher = EasyMock.createMock(DbSegmentPublisher.class);
+    SegmentPublisher dbSegmentPublisher = EasyMock.createMock(SegmentPublisher.class);
     EasyMock.replay(dbSegmentPublisher);
-    DatabaseSegmentManager databaseSegmentManager = EasyMock.createMock(DatabaseSegmentManager.class);
+    MetadataSegmentManager databaseSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
     EasyMock.replay(databaseSegmentManager);
     ServerView serverView = EasyMock.createMock(ServerView.class);
     EasyMock.replay(serverView);
@@ -167,7 +167,7 @@ public class DruidClusterBridgeTest
 
     Announcer announcer = new Announcer(remoteCf, Executors.newSingleThreadExecutor());
     announcer.start();
-    announcer.announce(zkPathsConfig.getAnnouncementsPath() + "/" + me.getHost(), jsonMapper.writeValueAsBytes(me));
+    announcer.announce(zkPathsConfig.getAnnouncementsPath() + "/" + me.getHostAndPort(), jsonMapper.writeValueAsBytes(me));
 
     BatchDataSegmentAnnouncer batchDataSegmentAnnouncer = EasyMock.createMock(BatchDataSegmentAnnouncer.class);
     BatchServerInventoryView batchServerInventoryView = EasyMock.createMock(BatchServerInventoryView.class);

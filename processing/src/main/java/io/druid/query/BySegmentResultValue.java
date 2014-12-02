@@ -19,15 +19,17 @@
 
 package io.druid.query;
 
+import org.joda.time.Interval;
+
 import java.util.List;
 
 /**
  */
 public interface BySegmentResultValue<T>
 {
-  public List<Result<T>> getResults();
+  public List<T> getResults();
 
   public String getSegmentId();
 
-  public String getIntervalString();
+  public Interval getInterval();
 }

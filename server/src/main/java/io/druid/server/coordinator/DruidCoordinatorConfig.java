@@ -27,9 +27,6 @@ import org.skife.config.Default;
  */
 public abstract class DruidCoordinatorConfig
 {
-  @Config("druid.host")
-  public abstract String getHost();
-
   @Config("druid.coordinator.startDelay")
   @Default("PT300s")
   public abstract Duration getCoordinatorStartDelay();

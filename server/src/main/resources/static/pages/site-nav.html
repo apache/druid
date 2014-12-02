@@ -1,0 +1,18 @@
+<ul class="nav nav-pills">
+  <li ui-sref-active="active"><a ui-sref="cluster">cluster</a></li>
+  <li ui-sref-active="active"><a ui-sref="dataSources">datasources</a></li>
+</ul>
+
+<div class="og-console-links" ng-if="coordinator">
+  <div>
+    old skool
+    <a href="http://{{ coordinator }}/rules.html">rules</a>
+    <a href="http://{{ coordinator }}/view.html">info</a>
+    <a href="http://{{ coordinator }}/cluster.html">cluster</a>
+    <a href="http://{{ coordinator }}/config.html">config</a>
+    <a href="http://{{ coordinator }}/enable.html">enable</a>
+  </div>
+  <div>
+    <a href="http://{{ coordinator }}/">coordinator @ {{ coordinator }}</a>
+  </div>
+</div>

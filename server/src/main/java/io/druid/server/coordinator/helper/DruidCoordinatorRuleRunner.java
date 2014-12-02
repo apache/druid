@@ -19,8 +19,9 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -37,6 +38,7 @@ import java.util.List;
 public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
+  private static int MAX_MISSING_RULES = 10;
 
   private final ReplicationThrottler replicatorThrottler;
 
@@ -86,7 +88,10 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     // Run through all matched rules for available segments
     DateTime now = new DateTime();
-    DatabaseRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
+    MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
+
+    final List<String> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
+    int missingRules = 0;
     for (DataSegment segment : paramsWithReplicationManager.getAvailableSegments()) {
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
@@ -99,11 +104,18 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       }
 
       if (!foundMatchingRule) {
-        log.makeAlert("Unable to find a matching rule!")
-           .addData("dataSource", segment.getDataSource())
-           .addData("segment", segment.getIdentifier())
-           .emit();
+        if (segmentsWithMissingRules.size() < MAX_MISSING_RULES) {
+          segmentsWithMissingRules.add(segment.getIdentifier());
+        }
+        missingRules++;
       }
+    }
+
+    if (!segmentsWithMissingRules.isEmpty()) {
+      log.makeAlert("Unable to find matching rules!")
+         .addData("segmentsWithMissingRulesCount", missingRules)
+         .addData("segmentsWithMissingRules", segmentsWithMissingRules)
+         .emit();
     }
 
     return paramsWithReplicationManager.buildFromExisting()

@@ -76,9 +76,4 @@ public class ClippedFirehoseFactory implements FirehoseFactory
     );
   }
 
-  @Override
-  public InputRowParser getParser()
-  {
-    return delegate.getParser();
-  }
 }

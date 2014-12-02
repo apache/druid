@@ -32,16 +32,20 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -56,11 +60,13 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
   private final ListeningExecutorService exec;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
+  private final StupidPool<ByteBuffer> bufferPool;
 
   public GroupByParallelQueryRunner(
       ExecutorService exec,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
+      StupidPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<T>> queryables
   )
   {
@@ -68,15 +74,17 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
+    this.bufferPool = bufferPool;
   }
 
   @Override
-  public Sequence<T> run(final Query<T> queryParam)
+  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        configSupplier.get()
+        configSupplier.get(),
+        bufferPool
     );
     final Pair<List, Accumulator<List, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
     final boolean bySegment = query.getContextBySegment(false);
@@ -103,10 +111,11 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
                           {
                             try {
                               if (bySegment) {
-                                input.run(queryParam)
+                                input.run(queryParam, responseContext)
                                      .accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
                               } else {
-                                input.run(queryParam).accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                                input.run(queryParam, responseContext)
+                                     .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
                               }
 
                               return null;
@@ -140,17 +149,21 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
       futures.cancel(true);
+      indexAccumulatorPair.lhs.close();
       throw new QueryInterruptedException("Query interrupted");
     }
     catch (CancellationException e) {
+      indexAccumulatorPair.lhs.close();
       throw new QueryInterruptedException("Query cancelled");
     }
     catch (TimeoutException e) {
+      indexAccumulatorPair.lhs.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
       futures.cancel(true);
       throw new QueryInterruptedException("Query timeout");
     }
     catch (ExecutionException e) {
+      indexAccumulatorPair.lhs.close();
       throw Throwables.propagate(e.getCause());
     }
 
@@ -158,18 +171,20 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
       return Sequences.simple(bySegmentAccumulatorPair.lhs);
     }
 
-    return Sequences.simple(
-        Iterables.transform(
-            indexAccumulatorPair.lhs.iterableWithPostAggregations(null),
-            new Function<Row, T>()
-            {
-              @Override
-              public T apply(Row input)
-              {
-                return (T) input;
-              }
-            }
-        )
+    return new ResourceClosingSequence<T>(
+        Sequences.simple(
+            Iterables.transform(
+                indexAccumulatorPair.lhs.iterableWithPostAggregations(null),
+                new Function<Row, T>()
+                {
+                  @Override
+                  public T apply(Row input)
+                  {
+                    return (T) input;
+                  }
+                }
+            )
+        ), indexAccumulatorPair.lhs
     );
   }
 }

@@ -20,7 +20,7 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-import io.druid.db.DatabaseRuleManager;
+import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.rules.Rule;
 
 import javax.ws.rs.Consumes;
@@ -38,11 +38,11 @@ import java.util.List;
 @Path("/druid/coordinator/v1/rules")
 public class RulesResource
 {
-  private final DatabaseRuleManager databaseRuleManager;
+  private final MetadataRuleManager databaseRuleManager;
 
   @Inject
   public RulesResource(
-      DatabaseRuleManager databaseRuleManager
+      MetadataRuleManager databaseRuleManager
   )
   {
     this.databaseRuleManager = databaseRuleManager;

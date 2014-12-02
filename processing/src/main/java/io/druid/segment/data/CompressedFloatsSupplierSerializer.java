@@ -35,27 +35,29 @@ import java.nio.FloatBuffer;
 public class CompressedFloatsSupplierSerializer
 {
   public static CompressedFloatsSupplierSerializer create(
-      IOPeon ioPeon, final String filenameBase, final ByteOrder order
+      IOPeon ioPeon, final String filenameBase, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
-    return create(ioPeon, filenameBase, CompressedFloatsIndexedSupplier.MAX_FLOATS_IN_BUFFER, order);
+    return create(ioPeon, filenameBase, CompressedFloatsIndexedSupplier.MAX_FLOATS_IN_BUFFER, order, compression);
   }
 
   public static CompressedFloatsSupplierSerializer create(
-      IOPeon ioPeon, final String filenameBase, final int sizePer, final ByteOrder order
+      IOPeon ioPeon, final String filenameBase, final int sizePer, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
     final CompressedFloatsSupplierSerializer retVal = new CompressedFloatsSupplierSerializer(
         sizePer,
         new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
-            ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order)
-        )
+            ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+        ),
+        compression
     );
     return retVal;
   }
 
   private final int sizePer;
   private final GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   private int numInserted = 0;
 
@@ -63,11 +65,13 @@ public class CompressedFloatsSupplierSerializer
 
   public CompressedFloatsSupplierSerializer(
       int sizePer,
-      GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener
+      GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.sizePer = sizePer;
     this.flattener = flattener;
+    this.compression = compression;
 
     endBuffer = FloatBuffer.allocate(sizePer);
     endBuffer.mark();
@@ -109,6 +113,7 @@ public class CompressedFloatsSupplierSerializer
       out.write(CompressedFloatsIndexedSupplier.version);
       out.write(Ints.toByteArray(numInserted));
       out.write(Ints.toByteArray(sizePer));
+      out.write(new byte[]{compression.getId()});
       ByteStreams.copy(flattener.combineStreams(), out);
     }
   }

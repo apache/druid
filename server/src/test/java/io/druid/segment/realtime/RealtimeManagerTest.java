@@ -74,7 +74,7 @@ public class RealtimeManagerTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null, Granularity.HOUR)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
         new FirehoseFactory()
@@ -83,12 +83,6 @@ public class RealtimeManagerTest
           public Firehose connect(InputRowParser parser) throws IOException
           {
             return new TestFirehose(rows.iterator());
-          }
-
-          @Override
-          public ByteBufferInputRowParser getParser()
-          {
-            throw new UnsupportedOperationException();
           }
         },
         new PlumberSchool()
@@ -100,17 +94,13 @@ public class RealtimeManagerTest
           {
             return plumber;
           }
-
-          @Override
-          public Granularity getSegmentGranularity()
-          {
-            throw new UnsupportedOperationException();
-          }
         }
     );
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
         new Period("P1Y"),
+        null,
+        null,
         null,
         null,
         null,
@@ -125,8 +115,7 @@ public class RealtimeManagerTest
             new FireDepartment(
                 schema,
                 ioConfig,
-                tuningConfig,
-                null, null, null, null
+                tuningConfig
             )
         ),
         null
@@ -185,6 +174,12 @@ public class RealtimeManagerTest
       public float getFloatMetric(String metric)
       {
         return 0;
+      }
+
+      @Override
+      public long getLongMetric(String metric)
+      {
+        return 0L;
       }
 
       @Override

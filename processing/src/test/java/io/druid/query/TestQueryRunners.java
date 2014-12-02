@@ -26,11 +26,10 @@ public class TestQueryRunners
         @Override
         public ByteBuffer get()
         {
-          return ByteBuffer.allocate(1024 * 10);
+          return ByteBuffer.allocate(1024 * 1024 * 10);
         }
       }
   );
-
   public static final TopNQueryConfig topNConfig = new TopNQueryConfig();
 
   public static StupidPool<ByteBuffer> getPool()

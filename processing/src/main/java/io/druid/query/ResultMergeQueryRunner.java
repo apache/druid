@@ -24,6 +24,9 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.common.guava.CombiningSequence;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  */
 public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRunner<T>
@@ -36,9 +39,9 @@ public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRu
   }
 
   @Override
-  public Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query)
+  public Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, Object> context)
   {
-    return CombiningSequence.create(baseRunner.run(query), makeOrdering(query), createMergeFn(query));
+    return CombiningSequence.create(baseRunner.run(query, context), makeOrdering(query), createMergeFn(query));
   }
 
   protected abstract Ordering<T> makeOrdering(Query<T> query);

@@ -23,7 +23,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.google.inject.Inject;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
@@ -35,15 +34,9 @@ import java.util.TreeSet;
  */
 public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 {
-  private final RemoteTaskRunnerConfig config;
-
-  @Inject
-  public FillCapacityWorkerSelectStrategy(RemoteTaskRunnerConfig config)
-  {
-    this.config = config;
-  }
-
+  @Override
   public Optional<ImmutableZkWorker> findWorkerForTask(
+      final RemoteTaskRunnerConfig config,
       final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
       final Task task
   )

@@ -19,9 +19,10 @@
 
 package io.druid.query.filter;
 
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.segment.data.Indexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 
 /**
  */
@@ -29,7 +30,8 @@ public interface BitmapIndexSelector
 {
   public Indexed<String> getDimensionValues(String dimension);
   public int getNumRows();
-  public ImmutableConciseSet getConciseInvertedIndex(String dimension, String value);
-  public ImmutableConciseSet getConciseInvertedIndex(String dimension, int idx);
+  public BitmapFactory getBitmapFactory();
+  public ImmutableBitmap getBitmapIndex(String dimension, String value);
+  public ImmutableBitmap getBitmapIndex(String dimension, int idx);
   public ImmutableRTree getSpatialIndex(String dimension);
 }

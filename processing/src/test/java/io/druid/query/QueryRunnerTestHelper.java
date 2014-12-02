@@ -82,7 +82,7 @@ public class QueryRunnerTestHelper
   );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
-  public static final String providerDimension = "proVider";
+  public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
@@ -116,7 +116,7 @@ public class QueryRunnerTestHelper
       Arrays.asList("quality"),
       false
   );
-  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
+  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator addRowsIndexConstant =
@@ -138,7 +138,7 @@ public class QueryRunnerTestHelper
   public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
       hyperUniqueFinalizingPostAggMetric,
       "+",
-      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1, 1))
+      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1))
   );
 
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
@@ -194,9 +194,10 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
     return Arrays.asList(
         new Object[][]{
             {
@@ -207,6 +208,9 @@ public class QueryRunnerTestHelper
             },
             {
                 makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            },
+            {
+                makeQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
             }
         }
     );
@@ -218,9 +222,11 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
+    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
+
     return Arrays.asList(
         new Object[][]{
             {
@@ -231,6 +237,9 @@ public class QueryRunnerTestHelper
             },
             {
                 makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+            },
+            {
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
             }
         }
     );

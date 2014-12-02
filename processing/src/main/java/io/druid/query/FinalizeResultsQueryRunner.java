@@ -28,6 +28,10 @@ import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
 
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
+
 /**
  */
 public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
@@ -45,7 +49,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
     final boolean isBySegment = query.getContextBySegment(false);
     final boolean shouldFinalize = query.getContextFinalize(true);
@@ -80,7 +84,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
             throw new ISE("Cannot have a null result!");
           }
 
-          BySegmentResultValueClass<T> resultsClass = result.getValue();
+          BySegmentResultValue<T> resultsClass = result.getValue();
 
           return (T) new Result<BySegmentResultValueClass>(
               result.getTimestamp(),
@@ -98,7 +102,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
 
 
     return Sequences.map(
-        baseRunner.run(queryToRun),
+        baseRunner.run(queryToRun, responseContext),
         finalizerFn
     );
 

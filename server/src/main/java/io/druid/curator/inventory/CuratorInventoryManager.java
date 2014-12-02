@@ -104,8 +104,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     }
     catch (Exception e) {
       synchronized (lock) {
-        try {
-          stop();
+        try {          stop();
         }
         catch (IOException e1) {
           log.error(e1, "Exception when stopping InventoryManager that couldn't start.");

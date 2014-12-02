@@ -96,6 +96,12 @@ public class CombiningFirehoseFactoryTest
       }
 
       @Override
+      public long getLongMetric(String metric)
+      {
+        return new Float(metricValue).longValue();
+      }
+
+      @Override
       public Object getRaw(String dimension)
       {
         return null;
@@ -150,10 +156,5 @@ public class CombiningFirehoseFactoryTest
       };
     }
 
-    @Override
-    public InputRowParser getParser()
-    {
-      return null;
-    }
   }
 }

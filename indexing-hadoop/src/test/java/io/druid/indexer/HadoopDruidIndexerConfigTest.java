@@ -21,17 +21,12 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Lists;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
-import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.JSONDataSpec;
-import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -71,14 +66,20 @@ public class HadoopDruidIndexerConfigTest
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + "\"dataSource\": \"source\","
-          + " \"granularitySpec\":{"
-          + "   \"type\":\"uniform\","
-          + "   \"gran\":\"hour\","
-          + "   \"intervals\":[\"2012-07-10/P1D\"]"
-          + " },"
-          + "\"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\""
+          "{\n"
+          + "    \"dataSchema\": {\n"
+          + "        \"dataSource\": \"source\",\n"
+          + "        \"metricsSpec\": [],\n"
+          + "        \"granularitySpec\": {\n"
+          + "            \"type\": \"uniform\",\n"
+          + "            \"segmentGranularity\": \"hour\",\n"
+          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
+          + "        }\n"
+          + "    },\n"
+          + "    \"ioConfig\": {\n"
+          + "        \"type\": \"hadoop\",\n"
+          + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );
@@ -111,14 +112,20 @@ public class HadoopDruidIndexerConfigTest
 
     try {
       schema = jsonReadWriteRead(
-          "{"
-          + "\"dataSource\": \"the:data:source\","
-          + " \"granularitySpec\":{"
-          + "   \"type\":\"uniform\","
-          + "   \"gran\":\"hour\","
-          + "   \"intervals\":[\"2012-07-10/P1D\"]"
-          + " },"
-          + "\"segmentOutputPath\": \"/tmp/dru:id/data:test\""
+          "{\n"
+          + "    \"dataSchema\": {\n"
+          + "        \"dataSource\": \"the:data:source\",\n"
+          + "        \"metricsSpec\": [],\n"
+          + "        \"granularitySpec\": {\n"
+          + "            \"type\": \"uniform\",\n"
+          + "            \"segmentGranularity\": \"hour\",\n"
+          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
+          + "        }\n"
+          + "    },\n"
+          + "    \"ioConfig\": {\n"
+          + "        \"type\": \"hadoop\",\n"
+          + "        \"segmentOutputPath\": \"/tmp/dru:id/data:test\"\n"
+          + "    }\n"
           + "}",
           HadoopIngestionSpec.class
       );
@@ -146,43 +153,37 @@ public class HadoopDruidIndexerConfigTest
   }
 
   @Test
-  public void testHashedBucketSelection() {
+  public void testHashedBucketSelection()
+  {
     List<HadoopyShardSpec> specs = Lists.newArrayList();
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
       specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, new DefaultObjectMapper()), i));
     }
+
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        null, null, null,
-        "foo",
-        new TimestampSpec("timestamp", "auto"),
-        new JSONDataSpec(ImmutableList.of("foo"), null),
-        new UniformGranularitySpec(
-            Granularity.HOUR,
+        new DataSchema(
+            "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
+            Granularity.MINUTE,
             QueryGranularity.MINUTE,
-            ImmutableList.of(new Interval("2010-01-01/P1D")),
-            Granularity.HOUR
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        true,
-        ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
-        false,
-        new DataRollupSpec(ImmutableList.<AggregatorFactory>of(), QueryGranularity.MINUTE),
-        null,
-        false,
-        ImmutableMap.of("foo", "bar"),
-        false,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+            ImmutableList.of(new Interval("2010-01-01/P1D"))
+        )
+        ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
+        new HadoopTuningConfig(
+            null,
+            null,
+            null,
+            ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
+            null,
+            false,
+            false,
+            false,
+            false,
+            null,
+            false,
+            false,
+            false
+        )
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");

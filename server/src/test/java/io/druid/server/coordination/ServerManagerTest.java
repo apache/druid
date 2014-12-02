@@ -71,8 +71,10 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -274,7 +276,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+    queryNotifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -313,7 +315,7 @@ public class ServerManagerTest
         )
     );
 
-    Assert.assertTrue("Operation must complete within 100ms", queryNotifyLatch.await(100, TimeUnit.MILLISECONDS));
+    queryNotifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -356,7 +358,7 @@ public class ServerManagerTest
         )
     );
 
-    queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+    queryNotifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(1, factory.getSegmentReferences().size());
 
@@ -390,7 +392,7 @@ public class ServerManagerTest
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
-      queryNotifyLatch.await(25, TimeUnit.MILLISECONDS);
+      queryNotifyLatch.await(1000, TimeUnit.MILLISECONDS);
       queryWaitYieldLatch.countDown();
       queryWaitLatch.countDown();
       future.get();
@@ -421,14 +423,14 @@ public class ServerManagerTest
         query,
         intervals
     );
-
     return serverManagerExec.submit(
         new Runnable()
         {
           @Override
           public void run()
           {
-            Sequence<Result<SearchResultValue>> seq = runner.run(query);
+            Map<String,Object> context = new HashMap<String, Object>();
+            Sequence<Result<SearchResultValue>> seq = runner.run(query, context);
             Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
@@ -683,9 +685,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> run(Query<T> query)
+    public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
     {
-      return new BlockingSequence<T>(runner.run(query), waitLatch, waitYieldLatch, notifyLatch);
+      return new BlockingSequence<T>(runner.run(query, responseContext), waitLatch, waitYieldLatch, notifyLatch);
     }
   }
 
@@ -718,7 +720,7 @@ public class ServerManagerTest
       notifyLatch.countDown();
 
       try {
-        waitYieldLatch.await(25, TimeUnit.MILLISECONDS);
+        waitYieldLatch.await(1000, TimeUnit.MILLISECONDS);
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -731,7 +733,7 @@ public class ServerManagerTest
         public OutType get()
         {
           try {
-            waitLatch.await(25, TimeUnit.MILLISECONDS);
+            waitLatch.await(1000, TimeUnit.MILLISECONDS);
           }
           catch (Exception e) {
             throw Throwables.propagate(e);

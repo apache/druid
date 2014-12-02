@@ -32,13 +32,16 @@ import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.MergeSequence;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.guice.annotations.Global;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.IntervalChunkingQueryRunner;
@@ -82,19 +85,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   );
 
   private final Supplier<GroupByQueryConfig> configSupplier;
+
+  private final StupidPool<ByteBuffer> bufferPool;
   private final ObjectMapper jsonMapper;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
+
 
   @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
       ObjectMapper jsonMapper,
-      GroupByQueryEngine engine
+      GroupByQueryEngine engine,
+      @Global StupidPool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;
     this.jsonMapper = jsonMapper;
     this.engine = engine;
+    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -103,24 +111,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input)
+      public Sequence<Row> run(Query<Row> input, Map<String, Object> responseContext)
       {
         if (input.getContextBySegment(false)) {
-          return runner.run(input);
+          return runner.run(input, responseContext);
         }
 
         if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner);
+          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner,
+                                     responseContext
+          );
         }
-        return runner.run(input);
+        return runner.run(input, responseContext);
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner)
+  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, Object> context)
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
+
     final DataSource dataSource = query.getDataSource();
+
     if (dataSource instanceof QueryDataSource) {
       GroupByQuery subquery;
       try {
@@ -129,7 +141,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
-      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner);
+
+      final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
         aggs.addAll(aggregatorFactory.getRequiredColumns());
@@ -145,13 +158,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final GroupByQuery outerQuery = new GroupByQuery.Builder(query)
           .setLimitSpec(query.getLimitSpec().merge(subquery.getLimitSpec()))
           .build();
+      IncrementalIndex index = makeIncrementalIndex(innerQuery, subqueryResult);
 
-      final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(
-          makeIncrementalIndex(innerQuery, subqueryResult)
+      return new ResourceClosingSequence<>(
+          outerQuery.applyLimit(
+              engine.process(
+                  outerQuery,
+                  new IncrementalIndexStorageAdapter(
+                      index
+                  )
+              )
+          ),
+          index
       );
-      return outerQuery.applyLimit(engine.process(outerQuery, adapter));
     } else {
-      return query.applyLimit(postAggregate(query, makeIncrementalIndex(query, runner.run(query))));
+      final IncrementalIndex index = makeIncrementalIndex(query, runner.run(query, context));
+      return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
     }
   }
 
@@ -180,12 +202,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     final GroupByQueryConfig config = configSupplier.get();
     Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        config
+        config,
+        bufferPool
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
-
 
   @Override
   public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)

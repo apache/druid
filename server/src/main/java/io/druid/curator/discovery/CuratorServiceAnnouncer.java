@@ -51,7 +51,7 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
   @Override
   public void announce(DruidNode service)
   {
-    final String serviceName = getServiceName(service);
+    final String serviceName = CuratorServiceUtils.makeCanonicalServiceName(service.getServiceName());
 
     final ServiceInstance<Void> instance;
     synchronized (monitor) {
@@ -62,7 +62,7 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
         try {
           instance = ServiceInstance.<Void>builder()
                                     .name(serviceName)
-                                    .address(service.getHostNoPort())
+                                    .address(service.getHost())
                                     .port(service.getPort())
                                     .build();
         }
@@ -89,7 +89,7 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
   @Override
   public void unannounce(DruidNode service)
   {
-    final String serviceName = getServiceName(service);
+    final String serviceName = CuratorServiceUtils.makeCanonicalServiceName(service.getServiceName());
     final ServiceInstance<Void> instance;
 
     synchronized (monitor) {
@@ -114,9 +114,5 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
         instanceMap.remove(serviceName);
       }
     }
-  }
-
-  private String getServiceName(DruidNode service) {
-    return service.getServiceName().replaceAll("/", ":");
   }
 }

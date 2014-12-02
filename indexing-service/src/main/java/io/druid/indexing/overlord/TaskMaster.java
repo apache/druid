@@ -35,8 +35,8 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
-import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
-import io.druid.indexing.overlord.scaling.ResourceManagementSchedulerFactory;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -177,7 +177,7 @@ public class TaskMaster
         }
     );
 
-    leaderSelector.setId(node.getHost());
+    leaderSelector.setId(node.getHostAndPort());
     leaderSelector.autoRequeue();
   }
 

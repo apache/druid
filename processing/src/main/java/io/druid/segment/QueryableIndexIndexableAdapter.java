@@ -27,12 +27,15 @@ import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.IndexedFloatsGenericColumn;
+import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
-import io.druid.segment.data.ConciseCompressedIndexedInts;
+import io.druid.segment.data.BitmapCompressedIndexedInts;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -53,10 +56,8 @@ import java.util.Set;
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
   private static final Logger log = new Logger(QueryableIndexIndexableAdapter.class);
-
   private final int numRows;
   private final QueryableIndex input;
-
   private final List<String> availableDimensions;
 
   public QueryableIndexIndexableAdapter(QueryableIndex input)
@@ -94,18 +95,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getAvailableDimensions()
+  public Indexed<String> getDimensionNames()
   {
-    return new ListIndexed<String>(availableDimensions, String.class);
+    return new ListIndexed<>(availableDimensions, String.class);
   }
 
   @Override
-  public Indexed<String> getAvailableMetrics()
+  public Indexed<String> getMetricNames()
   {
     final Set<String> columns = Sets.newLinkedHashSet(input.getColumnNames());
-    final HashSet<String> dimensions = Sets.newHashSet(getAvailableDimensions());
+    final HashSet<String> dimensions = Sets.newHashSet(getDimensionNames());
 
-    return new ListIndexed<String>(
+    return new ListIndexed<>(
         Lists.newArrayList(Sets.difference(columns, dimensions)),
         String.class
     );
@@ -170,28 +171,30 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       {
         return new Iterator<Rowboat>()
         {
-          final GenericColumn timestamps = input.getTimeColumn().getGenericColumn();
+          final GenericColumn timestamps = input.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
           final Object[] metrics;
+
           final Map<String, DictionaryEncodedColumn> dimensions;
 
-          final int numMetrics = getAvailableMetrics().size();
+          final int numMetrics = getMetricNames().size();
 
           int currRow = 0;
           boolean done = false;
 
           {
             dimensions = Maps.newLinkedHashMap();
-            for (String dim : getAvailableDimensions()) {
+            for (String dim : getDimensionNames()) {
               dimensions.put(dim, input.getColumn(dim).getDictionaryEncoding());
             }
 
-            final Indexed<String> availableMetrics = getAvailableMetrics();
+            final Indexed<String> availableMetrics = getMetricNames();
             metrics = new Object[availableMetrics.size()];
             for (int i = 0; i < metrics.length; ++i) {
               final Column column = input.getColumn(availableMetrics.get(i));
               final ValueType type = column.getCapabilities().getType();
               switch (type) {
                 case FLOAT:
+                case LONG:
                   metrics[i] = column.getGenericColumn();
                   break;
                 case COMPLEX:
@@ -247,21 +250,17 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
             Object[] metricArray = new Object[numMetrics];
             for (int i = 0; i < metricArray.length; ++i) {
-              if (metrics[i] instanceof GenericColumn) {
+              if (metrics[i] instanceof IndexedFloatsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
+              } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
+                metricArray[i] = ((GenericColumn) metrics[i]).getLongSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
                 metricArray[i] = ((ComplexColumn) metrics[i]).getRowValue(currRow);
               }
             }
 
-            Map<String, String> descriptions = Maps.newHashMap();
-            for (String columnName : input.getColumnNames()) {
-              if (input.getColumn(columnName).getSpatialIndex() != null) {
-                descriptions.put(columnName, "spatial");
-              }
-            }
             final Rowboat retVal = new Rowboat(
-                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow, descriptions
+                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow
             );
 
             ++currRow;
@@ -280,7 +279,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getInverteds(String dimension, String value)
+  public IndexedInts getBitmapIndex(String dimension, String value)
   {
     final Column column = input.getColumn(dimension);
 
@@ -293,7 +292,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return new EmptyIndexedInts();
     }
 
-    return new ConciseCompressedIndexedInts(bitmaps.getConciseSet(value));
+    return new BitmapCompressedIndexedInts(bitmaps.getBitmap(value));
   }
 
   @Override
@@ -305,10 +304,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     switch (type) {
       case FLOAT:
         return "float";
+      case LONG:
+        return "long";
       case COMPLEX:
         return column.getComplexColumn().getTypeName();
       default:
         throw new ISE("Unknown type[%s]", type);
     }
+  }
+
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return input.getColumn(column).getCapabilities();
   }
 }

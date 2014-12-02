@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -48,11 +49,11 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
 
   @Override
   @SuppressWarnings("unchecked")
-  public Sequence<T> run(final Query<T> query)
+  public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
     if (query.getContextBySegment(false)) {
-      final Sequence<T> baseSequence = base.run(query);
 
+      final Sequence<T> baseSequence = base.run(query, responseContext);
       final List<T> results = Sequences.toList(baseSequence, Lists.<T>newArrayList());
       return Sequences.simple(
           Arrays.asList(
@@ -67,7 +68,6 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
           )
       );
     }
-
-    return base.run(query);
+    return base.run(query, responseContext);
   }
 }

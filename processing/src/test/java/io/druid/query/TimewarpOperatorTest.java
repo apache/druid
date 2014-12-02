@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -35,9 +36,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Map;
+
 
 public class TimewarpOperatorTest
 {
+  public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
+
   TimewarpOperator<Result<TimeseriesResultValue>> testOperator = new TimewarpOperator<>(
       new Interval(new DateTime("2014-01-01"), new DateTime("2014-01-15")),
       new Period("P1W"),
@@ -75,7 +80,10 @@ public class TimewarpOperatorTest
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query,
+              Map<String, Object> responseContext
+          )
           {
             return Sequences.simple(
                 ImmutableList.of(
@@ -120,7 +128,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        Sequences.toList(queryRunner.run(query), Lists.<Result<TimeseriesResultValue>>newArrayList())
+        Sequences.toList(queryRunner.run(query, CONTEXT), Lists.<Result<TimeseriesResultValue>>newArrayList())
     );
 
 
@@ -134,13 +142,21 @@ public class TimewarpOperatorTest
         new QueryRunner<Result<TimeBoundaryResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeBoundaryResultValue>> run(Query<Result<TimeBoundaryResultValue>> query)
+          public Sequence<Result<TimeBoundaryResultValue>> run(
+              Query<Result<TimeBoundaryResultValue>> query,
+              Map<String, Object> responseContext
+          )
           {
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
                         new DateTime("2014-01-12"),
-                        new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-01-12")))
+                        new TimeBoundaryResultValue(
+                            ImmutableMap.<String, Object>of(
+                                "maxTime",
+                                new DateTime("2014-01-12")
+                            )
+                        )
                     )
                 )
             );
@@ -161,7 +177,10 @@ public class TimewarpOperatorTest
                 new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-08-02")))
             )
         ),
-        Sequences.toList(timeBoundaryRunner.run(timeBoundaryQuery), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
+        Sequences.toList(
+            timeBoundaryRunner.run(timeBoundaryQuery, CONTEXT),
+            Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+        )
     );
 
   }
@@ -173,7 +192,10 @@ public class TimewarpOperatorTest
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
           @Override
-          public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query,
+              Map<String, Object> responseContext
+          )
           {
             return Sequences.simple(
                 ImmutableList.of(
@@ -210,7 +232,7 @@ public class TimewarpOperatorTest
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
             )
         ),
-        Sequences.toList(queryRunner.run(query), Lists.<Result<TimeseriesResultValue>>newArrayList())
+        Sequences.toList(queryRunner.run(query, Maps.<String, Object>newHashMap()), Lists.<Result<TimeseriesResultValue>>newArrayList())
     );
   }
 }

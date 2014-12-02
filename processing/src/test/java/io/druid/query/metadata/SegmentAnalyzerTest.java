@@ -38,6 +38,7 @@ import io.druid.segment.column.ValueType;
 import junit.framework.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +50,7 @@ public class SegmentAnalyzerTest
   public void testIncrementalDoesNotWork() throws Exception
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null)
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), null)
     );
 
     Assert.assertEquals(0, results.size());
@@ -71,7 +72,7 @@ public class SegmentAnalyzerTest
     Assert.assertEquals(TestIndex.COLUMNS.length, columns.size()); // All columns including time
 
     for (String dimension : TestIndex.DIMENSIONS) {
-      final ColumnAnalysis columnAnalysis = columns.get(dimension.toLowerCase());
+      final ColumnAnalysis columnAnalysis = columns.get(dimension);
 
       Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
       Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
@@ -79,7 +80,7 @@ public class SegmentAnalyzerTest
     }
 
     for (String metric : TestIndex.METRICS) {
-      final ColumnAnalysis columnAnalysis = columns.get(metric.toLowerCase());
+      final ColumnAnalysis columnAnalysis = columns.get(metric);
 
       Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
       Assert.assertTrue(metric, columnAnalysis.getSize() > 0);
@@ -106,6 +107,7 @@ public class SegmentAnalyzerTest
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
         new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null
     );
-    return Sequences.toList(query.run(runner), Lists.<SegmentAnalysis>newArrayList());
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());
   }
 }

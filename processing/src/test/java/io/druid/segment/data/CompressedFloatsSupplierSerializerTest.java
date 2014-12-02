@@ -23,6 +23,8 @@ import com.google.common.io.OutputSupplier;
 import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,21 +33,31 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-/**
- */
-public class CompressedFloatsSupplierSerializerTest
+@RunWith(Parameterized.class)
+public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyTest
 {
+  public CompressedFloatsSupplierSerializerTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  {
+    super(compressionStrategy);
+  }
+
   @Test
   public void testSanity() throws Exception
   {
     final ByteOrder order = ByteOrder.nativeOrder();
+    final int sizePer = 999;
     CompressedFloatsSupplierSerializer serializer = new CompressedFloatsSupplierSerializer(
-        999,
+        sizePer,
         new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
             new IOPeonForTesting(),
             "test",
-            CompressedFloatBufferObjectStrategy.getBufferForOrder(order)
-        )
+            CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                order,
+                compressionStrategy,
+                sizePer
+            )
+        ),
+        compressionStrategy
     );
     serializer.open();
 

@@ -19,15 +19,22 @@
 
 package io.druid.segment.column;
 
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import com.metamx.collections.bitmap.BitmapFactory;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 
 /**
  */
 public interface BitmapIndex
 {
   public int getCardinality();
+
   public String getValue(int index);
+
   public boolean hasNulls();
-  public ImmutableConciseSet getConciseSet(String value);
-  public ImmutableConciseSet getConciseSet(int idx);
+
+  public BitmapFactory getBitmapFactory();
+
+  public ImmutableBitmap getBitmap(String value);
+
+  public ImmutableBitmap getBitmap(int idx);
 }

@@ -21,6 +21,7 @@ package io.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
@@ -44,7 +45,9 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class TimeSeriesUnionQueryRunnerTest
@@ -103,9 +106,9 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-
+    HashMap<String,Object> context = new HashMap<String, Object>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query),
+        runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
@@ -142,7 +145,9 @@ public class TimeSeriesUnionQueryRunnerTest
             new QueryRunner<Result<TimeseriesResultValue>>()
             {
               @Override
-              public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query)
+              public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query,
+                                                                 Map<String, Object> responseContext
+              )
               {
                 if (query.getDataSource().equals(new TableDataSource("ds1"))) {
                   return Sequences.simple(
@@ -244,7 +249,7 @@ public class TimeSeriesUnionQueryRunnerTest
     );
 
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        mergingrunner.run(query),
+        mergingrunner.run(query, Maps.<String, Object>newHashMap()),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
