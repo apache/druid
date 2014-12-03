@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
@@ -155,8 +156,8 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       return Lists.newArrayList();
     }
 
-    DateTime min = new DateTime(Long.MAX_VALUE);
-    DateTime max = new DateTime(Long.MIN_VALUE);
+    DateTime min = new DateTime(JodaUtils.MAX_INSTANT);
+    DateTime max = new DateTime(JodaUtils.MIN_INSTANT);
     for (Result<TimeBoundaryResultValue> result : results) {
       TimeBoundaryResultValue val = result.getValue();
 

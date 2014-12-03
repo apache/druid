@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.common.utils.JodaUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
@@ -31,7 +32,7 @@ public class MessageTimeRejectionPolicyFactory implements RejectionPolicyFactory
 
     return new RejectionPolicy()
     {
-      private volatile long maxTimestamp = Long.MIN_VALUE;
+      private volatile long maxTimestamp = JodaUtils.MIN_INSTANT;
 
       @Override
       public DateTime getCurrMaxTime()

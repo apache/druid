@@ -36,6 +36,10 @@ import java.util.TreeSet;
  */
 public class JodaUtils
 {
+  // joda limits years to [-292275054,292278993] that should be reasonable
+  public static final long MAX_INSTANT = new DateTime("292278993").getMillis();
+  public static final long MIN_INSTANT = new DateTime("-292275054").getMillis();
+
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
     ArrayList<Interval> retVal = Lists.newArrayList();
