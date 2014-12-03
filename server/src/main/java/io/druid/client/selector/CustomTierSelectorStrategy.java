@@ -2,7 +2,7 @@ package io.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.api.client.util.Maps;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 
 import java.util.Comparator;

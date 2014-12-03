@@ -20,7 +20,7 @@
 package io.druid.cli.validate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.metamx.common.UOE;
 import io.airlift.command.Command;
 import io.airlift.command.Option;

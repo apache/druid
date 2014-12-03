@@ -19,7 +19,7 @@
 
 package io.druid.segment.realtime;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;

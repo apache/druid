@@ -19,8 +19,8 @@
 
 package io.druid.indexer;
 
-import com.google.api.client.util.Sets;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;

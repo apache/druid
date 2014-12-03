@@ -19,9 +19,9 @@
 
 package io.druid.server.coordinator.rules;
 
-import com.google.api.client.util.Lists;
-import com.google.api.client.util.Maps;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
