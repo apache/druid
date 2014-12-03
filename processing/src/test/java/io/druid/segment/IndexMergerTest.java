@@ -27,6 +27,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -60,7 +61,7 @@ public class IndexMergerTest
 
       Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-      Assert.assertEquals(2, index.getColumnNames().size());
+      Assert.assertEquals(3, index.getColumnNames().size());
     }
     finally {
       tempDir.delete();
@@ -74,7 +75,7 @@ public class IndexMergerTest
     IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(true);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")});
 
     toPersist2.add(
         new MapBasedInputRow(
@@ -100,25 +101,25 @@ public class IndexMergerTest
 
       Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
-      Assert.assertEquals(2, index1.getColumnNames().size());
+      Assert.assertEquals(3, index1.getColumnNames().size());
 
       QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2));
 
       Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
-      Assert.assertEquals(2, index2.getColumnNames().size());
+      Assert.assertEquals(3, index2.getColumnNames().size());
 
       QueryableIndex merged = IndexIO.loadIndex(
           IndexMerger.mergeQueryableIndex(
               Arrays.asList(index1, index2),
-              new AggregatorFactory[]{},
+              new AggregatorFactory[]{new CountAggregatorFactory("count")},
               mergedDir
           )
       );
 
       Assert.assertEquals(3, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
-      Assert.assertEquals(2, merged.getColumnNames().size());
+      Assert.assertEquals(3, merged.getColumnNames().size());
     }
     finally {
       FileUtils.deleteQuietly(tempDir1);

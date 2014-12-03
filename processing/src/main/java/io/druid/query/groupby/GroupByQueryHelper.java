@@ -76,7 +76,7 @@ public class GroupByQueryHelper
         }
     );
     final IncrementalIndex index;
-    if(query.getContextValue("useOffheap", false)){
+    if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
           // use granularity truncated min timestamp
           // since incoming truncated timestamps may precede timeStart
@@ -87,14 +87,14 @@ public class GroupByQueryHelper
           false
       );
     } else {
-     index = new OnheapIncrementalIndex(
-        // use granularity truncated min timestamp
-        // since incoming truncated timestamps may precede timeStart
-        granTimeStart,
-        gran,
-        aggs.toArray(new AggregatorFactory[aggs.size()]),
-        false
-    );
+      index = new OnheapIncrementalIndex(
+          // use granularity truncated min timestamp
+          // since incoming truncated timestamps may precede timeStart
+          granTimeStart,
+          gran,
+          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          false
+      );
     }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()

@@ -157,10 +157,10 @@ public class TestIndex
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading index file[%s]", resource);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-                                          .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-                                          .withQueryGranularity(QueryGranularity.NONE)
-                                          .withMetrics(METRIC_AGGS)
-                                          .build();
+        .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withQueryGranularity(QueryGranularity.NONE)
+        .withMetrics(METRIC_AGGS)
+        .build();
     final IncrementalIndex retVal;
     if (useOffheap) {
       retVal = new OffheapIncrementalIndex(

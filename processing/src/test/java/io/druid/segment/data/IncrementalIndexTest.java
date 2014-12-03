@@ -25,6 +25,7 @@ import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -99,13 +100,13 @@ public class IncrementalIndexTest
       return new OffheapIncrementalIndex(
           0L,
           QueryGranularity.NONE,
-          new AggregatorFactory[]{},
+          new AggregatorFactory[]{new CountAggregatorFactory("count")},
           TestQueryRunners.pool,
           true
       );
     } else {
       return new OnheapIncrementalIndex(
-          0L, QueryGranularity.NONE, new AggregatorFactory[]{}
+          0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}
       );
     }
   }
