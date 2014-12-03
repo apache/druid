@@ -48,7 +48,7 @@ public class HadoopDruidIndexerJob implements Jobby
 
     Preconditions.checkArgument(
         !config.isUpdaterJobSpecSet() || handler != null,
-        "MetadataStorageUpdaterJobHandler must not be null if ioConfig.metadataUpdateSpec is specified in "
+        "MetadataStorageUpdaterJobHandler must not be null if ioConfig.metadataUpdateSpec is specified."
     );
 
     if (config.isUpdaterJobSpecSet()) {
