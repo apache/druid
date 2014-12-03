@@ -42,9 +42,8 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.io.AppendableByteArrayInputStream;
 import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.InputStreamResponseHandler;
+import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.query.BySegmentResultValueClass;
@@ -56,20 +55,30 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.net.URL;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -141,68 +150,112 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     try {
       log.debug("Querying url[%s]", url);
+
+      final HttpResponseHandler<SequenceInputStream, InputStream> responseHandler = new HttpResponseHandler<SequenceInputStream, InputStream>()
+      {
+        long startTime;
+        AtomicLong byteCount = new AtomicLong(0);
+        private final BlockingQueue<InputStream> queue = new LinkedBlockingQueue<>();
+        private final AtomicBoolean done = new AtomicBoolean(false);
+        private final Enumeration<InputStream> enumeration = new Enumeration<InputStream>()
+        {
+          @Override
+          public boolean hasMoreElements()
+          {
+            // Done is always true until the last stream has be put in the queue.
+            // Then the stream should be spouting good InputStreams, but sometimes
+            // has a null input stream at the end.
+            return !done.get() || (!queue.isEmpty() && null != queue.peek());
+          }
+
+          @Override
+          public InputStream nextElement()
+          {
+            try {
+              return queue.poll(10, TimeUnit.SECONDS);
+            }
+            catch (InterruptedException e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        };
+
+        @Override
+        public synchronized ClientResponse<SequenceInputStream> handleResponse(HttpResponse response)
+        {
+          log.debug("Initial response from url[%s]", url);
+          startTime = System.currentTimeMillis();
+          byteCount.addAndGet(response.getContent().readableBytes());
+          try {
+            final String responseContext = response.headers().get("X-Druid-Response-Context");
+            // context may be null in case of error or query timeout
+            if (responseContext != null) {
+              context.putAll(
+                  objectMapper.<Map<String, Object>>readValue(
+                      responseContext, new TypeReference<Map<String, Object>>()
+                      {
+                      }
+                  )
+              );
+            }
+            queue.put(new ChannelBufferInputStream(response.getContent()));
+          }
+          catch (IOException | InterruptedException e) {
+            log.error(e, "Unable to parse response context from url[%s]", url);
+          }
+          final SequenceInputStream sequenceInputStream = new SequenceInputStream(enumeration);
+          return ClientResponse.finished(sequenceInputStream);
+        }
+
+        @Override
+        public synchronized ClientResponse<SequenceInputStream> handleChunk(
+            ClientResponse<SequenceInputStream> clientResponse, HttpChunk chunk
+        )
+        {
+          final ChannelBuffer channelBuffer = chunk.getContent();
+          final int bytes = channelBuffer.readableBytes();
+          if (bytes > 0) {
+            queue.offer(new ChannelBufferInputStream(channelBuffer));
+            byteCount.addAndGet(bytes);
+          }
+          return clientResponse;
+        }
+
+        @Override
+        public synchronized ClientResponse<InputStream> done(ClientResponse<SequenceInputStream> clientResponse)
+        {
+          long stopTime = System.currentTimeMillis();
+          log.debug(
+              "Completed request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
+              url,
+              byteCount.get(),
+              stopTime - startTime,
+              byteCount.get() / (0.0001 * (stopTime - startTime))
+          );
+          try {
+            // An empty byte array is put at the end to give the SequenceInputStream.close() something to close out
+            // after done is set to true, regardless of the rest of the stream's state.
+            queue.put(new ByteArrayInputStream(new byte[0]));
+          }
+          catch (InterruptedException e) {
+            log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
+          }
+          done.set(true);
+          return ClientResponse.<InputStream>finished(clientResponse.getObj());
+        }
+
+        @Override
+        public void exceptionCaught(ClientResponse<SequenceInputStream> clientResponse, Throwable e)
+        {
+          this.done.set(true);
+          log.error(e, "Exception caught");
+        }
+      };
       future = httpClient
           .post(new URL(url))
           .setContent(objectMapper.writeValueAsBytes(query))
           .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
-          .go(
-              new InputStreamResponseHandler()
-              {
-                long startTime;
-                long byteCount = 0;
-
-                @Override
-                public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response)
-                {
-                  log.debug("Initial response from url[%s]", url);
-                  startTime = System.currentTimeMillis();
-                  byteCount += response.getContent().readableBytes();
-
-                  try {
-                    final String responseContext = response.headers().get("X-Druid-Response-Context");
-                    // context may be null in case of error or query timeout
-                    if (responseContext != null) {
-                      context.putAll(
-                          objectMapper.<Map<String, Object>>readValue(
-                              responseContext, new TypeReference<Map<String, Object>>()
-                              {
-                              }
-                          )
-                      );
-                    }
-                  }
-                  catch (IOException e) {
-                    log.error(e, "Unable to parse response context from url[%s]", url);
-                  }
-
-                  return super.handleResponse(response);
-                }
-
-                @Override
-                public ClientResponse<AppendableByteArrayInputStream> handleChunk(
-                    ClientResponse<AppendableByteArrayInputStream> clientResponse, HttpChunk chunk
-                )
-                {
-                  final int bytes = chunk.getContent().readableBytes();
-                  byteCount += bytes;
-                  return super.handleChunk(clientResponse, chunk);
-                }
-
-                @Override
-                public ClientResponse<InputStream> done(ClientResponse<AppendableByteArrayInputStream> clientResponse)
-                {
-                  long stopTime = System.currentTimeMillis();
-                  log.debug(
-                      "Completed request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
-                      url,
-                      byteCount,
-                      stopTime - startTime,
-                      byteCount / (0.0001 * (stopTime - startTime))
-                  );
-                  return super.done(clientResponse);
-                }
-              }
-          );
+          .go(responseHandler);
 
       queryWatcher.registerQuery(query, future);
 
@@ -336,6 +389,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       if (jp == null) {
         try {
           jp = objectMapper.getFactory().createParser(future.get());
+          if (null == jp.getInputSource()) {
+            log.warn("JSON parser has a NULL input source");
+          }
           final JsonToken nextToken = jp.nextToken();
           if (nextToken == JsonToken.START_OBJECT) {
             QueryInterruptedException e = jp.getCodec().readValue(jp, QueryInterruptedException.class);
