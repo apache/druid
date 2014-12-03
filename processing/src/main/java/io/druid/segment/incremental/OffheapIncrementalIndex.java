@@ -219,6 +219,14 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     }
   }
 
+  /**
+   -   * @return true if the underlying buffer for IncrementalIndex is full and cannot accommodate more rows.
+   -   */
+    public boolean isFull()
+   {
+      return (size() + 1) * totalAggSize > bufferHolder.get().limit();
+    }
+
   private int getMetricPosition(int rowOffset, int metricIndex)
   {
     return rowOffset + aggPositionOffsets[metricIndex];

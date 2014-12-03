@@ -52,4 +52,6 @@ public interface Plumber
    * fed into sinks and persisted.
    */
   public void finishJob();
+
+  public Sink getSink(long timestamp);
 }

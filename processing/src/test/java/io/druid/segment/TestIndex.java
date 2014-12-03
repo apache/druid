@@ -170,7 +170,8 @@ public class TestIndex
       );
     } else {
       retVal = new OnheapIncrementalIndex(
-          schema
+          schema,
+          10000
       );
     }
 

@@ -54,7 +54,7 @@ public class TimeseriesQueryRunnerBonusTest
   public void testOneRowAtATime() throws Exception
   {
     final IncrementalIndex oneRowIndex = new OnheapIncrementalIndex(
-        new DateTime("2012-01-01T00:00:00Z").getMillis(), QueryGranularity.NONE, new AggregatorFactory[]{}
+        new DateTime("2012-01-01T00:00:00Z").getMillis(), QueryGranularity.NONE, new AggregatorFactory[]{}, 1000
     );
 
     List<Result<TimeseriesResultValue>> results;

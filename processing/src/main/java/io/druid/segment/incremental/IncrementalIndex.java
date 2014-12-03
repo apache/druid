@@ -720,4 +720,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       ) + '}';
     }
   }
+
+  public abstract boolean isFull();
 }

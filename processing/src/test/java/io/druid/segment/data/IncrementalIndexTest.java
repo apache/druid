@@ -75,7 +75,7 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return createCaseInsensitiveIndex(true);
+                    return IncrementalIndexTest.createIndex(true);
                   }
                 }
             },
@@ -85,7 +85,7 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return createCaseInsensitiveIndex(false);
+                    return IncrementalIndexTest.createIndex(false);
                   }
                 }
             }
@@ -94,7 +94,7 @@ public class IncrementalIndexTest
     );
   }
 
-  public static IncrementalIndex createCaseInsensitiveIndex(boolean offheap)
+  public static IncrementalIndex createIndex(boolean offheap)
   {
     if (offheap) {
       return new OffheapIncrementalIndex(
@@ -106,7 +106,7 @@ public class IncrementalIndexTest
       );
     } else {
       return new OnheapIncrementalIndex(
-          0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}
+          0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000
       );
     }
   }

@@ -90,7 +90,7 @@ public class IncrementalIndexStorageAdapterTest
               public IncrementalIndex createIndex()
               {
                 return new OnheapIncrementalIndex(
-                    0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}
+                    0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
                 );
               }
             }

@@ -49,6 +49,7 @@ import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
+import io.druid.segment.realtime.plumber.Sink;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
@@ -292,7 +293,8 @@ public class RealtimeIndexTask extends AbstractTask
           }
 
           fireDepartment.getMetrics().incrementProcessed();
-          if (currCount >= tuningConfig.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+          if ((sink != null && sink.isFull()) || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }

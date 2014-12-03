@@ -348,7 +348,7 @@ public class IndexGeneratorJob implements Jobby
           int numRows = index.add(inputRow);
           ++lineCount;
 
-          if (numRows >= config.getSchema().getTuningConfig().getRowFlushBoundary()) {
+          if (index.isFull()) {
             log.info(
                 "%,d lines to %,d rows in %,d millis",
                 lineCount - runningTotalLineCount,
@@ -631,12 +631,7 @@ public class IndexGeneratorJob implements Jobby
 
     private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
     {
-      int aggsSize = 0;
-      for (AggregatorFactory agg : aggs) {
-        aggsSize += agg.getMaxIntermediateSize();
-      }
       final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
-      int bufferSize = aggsSize * tuningConfig.getRowFlushBoundary();
       final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
           .withMinTimestamp(theBucket.time.getMillis())
           .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
@@ -646,12 +641,13 @@ public class IndexGeneratorJob implements Jobby
       if (tuningConfig.isIngestOffheap()) {
         return new OffheapIncrementalIndex(
             indexSchema,
-            new OffheapBufferPool(bufferSize),
+            new OffheapBufferPool(tuningConfig.getBufferSize()),
             true
         );
       } else {
         return new OnheapIncrementalIndex(
-            indexSchema
+            indexSchema,
+            tuningConfig.getRowFlushBoundary()
         );
       }
     }

@@ -39,6 +39,7 @@ public class HadoopTuningConfig implements TuningConfig
   private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
   private static final int defaultRowFlushBoundary = 80000;
+  private static final int defaultBufferSize = 128 * 1024 * 1024;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -55,7 +56,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         false,
         false,
-        false
+        false,
+        defaultBufferSize
     );
   }
 
@@ -72,6 +74,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean combineText;
   private final boolean persistInHeap;
   private final boolean ingestOffheap;
+  private final int bufferSize;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -87,7 +90,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("persistInHeap") boolean persistInHeap,
-      final @JsonProperty("ingestOffheap") boolean ingestOffheap
+      final @JsonProperty("ingestOffheap") boolean ingestOffheap,
+      final @JsonProperty("bufferSize") Integer bufferSize
   )
   {
     this.workingPath = workingPath == null ? null : workingPath;
@@ -105,6 +109,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.combineText = combineText;
     this.persistInHeap = persistInHeap;
     this.ingestOffheap = ingestOffheap;
+    this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
   }
 
   @JsonProperty
@@ -184,6 +189,11 @@ public class HadoopTuningConfig implements TuningConfig
     return ingestOffheap;
   }
 
+  @JsonProperty
+  public int getBufferSize(){
+    return bufferSize;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -199,7 +209,8 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize
     );
   }
 
@@ -218,7 +229,8 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize
     );
   }
 
@@ -237,7 +249,8 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize
     );
   }
 }

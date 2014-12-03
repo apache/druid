@@ -52,7 +52,8 @@ public class EmptyIndexTest
     IncrementalIndex emptyIndex = new OnheapIncrementalIndex(
         0,
         QueryGranularity.NONE,
-        new AggregatorFactory[0]
+        new AggregatorFactory[0],
+        1000
     );
     IncrementalIndexAdapter emptyIndexAdapter = new IncrementalIndexAdapter(
         new Interval("2012-08-01/P3D"),

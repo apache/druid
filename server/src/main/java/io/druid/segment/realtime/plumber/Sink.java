@@ -177,11 +177,6 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
-    int aggsSize = 0;
-    for (AggregatorFactory agg : schema.getAggregators()) {
-      aggsSize += agg.getMaxIntermediateSize();
-    }
-    int bufferSize = aggsSize * config.getMaxRowsInMemory();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
@@ -192,12 +187,13 @@ public class Sink implements Iterable<FireHydrant>
     if (config.isIngestOffheap()) {
       newIndex = new OffheapIncrementalIndex(
           indexSchema,
-          new OffheapBufferPool(bufferSize),
+          new OffheapBufferPool(config.getBufferSize()),
           true
       );
     } else {
       newIndex = new OnheapIncrementalIndex(
-          indexSchema
+          indexSchema,
+          config.getMaxRowsInMemory()
       );
     }
 
@@ -236,4 +232,11 @@ public class Sink implements Iterable<FireHydrant>
            ", schema=" + schema +
            '}';
   }
+
+  public boolean isFull()
+   {
+     synchronized (currHydrant){
+         return currHydrant != null && currHydrant.getIndex().isFull();
+        }
+   }
 }

@@ -93,7 +93,8 @@ public class GroupByQueryHelper
           granTimeStart,
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
-          false
+          false,
+          Integer.MAX_VALUE
       );
     }
 

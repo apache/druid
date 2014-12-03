@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.column.Column;
@@ -52,7 +51,7 @@ public class IndexMergerTest
   {
     final long timestamp = System.currentTimeMillis();
 
-    IncrementalIndex toPersist = IncrementalIndexTest.createCaseInsensitiveIndex(true);
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(true);
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
     final File tempDir = Files.createTempDir();
@@ -72,10 +71,10 @@ public class IndexMergerTest
   public void testPersistMerge() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createCaseInsensitiveIndex(true);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")});
+    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000);
 
     toPersist2.add(
         new MapBasedInputRow(
@@ -131,8 +130,8 @@ public class IndexMergerTest
   @Test
   public void testPersistEmptyColumn() throws Exception
   {
-    final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
-    final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{});
+    final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{}, 10);
+    final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(0L, QueryGranularity.NONE, new AggregatorFactory[]{}, 10);
     final File tmpDir1 = Files.createTempDir();
     final File tmpDir2 = Files.createTempDir();
     final File tmpDir3 = Files.createTempDir();

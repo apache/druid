@@ -43,18 +43,21 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
   private final List<Aggregator[]> aggList = Lists.newArrayList();
+  private final int maxRowCount;
 
-  public OnheapIncrementalIndex(IncrementalIndexSchema incrementalIndexSchema, boolean deserializeComplexMetrics)
+  public OnheapIncrementalIndex(IncrementalIndexSchema incrementalIndexSchema, boolean deserializeComplexMetrics, int maxRowCount)
   {
     super(incrementalIndexSchema, deserializeComplexMetrics);
     this.facts = new ConcurrentSkipListMap<>();
+    this.maxRowCount = maxRowCount;
   }
 
   public OnheapIncrementalIndex(
       long minTimestamp,
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics
+      boolean deserializeComplexMetrics,
+      int maxRowCount
   )
   {
     this(
@@ -62,14 +65,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
                                             .build(),
-        deserializeComplexMetrics
+        deserializeComplexMetrics,
+        maxRowCount
     );
   }
 
   public OnheapIncrementalIndex(
       long minTimestamp,
       QueryGranularity gran,
-      final AggregatorFactory[] metrics
+      final AggregatorFactory[] metrics,
+      int maxRowCount
   )
   {
     this(
@@ -77,15 +82,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
                                             .build(),
-        true
+        true,
+        maxRowCount
     );
   }
 
   public OnheapIncrementalIndex(
-      IncrementalIndexSchema incrementalIndexSchema
+      IncrementalIndexSchema incrementalIndexSchema,
+      int maxRowCount
   )
   {
-    this(incrementalIndexSchema, true);
+    this(incrementalIndexSchema, true, maxRowCount);
   }
 
   @Override
@@ -165,6 +172,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
     return aggList.get(rowOffset)[aggOffset].getFloat();
+  }
+
+  @Override
+  public boolean isFull()
+  {
+    return size() >= maxRowCount;
   }
 
   @Override

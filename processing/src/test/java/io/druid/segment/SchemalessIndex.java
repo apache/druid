@@ -135,7 +135,7 @@ public class SchemalessIndex
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS);
+          theIndex = new OnheapIncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS, 1000);
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -332,7 +332,7 @@ public class SchemalessIndex
           }
 
           final IncrementalIndex rowIndex = new OnheapIncrementalIndex(
-              timestamp, QueryGranularity.MINUTE, METRIC_AGGS
+              timestamp, QueryGranularity.MINUTE, METRIC_AGGS, 1000
           );
 
           rowIndex.add(
@@ -362,7 +362,7 @@ public class SchemalessIndex
     log.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs
+        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs, 1000
     );
 
     try {

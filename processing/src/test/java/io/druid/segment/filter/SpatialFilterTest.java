@@ -126,7 +126,8 @@ public class SpatialFilterTest
                                                     )
                                                 )
                                             ).build(),
-        false
+        false,
+        1000
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -288,7 +289,8 @@ public class SpatialFilterTest
                                                       )
                                                   )
                                               ).build(),
-          false
+          false,
+          1000
       );
       IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -311,7 +313,8 @@ public class SpatialFilterTest
                                                       )
                                                   )
                                               ).build(),
-          false
+          false,
+          1000
       );
       IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -334,7 +337,8 @@ public class SpatialFilterTest
                                                       )
                                                   )
                                               ).build(),
-          false
+          false,
+          1000
       );
 
 
