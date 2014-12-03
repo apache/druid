@@ -117,7 +117,7 @@ public class HadoopIndexTask extends AbstractTask
     Preconditions.checkArgument(this.spec.getTuningConfig().getWorkingPath() == null, "workingPath must be absent");
     Preconditions.checkArgument(
         this.spec.getIOConfig().getMetadataUpdateSpec() == null,
-        "updaterJobSpec must be absent"
+        "metadataUpdateSpec must be absent"
     );
 
     if (hadoopDependencyCoordinates != null) {
