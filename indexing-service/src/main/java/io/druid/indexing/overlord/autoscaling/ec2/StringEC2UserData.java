@@ -21,7 +21,7 @@ package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Charsets;
+import com.google.common.base.Charsets;
 import org.apache.commons.codec.binary.Base64;
 
 public class StringEC2UserData implements EC2UserData<StringEC2UserData>
