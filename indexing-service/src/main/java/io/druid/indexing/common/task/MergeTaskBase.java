@@ -75,6 +75,8 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
         computeMergedInterval(segments)
     );
 
+    this.priority = Priority.LOW;
+
     // Verify segment list is nonempty
     Preconditions.checkArgument(segments.size() > 0, "segments nonempty");
     // Verify segments are all in the correct datasource

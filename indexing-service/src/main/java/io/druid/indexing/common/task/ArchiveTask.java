@@ -50,6 +50,7 @@ public class ArchiveTask extends AbstractFixedIntervalTask
         dataSource,
         interval
     );
+    this.priority = Priority.LOW;
   }
 
   @Override

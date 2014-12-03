@@ -466,23 +466,20 @@ public class RealtimePlumber implements Plumber
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_persist_%d", maxPendingPersists
+          "plumber_persist_%d", maxPendingPersists, Thread.MIN_PRIORITY
       );
     }
     if (mergeExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       mergeExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_merge_%d", 1
+          "plumber_merge_%d", 1, Thread.MIN_PRIORITY
       );
     }
 
     if (scheduledExecutor == null) {
       scheduledExecutor = Executors.newScheduledThreadPool(
           1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("plumber_scheduled_%d")
-              .build()
+          Execs.makeThreadFactory("plumber_scheduled_%d",Thread.MIN_PRIORITY)
       );
     }
   }

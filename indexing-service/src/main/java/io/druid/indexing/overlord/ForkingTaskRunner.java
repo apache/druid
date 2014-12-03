@@ -207,6 +207,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
 
+                              command.add("-XX:+UseThreadPriorities");
+                              command.add("-XX:ThreadPriorityPolicy=42");
+
                               command.add("io.druid.cli.Main");
                               command.add("internal");
                               command.add("peon");
