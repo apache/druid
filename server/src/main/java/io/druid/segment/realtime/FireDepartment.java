@@ -21,19 +21,13 @@ package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.PlumberSchool;
-import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
-import org.joda.time.Interval;
 
 import java.io.IOException;
 

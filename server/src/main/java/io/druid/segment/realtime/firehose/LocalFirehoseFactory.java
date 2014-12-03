@@ -21,7 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;

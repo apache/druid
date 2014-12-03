@@ -19,7 +19,7 @@
 
 package io.druid.guice.http;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.lifecycle.Lifecycle;

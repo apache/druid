@@ -19,13 +19,12 @@
 
 package io.druid.indexing.worker.http;
 
-import com.google.api.client.util.Lists;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.overlord.ForkingTaskRunner;
