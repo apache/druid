@@ -31,6 +31,7 @@ import org.mapdb.BTreeKeySerializer;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
+import org.mapdb.Store;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -57,11 +58,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   private final int[] aggPositionOffsets;
   private final int totalAggSize;
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
+  private final int sizeLimit;
 
   public OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       StupidPool<ByteBuffer> bufferPool,
-      boolean deserializeComplexMetrics
+      boolean deserializeComplexMetrics,
+      int sizeLimit
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics);
@@ -91,6 +94,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                         .comparator(timeAndDimsSerializer.getComparator())
                         .valueSerializer(Serializer.INTEGER)
                         .make();
+    this.sizeLimit = sizeLimit;
   }
 
   public OffheapIncrementalIndex(
@@ -98,7 +102,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
       StupidPool<ByteBuffer> bufferPool,
-      boolean deserializeComplexMetrics
+      boolean deserializeComplexMetrics,
+      int sizeLimit
   )
   {
     this(
@@ -107,7 +112,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                             .withMetrics(metrics)
                                             .build(),
         bufferPool,
-        deserializeComplexMetrics
+        deserializeComplexMetrics,
+        sizeLimit
     );
   }
 
@@ -220,12 +226,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   /**
-   -   * @return true if the underlying buffer for IncrementalIndex is full and cannot accommodate more rows.
-   -   */
-    public boolean isFull()
-   {
-      return (size() + 1) * totalAggSize > bufferHolder.get().limit();
-    }
+   * -   * @return true if the underlying buffer for IncrementalIndex is full and cannot accommodate more rows.
+   * -
+   */
+  public boolean isFull()
+  {
+    return (size() + 1) * totalAggSize > bufferHolder.get().limit() || getCurrentSize() > sizeLimit ;
+  }
 
   private int getMetricPosition(int rowOffset, int metricIndex)
   {
@@ -415,5 +422,10 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     {
       return s1.equals(s2);
     }
+  }
+
+  private long getCurrentSize()
+  {
+    return Store.forDB(db).getCurrSize() + Store.forDB(factsDb).getCurrSize() + bufferHolder.get().limit();
   }
 }

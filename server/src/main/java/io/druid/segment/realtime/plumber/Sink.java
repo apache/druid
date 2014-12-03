@@ -187,8 +187,10 @@ public class Sink implements Iterable<FireHydrant>
     if (config.isIngestOffheap()) {
       newIndex = new OffheapIncrementalIndex(
           indexSchema,
+          // Assuming half space for aggregates
           new OffheapBufferPool(config.getBufferSize()),
-          true
+          true,
+          config.getBufferSize()
       );
     } else {
       newIndex = new OnheapIncrementalIndex(

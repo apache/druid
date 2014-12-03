@@ -166,7 +166,8 @@ public class TestIndex
       retVal = new OffheapIncrementalIndex(
           schema,
           TestQueryRunners.pool,
-          true
+          true,
+          100 * 1024 * 1024
       );
     } else {
       retVal = new OnheapIncrementalIndex(

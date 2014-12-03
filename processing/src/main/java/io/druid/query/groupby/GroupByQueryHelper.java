@@ -84,7 +84,8 @@ public class GroupByQueryHelper
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           bufferPool,
-          false
+          false,
+          Integer.MAX_VALUE
       );
     } else {
       index = new OnheapIncrementalIndex(

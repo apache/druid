@@ -36,19 +36,19 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
-  private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
-  private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
-  private static final int defaultRowFlushBoundary = 80000;
-  private static final int defaultBufferSize = 128 * 1024 * 1024;
+  private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
+  private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
+  private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
+  private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
     return new HadoopTuningConfig(
         null,
         new DateTime().toString(),
-        defaultPartitionsSpec,
-        defaultShardSpecs,
-        defaultRowFlushBoundary,
+        DEFAULT_PARTITIONS_SPEC,
+        DEFAULT_SHARD_SPECS,
+        DEFAULT_ROW_FLUSH_BOUNDARY,
         false,
         true,
         false,
@@ -57,7 +57,7 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         false,
         false,
-        defaultBufferSize
+        DEFAULT_BUFFER_SIZE
     );
   }
 
@@ -96,9 +96,9 @@ public class HadoopTuningConfig implements TuningConfig
   {
     this.workingPath = workingPath == null ? null : workingPath;
     this.version = version == null ? new DateTime().toString() : version;
-    this.partitionsSpec = partitionsSpec == null ? defaultPartitionsSpec : partitionsSpec;
-    this.shardSpecs = shardSpecs == null ? defaultShardSpecs : shardSpecs;
-    this.rowFlushBoundary = rowFlushBoundary == null ? defaultRowFlushBoundary : rowFlushBoundary;
+    this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
+    this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
+    this.rowFlushBoundary = rowFlushBoundary == null ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -109,7 +109,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.combineText = combineText;
     this.persistInHeap = persistInHeap;
     this.ingestOffheap = ingestOffheap;
-    this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
+    this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
   }
 
   @JsonProperty

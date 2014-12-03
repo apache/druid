@@ -102,7 +102,8 @@ public class IncrementalIndexTest
           QueryGranularity.NONE,
           new AggregatorFactory[]{new CountAggregatorFactory("count")},
           TestQueryRunners.pool,
-          true
+          true,
+          100 * 1024 * 1024
       );
     } else {
       return new OnheapIncrementalIndex(

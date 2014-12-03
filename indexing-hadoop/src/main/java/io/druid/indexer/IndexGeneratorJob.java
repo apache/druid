@@ -642,7 +642,8 @@ public class IndexGeneratorJob implements Jobby
         return new OffheapIncrementalIndex(
             indexSchema,
             new OffheapBufferPool(tuningConfig.getBufferSize()),
-            true
+            true,
+            tuningConfig.getBufferSize()
         );
       } else {
         return new OnheapIncrementalIndex(

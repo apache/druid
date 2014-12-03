@@ -107,7 +107,8 @@ public class IncrementalIndexStorageAdapterTest
                         QueryGranularity.MINUTE,
                         new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
                         TestQueryRunners.pool,
-                        true
+                        true,
+                        100 * 1024 * 1024
                     );
                   }
                 }
