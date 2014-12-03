@@ -457,8 +457,8 @@ public class IndexMerger
       GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.stringStrategy).writeToChannel(channel);
       GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.stringStrategy).writeToChannel(channel);
 
-      DateTime minTime = new DateTime(Long.MAX_VALUE);
-      DateTime maxTime = new DateTime(0l);
+      DateTime minTime = new DateTime(JodaUtils.MAX_INSTANT);
+      DateTime maxTime = new DateTime(JodaUtils.MIN_INSTANT);
 
       for (IndexableAdapter index : indexes) {
         minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
