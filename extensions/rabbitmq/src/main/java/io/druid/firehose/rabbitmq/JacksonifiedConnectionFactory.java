@@ -20,11 +20,16 @@
 package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.LongString;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 /**
@@ -152,6 +157,20 @@ public class JacksonifiedConnectionFactory extends ConnectionFactory
   public String getUri()
   {
     return uri;
+  }
+
+  // we are only overriding this to help Jackson not be confused about the two setURI methods
+  @JsonIgnore
+  @Override
+  public void setUri(URI uri) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException
+  {
+    super.setUri(uri);
+  }
+
+  @Override
+  public void setUri(String uriString) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException
+  {
+    super.setUri(uriString);
   }
 
   @Override
