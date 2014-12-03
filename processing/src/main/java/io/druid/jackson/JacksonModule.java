@@ -21,6 +21,7 @@ package io.druid.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -49,6 +50,7 @@ public class JacksonModule implements Module
   public ObjectMapper smileMapper()
   {
     final SmileFactory smileFactory = new SmileFactory();
+    smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
     smileFactory.delegateToTextual(true);
     final ObjectMapper retVal = new DefaultObjectMapper(smileFactory);
     retVal.getFactory().setCodec(retVal);
