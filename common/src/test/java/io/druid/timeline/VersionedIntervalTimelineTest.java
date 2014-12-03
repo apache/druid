@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.common.Pair;
+import io.druid.common.utils.JodaUtils;
 import io.druid.timeline.partition.ImmutablePartitionHolder;
 import io.druid.timeline.partition.IntegerPartitionChunk;
 import io.druid.timeline.partition.PartitionChunk;
@@ -1294,7 +1295,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-05/2011-01-10", "2", 2),
             createExpected("2011-01-10/2011-01-15", "3", 3)
         ),
-        timeline.lookup(new Interval(new DateTime(0), new DateTime(Long.MAX_VALUE)))
+        timeline.lookup(new Interval(new DateTime(0), new DateTime(JodaUtils.MAX_INSTANT)))
     );
   }
 

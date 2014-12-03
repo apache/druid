@@ -20,19 +20,20 @@
 package io.druid.granularity;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.common.utils.JodaUtils;
 
 public final class AllGranularity extends BaseQueryGranularity
 {
   @Override
   public long next(long offset)
   {
-    return Long.MAX_VALUE;
+    return JodaUtils.MAX_INSTANT;
   }
 
   @Override
   public long truncate(long offset)
   {
-    return Long.MIN_VALUE;
+    return JodaUtils.MIN_INSTANT;
   }
 
   @Override
