@@ -19,9 +19,7 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFChunk;
@@ -34,7 +32,6 @@ import net.jpountz.lz4.LZ4SafeDecompressor;
 
 import java.io.IOException;
 import java.nio.Buffer;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Map;
@@ -233,38 +230,18 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out)
     {
-      final byte[] bytes = new byte[numBytes];
-      in.get(bytes);
-
-      try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
-        final byte[] outputBytes = outputBytesHolder.get();
-        // Since decompressed size is NOT known, must use lz4Safe
-        final int numDecompressedBytes = lz4Safe.decompress(bytes, outputBytes);
-        out.put(outputBytes, 0, numDecompressedBytes);
-        out.flip();
-      }
-      catch (IOException e) {
-        log.error(e, "IOException thrown while closing ChunkEncoder.");
-      }
+      // Since decompressed size is NOT known, must use lz4Safe
+      // lz4Safe.decompress does not modify buffer positions
+      final int numDecompressedBytes = lz4Safe.decompress(in, in.position(), numBytes, out, out.position(), out.remaining());
+      out.limit(out.position() + numDecompressedBytes);
     }
 
     @Override
     public void decompress(ByteBuffer in, int numBytes, ByteBuffer out, int decompressedSize)
     {
-      final byte[] bytes = new byte[numBytes];
-      in.get(bytes);
-
-      // TODO: Upgrade this to ByteBuffer once https://github.com/jpountz/lz4-java/issues/9 is in mainline code for lz4-java
-      try (final ResourceHolder<byte[]> outputBytesHolder = CompressedPools.getOutputBytes()) {
-        final byte[] outputBytes = outputBytesHolder.get();
-        lz4Fast.decompress(bytes, 0, outputBytes, 0, decompressedSize);
-
-        out.put(outputBytes, 0, decompressedSize);
-        out.flip();
-      }
-      catch (IOException e) {
-        log.error(e, "IOException thrown while closing ChunkEncoder.");
-      }
+      // lz4Fast.decompress does not modify buffer positions
+      lz4Fast.decompress(in, in.position(), out, out.position(), decompressedSize);
+      out.limit(out.position() + decompressedSize);
     }
   }
 
