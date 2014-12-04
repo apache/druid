@@ -231,7 +231,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
    */
   public boolean isFull()
   {
-    return (size() + 1) * totalAggSize > bufferHolder.get().limit() || getCurrentSize() > sizeLimit ;
+    return getCurrentSize() > sizeLimit;
   }
 
   private int getMetricPosition(int rowOffset, int metricIndex)
@@ -426,6 +426,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   private long getCurrentSize()
   {
-    return Store.forDB(db).getCurrSize() + Store.forDB(factsDb).getCurrSize() + bufferHolder.get().limit();
+    return Store.forDB(db).getCurrSize() +
+           Store.forDB(factsDb).getCurrSize()
+           // Size of aggregators
+           + (size() + 1) * totalAggSize;
   }
 }

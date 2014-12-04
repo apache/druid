@@ -208,4 +208,26 @@ public class IncrementalIndexTest
     }
     Assert.assertEquals(elementsPerThread, curr);
   }
+
+  @Test
+  public void testOffheapIndexIsFull()
+  {
+    OffheapIncrementalIndex index = new OffheapIncrementalIndex(
+        0L,
+        QueryGranularity.NONE,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        TestQueryRunners.pool,
+        true,
+        2 * 1024 * 1024
+    );
+    int rowCount = 0;
+    for (int i = 0; i < 500; i++) {
+      rowCount = index.add(getRow(System.currentTimeMillis(), i, 100));
+      if (index.isFull()) {
+        break;
+      }
+    }
+
+    Assert.assertTrue("rowCount : " + rowCount, rowCount > 200 && rowCount < 600);
+  }
 }
