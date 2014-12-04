@@ -90,7 +90,7 @@ public class CliBroker extends ServerRunnable
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
-            JsonConfigProvider.bind(binder, "druid.broker.cache", CacheProvider.class);
+            JsonConfigProvider.bind(binder, "druid.cache", CacheProvider.class);
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
             JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
