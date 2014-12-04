@@ -82,7 +82,7 @@ public class CachingQueryRunnerTest
   @Test
   public void testCloseAndPopulate() throws Exception
   {
-    Iterable<Result<TopNResultValue>> expectedRes = makeTopNResults(false,objects);
+    Iterable<Result<TopNResultValue>> expectedRes = makeTopNResults(false, objects);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource("ds")
         .dimension("top_dim")
@@ -130,7 +130,19 @@ public class CachingQueryRunnerTest
           }
         },
         new CacheConfig()
+        {
+          @Override
+          public boolean isPopulateCache()
+          {
+            return true;
+          }
 
+          @Override
+          public boolean isUseCache()
+          {
+            return true;
+          }
+        }
     );
 
     TopNQuery query = builder.build();
@@ -141,7 +153,7 @@ public class CachingQueryRunnerTest
         cacheStrategy.computeCacheKey(query)
     );
 
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Sequence res = runner.run(query, context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
@@ -220,9 +232,22 @@ public class CachingQueryRunnerTest
           }
         },
         new CacheConfig()
+        {
+          @Override
+          public boolean isPopulateCache()
+          {
+            return true;
+          }
+
+          @Override
+          public boolean isUseCache()
+          {
+            return true;
+          }
+        }
 
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     List<Object> results = Sequences.toList(runner.run(query, context), new ArrayList());
     Assert.assertEquals(expectedResults, results);
   }
@@ -252,7 +277,7 @@ public class CachingQueryRunnerTest
                   "rows", rows,
                   "imps", imps,
                   "impers", imps
-                  )
+              )
           );
         } else {
           values.add(

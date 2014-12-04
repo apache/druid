@@ -1903,6 +1903,18 @@ public class CachingClusteredClientTest
         new CacheConfig()
         {
           @Override
+          public boolean isPopulateCache()
+          {
+            return true;
+          }
+
+          @Override
+          public boolean isUseCache()
+          {
+            return true;
+          }
+
+          @Override
           public boolean isQueryCacheable(Query query)
           {
             return true;
