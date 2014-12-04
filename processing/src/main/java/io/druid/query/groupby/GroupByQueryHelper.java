@@ -31,6 +31,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 
@@ -95,7 +96,7 @@ public class GroupByQueryHelper
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
-          Integer.MAX_VALUE
+          config.getMaxResults()
       );
     }
 
@@ -106,9 +107,10 @@ public class GroupByQueryHelper
       {
 
         if (in instanceof Row) {
-          if (accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions))
-              > config.getMaxResults()) {
-            throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+          try {
+            accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions));
+          } catch(IndexSizeExceededException e) {
+            throw new ISE(e.getMessage());
           }
         } else {
           throw new ISE("Unable to accumulate something of type [%s]", in.getClass());

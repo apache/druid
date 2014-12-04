@@ -40,6 +40,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.timeline.TimelineObjectHolder;
@@ -145,7 +146,11 @@ public class SchemalessIndex
           }
         }
 
-        theIndex.add(new MapBasedInputRow(timestamp, dims, event));
+        try {
+          theIndex.add(new MapBasedInputRow(timestamp, dims, event));
+        } catch(IndexSizeExceededException e) {
+          Throwables.propagate(e);
+        }
 
         count++;
       }

@@ -40,6 +40,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
@@ -197,12 +198,19 @@ public class RealtimeManager implements QuerySegmentWalker
               continue;
             }
 
-            int currCount = plumber.add(inputRow);
-            if (currCount == -1) {
+            boolean lateEvent = false;
+            boolean indexLimitExceeded = false;
+            try {
+              lateEvent = plumber.add(inputRow) == -1;
+            } catch (IndexSizeExceededException e) {
+              log.info("Index limit exceeded: %s", e.getMessage());
+              indexLimitExceeded = true;
+            }
+            if (indexLimitExceeded || lateEvent) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
 
-              if (System.currentTimeMillis() > nextFlush) {
+              if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
                 plumber.persist(firehose.commit());
                 nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
               }
@@ -210,7 +218,7 @@ public class RealtimeManager implements QuerySegmentWalker
               continue;
             }
             final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-            if ((sink != null && sink.isFull()) || System.currentTimeMillis() > nextFlush) {
+            if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }

@@ -27,9 +27,10 @@ import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -112,7 +113,7 @@ public class IncrementalIndexTest
     }
   }
 
-  public static void populateIndex(long timestamp, IncrementalIndex index)
+  public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException
   {
     index.add(
         new MapBasedInputRow(
@@ -203,14 +204,14 @@ public class IncrementalIndexTest
     while (iterator.hasNext()) {
       Row row = iterator.next();
       Assert.assertEquals(timestamp + curr, row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(threadCount), row.getFloatMetric("count"));
+      Assert.assertEquals(Float.valueOf(threadCount), (Float)row.getFloatMetric("count"));
       curr++;
     }
     Assert.assertEquals(elementsPerThread, curr);
   }
 
   @Test
-  public void testOffheapIndexIsFull()
+  public void testOffheapIndexIsFull() throws IndexSizeExceededException
   {
     OffheapIncrementalIndex index = new OffheapIncrementalIndex(
         0L,
@@ -218,12 +219,12 @@ public class IncrementalIndexTest
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         TestQueryRunners.pool,
         true,
-        2 * 1024 * 1024
+        (10 + 2) * 1024 * 1024
     );
     int rowCount = 0;
     for (int i = 0; i < 500; i++) {
       rowCount = index.add(getRow(System.currentTimeMillis(), i, 100));
-      if (index.isFull()) {
+      if (!index.canAppendRow()) {
         break;
       }
     }

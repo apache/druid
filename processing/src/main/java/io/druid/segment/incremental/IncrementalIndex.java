@@ -314,6 +314,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public abstract ConcurrentNavigableMap<TimeAndDims, Integer> getFacts();
 
+  public abstract boolean canAppendRow();
+
+  public abstract String getOutOfRowsReason();
+
   protected abstract DimDim makeDimDim(String dimension);
 
   protected abstract AggregatorType[] initAggs(
@@ -329,7 +333,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> in
-  );
+  ) throws IndexSizeExceededException;
 
   protected abstract AggregatorType[] getAggsForRow(int rowOffset);
 
@@ -371,7 +375,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row)
+  public int add(InputRow row) throws IndexSizeExceededException
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
@@ -720,6 +724,4 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       ) + '}';
     }
   }
-
-  public abstract boolean isFull();
 }

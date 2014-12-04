@@ -40,6 +40,8 @@ public class HadoopTuningConfig implements TuningConfig
   private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
   private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
+  private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
+
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -57,7 +59,8 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         false,
         false,
-        DEFAULT_BUFFER_SIZE
+        DEFAULT_BUFFER_SIZE,
+        DEFAULT_AGG_BUFFER_RATIO
     );
   }
 
@@ -75,6 +78,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean persistInHeap;
   private final boolean ingestOffheap;
   private final int bufferSize;
+  private final float aggregationBufferRatio;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -91,7 +95,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("persistInHeap") boolean persistInHeap,
       final @JsonProperty("ingestOffheap") boolean ingestOffheap,
-      final @JsonProperty("bufferSize") Integer bufferSize
+      final @JsonProperty("bufferSize") Integer bufferSize,
+      final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio
   )
   {
     this.workingPath = workingPath == null ? null : workingPath;
@@ -110,6 +115,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.persistInHeap = persistInHeap;
     this.ingestOffheap = ingestOffheap;
     this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
+    this.aggregationBufferRatio = aggregationBufferRatio == null ? DEFAULT_AGG_BUFFER_RATIO : aggregationBufferRatio;
   }
 
   @JsonProperty
@@ -194,6 +200,12 @@ public class HadoopTuningConfig implements TuningConfig
     return bufferSize;
   }
 
+  @JsonProperty
+  public float getAggregationBufferRatio()
+  {
+    return aggregationBufferRatio;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -210,7 +222,8 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         persistInHeap,
         ingestOffheap,
-        bufferSize
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 
@@ -230,7 +243,8 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         persistInHeap,
         ingestOffheap,
-        bufferSize
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 
@@ -250,7 +264,8 @@ public class HadoopTuningConfig implements TuningConfig
         combineText,
         persistInHeap,
         ingestOffheap,
-        bufferSize
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 }

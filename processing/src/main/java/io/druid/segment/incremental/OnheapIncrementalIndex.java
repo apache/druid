@@ -45,6 +45,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private final List<Aggregator[]> aggList = Lists.newArrayList();
   private final int maxRowCount;
 
+  private String outOfRowsReason = null;
+
   public OnheapIncrementalIndex(IncrementalIndexSchema incrementalIndexSchema, boolean deserializeComplexMetrics, int maxRowCount)
   {
     super(incrementalIndexSchema, deserializeComplexMetrics);
@@ -123,11 +125,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> in
-  )
+  ) throws IndexSizeExceededException
   {
     Integer rowOffset;
     synchronized (this) {
       rowOffset = numEntries.get();
+      if(rowOffset >= maxRowCount && !facts.containsKey(key)) {
+        throw new IndexSizeExceededException("Maximum number of rows reached");
+      }
       final Integer prev = facts.putIfAbsent(key, rowOffset);
       if (prev != null) {
         rowOffset = prev;
@@ -157,6 +162,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
+  public boolean canAppendRow()
+  {
+    final boolean canAdd = size() < maxRowCount;
+    if(!canAdd) {
+      outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
+    }
+    return canAdd;
+  }
+
+  @Override
+  public String getOutOfRowsReason()
+  {
+    return outOfRowsReason;
+  }
+
+  @Override
   protected Aggregator[] getAggsForRow(int rowOffset)
   {
     return aggList.get(rowOffset);
@@ -172,12 +193,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
     return aggList.get(rowOffset)[aggOffset].getFloat();
-  }
-
-  @Override
-  public boolean isFull()
-  {
-    return size() >= maxRowCount;
   }
 
   @Override

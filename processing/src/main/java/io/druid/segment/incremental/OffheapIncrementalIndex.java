@@ -19,6 +19,7 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import io.druid.collections.ResourceHolder;
@@ -38,6 +39,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -51,6 +53,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
+  private static final long STORE_CHUNK_SIZE;
+
+  static
+  {
+    // MapDB allocated memory in chunks. We need to know CHUNK_SIZE
+    // in order to get a crude estimate of how much more direct memory
+    // might be used when adding an additional row.
+    try {
+      Field field = Store.class.getDeclaredField("CHUNK_SIZE");
+      field.setAccessible(true);
+      STORE_CHUNK_SIZE = field.getLong(null);
+    } catch(NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException("Unable to determine MapDB store chunk size", e);
+    }
+  }
+
   private final ResourceHolder<ByteBuffer> bufferHolder;
 
   private final DB db;
@@ -58,18 +76,24 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   private final int[] aggPositionOffsets;
   private final int totalAggSize;
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
-  private final int sizeLimit;
+  private final int maxTotalBufferSize;
+
+  private String outOfRowsReason = null;
 
   public OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       StupidPool<ByteBuffer> bufferPool,
       boolean deserializeComplexMetrics,
-      int sizeLimit
+      int maxTotalBufferSize
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics);
 
     this.bufferHolder = bufferPool.take();
+    Preconditions.checkArgument(
+        maxTotalBufferSize > bufferHolder.get().limit(),
+        "Maximum total buffer size must be greater than aggregation buffer size"
+    );
 
     final AggregatorFactory[] metrics = incrementalIndexSchema.getMetrics();
     this.aggPositionOffsets = new int[metrics.length];
@@ -94,7 +118,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                         .comparator(timeAndDimsSerializer.getComparator())
                         .valueSerializer(Serializer.INTEGER)
                         .make();
-    this.sizeLimit = sizeLimit;
+    this.maxTotalBufferSize = maxTotalBufferSize;
   }
 
   public OffheapIncrementalIndex(
@@ -103,7 +127,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       final AggregatorFactory[] metrics,
       StupidPool<ByteBuffer> bufferPool,
       boolean deserializeComplexMetrics,
-      int sizeLimit
+      int maxTotalBufferSize
   )
   {
     this(
@@ -113,7 +137,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                             .build(),
         bufferPool,
         deserializeComplexMetrics,
-        sizeLimit
+        maxTotalBufferSize
     );
   }
 
@@ -154,20 +178,21 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> in
-  )
+  ) throws IndexSizeExceededException
   {
     final BufferAggregator[] aggs = getAggs();
     Integer rowOffset;
     synchronized (this) {
+      if (!facts.containsKey(key)) {
+        if (!canAppendRow(false)) {
+          throw new IndexSizeExceededException(getOutOfRowsReason());
+        }
+      }
       rowOffset = totalAggSize * numEntries.get();
       final Integer prev = facts.putIfAbsent(key, rowOffset);
       if (prev != null) {
         rowOffset = prev;
       } else {
-        if (rowOffset + totalAggSize > bufferHolder.get().limit()) {
-          facts.remove(key);
-          throw new ISE("Buffer full, cannot add more rows! Current rowSize[%,d].", numEntries.get());
-        }
         numEntries.incrementAndGet();
         for (int i = 0; i < aggs.length; i++) {
           aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
@@ -182,6 +207,34 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     }
     in.set(null);
     return numEntries.get();
+  }
+
+  public boolean canAppendRow() {
+    return canAppendRow(true);
+  }
+
+  private boolean canAppendRow(boolean includeFudgeFactor)
+  {
+    // there is a race condition when checking current MapDB
+    // when canAppendRow() is called after adding a row it may return true, but on a subsequence call
+    // to addToFacts that may not be the case anymore because MapDB size may have changed.
+    // so we add this fudge factor, hoping that will be enough.
+
+    final int aggBufferSize = bufferHolder.get().limit();
+    if ((size() + 1) * totalAggSize > aggBufferSize) {
+      outOfRowsReason = String.format("Maximum aggregation buffer limit reached [%d bytes].", aggBufferSize);
+      return false;
+    }
+    // hopefully both MapDBs will grow by at most STORE_CHUNK_SIZE each when we add the next row.
+    if (getCurrentSize() + totalAggSize + 2 * STORE_CHUNK_SIZE + (includeFudgeFactor ? STORE_CHUNK_SIZE : 0) > maxTotalBufferSize) {
+      outOfRowsReason = String.format("Maximum time and dimension buffer limit reached [%d bytes].", maxTotalBufferSize - aggBufferSize);
+      return false;
+    }
+    return true;
+  }
+
+  public String getOutOfRowsReason() {
+    return outOfRowsReason;
   }
 
   @Override
@@ -219,19 +272,12 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     try {
       bufferHolder.close();
+      Store.forDB(db).close();
+      Store.forDB(factsDb).close();
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  /**
-   * -   * @return true if the underlying buffer for IncrementalIndex is full and cannot accommodate more rows.
-   * -
-   */
-  public boolean isFull()
-  {
-    return getCurrentSize() > sizeLimit;
   }
 
   private int getMetricPosition(int rowOffset, int metricIndex)
@@ -429,6 +475,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     return Store.forDB(db).getCurrSize() +
            Store.forDB(factsDb).getCurrSize()
            // Size of aggregators
-           + (size() + 1) * totalAggSize;
+           + size() * totalAggSize;
   }
 }

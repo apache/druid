@@ -73,6 +73,7 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterBonusTest
 {
+  public static final int NUM_POINTS = 5000;
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
@@ -126,7 +127,7 @@ public class SpatialFilterBonusTest
                                                 )
                                             ).build(),
         false,
-        1000
+        NUM_POINTS
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -203,7 +204,7 @@ public class SpatialFilterBonusTest
 
     // Add a bunch of random points
     Random rand = new Random();
-    for (int i = 5; i < 5000; i++) {
+    for (int i = 6; i < NUM_POINTS; i++) {
       theIndex.add(
           new MapBasedInputRow(
               new DateTime("2013-01-01").getMillis(),
@@ -258,7 +259,7 @@ public class SpatialFilterBonusTest
 
                                               ).build(),
           false,
-          1000
+          NUM_POINTS
       );
       IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -277,7 +278,7 @@ public class SpatialFilterBonusTest
                                                   )
                                               ).build(),
           false,
-          1000
+          NUM_POINTS
       );
       IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
@@ -297,7 +298,7 @@ public class SpatialFilterBonusTest
 
                                               ).build(),
           false,
-          1000
+          NUM_POINTS
       );
 
 
@@ -376,7 +377,7 @@ public class SpatialFilterBonusTest
 
       // Add a bunch of random points
       Random rand = new Random();
-      for (int i = 5; i < 5000; i++) {
+      for (int i = 6; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(
                 new DateTime("2013-01-01").getMillis(),

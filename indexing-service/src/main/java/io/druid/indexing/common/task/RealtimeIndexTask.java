@@ -294,7 +294,7 @@ public class RealtimeIndexTask extends AbstractTask
 
           fireDepartment.getMetrics().incrementProcessed();
           final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if ((sink != null && sink.isFull()) || System.currentTimeMillis() > nextFlush) {
+          if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
             plumber.persist(firehose.commit());
             nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }

@@ -247,7 +247,7 @@ public class IncrementalIndexStorageAdapterTest
   }
 
   @Test
-  public void testResetSanity() {
+  public void testResetSanity() throws IOException{
 
     IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTime.now();
@@ -295,7 +295,7 @@ public class IncrementalIndexStorageAdapterTest
   }
 
   @Test
-  public void testSingleValueTopN()
+  public void testSingleValueTopN() throws IOException
   {
     IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTime.now();

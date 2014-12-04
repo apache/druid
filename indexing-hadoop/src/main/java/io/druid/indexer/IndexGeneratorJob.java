@@ -348,7 +348,8 @@ public class IndexGeneratorJob implements Jobby
           int numRows = index.add(inputRow);
           ++lineCount;
 
-          if (index.isFull()) {
+          if (!index.canAppendRow()) {
+            log.info(index.getOutOfRowsReason());
             log.info(
                 "%,d lines to %,d rows in %,d millis",
                 lineCount - runningTotalLineCount,
@@ -639,11 +640,14 @@ public class IndexGeneratorJob implements Jobby
           .withMetrics(aggs)
           .build();
       if (tuningConfig.isIngestOffheap()) {
+        final int maxTotalBufferSize = tuningConfig.getBufferSize();
+        final int aggregationBufferSize = (int) ((double) maxTotalBufferSize
+                                                 * tuningConfig.getAggregationBufferRatio());
         return new OffheapIncrementalIndex(
             indexSchema,
-            new OffheapBufferPool(tuningConfig.getBufferSize()),
+            new OffheapBufferPool(aggregationBufferSize),
             true,
-            tuningConfig.getBufferSize()
+            maxTotalBufferSize
         );
       } else {
         return new OnheapIncrementalIndex(
