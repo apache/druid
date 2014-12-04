@@ -55,6 +55,15 @@ public class TimeBoundaryResultValue
     }
   }
 
+  public DateTime getLastIngestedEventTime()
+  {
+    if (value instanceof Map) {
+      return getDateTimeValue(((Map) value).get(TimeBoundaryQuery.LAST_INGESTED_EVENT_TIME));
+    } else {
+      return getDateTimeValue(value);
+    }
+  }
+
   public DateTime getMinTime()
   {
     if (value instanceof Map) {

@@ -25,10 +25,15 @@ import com.google.common.collect.MapMaker;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.RetryQueryRunner;
 import io.druid.query.TableDataSource;
+import io.druid.segment.IncrementalIndexSegment;
+import io.druid.segment.TestIndex;
+import io.druid.segment.data.IncrementalIndexTest;
+import io.druid.segment.incremental.IncrementalIndex;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -167,5 +172,32 @@ public class TimeBoundaryQueryRunnerTest
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
     Assert.assertFalse(actual.iterator().hasNext());
+  }
+
+  @Test
+  public void testTimeBoundaryLastIngestedEventTime()
+  {
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
+    final QueryRunner<Result<TimeBoundaryResultValue>> queryRunner = QueryRunnerTestHelper.makeQueryRunner(
+        (QueryRunnerFactory) new TimeBoundaryQueryRunnerFactory(
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        ), new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.segmentId)
+    );
+    long timeStamp = System.currentTimeMillis();
+    rtIndex.add(IncrementalIndexTest.getRow(timeStamp, 1, 10));
+
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .bound(TimeBoundaryQuery.LAST_INGESTED_EVENT_TIME)
+                                                .build();
+    Map<String, Object> context = new MapMaker().makeMap();
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
+        queryRunner.run(timeBoundaryQuery, context),
+        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+    );
+    TimeBoundaryResultValue val = results.iterator().next().getValue();
+    Assert.assertEquals(timeStamp, val.getLastIngestedEventTime().getMillis());
+
   }
 }

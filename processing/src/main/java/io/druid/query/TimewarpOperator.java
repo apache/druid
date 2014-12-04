@@ -116,7 +116,8 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                     return (T) ((TimeBoundaryQuery) query).buildResult(
                         new DateTime(Math.min(res.getTimestamp().getMillis() - offset, now)),
                         minTime != null ? minTime.minus(offset) : null,
-                        maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null
+                        maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null,
+                        null
                     ).iterator().next();
                   }
                   return (T) new Result(res.getTimestamp().minus(offset), value);

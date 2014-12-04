@@ -128,6 +128,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public DateTime getLastIngestedEventTime()
+  {
+    // for Immutable indexes lastIngestedEventTimestamp is equal to maxTime
+    return getMaxTime();
+  }
+
+  @Override
   public Capabilities getCapabilities()
   {
     return Capabilities.builder().dimensionValuesSorted(true).build();

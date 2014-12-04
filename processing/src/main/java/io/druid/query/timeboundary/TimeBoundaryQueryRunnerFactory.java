@@ -108,18 +108,32 @@ public class TimeBoundaryQueryRunnerFactory
                 );
               }
 
-              final DateTime minTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)
-                                       ? null
-                                       : adapter.getMinTime();
-              final DateTime maxTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)
-                                       ? null
-                                       : adapter.getMaxTime();
-
+              final DateTime minTime;
+              final DateTime maxTime;
+              final DateTime lastIngestedEventTime;
+              if (legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)) {
+                minTime = adapter.getMinTime();
+                maxTime = null;
+                lastIngestedEventTime = null;
+              } else  if (legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)) {
+              minTime = null;
+              maxTime = adapter.getMaxTime();
+              lastIngestedEventTime = null;
+            } else  if (legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.LAST_INGESTED_EVENT_TIME)) {
+                minTime = null;
+                maxTime = null;
+                lastIngestedEventTime = adapter.getLastIngestedEventTime();
+              } else {
+                minTime = adapter.getMinTime();
+                maxTime = adapter.getMaxTime();
+                lastIngestedEventTime = null;
+              }
 
               return legacyQuery.buildResult(
                   adapter.getInterval().getStart(),
                   minTime,
-                  maxTime
+                  maxTime,
+                  lastIngestedEventTime
               ).iterator();
             }
 

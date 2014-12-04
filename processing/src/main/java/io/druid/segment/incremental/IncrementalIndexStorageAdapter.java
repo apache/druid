@@ -119,6 +119,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public DateTime getLastIngestedEventTime()
+  {
+    return index.getLastIngestedEventTime();
+  }
+
+  @Override
   public Capabilities getCapabilities()
   {
     return Capabilities.builder().dimensionValuesSorted(false).build();

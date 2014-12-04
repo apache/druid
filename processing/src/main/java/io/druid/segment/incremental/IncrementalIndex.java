@@ -34,6 +34,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
+import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -97,6 +98,7 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
   private volatile AtomicInteger numEntries = new AtomicInteger();
   // This is modified on add() in a critical section.
   private ThreadLocal<InputRow> in = new ThreadLocal<>();
+  private volatile DateTime lastIngestedEventTime = new DateTime(JodaUtils.MIN_INSTANT);
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -438,7 +440,6 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       }
     }
 
-
     if (overflow != null) {
       // Merge overflow and non-overflow
       String[][] newDims = new String[dims.length + overflow.size()][];
@@ -474,6 +475,9 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
       }
     }
     in.set(null);
+    if(row.getTimestamp().isAfter(lastIngestedEventTime)) {
+      lastIngestedEventTime = row.getTimestamp();
+    }
     return numEntries.get();
   }
 
@@ -665,6 +669,11 @@ public class IncrementalIndex implements Iterable<Row>, Closeable
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public DateTime getLastIngestedEventTime()
+  {
+    return lastIngestedEventTime;
   }
 
   class DimensionHolder
