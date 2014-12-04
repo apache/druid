@@ -49,6 +49,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   );
   public static final String MAX_TIME = "maxTime";
   public static final String MIN_TIME = "minTime";
+  public static final String LAST_INGESTED_EVENT_TIME = "lastIngestedEventTime";
 
   private static final byte CACHE_TYPE_ID = 0x0;
 
@@ -132,7 +133,12 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
                      .array();
   }
 
-  public Iterable<Result<TimeBoundaryResultValue>> buildResult(DateTime timestamp, DateTime min, DateTime max)
+  public Iterable<Result<TimeBoundaryResultValue>> buildResult(
+      DateTime timestamp,
+      DateTime min,
+      DateTime max,
+      DateTime lastIngestedEventTime
+  )
   {
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
     Map<String, Object> result = Maps.newHashMap();
@@ -142,6 +148,9 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     }
     if (max != null) {
       result.put(MAX_TIME, max);
+    }
+    if (lastIngestedEventTime != null) {
+      result.put(LAST_INGESTED_EVENT_TIME, lastIngestedEventTime);
     }
     if (!result.isEmpty()) {
       results.add(new Result<>(timestamp, new TimeBoundaryResultValue(result)));
@@ -158,6 +167,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
     DateTime min = new DateTime(JodaUtils.MAX_INSTANT);
     DateTime max = new DateTime(JodaUtils.MIN_INSTANT);
+    DateTime lastIngestedEvent = new DateTime(JodaUtils.MIN_INSTANT);
     for (Result<TimeBoundaryResultValue> result : results) {
       TimeBoundaryResultValue val = result.getValue();
 
@@ -169,27 +179,41 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       if (currMaxTime != null && currMaxTime.isAfter(max)) {
         max = currMaxTime;
       }
+
+      DateTime currLastIngestedEventTime = val.getLastIngestedEventTime();
+      if (currLastIngestedEventTime != null && currLastIngestedEventTime.isAfter(lastIngestedEvent)) {
+        lastIngestedEvent = currLastIngestedEventTime;
+      }
     }
 
     final DateTime ts;
     final DateTime minTime;
     final DateTime maxTime;
+    final DateTime lastIngestedEventTime;
 
     if (bound.equalsIgnoreCase(MIN_TIME)) {
       ts = min;
       minTime = min;
       maxTime = null;
+      lastIngestedEventTime = null;
     } else if (bound.equalsIgnoreCase(MAX_TIME)) {
       ts = max;
       minTime = null;
       maxTime = max;
+      lastIngestedEventTime = null;
+    } else if (bound.equalsIgnoreCase(LAST_INGESTED_EVENT_TIME)) {
+      ts = lastIngestedEvent;
+      minTime = null;
+      maxTime = null;
+      lastIngestedEventTime = lastIngestedEvent;
     } else {
       ts = min;
       minTime = min;
       maxTime = max;
+      lastIngestedEventTime = null;
     }
 
-    return buildResult(ts, minTime, maxTime);
+    return buildResult(ts, minTime, maxTime, lastIngestedEventTime);
   }
 
   @Override
