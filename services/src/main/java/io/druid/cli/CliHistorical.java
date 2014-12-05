@@ -88,7 +88,7 @@ public class CliHistorical extends ServerRunnable
             LifecycleModule.register(binder, ZkCoordinator.class);            
 
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
-            JsonConfigProvider.bind(binder, "druid.historical.cache", CacheProvider.class);
+            JsonConfigProvider.bind(binder, "druid.cache", CacheProvider.class);
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
             MetricsModule.register(binder, CacheMonitor.class);
           }

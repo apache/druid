@@ -290,10 +290,16 @@ public class HadoopIndexTask extends AbstractTask
               .withTuningConfig(theSchema.getTuningConfig().withVersion(version))
       );
 
-      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(
-          config,
-          injector.getInstance(MetadataStorageUpdaterJobHandler.class)
-      );
+      // MetadataStorageUpdaterJobHandler is only needed when running standalone without indexing service
+      // In that case the whatever runs the Hadoop Index Task must ensure MetadataStorageUpdaterJobHandler
+      // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
+      final MetadataStorageUpdaterJobHandler maybeHandler;
+      if (config.isUpdaterJobSpecSet()) {
+        maybeHandler = injector.getInstance(MetadataStorageUpdaterJobHandler.class);
+      } else {
+        maybeHandler = null;
+      }
+      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config, maybeHandler);
 
       log.info("Starting a hadoop index generator job...");
       if (job.run()) {
