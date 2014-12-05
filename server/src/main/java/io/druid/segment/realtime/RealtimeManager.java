@@ -69,10 +69,10 @@ public class RealtimeManager implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   private ExecutorService executorService;
 
-	/**
-	 * key=data source name,value=FireChiefs of all partition of that data source
-	 */
-	private final Map<String, List<FireChief>> chiefs;
+  /**
+   * key=data source name,value=FireChiefs of all partition of that data source
+   */
+  private final Map<String, List<FireChief>> chiefs;
 
 
   @Inject
@@ -84,7 +84,7 @@ public class RealtimeManager implements QuerySegmentWalker
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
-		this.executorService = executorService;
+    this.executorService = executorService;
 
     this.chiefs = Maps.newHashMap();
   }
@@ -95,53 +95,46 @@ public class RealtimeManager implements QuerySegmentWalker
     for (final FireDepartment fireDepartment : fireDepartments) {
       DataSchema schema = fireDepartment.getDataSchema();
 
-			final FireChief chief = new FireChief(fireDepartment);
-			List<FireChief> chiefs = this.chiefs.get(schema.getDataSource());
-			if (chiefs == null)
-			{
-				chiefs = new ArrayList<RealtimeManager.FireChief>();
-				this.chiefs.put(schema.getDataSource(), chiefs);
-			}
-			chiefs.add(chief);
+      final FireChief chief = new FireChief(fireDepartment);
+      List<FireChief> chiefs = this.chiefs.get(schema.getDataSource());
+      if (chiefs == null) {
+        chiefs = new ArrayList<RealtimeManager.FireChief>();
+        this.chiefs.put(schema.getDataSource(), chiefs);
+      }
+      chiefs.add(chief);
 
-			chief.setName(String.format("chief-%s", schema.getDataSource()));
-			chief.setDaemon(true);
-			chief.init();
-			chief.start();
+      chief.setName(String.format("chief-%s", schema.getDataSource()));
+      chief.setDaemon(true);
+      chief.init();
+      chief.start();
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-		for (Iterable<FireChief> chiefs : this.chiefs.values())
-		{
-			for (FireChief chief : chiefs)
-			{
-				CloseQuietly.close(chief);
-			}
-		}
+    for (Iterable<FireChief> chiefs : this.chiefs.values()) {
+      for (FireChief chief : chiefs) {
+        CloseQuietly.close(chief);
+      }
+    }
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
 	{
 		List<FireChief> chiefs = this.chiefs.get(datasource);
-		if (chiefs == null)
-		{
-			return null;
-		}
-		FireDepartmentMetrics snapshot = null;
-		for (FireChief chief : chiefs)
-		{
-			if (snapshot == null)
-			{
-				snapshot = chief.getMetrics().snapshot();
-			} else
-			{
-				snapshot.merge(chief.getMetrics());
-			}
-		}
-		return snapshot;
+    if (chiefs == null) {
+      return null;
+    }
+    FireDepartmentMetrics snapshot = null;
+    for (FireChief chief : chiefs) {
+      if (snapshot == null) {
+        snapshot = chief.getMetrics().snapshot();
+      } else {
+        snapshot.merge(chief.getMetrics());
+      }
+    }
+    return snapshot;
   }
 
   @Override
@@ -152,20 +145,25 @@ public class RealtimeManager implements QuerySegmentWalker
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
-	{
-		QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-		Iterable<FireChief> chiefsOfDataSource = chiefs.get(getDataSourceName(query));
-		return chiefsOfDataSource == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
-		    factory.mergeRunners(executorService,
-		        Iterables.transform(chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
-		        {
-			        @Override
-			        public QueryRunner<T> apply(FireChief input)
-			        {
-				        return input.getQueryRunner(query);
-			        }
-		        })));
-	}
+  {
+    QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    Iterable<FireChief> chiefsOfDataSource = chiefs.get(getDataSourceName(query));
+    return chiefsOfDataSource == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
+        factory.mergeRunners(
+            executorService,
+            Iterables.transform(
+                chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
+                {
+                  @Override
+                  public QueryRunner<T> apply(FireChief input)
+                  {
+                    return input.getQueryRunner(query);
+                  }
+                }
+            )
+        )
+    );
+  }
 
   private <T> String getDataSourceName(Query<T> query)
   {
