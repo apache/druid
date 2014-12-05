@@ -109,7 +109,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
                                    .transactionDisable()
                                    .asyncWriteEnable()
-                                   .cacheSoftRefEnable();
+                                   .cacheLRUEnable()
+                                   .cacheSize(16384);
+
     this.factsDb = dbMaker.make();
     this.db = dbMaker.make();
     final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
