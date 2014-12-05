@@ -23,6 +23,8 @@ import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,6 +32,29 @@ import java.util.concurrent.atomic.AtomicLong;
 public class OffheapBufferPool extends StupidPool<ByteBuffer>
 {
   private static final Logger log = new Logger(OffheapBufferPool.class);
+
+  private static final Method bufferCleaner;
+  private static final Method clean;
+
+  static {
+    try {
+      bufferCleaner = Class.forName("java.nio.DirectByteBuffer").getMethod("cleaner");
+      bufferCleaner.setAccessible(true);
+      clean = Class.forName("sum.misc.Cleaner").getMethod("clean");
+      clean.setAccessible(true);
+    } catch(ClassNotFoundException | NoSuchMethodException e) {
+      throw new RuntimeException("Unable to access ByteBuffer release methods");
+    }
+  }
+
+  private static void releaseBuffer(ByteBuffer buf) {
+    try {
+      Object cleaner = bufferCleaner.invoke(buf);
+      clean.invoke(cleaner);
+    } catch(IllegalAccessException | InvocationTargetException e) {
+      log.error(e, "Unable to release ByteBuffer");
+    }
+  }
 
   public OffheapBufferPool(final int computationBufferSize)
   {
