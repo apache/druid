@@ -59,6 +59,7 @@ public class OrderByColumnSpec
     stupidEnumMap = bob.build();
   }
 
+  private final boolean asNumber;
   private final String dimension;
   private final Direction direction;
 
@@ -68,14 +69,20 @@ public class OrderByColumnSpec
     Preconditions.checkNotNull(obj, "Cannot build an OrderByColumnSpec from a null object.");
 
     if (obj instanceof String) {
-      return new OrderByColumnSpec(obj.toString(), null);
+      return new OrderByColumnSpec(false, obj.toString(), null);
     } else if (obj instanceof Map) {
       final Map map = (Map) obj;
 
+      final boolean asNumber;
+      if (map.get("asNumber") instanceof Boolean) {
+        asNumber = (Boolean) map.get("asNumber");
+      } else {
+        asNumber = false;
+      }
       final String dimension = map.get("dimension").toString();
       final Direction direction = determineDirection(map.get("direction"));
 
-      return new OrderByColumnSpec(dimension, direction);
+      return new OrderByColumnSpec(asNumber, dimension, direction);
     } else {
       throw new ISE("Cannot build an OrderByColumnSpec from a %s", obj.getClass());
     }
@@ -126,8 +133,24 @@ public class OrderByColumnSpec
       Direction direction
   )
   {
+    this(false, dimension, direction);
+  }
+
+  public OrderByColumnSpec(
+      boolean asNumber,
+      String dimension,
+      Direction direction
+  )
+  {
+    this.asNumber = asNumber;
     this.dimension = dimension;
     this.direction = direction == null ? Direction.ASCENDING : direction;
+  }
+
+  @JsonProperty
+  public boolean asNumber()
+  {
+    return asNumber;
   }
 
   @JsonProperty
