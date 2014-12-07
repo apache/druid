@@ -19,6 +19,10 @@ Some great folks have written their own libraries to interact with Druid
 
 -   [RDruid](https://github.com/metamx/RDruid) - Druid connector for R
 
+#### Node.js
+
+-   [7eggs/node-druid-query](https://github.com/7eggs/node-druid-query) - A Node.js client for Druid
+
 #### Helper Libraries
 
 * [madvertise/druid-dumbo](https://github.com/madvertise/druid-dumbo) - Scripts to help generate batch configs for the ingestion of data into Druid
