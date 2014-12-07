@@ -33,6 +33,6 @@ The broker module uses several of the default modules in [Configuration](Configu
 |--------|-----------|-------|
 |`druid.broker.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
 |`druid.broker.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
-|`druid.broker.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
+|`druid.broker.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
 |`druid.broker.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.broker.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
