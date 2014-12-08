@@ -22,6 +22,7 @@ package io.druid.segment.realtime.plumber;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.segment.incremental.IndexSizeExceededException;
 
 public interface Plumber
 {
@@ -36,7 +37,7 @@ public interface Plumber
    * @return - positive numbers indicate how many summarized rows exist in the index for that timestamp,
    * -1 means a row was thrown away because it was too late
    */
-  public int add(InputRow row);
+  public int add(InputRow row) throws IndexSizeExceededException;
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
@@ -52,4 +53,6 @@ public interface Plumber
    * fed into sinks and persisted.
    */
   public void finishJob();
+
+  public Sink getSink(long timestamp);
 }

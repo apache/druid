@@ -31,7 +31,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
-
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.guice.annotations.Processing;
@@ -44,10 +43,11 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
-
+import io.druid.segment.realtime.plumber.Sink;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -237,19 +237,27 @@ public class RealtimeManager implements QuerySegmentWalker
               continue;
             }
 
-            int currCount = plumber.add(inputRow);
-            if (currCount == -1) {
+            boolean lateEvent = false;
+            boolean indexLimitExceeded = false;
+            try {
+              lateEvent = plumber.add(inputRow) == -1;
+            } catch (IndexSizeExceededException e) {
+              log.info("Index limit exceeded: %s", e.getMessage());
+              indexLimitExceeded = true;
+            }
+            if (indexLimitExceeded || lateEvent) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
 
-              if (System.currentTimeMillis() > nextFlush) {
+              if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
                 plumber.persist(firehose.commit());
                 nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
               }
 
               continue;
             }
-            if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+            final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+            if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }

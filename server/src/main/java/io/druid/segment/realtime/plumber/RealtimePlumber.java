@@ -38,6 +38,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -158,7 +159,7 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public int add(InputRow row)
+  public int add(InputRow row) throws IndexSizeExceededException
   {
     final Sink sink = getSink(row.getTimestampFromEpoch());
     if (sink == null) {

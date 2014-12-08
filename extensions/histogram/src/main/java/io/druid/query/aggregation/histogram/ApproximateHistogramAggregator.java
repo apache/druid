@@ -90,6 +90,12 @@ public class ApproximateHistogramAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getLong()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

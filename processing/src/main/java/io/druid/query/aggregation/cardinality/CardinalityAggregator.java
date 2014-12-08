@@ -127,6 +127,12 @@ public class CardinalityAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException("CardinalityAggregator does not support getLong()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

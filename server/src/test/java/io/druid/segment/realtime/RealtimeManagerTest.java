@@ -34,6 +34,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -99,6 +100,7 @@ public class RealtimeManagerTest
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
         new Period("P1Y"),
+        null,
         null,
         null,
         null,
@@ -267,7 +269,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row)
+    public int add(InputRow row) throws IndexSizeExceededException
     {
       if (row == null) {
         return -1;

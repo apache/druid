@@ -19,21 +19,27 @@
 
 package io.druid.segment.incremental;
 
-
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
+import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
+import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import org.mapdb.BTreeKeySerializer;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
+import org.mapdb.Store;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -41,18 +47,80 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class OffheapIncrementalIndex extends IncrementalIndex
+/**
+ */
+public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
-  private volatile DB db;
-  private volatile DB factsDb;
+  private static final long STORE_CHUNK_SIZE;
+
+  static
+  {
+    // MapDB allocated memory in chunks. We need to know CHUNK_SIZE
+    // in order to get a crude estimate of how much more direct memory
+    // might be used when adding an additional row.
+    try {
+      Field field = Store.class.getDeclaredField("CHUNK_SIZE");
+      field.setAccessible(true);
+      STORE_CHUNK_SIZE = field.getLong(null);
+    } catch(NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException("Unable to determine MapDB store chunk size", e);
+    }
+  }
+
+  private final ResourceHolder<ByteBuffer> bufferHolder;
+
+  private final DB db;
+  private final DB factsDb;
+  private final int[] aggPositionOffsets;
+  private final int totalAggSize;
+  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
+  private final int maxTotalBufferSize;
+
+  private String outOfRowsReason = null;
 
   public OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
-      StupidPool<ByteBuffer> bufferPool
+      StupidPool<ByteBuffer> bufferPool,
+      boolean deserializeComplexMetrics,
+      int maxTotalBufferSize
   )
   {
-    super(incrementalIndexSchema, bufferPool);
+    super(incrementalIndexSchema, deserializeComplexMetrics);
+
+    this.bufferHolder = bufferPool.take();
+    Preconditions.checkArgument(
+        maxTotalBufferSize > bufferHolder.get().limit(),
+        "Maximum total buffer size must be greater than aggregation buffer size"
+    );
+
+    final AggregatorFactory[] metrics = incrementalIndexSchema.getMetrics();
+    this.aggPositionOffsets = new int[metrics.length];
+
+    int currAggSize = 0;
+    for (int i = 0; i < metrics.length; i++) {
+      final AggregatorFactory agg = metrics[i];
+      aggPositionOffsets[i] = currAggSize;
+      currAggSize += agg.getMaxIntermediateSize();
+    }
+    this.totalAggSize = currAggSize;
+
+    final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
+                                   .transactionDisable()
+                                   .asyncWriteEnable()
+                                   .cacheLRUEnable()
+                                   .cacheSize(16384);
+
+    this.factsDb = dbMaker.make();
+    this.db = dbMaker.make();
+    final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
+    this.facts = factsDb.createTreeMap("__facts" + UUID.randomUUID())
+                        .keySerializer(timeAndDimsSerializer)
+                        .comparator(timeAndDimsSerializer.getComparator())
+                        .valueSerializer(Serializer.INTEGER)
+                        .make();
+    this.maxTotalBufferSize = maxTotalBufferSize;
   }
 
   public OffheapIncrementalIndex(
@@ -60,44 +128,177 @@ public class OffheapIncrementalIndex extends IncrementalIndex
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
       StupidPool<ByteBuffer> bufferPool,
-      boolean deserializeComplexMetrics
-
+      boolean deserializeComplexMetrics,
+      int maxTotalBufferSize
   )
   {
-    super(minTimestamp, gran, metrics, bufferPool, deserializeComplexMetrics);
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .build(),
+        bufferPool,
+        deserializeComplexMetrics,
+        maxTotalBufferSize
+    );
   }
 
   @Override
-  protected synchronized ConcurrentNavigableMap<TimeAndDims, Integer> createFactsTable()
+  public ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
   {
-    if (factsDb == null) {
-      final DBMaker dbMaker = DBMaker.newMemoryDirectDB()
-                                     .transactionDisable()
-                                     .asyncWriteEnable()
-                                     .cacheSoftRefEnable();
-      factsDb = dbMaker.make();
-      db = dbMaker.make();
-    }
-    final TimeAndDimsSerializer timeAndDimsSerializer = new TimeAndDimsSerializer(this);
-    return factsDb.createTreeMap("__facts" + UUID.randomUUID())
-                  .keySerializer(timeAndDimsSerializer)
-                  .comparator(timeAndDimsSerializer.getComparator())
-                  .valueSerializer(Serializer.INTEGER)
-                  .make();
+    return facts;
   }
 
   @Override
-  protected DimDim createDimDim(String dimension)
+  protected DimDim makeDimDim(String dimension)
   {
     return new OffheapDimDim(dimension);
   }
 
-  public static class TimeAndDimsSerializer extends BTreeKeySerializer<TimeAndDims> implements Serializable
+  @Override
+  protected BufferAggregator[] initAggs(
+      AggregatorFactory[] metrics,
+      ThreadLocal<InputRow> in,
+      boolean deserializeComplexMetrics
+  )
+  {
+    BufferAggregator[] aggs = new BufferAggregator[metrics.length];
+    for (int i = 0; i < metrics.length; i++) {
+      final AggregatorFactory agg = metrics[i];
+      aggs[i] = agg.factorizeBuffered(
+          makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
+      );
+    }
+    return aggs;
+  }
+
+  @Override
+  protected Integer addToFacts(
+      AggregatorFactory[] metrics,
+      boolean deserializeComplexMetrics,
+      InputRow row,
+      AtomicInteger numEntries,
+      TimeAndDims key,
+      ThreadLocal<InputRow> in
+  ) throws IndexSizeExceededException
+  {
+    final BufferAggregator[] aggs = getAggs();
+    Integer rowOffset;
+    synchronized (this) {
+      if (!facts.containsKey(key)) {
+        if (!canAppendRow(false)) {
+          throw new IndexSizeExceededException(getOutOfRowsReason());
+        }
+      }
+      rowOffset = totalAggSize * numEntries.get();
+      final Integer prev = facts.putIfAbsent(key, rowOffset);
+      if (prev != null) {
+        rowOffset = prev;
+      } else {
+        numEntries.incrementAndGet();
+        for (int i = 0; i < aggs.length; i++) {
+          aggs[i].init(bufferHolder.get(), getMetricPosition(rowOffset, i));
+        }
+      }
+    }
+    in.set(row);
+    for (int i = 0; i < aggs.length; i++) {
+      synchronized (aggs[i]) {
+        aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
+      }
+    }
+    in.set(null);
+    return numEntries.get();
+  }
+
+  public boolean canAppendRow() {
+    return canAppendRow(true);
+  }
+
+  private boolean canAppendRow(boolean includeFudgeFactor)
+  {
+    // there is a race condition when checking current MapDB
+    // when canAppendRow() is called after adding a row it may return true, but on a subsequence call
+    // to addToFacts that may not be the case anymore because MapDB size may have changed.
+    // so we add this fudge factor, hoping that will be enough.
+
+    final int aggBufferSize = bufferHolder.get().limit();
+    if ((size() + 1) * totalAggSize > aggBufferSize) {
+      outOfRowsReason = String.format("Maximum aggregation buffer limit reached [%d bytes].", aggBufferSize);
+      return false;
+    }
+    // hopefully both MapDBs will grow by at most STORE_CHUNK_SIZE each when we add the next row.
+    if (getCurrentSize() + totalAggSize + 2 * STORE_CHUNK_SIZE + (includeFudgeFactor ? STORE_CHUNK_SIZE : 0) > maxTotalBufferSize) {
+      outOfRowsReason = String.format("Maximum time and dimension buffer limit reached [%d bytes].", maxTotalBufferSize - aggBufferSize);
+      return false;
+    }
+    return true;
+  }
+
+  public String getOutOfRowsReason() {
+    return outOfRowsReason;
+  }
+
+  @Override
+  protected BufferAggregator[] getAggsForRow(int rowOffset)
+  {
+    return getAggs();
+  }
+
+  @Override
+  protected Object getAggVal(BufferAggregator agg, int rowOffset, int aggPosition)
+  {
+    return agg.get(bufferHolder.get(), getMetricPosition(rowOffset, aggPosition));
+  }
+
+  @Override
+  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  {
+    return getAggs()[aggOffset].getFloat(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
+  }
+
+  @Override
+  public long getMetricLongValue(int rowOffset, int aggOffset)
+  {
+    return getAggs()[aggOffset].getLong(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
+  }
+
+  @Override
+  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  {
+    return getAggs()[aggOffset].get(bufferHolder.get(), getMetricPosition(rowOffset, aggOffset));
+  }
+
+  @Override
+  public void close()
+  {
+    try {
+      bufferHolder.close();
+      Store.forDB(db).close();
+      Store.forDB(factsDb).close();
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  private int getMetricPosition(int rowOffset, int metricIndex)
+  {
+    return rowOffset + aggPositionOffsets[metricIndex];
+  }
+
+  private DimDim getDimDim(int dimIndex)
+  {
+    return getDimValues().get(getDimensions().get(dimIndex));
+  }
+
+  // MapDB forces serializers to implement serializable, which sucks
+  private static class TimeAndDimsSerializer extends BTreeKeySerializer<TimeAndDims> implements Serializable
   {
     private final TimeAndDimsComparator comparator;
-    private final transient IncrementalIndex incrementalIndex;
+    private final transient OffheapIncrementalIndex incrementalIndex;
 
-    TimeAndDimsSerializer(IncrementalIndex incrementalIndex)
+    TimeAndDimsSerializer(OffheapIncrementalIndex incrementalIndex)
     {
       this.comparator = new TimeAndDimsComparator();
       this.incrementalIndex = incrementalIndex;
@@ -115,7 +316,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex
           if (dims == null) {
             out.write(-1);
           } else {
-            DimDim dimDim = incrementalIndex.getDimension(incrementalIndex.dimensions.get(index));
+            DimDim dimDim = incrementalIndex.getDimDim(index);
             out.writeInt(dims.length);
             for (String value : dims) {
               out.writeInt(dimDim.getId(value));
@@ -136,7 +337,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex
         for (int k = 0; k < dims.length; k++) {
           int len = in.readInt();
           if (len != -1) {
-            DimDim dimDim = incrementalIndex.getDimension(incrementalIndex.dimensions.get(k));
+            DimDim dimDim = incrementalIndex.getDimDim(k);
             String[] col = new String[len];
             for (int l = 0; l < col.length; l++) {
               col[l] = dimDim.get(dimDim.getValue(in.readInt()));
@@ -156,7 +357,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex
     }
   }
 
-  public static class TimeAndDimsComparator implements Comparator, Serializable
+  private static class TimeAndDimsComparator implements Comparator, Serializable
   {
     @Override
     public int compare(Object o1, Object o2)
@@ -169,8 +370,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex
   {
     private final Map<String, Integer> falseIds;
     private final Map<Integer, String> falseIdsReverse;
-    private final WeakHashMap<String, WeakReference<String>> cache =
-        new WeakHashMap();
+    private final WeakHashMap<String, WeakReference<String>> cache = new WeakHashMap();
+
     private volatile String[] sortedVals = null;
     // size on MapDB is slow so maintain a count here
     private volatile int size = 0;
@@ -271,4 +472,11 @@ public class OffheapIncrementalIndex extends IncrementalIndex
     }
   }
 
+  private long getCurrentSize()
+  {
+    return Store.forDB(db).getCurrSize() +
+           Store.forDB(factsDb).getCurrSize()
+           // Size of aggregators
+           + size() * totalAggSize;
+  }
 }

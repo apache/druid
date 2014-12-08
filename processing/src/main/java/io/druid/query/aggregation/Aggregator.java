@@ -39,4 +39,6 @@ public interface Aggregator {
   float getFloat();
   String getName();
   void close();
+
+  long getLong();
 }

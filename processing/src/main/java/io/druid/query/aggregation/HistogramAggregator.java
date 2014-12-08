@@ -75,6 +75,12 @@ public class HistogramAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException("HistogramAggregator does not support getLong()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

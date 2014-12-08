@@ -1,4 +1,3 @@
-
 /*
  * Druid - a distributed column store.
  * Copyright (C) 2012, 2013  Metamarkets Group Inc.
@@ -30,7 +29,6 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -352,17 +350,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 final int metricIndex = metricIndexInt;
-                final BufferAggregator agg = index.getAggregator(metricIndex);
-
                 return new FloatColumnSelector()
                 {
                   @Override
                   public float get()
                   {
-                    return agg.getFloat(
-                        index.getMetricBuffer(),
-                        index.getMetricPosition(currEntry.getValue(), metricIndex)
-                    );
+                    return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
                   }
                 };
               }
@@ -370,7 +363,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public LongColumnSelector makeLongColumnSelector(String columnName)
               {
-                if(columnName.equals(Column.TIME_COLUMN_NAME)){
+                if (columnName.equals(Column.TIME_COLUMN_NAME)) {
                   return new LongColumnSelector()
                   {
                     @Override
@@ -393,16 +386,15 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 final int metricIndex = metricIndexInt;
-                final BufferAggregator agg = index.getAggregator(metricIndex);
 
                 return new LongColumnSelector()
                 {
                   @Override
                   public long get()
                   {
-                    return agg.getLong(
-                        index.getMetricBuffer(),
-                        index.getMetricPosition(currEntry.getValue(), metricIndex)
+                    return index.getMetricLongValue(
+                        currEntry.getValue(),
+                        metricIndex
                     );
                   }
                 };
@@ -417,7 +409,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   final int metricIndex = metricIndexInt;
 
                   final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(column));
-                  final BufferAggregator agg = index.getAggregator(metricIndex);
                   return new ObjectColumnSelector()
                   {
                     @Override
@@ -429,9 +420,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Object get()
                     {
-                      return agg.get(
-                          index.getMetricBuffer(),
-                          index.getMetricPosition(currEntry.getValue(), metricIndex)
+                      return index.getMetricObjectValue(
+                          currEntry.getValue(),
+                          metricIndex
                       );
                     }
                   };
@@ -453,7 +444,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     public Object get()
                     {
                       final String[][] dims = currEntry.getKey().getDims();
-                      if(dimensionIndex >= dims.length) {
+                      if (dimensionIndex >= dims.length) {
                         return null;
                       }
                       final String[] dimVals = dims[dimensionIndex];
@@ -562,7 +553,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
-            if (dimDim.compareCannonicalValues(id,dimVal)) {
+            if (dimDim.compareCannonicalValues(id, dimVal)) {
               return true;
             }
           }
