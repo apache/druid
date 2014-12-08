@@ -25,10 +25,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.logger.Logger;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.query.CacheStrategy;
@@ -38,13 +42,18 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
-
+  private static final Logger log = new Logger(CachingQueryRunner.class);
   private final String segmentIdentifier;
   private final SegmentDescriptor segmentDescriptor;
   private final QueryRunner<T> base;
@@ -52,6 +61,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   private final Cache cache;
   private final ObjectMapper mapper;
   private final CacheConfig cacheConfig;
+  private final ListeningExecutorService backgroundExecutorService;
 
   public CachingQueryRunner(
       String segmentIdentifier,
@@ -60,6 +70,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       Cache cache,
       QueryToolChest toolchest,
       QueryRunner<T> base,
+      ExecutorService backgroundExecutorService,
       CacheConfig cacheConfig
   )
   {
@@ -69,6 +80,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     this.toolChest = toolchest;
     this.cache = cache;
     this.mapper = mapper;
+    this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
     this.cacheConfig = cacheConfig;
   }
 
@@ -137,6 +149,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       }
     }
 
+    final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.<ListenableFuture<?>>newLinkedList());
     if (populateCache) {
       final Function cacheFn = strategy.prepareForCache();
       final List<Object> cacheResults = Lists.newLinkedList();
@@ -147,9 +160,20 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
               new Function<T, T>()
               {
                 @Override
-                public T apply(T input)
+                public T apply(final T input)
                 {
-                  cacheResults.add(cacheFn.apply(input));
+                  cacheFutures.add(
+                      backgroundExecutorService.submit(
+                          new Runnable()
+                          {
+                            @Override
+                            public void run()
+                            {
+                              cacheResults.add(cacheFn.apply(input));
+                            }
+                          }
+                      )
+                  );
                   return input;
                 }
               }
@@ -159,10 +183,17 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
             @Override
             public void run()
             {
-              CacheUtil.populate(cache, mapper, key, cacheResults);
+              try {
+                Futures.allAsList(cacheFutures).get();
+                CacheUtil.populate(cache, mapper, key, cacheResults);
+              }
+              catch (Exception e) {
+                log.error(e, "Error while getting future for cache task");
+                throw Throwables.propagate(e);
+              }
             }
           },
-          MoreExecutors.sameThreadExecutor()
+          backgroundExecutorService
       );
     } else {
       return base.run(query, responseContext);

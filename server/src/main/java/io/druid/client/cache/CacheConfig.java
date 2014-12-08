@@ -20,8 +20,10 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.query.Query;
 
+import javax.validation.constraints.Min;
 import java.util.Arrays;
 import java.util.List;
 
@@ -37,6 +39,10 @@ public class CacheConfig
   private boolean populateCache = false;
 
   @JsonProperty
+  @Min(0)
+  private int numBackgroundThreads = 0;
+
+  @JsonProperty
   private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
 
   public boolean isPopulateCache()
@@ -47,6 +53,9 @@ public class CacheConfig
   public boolean isUseCache()
   {
     return useCache;
+  }
+  public int getNumBackgroundThreads(){
+    return numBackgroundThreads;
   }
 
   public boolean isQueryCacheable(Query query)

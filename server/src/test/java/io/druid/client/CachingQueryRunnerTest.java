@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
@@ -129,6 +130,7 @@ public class CachingQueryRunnerTest
             return resultSeq;
           }
         },
+        MoreExecutors.sameThreadExecutor(),
         new CacheConfig()
         {
           @Override
@@ -231,6 +233,7 @@ public class CachingQueryRunnerTest
             return Sequences.empty();
           }
         },
+        MoreExecutors.sameThreadExecutor(),
         new CacheConfig()
         {
           @Override
