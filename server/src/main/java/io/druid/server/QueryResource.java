@@ -49,6 +49,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -69,6 +70,8 @@ import java.util.UUID;
 public class QueryResource
 {
   private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
+  @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
+  private static final String APPLICATION_SMILE = "application/smile";
 
   private final ServerConfig config;
   private final ObjectMapper jsonMapper;
@@ -104,7 +107,7 @@ public class QueryResource
 
   @DELETE
   @Path("{id}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getServer(@PathParam("id") String queryId)
   {
     queryManager.cancelQuery(queryId);
@@ -123,7 +126,7 @@ public class QueryResource
     byte[] requestQuery = null;
     String queryId = null;
 
-    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType());
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType()) || APPLICATION_SMILE.equals(req.getContentType());
     final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;

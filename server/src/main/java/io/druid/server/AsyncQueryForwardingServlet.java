@@ -59,6 +59,8 @@ import java.util.concurrent.TimeUnit;
 public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 {
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
+  @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
+  private static final String APPLICATION_SMILE = "application/smile";
 
   private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
@@ -103,7 +105,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   @Override
   protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
   {
-    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(request.getContentType());
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(request.getContentType()) || APPLICATION_SMILE.equals(request.getContentType());
     final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
 
     String host = hostFinder.getDefaultHost();
