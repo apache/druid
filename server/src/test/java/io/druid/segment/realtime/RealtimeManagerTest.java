@@ -120,6 +120,7 @@ public class RealtimeManagerTest
                 tuningConfig
             )
         ),
+        null,
         null
     );
   }

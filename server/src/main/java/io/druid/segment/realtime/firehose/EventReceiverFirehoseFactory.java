@@ -65,11 +65,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
-      @JsonProperty("parser") InputRowParser parser,
       @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    Preconditions.checkNotNull(parser, "parser");
     Preconditions.checkNotNull(serviceName, "serviceName");
 
     this.serviceName = serviceName;
