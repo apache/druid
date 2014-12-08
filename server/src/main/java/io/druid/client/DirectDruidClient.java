@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -60,6 +61,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import javax.ws.rs.core.MediaType;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -144,7 +146,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       future = httpClient
           .post(new URL(url))
           .setContent(objectMapper.writeValueAsBytes(query))
-          .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
+          .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON)
           .go(
               new InputStreamResponseHandler()
               {
@@ -226,7 +228,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   StatusResponseHolder res = httpClient
                       .delete(new URL(cancelUrl))
                       .setContent(objectMapper.writeValueAsBytes(query))
-                      .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? "application/smile" : "application/json")
+                      .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON)
                       .go(new StatusResponseHandler(Charsets.UTF_8))
                       .get();
                   if (res.getStatus().getCode() >= 500) {

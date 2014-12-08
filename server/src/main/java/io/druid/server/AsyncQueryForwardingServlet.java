@@ -20,6 +20,7 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -45,6 +46,7 @@ import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Enumeration;
@@ -101,7 +103,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   @Override
   protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
   {
-    final boolean isSmile = QueryResource.APPLICATION_SMILE.equals(request.getContentType());
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(request.getContentType());
     final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
 
     String host = hostFinder.getDefaultHost();
@@ -133,7 +135,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
             )
         );
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        response.setContentType(QueryResource.APPLICATION_JSON);
+        response.setContentType(MediaType.APPLICATION_JSON);
         objectMapper.writeValue(
             response.getOutputStream(),
             ImmutableMap.of("error", errorMessage)

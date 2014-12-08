@@ -22,6 +22,7 @@ package io.druid.server;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -54,6 +55,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
@@ -67,8 +69,6 @@ import java.util.UUID;
 public class QueryResource
 {
   private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
-  public static final String APPLICATION_SMILE = "application/smile";
-  public static final String APPLICATION_JSON = "application/json";
 
   private final ServerConfig config;
   private final ObjectMapper jsonMapper;
@@ -123,8 +123,8 @@ public class QueryResource
     byte[] requestQuery = null;
     String queryId = null;
 
-    final boolean isSmile = APPLICATION_SMILE.equals(req.getContentType());
-    final String contentType = isSmile ? APPLICATION_SMILE : APPLICATION_JSON;
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType());
+    final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     final ObjectWriter jsonWriter = req.getParameter("pretty") == null
