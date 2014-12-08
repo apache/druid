@@ -58,7 +58,7 @@ public class PartialDimExtractionFn implements DimExtractionFn
   @Override
   public String apply(String dimValue)
   {
-    if (dimValue == null) return null;
+    dimValue = (dimValue == null) ? "" : dimValue;
     Matcher matcher = pattern.matcher(dimValue);
     return matcher.find() ? dimValue : null;
   }
