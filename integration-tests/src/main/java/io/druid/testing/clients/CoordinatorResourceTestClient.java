@@ -63,15 +63,7 @@ public class CoordinatorResourceTestClient
   private String getCoordinatorURL()
   {
     return String.format(
-        "http://%s/coordinator/",
-        coordinator
-    );
-  }
-
-  private String getInfoURL()
-  {
-    return String.format(
-        "http://%s/info/",
+        "http://%s/druid/coordinator/v1/",
         coordinator
     );
   }
@@ -97,7 +89,7 @@ public class CoordinatorResourceTestClient
   public boolean areSegmentsLoaded(String dataSource)
   {
     Map<String, Double> status = getLoadStatus();
-    if (status.containsKey(dataSource) && ((Number) status.get(dataSource)).doubleValue() == 100.0) {
+    if (status.containsKey(dataSource) && (status.get(dataSource)).doubleValue() == 100.0) {
       return true;
     } else {
       return false;
@@ -121,7 +113,7 @@ public class CoordinatorResourceTestClient
           HttpMethod.DELETE,
           String.format(
               "%sdatasources/%s?kill=%s&interval=%s",
-              getInfoURL(),
+              getCoordinatorURL(),
               dataSource, kill, URLEncoder.encode(interval.toString(), "UTF-8")
           )
       );
