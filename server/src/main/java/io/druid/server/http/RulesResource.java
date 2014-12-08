@@ -30,6 +30,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
@@ -49,7 +50,7 @@ public class RulesResource
   }
 
   @GET
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getRules()
   {
     return Response.ok(databaseRuleManager.getAllRules()).build();
@@ -57,7 +58,7 @@ public class RulesResource
 
   @GET
   @Path("/{dataSourceName}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getDatasourceRules(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("full") final String full
@@ -74,7 +75,7 @@ public class RulesResource
 
   @POST
   @Path("/{dataSourceName}")
-  @Consumes("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response setDatasourceRules(
       @PathParam("dataSourceName") final String dataSourceName,
       final List<Rule> rules

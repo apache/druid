@@ -50,6 +50,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
@@ -143,7 +144,7 @@ public class SQLRunner
 
     URL url = new URL(String.format("http://%s/druid/v2/?pretty", hostname));
     final URLConnection urlConnection = url.openConnection();
-    urlConnection.addRequestProperty("content-type", "application/json");
+    urlConnection.addRequestProperty("content-type", MediaType.APPLICATION_JSON);
     urlConnection.getOutputStream().write(queryStr.getBytes(Charsets.UTF_8));
     BufferedReader stdInput = new BufferedReader(new InputStreamReader(urlConnection.getInputStream(), Charsets.UTF_8));
 

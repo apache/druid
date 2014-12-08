@@ -32,6 +32,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
@@ -53,7 +54,7 @@ public class MetadataResource
 
   @GET
   @Path("/datasources")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseDataSources(
       @QueryParam("full") String full,
       @QueryParam("includeDisabled") String includeDisabled
@@ -88,7 +89,7 @@ public class MetadataResource
 
   @GET
   @Path("/datasources/{dataSourceName}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegmentDataSource(
       @PathParam("dataSourceName") final String dataSourceName
   )
@@ -103,7 +104,7 @@ public class MetadataResource
 
   @GET
   @Path("/datasources/{dataSourceName}/segments")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegmentDataSourceSegments(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("full") String full
@@ -136,7 +137,7 @@ public class MetadataResource
 
   @GET
   @Path("/datasources/{dataSourceName}/segments/{segmentId}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegmentDataSourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
