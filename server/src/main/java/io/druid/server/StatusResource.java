@@ -27,6 +27,7 @@ import io.druid.initialization.Initialization;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,7 +38,7 @@ import java.util.List;
 public class StatusResource
 {
   @GET
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Status doGet()
   {
     return new Status(Initialization.getLoadedModules(DruidModule.class));

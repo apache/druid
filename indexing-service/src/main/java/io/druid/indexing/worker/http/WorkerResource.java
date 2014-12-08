@@ -39,6 +39,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 
@@ -72,7 +73,7 @@ public class WorkerResource
 
   @POST
   @Path("/disable")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doDisable()
   {
     try {
@@ -86,7 +87,7 @@ public class WorkerResource
 
   @POST
   @Path("/enable")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doEnable()
   {
     try {
@@ -100,7 +101,7 @@ public class WorkerResource
 
   @GET
   @Path("/enabled")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response isEnabled()
   {
     try {
@@ -115,7 +116,7 @@ public class WorkerResource
 
   @GET
   @Path("/tasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTasks()
   {
     try {
@@ -142,7 +143,7 @@ public class WorkerResource
 
   @POST
   @Path("/task/{taskid}/shutdown")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {

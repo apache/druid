@@ -58,6 +58,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,8 +101,8 @@ public class OverlordResource
 
   @POST
   @Path("/task")
-  @Consumes("application/json")
-  @Produces("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response taskPost(final Task task)
   {
     return asLeaderWith(
@@ -127,7 +128,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskPayload(@PathParam("taskid") String taskid)
   {
     return optionalTaskResponse(taskid, "payload", taskStorageQueryAdapter.getTask(taskid));
@@ -135,7 +136,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}/status")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
     return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getStatus(taskid));
@@ -143,7 +144,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}/segments")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
     final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
@@ -152,7 +153,7 @@ public class OverlordResource
 
   @POST
   @Path("/task/{taskid}/shutdown")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doShutdown(@PathParam("taskid") final String taskid)
   {
     return asLeaderWith(
@@ -171,7 +172,7 @@ public class OverlordResource
 
   @GET
   @Path("/worker")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWorkerConfig()
   {
     if (workerConfigRef == null) {
@@ -183,7 +184,7 @@ public class OverlordResource
 
   @POST
   @Path("/worker")
-  @Consumes("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response setWorkerConfig(
       final WorkerBehaviorConfig workerBehaviorConfig
   )
@@ -201,7 +202,7 @@ public class OverlordResource
   @Deprecated
   @GET
   @Path("/worker/setup")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWorkerSetupData()
   {
     if (workerSetupDataRef == null) {
@@ -214,7 +215,7 @@ public class OverlordResource
   @Deprecated
   @POST
   @Path("/worker/setup")
-  @Consumes("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response setWorkerSetupData(
       final WorkerSetupData workerSetupData
   )
@@ -230,7 +231,7 @@ public class OverlordResource
 
   @POST
   @Path("/action")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
     return asLeaderWith(
@@ -264,7 +265,7 @@ public class OverlordResource
 
   @GET
   @Path("/waitingTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWaitingTasks()
   {
     return workItemsResponse(
@@ -311,7 +312,7 @@ public class OverlordResource
 
   @GET
   @Path("/pendingTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getPendingTasks()
   {
     return workItemsResponse(
@@ -328,7 +329,7 @@ public class OverlordResource
 
   @GET
   @Path("/runningTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasks()
   {
     return workItemsResponse(
@@ -345,7 +346,7 @@ public class OverlordResource
 
   @GET
   @Path("/completeTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteTasks()
   {
     final List<TaskResponseObject> completeTasks = Lists.transform(
@@ -370,7 +371,7 @@ public class OverlordResource
 
   @GET
   @Path("/workers")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWorkers()
   {
     return asLeaderWith(
@@ -388,7 +389,7 @@ public class OverlordResource
 
   @GET
   @Path("/scaling")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getScalingState()
   {
     // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.

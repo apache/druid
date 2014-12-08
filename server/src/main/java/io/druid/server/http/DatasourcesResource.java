@@ -47,6 +47,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
 import java.util.List;
@@ -76,7 +77,7 @@ public class DatasourcesResource
   }
 
   @GET
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getQueryableDataSources(
       @QueryParam("full") String full,
       @QueryParam("simple") String simple
@@ -122,7 +123,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTheDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("full") final String full
@@ -142,7 +143,7 @@ public class DatasourcesResource
 
   @POST
   @Path("/{dataSourceName}")
-  @Consumes("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response enableDataSource(
       @PathParam("dataSourceName") final String dataSourceName
   )
@@ -156,7 +157,7 @@ public class DatasourcesResource
 
   @DELETE
   @Path("/{dataSourceName}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
@@ -190,7 +191,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}/intervals")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getSegmentDataSourceIntervals(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("simple") String simple,
@@ -250,7 +251,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}/intervals/{interval}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getSegmentDataSourceSpecificInterval(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
@@ -317,7 +318,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}/segments")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getSegmentDataSourceSegments(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("full") String full
@@ -350,7 +351,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}/segments/{segmentId}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getSegmentDataSourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
@@ -388,7 +389,7 @@ public class DatasourcesResource
 
   @POST
   @Path("/{dataSourceName}/segments/{segmentId}")
-  @Consumes("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response enableDatasourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
@@ -403,7 +404,7 @@ public class DatasourcesResource
 
   @GET
   @Path("/{dataSourceName}/tiers")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getSegmentDataSourceTiers(
       @PathParam("dataSourceName") String dataSourceName
   )
