@@ -38,6 +38,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
+import javax.ws.rs.core.MediaType;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +103,7 @@ public class BridgeQuerySegmentWalker implements QuerySegmentWalker
 
           StatusResponseHolder response = httpClient.post(new URL(url))
                                                     .setContent(
-                                                        "application/json",
+                                                        MediaType.APPLICATION_JSON,
                                                         jsonMapper.writeValueAsBytes(query)
                                                     )
                                                     .go(responseHandler)

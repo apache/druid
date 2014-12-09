@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.IAE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.Pair;
@@ -141,7 +142,10 @@ public class ServerManagerTest
           }
         },
         new NoopServiceEmitter(),
-        serverManagerExec, new DefaultObjectMapper(), new LocalCacheProvider().get(),
+        serverManagerExec,
+        MoreExecutors.sameThreadExecutor(),
+        new DefaultObjectMapper(),
+        new LocalCacheProvider().get(),
         new CacheConfig()
     );
 
@@ -429,7 +433,7 @@ public class ServerManagerTest
           @Override
           public void run()
           {
-            Map<String,Object> context = new HashMap<String, Object>();
+            Map<String, Object> context = new HashMap<String, Object>();
             Sequence<Result<SearchResultValue>> seq = runner.run(query, context);
             Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();

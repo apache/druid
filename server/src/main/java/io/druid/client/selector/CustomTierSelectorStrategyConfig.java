@@ -20,7 +20,7 @@
 package io.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Lists;
+import com.google.common.collect.Lists;
 
 import java.util.List;
 

@@ -329,7 +329,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         tmpDir
     ).findPlumber(
         schema,
-        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec, null, null),
+        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec, null, null, null),
         metrics
     );
 

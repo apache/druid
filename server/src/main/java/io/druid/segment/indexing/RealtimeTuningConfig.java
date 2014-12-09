@@ -46,6 +46,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
   private static final boolean defaultPersistInHeap = false;
   private static final boolean defaultIngestOffheap = false;
+  private static final int defaultBufferSize = 128 * 1024* 1024; // 128M
 
 
   // Might make sense for this to be a builder
@@ -61,7 +62,8 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultMaxPendingPersists,
         defaultShardSpec,
         defaultPersistInHeap,
-        defaultIngestOffheap
+        defaultIngestOffheap,
+        defaultBufferSize
     );
   }
 
@@ -75,6 +77,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private final ShardSpec shardSpec;
   private final boolean persistInHeap;
   private final boolean ingestOffheap;
+  private final int bufferSize;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -87,7 +90,8 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("persistInHeap") Boolean persistInHeap,
-      @JsonProperty("ingestOffheap") Boolean ingestOffheap
+      @JsonProperty("ingestOffheap") Boolean ingestOffheap,
+      @JsonProperty("buffersize") Integer bufferSize
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -104,6 +108,8 @@ public class RealtimeTuningConfig implements TuningConfig
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.persistInHeap = persistInHeap == null ? defaultPersistInHeap : persistInHeap;
     this.ingestOffheap = ingestOffheap == null ? defaultIngestOffheap : ingestOffheap;
+    this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
+
   }
 
   @JsonProperty
@@ -165,6 +171,11 @@ public class RealtimeTuningConfig implements TuningConfig
     return ingestOffheap;
   }
 
+  @JsonProperty
+  public int getBufferSize(){
+    return bufferSize;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -177,7 +188,8 @@ public class RealtimeTuningConfig implements TuningConfig
         maxPendingPersists,
         shardSpec,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize
     );
   }
 
@@ -193,7 +205,8 @@ public class RealtimeTuningConfig implements TuningConfig
         maxPendingPersists,
         shardSpec,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize
     );
   }
 }

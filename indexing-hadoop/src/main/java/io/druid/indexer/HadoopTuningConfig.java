@@ -36,18 +36,21 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
-  private static final PartitionsSpec defaultPartitionsSpec = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
-  private static final Map<DateTime, List<HadoopyShardSpec>> defaultShardSpecs = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
-  private static final int defaultRowFlushBoundary = 80000;
+  private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
+  private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
+  private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
+  private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
+  private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
+
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
     return new HadoopTuningConfig(
         null,
         new DateTime().toString(),
-        defaultPartitionsSpec,
-        defaultShardSpecs,
-        defaultRowFlushBoundary,
+        DEFAULT_PARTITIONS_SPEC,
+        DEFAULT_SHARD_SPECS,
+        DEFAULT_ROW_FLUSH_BOUNDARY,
         false,
         true,
         false,
@@ -55,7 +58,9 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         false,
         false,
-        false
+        false,
+        DEFAULT_BUFFER_SIZE,
+        DEFAULT_AGG_BUFFER_RATIO
     );
   }
 
@@ -72,6 +77,8 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean combineText;
   private final boolean persistInHeap;
   private final boolean ingestOffheap;
+  private final int bufferSize;
+  private final float aggregationBufferRatio;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -87,14 +94,16 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("persistInHeap") boolean persistInHeap,
-      final @JsonProperty("ingestOffheap") boolean ingestOffheap
+      final @JsonProperty("ingestOffheap") boolean ingestOffheap,
+      final @JsonProperty("bufferSize") Integer bufferSize,
+      final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio
   )
   {
     this.workingPath = workingPath == null ? null : workingPath;
     this.version = version == null ? new DateTime().toString() : version;
-    this.partitionsSpec = partitionsSpec == null ? defaultPartitionsSpec : partitionsSpec;
-    this.shardSpecs = shardSpecs == null ? defaultShardSpecs : shardSpecs;
-    this.rowFlushBoundary = rowFlushBoundary == null ? defaultRowFlushBoundary : rowFlushBoundary;
+    this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
+    this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
+    this.rowFlushBoundary = rowFlushBoundary == null ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -105,6 +114,8 @@ public class HadoopTuningConfig implements TuningConfig
     this.combineText = combineText;
     this.persistInHeap = persistInHeap;
     this.ingestOffheap = ingestOffheap;
+    this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
+    this.aggregationBufferRatio = aggregationBufferRatio == null ? DEFAULT_AGG_BUFFER_RATIO : aggregationBufferRatio;
   }
 
   @JsonProperty
@@ -184,6 +195,17 @@ public class HadoopTuningConfig implements TuningConfig
     return ingestOffheap;
   }
 
+  @JsonProperty
+  public int getBufferSize(){
+    return bufferSize;
+  }
+
+  @JsonProperty
+  public float getAggregationBufferRatio()
+  {
+    return aggregationBufferRatio;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -199,7 +221,9 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 
@@ -218,7 +242,9 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 
@@ -237,7 +263,9 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         persistInHeap,
-        ingestOffheap
+        ingestOffheap,
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 }

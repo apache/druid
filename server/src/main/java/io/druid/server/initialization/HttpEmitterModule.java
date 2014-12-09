@@ -20,6 +20,7 @@
 package io.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -37,6 +38,7 @@ import io.druid.guice.ManageLifecycle;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
+import java.security.NoSuchAlgorithmException;
 
 /**
  */
@@ -47,8 +49,14 @@ public class HttpEmitterModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.emitter.http", HttpEmitterConfig.class);
 
-    // Fix the injection of this if we want to enable ssl emission of events.
-    binder.bind(SSLContext.class).toProvider(Providers.<SSLContext>of(null)).in(LazySingleton.class);
+    final SSLContext context;
+    try {
+      context = SSLContext.getDefault();
+    } catch (NoSuchAlgorithmException e) {
+      throw Throwables.propagate(e);
+    }
+
+    binder.bind(SSLContext.class).toProvider(Providers.of(context)).in(LazySingleton.class);
   }
 
   @Provides

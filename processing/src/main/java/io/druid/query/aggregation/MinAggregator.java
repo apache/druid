@@ -72,6 +72,12 @@ public class MinAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return (long) min;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

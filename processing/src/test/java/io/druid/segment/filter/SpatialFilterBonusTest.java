@@ -53,6 +53,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
@@ -72,6 +73,7 @@ import java.util.Random;
 @RunWith(Parameterized.class)
 public class SpatialFilterBonusTest
 {
+  public static final int NUM_POINTS = 5000;
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
@@ -108,7 +110,7 @@ public class SpatialFilterBonusTest
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
   {
-    IncrementalIndex theIndex = new IncrementalIndex(
+    IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                             .withQueryGranularity(QueryGranularity.DAY)
                                             .withMetrics(METRIC_AGGS)
@@ -124,8 +126,8 @@ public class SpatialFilterBonusTest
                                                     )
                                                 )
                                             ).build(),
-        TestQueryRunners.pool,
-        false
+        false,
+        NUM_POINTS
     );
     theIndex.add(
         new MapBasedInputRow(
@@ -202,7 +204,7 @@ public class SpatialFilterBonusTest
 
     // Add a bunch of random points
     Random rand = new Random();
-    for (int i = 5; i < 5000; i++) {
+    for (int i = 6; i < NUM_POINTS; i++) {
       theIndex.add(
           new MapBasedInputRow(
               new DateTime("2013-01-01").getMillis(),
@@ -239,7 +241,7 @@ public class SpatialFilterBonusTest
   private static QueryableIndex makeMergedQueryableIndex()
   {
     try {
-      IncrementalIndex first = new IncrementalIndex(
+      IncrementalIndex first = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
@@ -256,10 +258,10 @@ public class SpatialFilterBonusTest
                                                   )
 
                                               ).build(),
-          TestQueryRunners.pool,
-          false
+          false,
+          NUM_POINTS
       );
-      IncrementalIndex second = new IncrementalIndex(
+      IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
@@ -275,10 +277,10 @@ public class SpatialFilterBonusTest
                                                       )
                                                   )
                                               ).build(),
-          TestQueryRunners.pool,
-          false
+          false,
+          NUM_POINTS
       );
-      IncrementalIndex third = new IncrementalIndex(
+      IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
                                               .withQueryGranularity(QueryGranularity.DAY)
                                               .withMetrics(METRIC_AGGS)
@@ -295,8 +297,8 @@ public class SpatialFilterBonusTest
                                                   )
 
                                               ).build(),
-          TestQueryRunners.pool,
-          false
+          false,
+          NUM_POINTS
       );
 
 
@@ -375,7 +377,7 @@ public class SpatialFilterBonusTest
 
       // Add a bunch of random points
       Random rand = new Random();
-      for (int i = 5; i < 5000; i++) {
+      for (int i = 6; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(
                 new DateTime("2013-01-01").getMillis(),

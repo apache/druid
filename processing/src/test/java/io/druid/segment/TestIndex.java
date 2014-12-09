@@ -39,6 +39,7 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -156,20 +157,22 @@ public class TestIndex
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading index file[%s]", resource);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-                                          .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-                                          .withQueryGranularity(QueryGranularity.NONE)
-                                          .withMetrics(METRIC_AGGS)
-                                          .build();
+        .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withQueryGranularity(QueryGranularity.NONE)
+        .withMetrics(METRIC_AGGS)
+        .build();
     final IncrementalIndex retVal;
     if (useOffheap) {
       retVal = new OffheapIncrementalIndex(
           schema,
-          TestQueryRunners.pool
+          TestQueryRunners.pool,
+          true,
+          100 * 1024 * 1024
       );
     } else {
-      retVal = new IncrementalIndex(
+      retVal = new OnheapIncrementalIndex(
           schema,
-          TestQueryRunners.pool
+          10000
       );
     }
 

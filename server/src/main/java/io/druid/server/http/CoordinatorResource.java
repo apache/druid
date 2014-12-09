@@ -32,6 +32,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -51,7 +52,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/leader")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
     return Response.ok(coordinator.getCurrentLeader()).build();
@@ -59,7 +60,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/loadstatus")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
       @QueryParam("full") String full
@@ -77,7 +78,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/loadqueue")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadQueue(
       @QueryParam("simple") String simple,
       @QueryParam("full") String full

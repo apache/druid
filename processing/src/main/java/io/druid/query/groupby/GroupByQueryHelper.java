@@ -31,7 +31,9 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -75,7 +77,7 @@ public class GroupByQueryHelper
         }
     );
     final IncrementalIndex index;
-    if(query.getContextValue("useOffheap", false)){
+    if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
           // use granularity truncated min timestamp
           // since incoming truncated timestamps may precede timeStart
@@ -83,18 +85,19 @@ public class GroupByQueryHelper
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           bufferPool,
-          false
+          false,
+          Integer.MAX_VALUE
       );
     } else {
-     index = new IncrementalIndex(
-        // use granularity truncated min timestamp
-        // since incoming truncated timestamps may precede timeStart
-        granTimeStart,
-        gran,
-        aggs.toArray(new AggregatorFactory[aggs.size()]),
-        bufferPool,
-        false
-    );
+      index = new OnheapIncrementalIndex(
+          // use granularity truncated min timestamp
+          // since incoming truncated timestamps may precede timeStart
+          granTimeStart,
+          gran,
+          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          false,
+          config.getMaxResults()
+      );
     }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
@@ -104,9 +107,10 @@ public class GroupByQueryHelper
       {
 
         if (in instanceof Row) {
-          if (accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions))
-              > config.getMaxResults()) {
-            throw new ISE("Computation exceeds maxRows limit[%s]", config.getMaxResults());
+          try {
+            accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions));
+          } catch(IndexSizeExceededException e) {
+            throw new ISE(e.getMessage());
           }
         } else {
           throw new ISE("Unable to accumulate something of type [%s]", in.getClass());

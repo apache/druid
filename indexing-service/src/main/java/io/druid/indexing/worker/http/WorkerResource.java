@@ -19,13 +19,12 @@
 
 package io.druid.indexing.worker.http;
 
-import com.google.api.client.util.Lists;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.overlord.ForkingTaskRunner;
@@ -40,6 +39,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 
@@ -73,7 +73,7 @@ public class WorkerResource
 
   @POST
   @Path("/disable")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doDisable()
   {
     try {
@@ -87,7 +87,7 @@ public class WorkerResource
 
   @POST
   @Path("/enable")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doEnable()
   {
     try {
@@ -101,7 +101,7 @@ public class WorkerResource
 
   @GET
   @Path("/enabled")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response isEnabled()
   {
     try {
@@ -116,7 +116,7 @@ public class WorkerResource
 
   @GET
   @Path("/tasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTasks()
   {
     try {
@@ -143,7 +143,7 @@ public class WorkerResource
 
   @POST
   @Path("/task/{taskid}/shutdown")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {

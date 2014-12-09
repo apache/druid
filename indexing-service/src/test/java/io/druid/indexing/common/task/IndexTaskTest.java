@@ -19,7 +19,7 @@
 
 package io.druid.indexing.common.task;
 
-import com.google.api.client.util.Lists;
+import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;

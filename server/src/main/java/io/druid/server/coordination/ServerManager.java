@@ -33,6 +33,7 @@ import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.CountingMap;
+import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentQueryRunner;
@@ -80,6 +81,7 @@ public class ServerManager implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
   private final ExecutorService exec;
+  private final ExecutorService cachingExec;
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> dataSources;
   private final CountingMap<String> dataSourceSizes = new CountingMap<String>();
   private final CountingMap<String> dataSourceCounts = new CountingMap<String>();
@@ -93,6 +95,7 @@ public class ServerManager implements QuerySegmentWalker
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
       @Processing ExecutorService exec,
+      @BackgroundCaching ExecutorService cachingExec,
       @Smile ObjectMapper objectMapper,
       Cache cache,
       CacheConfig cacheConfig
@@ -103,6 +106,7 @@ public class ServerManager implements QuerySegmentWalker
     this.emitter = emitter;
 
     this.exec = exec;
+    this.cachingExec = cachingExec;
     this.cache = cache;
     this.objectMapper = objectMapper;
 
@@ -423,6 +427,7 @@ public class ServerManager implements QuerySegmentWalker
                         new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
                         "scan/time"
                     ),
+                    cachingExec,
                     cacheConfig
                 )
             )

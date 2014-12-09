@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,24 +17,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query;
+package io.druid.segment.incremental;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
+import java.io.IOException;
 
-/**
-*/
-public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
+public class IndexSizeExceededException extends IOException
 {
-  public byte[] computeCacheKey(QueryType query);
+  public IndexSizeExceededException()
+  {
+  }
 
-  public TypeReference<CacheType> getCacheObjectClazz();
+  public IndexSizeExceededException(String message)
+  {
+    super(message);
+  }
 
-  // Resultant function must be THREAD SAFE
-  public Function<T, CacheType> prepareForCache();
+  public IndexSizeExceededException(String message, Throwable cause)
+  {
+    super(message, cause);
+  }
 
-  public Function<CacheType, T> pullFromCache();
-
-  public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences);
+  public IndexSizeExceededException(Throwable cause)
+  {
+    super(cause);
+  }
 }

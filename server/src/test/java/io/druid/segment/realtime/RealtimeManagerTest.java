@@ -34,6 +34,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -106,6 +107,7 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));
@@ -118,6 +120,7 @@ public class RealtimeManagerTest
                 tuningConfig
             )
         ),
+        null,
         null
     );
   }
@@ -266,7 +269,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row)
+    public int add(InputRow row) throws IndexSizeExceededException
     {
       if (row == null) {
         return -1;

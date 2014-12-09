@@ -35,6 +35,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
@@ -66,7 +67,7 @@ public class ServersResource
   }
 
   @GET
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getClusterServers(
       @QueryParam("full") String full,
       @QueryParam("simple") String simple
@@ -113,7 +114,7 @@ public class ServersResource
 
   @GET
   @Path("/{serverName}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getServer(
       @PathParam("serverName") String serverName,
       @QueryParam("simple") String simple
@@ -136,7 +137,7 @@ public class ServersResource
 
   @GET
   @Path("/{serverName}/segments")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getServerSegments(
       @PathParam("serverName") String serverName,
       @QueryParam("full") String full
@@ -169,7 +170,7 @@ public class ServersResource
 
   @GET
   @Path("/{serverName}/segments/{segmentId}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getServerSegment(
       @PathParam("serverName") String serverName,
       @PathParam("segmentId") String segmentId

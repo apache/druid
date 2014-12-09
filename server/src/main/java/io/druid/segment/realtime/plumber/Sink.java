@@ -31,7 +31,9 @@ import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireHydrant;
@@ -111,7 +113,7 @@ public class Sink implements Iterable<FireHydrant>
     return currHydrant;
   }
 
-  public int add(InputRow row)
+  public int add(InputRow row) throws IndexSizeExceededException
   {
     if (currHydrant == null) {
       throw new IAE("No currHydrant but given row[%s]", row);
@@ -123,6 +125,13 @@ public class Sink implements Iterable<FireHydrant>
         return -1; // the hydrant was swapped without being replaced
       }
       return index.add(row);
+    }
+  }
+
+  public boolean canAppendRow()
+  {
+    synchronized (currHydrant) {
+      return currHydrant != null && currHydrant.getIndex().canAppendRow();
     }
   }
 
@@ -176,11 +185,6 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
-    int aggsSize = 0;
-    for (AggregatorFactory agg : schema.getAggregators()) {
-      aggsSize += agg.getMaxIntermediateSize();
-    }
-    int bufferSize = aggsSize * config.getMaxRowsInMemory();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
@@ -191,12 +195,15 @@ public class Sink implements Iterable<FireHydrant>
     if (config.isIngestOffheap()) {
       newIndex = new OffheapIncrementalIndex(
           indexSchema,
-          new OffheapBufferPool(bufferSize)
+          // Assuming half space for aggregates
+          new OffheapBufferPool(config.getBufferSize()),
+          true,
+          config.getBufferSize()
       );
     } else {
-      newIndex = new IncrementalIndex(
+      newIndex = new OnheapIncrementalIndex(
           indexSchema,
-          new OffheapBufferPool(bufferSize)
+          config.getMaxRowsInMemory()
       );
     }
 

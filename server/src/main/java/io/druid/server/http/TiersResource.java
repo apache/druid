@@ -19,11 +19,11 @@
 
 package io.druid.server.http;
 
-import com.google.api.client.util.Lists;
-import com.google.api.client.util.Maps;
 import com.google.common.base.Function;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
@@ -39,6 +39,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 import java.util.Set;
@@ -59,7 +60,7 @@ public class TiersResource
   }
 
   @GET
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTiers(
       @QueryParam("simple") String simple
   )
@@ -95,7 +96,7 @@ public class TiersResource
 
   @GET
   @Path("/{tierName}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTierDatasources(
       @PathParam("tierName") String tierName,
       @QueryParam("simple") String simple

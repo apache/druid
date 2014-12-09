@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
@@ -117,7 +117,7 @@ public class HadoopIndexTask extends AbstractTask
     Preconditions.checkArgument(this.spec.getTuningConfig().getWorkingPath() == null, "workingPath must be absent");
     Preconditions.checkArgument(
         this.spec.getIOConfig().getMetadataUpdateSpec() == null,
-        "updaterJobSpec must be absent"
+        "metadataUpdateSpec must be absent"
     );
 
     if (hadoopDependencyCoordinates != null) {
@@ -290,10 +290,16 @@ public class HadoopIndexTask extends AbstractTask
               .withTuningConfig(theSchema.getTuningConfig().withVersion(version))
       );
 
-      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(
-          config,
-          injector.getInstance(MetadataStorageUpdaterJobHandler.class)
-      );
+      // MetadataStorageUpdaterJobHandler is only needed when running standalone without indexing service
+      // In that case the whatever runs the Hadoop Index Task must ensure MetadataStorageUpdaterJobHandler
+      // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
+      final MetadataStorageUpdaterJobHandler maybeHandler;
+      if (config.isUpdaterJobSpecSet()) {
+        maybeHandler = injector.getInstance(MetadataStorageUpdaterJobHandler.class);
+      } else {
+        maybeHandler = null;
+      }
+      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config, maybeHandler);
 
       log.info("Starting a hadoop index generator job...");
       if (job.run()) {

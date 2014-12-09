@@ -34,6 +34,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
@@ -1288,7 +1289,7 @@ public class CachingClusteredClientTest
             @Override
             public void run()
             {
-              HashMap<String,List> context = new HashMap<String, List>();
+              HashMap<String, List> context = new HashMap<String, List>();
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable<>(
@@ -1900,8 +1901,21 @@ public class CachingClusteredClientTest
         },
         cache,
         jsonMapper,
+        MoreExecutors.sameThreadExecutor(),
         new CacheConfig()
         {
+          @Override
+          public boolean isPopulateCache()
+          {
+            return true;
+          }
+
+          @Override
+          public boolean isUseCache()
+          {
+            return true;
+          }
+
           @Override
           public boolean isQueryCacheable(Query query)
           {

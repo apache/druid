@@ -38,6 +38,7 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -107,7 +108,7 @@ public class YeOldePlumberSchool implements PlumberSchool
       }
 
       @Override
-      public int add(InputRow row)
+      public int add(InputRow row) throws IndexSizeExceededException
       {
         Sink sink = getSink(row.getTimestampFromEpoch());
         if (sink == null) {

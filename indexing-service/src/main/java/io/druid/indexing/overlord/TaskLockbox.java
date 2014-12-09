@@ -19,10 +19,10 @@
 
 package io.druid.indexing.overlord;
 
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +36,7 @@ import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
@@ -462,11 +463,11 @@ public class TaskLockbox
         final NavigableSet<Interval> dsLockbox = dsRunning.navigableKeySet();
         final Iterable<Interval> searchIntervals = Iterables.concat(
             // Single interval that starts at or before ours
-            Collections.singletonList(dsLockbox.floor(new Interval(interval.getStart(), new DateTime(Long.MAX_VALUE)))),
+            Collections.singletonList(dsLockbox.floor(new Interval(interval.getStart(), new DateTime(JodaUtils.MAX_INSTANT)))),
 
             // All intervals that start somewhere between our start instant (exclusive) and end instant (exclusive)
             dsLockbox.subSet(
-                new Interval(interval.getStart(), new DateTime(Long.MAX_VALUE)),
+                new Interval(interval.getStart(), new DateTime(JodaUtils.MAX_INSTANT)),
                 false,
                 new Interval(interval.getEnd(), interval.getEnd()),
                 false

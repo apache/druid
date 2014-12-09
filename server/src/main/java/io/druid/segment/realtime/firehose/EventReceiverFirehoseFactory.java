@@ -38,6 +38,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Collection;
@@ -65,11 +66,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
-      @JsonProperty("parser") InputRowParser parser,
       @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    Preconditions.checkNotNull(parser, "parser");
     Preconditions.checkNotNull(serviceName, "serviceName");
 
     this.serviceName = serviceName;
@@ -127,7 +126,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
     @POST
     @Path("/push-events")
-    @Produces("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response addAll(Collection<Map<String, Object>> events)
     {
       log.debug("Adding %,d events to firehose: %s", events.size(), serviceName);

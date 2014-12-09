@@ -20,10 +20,10 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
@@ -182,7 +182,9 @@ public class HadoopDruidIndexerConfigTest
             null,
             false,
             false,
-            false
+            false,
+            null,
+            null
         )
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(spec);
