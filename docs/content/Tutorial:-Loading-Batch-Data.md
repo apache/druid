@@ -2,17 +2,13 @@
 layout: doc_page
 ---
 
-# Tutorial: Loading Your Data (Part 1)
-In our last [tutorial](Tutorial%3A-The-Druid-Cluster.html), we set up a complete Druid cluster. We created all the Druid dependencies and loaded some batched data. Druid shards data into self-contained chunks known as [segments](Segments.html). Segments are the fundamental unit of storage in Druid and all Druid nodes only understand segments.
+# Tutorial: Loading Batch Data
 
 In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments.
 
-If you are interested more about ingesting your own data into Druid, skip to the next [tutorial](Tutorial%3A-Loading-Your-Data-Part-2.html).
-
-About the data
---------------
-
-The data source we'll be working with is Wikipedia edits once again. The data schema is the same as the previous tutorials:
+The Data
+--------
+The data source we'll be using is Wikipedia edits. The data schema is:
 
 Dimensions (things to filter on):
 
@@ -39,20 +35,22 @@ Metrics (things to aggregate over):
 "delta"
 "deleted"
 ```
-Setting Up
-----------
 
-At this point, you should already have Druid downloaded and are comfortable with running a Druid cluster locally. If you are not, see [here](Tutorial%3A-The-Druid-Cluster.html).
+Batch Ingestion
+---------------
+Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
 
-Let's start from our usual starting point in the tarball directory.
+For this tutorial, we used [Hadoop 1.0.3](https://archive.apache.org/dist/hadoop/core/hadoop-1.0.3/). There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example.
 
-Segments require data, so before we can build a Druid segment, we are going to need some raw data. Make sure that the following file exists:
+For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html), but we are going to use Hadoop here for demonstration purposes.
+
+Our data is located at:
 
 ```
 examples/indexing/wikipedia_data.json
 ```
 
-Open the file and make sure the following events exist:
+The following events should exist in the file:
 
 ```json
 {"timestamp": "2013-08-31T01:02:33Z", "page": "Gypsy Danger", "language" : "en", "user" : "nuclear", "unpatrolled" : "true", "newPage" : "true", "robot": "false", "anonymous": "false", "namespace":"article", "continent":"North America", "country":"United States", "region":"Bay Area", "city":"San Francisco", "added": 57, "deleted": 200, "delta": -143}
@@ -62,72 +60,35 @@ Open the file and make sure the following events exist:
 {"timestamp": "2013-08-31T12:41:27Z", "page": "Coyote Tango", "language" : "ja", "user" : "stringer", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"Japan", "region":"Kanto", "city":"Tokyo", "added": 1, "deleted": 10, "delta": -9}
 ```
 
-There are five data points spread across the day of 2013-08-31. Talk about big data right? Thankfully, we don't need a ton of data to introduce how batch ingestion works.
+#### Set Up a Druid Cluster
 
-In order to ingest and query this data, we are going to need to run a historical node, a coordinator node, and an indexing service to run the batch ingestion.
+To index the data, we are going to need an indexing service, a historical node, and a coordinator node.
 
 Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
 
-#### Starting a Local Indexing Service
-
-The simplest indexing service we can start up is to run an [overlord](Indexing-Service.html) node in local mode. You can do so by issuing:
+To start the Indexing Service:
 
 ```bash
-java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/overlord io.druid.cli.Main server overlord
+java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path>:config/overlord io.druid.cli.Main server overlord
 ```
 
-The overlord configurations should already exist in:
-
-```
-config/overlord/runtime.properties
-```
-
-The configurations for the overlord node are as follows:
-
-```bash
-druid.host=localhost
-druid.port=8087
-druid.service=overlord
-
-druid.zk.service.host=localhost
-
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.160"]
-
-druid.metadata.storage.connector.connectURI=jdbc:mysql://localhost:3306/druid
-druid.metadata.storage.connector.user=druid
-druid.metadata.storage.connector.password=diurd
-
-druid.selectors.indexing.serviceName=overlord
-druid.indexer.queue.startDelay=PT0M
-druid.indexer.runner.javaOpts="-server -Xmx256m"
-druid.indexer.fork.property.druid.processing.numThreads=1
-druid.indexer.fork.property.druid.computation.buffer.size=100000000
-```
-
-If you are interested in reading more about these configurations, see [here](Indexing-Service.html).
-
-#### Starting Other Nodes
-
-Just in case you forgot how, let's start up the other nodes we require:
-
-Coordinator node:
+To start the Coordinator Node:
 
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
 ```
 
-Historical node:
+To start the Historical Node:
 
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
 ```
 
-Note: Historical, real-time and broker nodes share the same query interface. Hence, we do not explicitly need a broker node for this tutorial. All queries can go against the historical node directly.
+#### Index the Data
 
-Once all the nodes are up and running, we are ready to index some data.
+There are two ways we can load the data, depending on the data volume. The simplest method of loading data is to use the [Index Task](Tasks.html). Index tasks can load batch data without any external dependencies. They are however, slow when the data volume exceeds 1G.
 
-Indexing the Data
------------------
+#### Index Task
 
 To index the data and build a Druid segment, we are going to need to submit a task to the indexing service. This task should already exist:
 
@@ -140,40 +101,64 @@ Open up the file to see the following:
 ```json
 {
   "type" : "index",
-  "dataSource" : "wikipedia",
-  "granularitySpec" : {
-    "type" : "uniform",
-    "gran" : "DAY",
-    "intervals" : [ "2013-08-31/2013-09-01" ]
-  },
-  "aggregators" : [{
-     "type" : "count",
-     "name" : "count"
-    }, {
-     "type" : "doubleSum",
-     "name" : "added",
-     "fieldName" : "added"
-    }, {
-     "type" : "doubleSum",
-     "name" : "deleted",
-     "fieldName" : "deleted"
-    }, {
-     "type" : "doubleSum",
-     "name" : "delta",
-     "fieldName" : "delta"
-  }],
-  "firehose" : {
-    "type" : "local",
-    "baseDir" : "examples/indexing",
-    "filter" : "wikipedia_data.json",
-    "parser" : {
-      "timestampSpec" : {
-        "column" : "timestamp"
+  "schema" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia",
+      "parser" : {
+        "type" : "string",
+        "parseSpec" : {
+          "format" : "json",
+          "timestampSpec" : {
+            "column" : "timestamp",
+            "format" : "auto"
+          },
+          "dimensionsSpec" : {
+            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+            "dimensionExclusions" : [],
+            "spatialDimensions" : []
+          }
+        }
       },
-      "data" : {
-        "format" : "json",
-        "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+      "metricsSpec" : [
+        {
+          "type" : "count",
+          "name" : "count"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "added",
+          "fieldName" : "added"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "deleted",
+          "fieldName" : "deleted"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "delta",
+          "fieldName" : "delta"
+        }
+      ],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "DAY",
+        "queryGranularity" : "NONE",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
       }
+    },
+    "ioConfig" : {
+      "type" : "index",
+      "firehose" : {
+        "type" : "local",
+        "baseDir" : "examples/indexing/",
+        "filter" : "wikipedia_data.json"
+       }
+    },
+    "tuningConfig" : {
+      "type" : "index",
+      "targetPartitionSize" : 0,
+      "rowFlushBoundary" : 0
     }
   }
 }
@@ -262,12 +247,89 @@ Task logs can be stored locally or uploaded to [Deep Storage](Deep-Storage.html)
 
 Most common data ingestion problems are around timestamp formats and other malformed data issues.
 
+#### Hadoop Index Task
+
+Before indexing the data, make sure you have a valid Hadoop cluster running. To build our Druid segment, we are going to submit a [Hadoop index task](Tasks.html) to the indexing service. The grammar for the Hadoop index task is very similar to the index task of the last tutorial. The tutorial Hadoop index task should be located at:
+
+```
+examples/indexing/wikipedia_index_hadoop_task.json
+```
+
+Examining the contents of the file, you should find:
+
+  ```json
+  {
+    "type" : "index_hadoop",
+    "schema" : {
+      "dataSchema" : {
+        "dataSource" : "wikipedia",
+        "parser" : {
+          "type" : "string",
+          "parseSpec" : {
+            "format" : "json",
+            "timestampSpec" : {
+              "column" : "timestamp",
+              "format" : "auto"
+            },
+            "dimensionsSpec" : {
+              "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+              "dimensionExclusions" : [],
+              "spatialDimensions" : []
+            }
+          }
+        },
+        "metricsSpec" : [
+          {
+            "type" : "count",
+            "name" : "count"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "added",
+            "fieldName" : "added"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "deleted",
+            "fieldName" : "deleted"
+          },
+          {
+            "type" : "doubleSum",
+            "name" : "delta",
+            "fieldName" : "delta"
+          }
+        ],
+        "granularitySpec" : {
+          "type" : "uniform",
+          "segmentGranularity" : "DAY",
+          "queryGranularity" : "NONE",
+          "intervals" : [ "2013-08-31/2013-09-01" ]
+        }
+      },
+      "ioConfig" : {
+        "type" : "hadoop",
+        "inputSpec" : {
+          "type" : "static",
+          "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
+        }
+      }
+    }
+  }
+  ```
+
+If you are curious about what all this configuration means, see [here](Tasks.html).
+
+To submit the task:
+
+```bash
+curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedia_index_hadoop_task.json localhost:8087/druid/indexer/v1/task
+```
+
+After the task is completed, the segment should be assigned to your historical node. You should be able to query the segment.
+
 Next Steps
 ----------
-
-This tutorial covered ingesting a small batch data set and loading it into Druid. In [Loading Your Data Part 2](Tutorial%3A-Loading-Your-Data-Part-2.html), we will cover how to ingest data using Hadoop for larger data sets.
-
-Note: The index task and local firehose can be used to ingest your own data if the size of that data is relatively small (< 1G). The index task is fairly slow and we highly recommend using the Hadoop Index Task for ingesting larger quantities of data.
+We demonstrated using the indexing service as a way to ingest data into Druid. Previous versions of Druid used the [HadoopDruidIndexer](Batch-ingestion.html) to ingest batch data. The `HadoopDruidIndexer` still remains a valid option for batch ingestion, however, we recommend using the indexing service as the preferred method of getting batch data into Druid.
 
 Additional Information
 ----------------------

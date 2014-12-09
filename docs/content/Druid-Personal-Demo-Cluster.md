@@ -14,7 +14,7 @@ This guide walks you through the steps to create the cluster and then how to cre
 
 ## What’s in this Druid Demo Cluster?
 
-1. A single "Coordinator" node.  This node co-locates the [Coordinator](Coordinator.html) process, the [Broker](Broker.html) process, Zookeeper, and the MySQL instance. You can read more about Druid architecture [Design](Design.html).
+1. A single "Coordinator" node.  This node co-locates the [Coordinator](Coordinator.html) process, the [Broker](Broker.html) process, Zookeeper, and the metadata storage instance. You can read more about Druid architecture [Design](Design.html).
 
 1. Three historical nodes; these historical nodes, have been pre-configured to work with the Coordinator node and should automatically load up the Wikipedia edit stream data (no specific setup is required).
 

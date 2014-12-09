@@ -36,17 +36,17 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
+  private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
   private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
   private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
   private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
 
-
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
     return new HadoopTuningConfig(
-        null,
+        DEFAULT_WORKING_PATH,
         new DateTime().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
@@ -86,7 +86,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("version") String version,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
-      final @JsonProperty("rowFlushBoundary") Integer rowFlushBoundary,
+      final @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -99,11 +99,11 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio
   )
   {
-    this.workingPath = workingPath == null ? null : workingPath;
+    this.workingPath = workingPath == null ? DEFAULT_WORKING_PATH : workingPath;
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
-    this.rowFlushBoundary = rowFlushBoundary == null ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
+    this.rowFlushBoundary = maxRowsInMemory == null ? DEFAULT_ROW_FLUSH_BOUNDARY : maxRowsInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;

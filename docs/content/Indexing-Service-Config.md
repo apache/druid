@@ -44,7 +44,7 @@ There are additional configs for autoscaling (if it is enabled):
 
 #### Dynamic Configuration
 
-Overlord dynamic configuration is mainly for autoscaling. The overlord reads a worker setup spec as a JSON object from the Druid [MySQL](MySQL.html) config table. This object contains information about the version of middle managers to create, the maximum and minimum number of middle managers in the cluster at one time, and additional information required to automatically create middle managers.
+Overlord dynamic configuration is mainly for autoscaling. The overlord reads a worker setup spec as a JSON object from the Druid [metadata storage](Metadata-storage.html) config table. This object contains information about the version of middle managers to create, the maximum and minimum number of middle managers in the cluster at one time, and additional information required to automatically create middle managers.
 
 The JSON object can be submitted to the overlord via a POST request at:
 

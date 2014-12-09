@@ -1,25 +1,4 @@
 {
-   "queryType":"timeseries",
-   "dataSource":"wikipedia",
-   "granularity":"minute",
-   "aggregations":[
-      {
-         "type":"count",
-         "name":"rows"
-      },
-      {
-         "type":"longSum",
-         "fieldName":"count",
-         "name":"edit_count"
-      }
-   ],
-   "filter":{
-      "type":"selector",
-      "dimension":"namespace",
-      "value":"article"
-   },
-   "intervals":[
-      "2013-06-01T00:00/2020-01-01T00"
-   ]
+   "queryType":"timeBoundary",
+   "dataSource":"wikipedia"
 }
-

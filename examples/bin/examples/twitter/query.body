@@ -1,24 +1,4 @@
 {
-  "queryType": "timeseries",
-  "dataSource": "twitterstream",
-  "granularity": "all",
-  "aggregations": [
-    {
-      "type": "count",
-      "name": "rows"
-    },
-    {
-      "type": "doubleSum",
-      "fieldName": "tweets",
-      "name": "tweets"
-    }
-  ],
-  "filter": {
-    "type": "selector",
-    "dimension": "lang",
-    "value": "en"
-  },
-  "intervals": [
-    "2012-10-01T00:00\/2020-01-01T00"
-  ]
+  "queryType": "timeBoundary",
+  "dataSource": "twitterstream"
 }

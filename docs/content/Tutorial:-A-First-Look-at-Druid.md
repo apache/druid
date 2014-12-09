@@ -51,13 +51,13 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.160-bin.tar.gz). Download this file to a directory of your choosing.
 
-You can extract the awesomeness within by issuing:
+You can extract the content within by issuing:
 
 ```
 tar -zxvf druid-services-*-bin.tar.gz
 ```
 
-Not too lost so far right? That's great! If you cd into the directory:
+If you cd into the directory:
 
 ```
 cd druid-services-0.6.160
@@ -68,24 +68,6 @@ You should see a bunch of files:
 * run_example_server.sh
 * run_example_client.sh
 * LICENSE, config, examples, lib directories
-
-Setting up Zookeeper
---------------------
-
-Before we get started, we need to start Apache Zookeeper.
-
-```bash
-Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
-Install zookeeper.
-
-e.g.
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
-tar xzf zookeeper-3.4.6.tar.gz
-cd zookeeper-3.4.6
-cp conf/zoo_sample.cfg conf/zoo.cfg
-./bin/zkServer.sh start
-cd ..
-```
 
 Running Example Scripts
 -----------------------
@@ -109,82 +91,28 @@ Note that the first time you start the example, it may take some extra time due 
 2013-09-04 19:33:11,946 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #ja.wikipedia
 ```
 
-The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. If you are interested in the details of our real-time architecture and why we persist indexes to disk, I suggest you read our [White Paper](http://static.druid.io/docs/druid.pdf).
+The Druid real time-node ingests events in an in-memory buffer. Periodically, these events will be persisted to disk. If you are interested in the details of our real-time architecture and why we persist indexes to disk, we suggest you read our [White Paper](http://static.druid.io/docs/druid.pdf).
 
-Okay, things are about to get real-time. To query the real-time node you've spun up, you can issue:
+To query the real-time node you've spun up, you can issue:
 
 ```
 ./run_example_client.sh
 ```
 
-Select "wikipedia" once again. This script issues [GroupByQueries](GroupByQuery.html) to the data we've been ingesting. The query looks like this:
+Select "wikipedia" once again. This script issues [TimeBoundary](TimeBoundaryQuery.html) to the data we've been ingesting. The query looks like this:
 
 ```json
 {
-   "queryType":"groupBy",
-   "dataSource":"wikipedia",
-   "granularity":"minute",
-   "dimensions":[ "page" ],
-   "aggregations":[
-      {"type":"count", "name":"rows"},
-      {"type":"longSum", "fieldName":"count", "name":"edit_count"}
-   ],
-   "filter":{ "type":"selector", "dimension":"namespace", "value":"article" },
-   "intervals":[ "2013-06-01T00:00/2020-01-01T00" ]
+   "queryType":"timeBoundary",
+   "dataSource":"wikipedia"
 }
 ```
 
-This is a **groupBy** query, which you may be familiar with from SQL. We are grouping, or aggregating, via the `dimensions` field: `["page"]`. We are **filtering** via the `namespace` dimension, to only look at edits on `articles`. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
+The **timeBoundary** query is one of the simplest queries you can make in Druid. It gives you the boundaries of the ingested data.
+
+We are **filtering** via the `namespace` dimension, to only look at edits on `articles`. Our **aggregations** are what we are calculating: a count of the number of data rows, and a count of the number of edits that have occurred.
 
 The result looks something like this (when it's prettified):
-
-```json
-[
-  {
-    "version": "v1",
-    "timestamp": "2013-09-04T21:44:00.000Z",
-    "event": { "count": 0, "page": "2013\u201314_Brentford_F.C._season", "rows": 1 }
-  },
-  {
-    "version": "v1",
-    "timestamp": "2013-09-04T21:44:00.000Z",
-    "event": { "count": 0, "page": "8e_\u00e9tape_du_Tour_de_France_2013", "rows": 1 }
-  },
-  {
-    "version": "v1",
-    "timestamp": "2013-09-04T21:44:00.000Z",
-    "event": { "count": 0, "page": "Agenda_of_the_Tea_Party_movement", "rows": 1 }
-  },
-...
-```
-
-This groupBy query is a bit complicated and we'll return to it later. For the time being, just make sure you are getting some blocks of data back. If you are having problems, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
-
-Querying Druid
---------------
-
-In your favorite editor, create the file:
-
-```
-time_boundary_query.body
-```
-
-Druid queries are JSON blobs which are relatively painless to create programmatically, but an absolute pain to write by hand. So anyway, we are going to create a Druid query by hand. Add the following to the file you just created:
-
-```json
-{
-    "queryType": "timeBoundary", 
-    "dataSource": "wikipedia"
-}
-```
-
-The [TimeBoundaryQuery](TimeBoundaryQuery.html) is one of the simplest Druid queries. To run the query, you can issue:
-
-```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d @time_boundary_query.body
-```
-
-We get something like this JSON back:
 
 ```json
 [ {
@@ -196,12 +124,15 @@ We get something like this JSON back:
 } ]
 ```
 
-As you can probably tell, the result is indicating the maximum and minimum timestamps we've seen thus far (summarized to a minutely granularity). Let's explore a bit further.
+If you are having problems with getting results back, make sure you have [curl](http://curl.haxx.se/) installed. Control+C to break out of the client script.
 
-Return to your favorite editor and create the file:
+Querying Druid
+--------------
+
+In your favorite editor, create the file:
 
 ```
-timeseries_query.body
+timeseries.json
 ```
 
 We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
@@ -219,11 +150,11 @@ We are going to make a slightly more complicated query, the [TimeseriesQuery](Ti
 }
 ```
 
-You are probably wondering, what are these [Granularities](Granularities.html) and [Aggregations](Aggregations.html) things? What the query is doing is aggregating some metrics over some span of time. 
+Our query has now expanded to include a time interval, [Granularities](Granularities.html), and [Aggregations](Aggregations.html). What the query is doing is aggregating a set metrics over a span of time, and the results are put into a single bucket.
 To issue the query and get some results, run the following in your command line:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries_query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries.json
 ```
 
 Once again, you should get a JSON blob of text back with your results, that looks something like this:
@@ -237,9 +168,9 @@ Once again, you should get a JSON blob of text back with your results, that look
 
 If you issue the query again, you should notice your results updating.
 
-Right now all the results you are getting back are being aggregated into a single timestamp bucket. What if we wanted to see our aggregations on a per minute basis? What field can we change in the query to accomplish this?
+Right now all the results you are getting back are being aggregated into a single timestamp bucket. What if we wanted to see our aggregations on a per minute basis?
 
-If you loudly exclaimed "we can change granularity to minute", you are absolutely correct! We can specify different granularities to bucket our results, like so:
+We can change granularity our the results to minute. To specify different granularities to bucket our results, we change our schema like so:
 
 ```json
 {
@@ -254,7 +185,7 @@ If you loudly exclaimed "we can change granularity to minute", you are absolutel
 }
 ```
 
-This gives us something like the following:
+This gives us results like the following:
 
 ```json
 [
@@ -277,27 +208,24 @@ This gives us something like the following:
 Solving a Problem
 -----------------
 
-One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we have to return to the query we introduced at the very beginning of this tutorial, the [GroupByQuery](GroupByQuery.html). It would be nice if we could group by results by dimension value and somehow sort those results... and it turns out we can!
+One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we can use the [TopN](TopNQuery.html).
 
 Let's create the file:
 
 ```
-group_by_query.body
+topn.json
 ```
 
 and put the following in there:
 
 ```json
 {
-  "queryType": "groupBy", 
+  "queryType": "topN",
   "dataSource": "wikipedia", 
   "granularity": "all", 
-  "dimensions": [ "page" ], 
-  "limitSpec": {
-     "type": "default", 
-     "columns": [ { "dimension": "edit_count", "direction": "DESCENDING" } ], 
-     "limit": 10
-  }, 
+  "dimension": "page",
+  "metric": "edit_count",
+  "threshold" : 10,
   "aggregations": [
     {"type": "longSum", "fieldName": "count", "name": "edit_count"}
   ], 
@@ -306,12 +234,12 @@ and put the following in there:
 }
 ```
 
-Woah! Our query just got a way more complicated. Now we have these [Filters](Filters.html) things and this [LimitSpec](LimitSpec.html) thing. Fear not, it turns out the new objects we've introduced to our query can help define the format of our results and provide an answer to our question.
+Note that our query now includes [Filters](Filters.html).
 
 If you issue the query:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d @group_by_query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d @topn.json
 ```
 
 You should see an answer to our question. As an example, some results are shown below:
@@ -319,21 +247,15 @@ You should see an answer to our question. As an example, some results are shown 
 ```json
 [
  {
-   "version" : "v1",
-   "timestamp" : "2012-10-01T00:00:00.000Z",
-   "event" : { "page" : "RTC_Transit", "edit_count" : 6 }
- }, 
- {
-   "version" : "v1",
-   "timestamp" : "2012-10-01T00:00:00.000Z",
-   "event" : { "page" : "List_of_Deadly_Women_episodes", "edit_count" : 4 }
- }, 
- {
-   "version" : "v1",
-   "timestamp" : "2012-10-01T00:00:00.000Z",
-   "event" : { "page" : "User_talk:David_Biddulph", "edit_count" : 4 }
- },
-...
+   "timestamp" : "2013-09-04T21:00:00.000Z",
+   "result" : [
+    { "page" : "RTC_Transit", "edit_count" : 6 },
+    { "page" : "List_of_Deadly_Women_episodes", "edit_count" : 4 },
+    { "page" : "User_talk:David_Biddulph", "edit_count" : 4 },
+    ...
+   ]
+ }
+]
 ```
 
 Feel free to tweak other query parameters to answer other questions you may have about the data.
@@ -348,6 +270,6 @@ Druid is even more fun if you load your own data into it! To learn how to load y
 Additional Information
 ----------------------
 
-This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, read more of the Druid documentation and the blogs found on druid.io.
+This tutorial is merely showcasing a small fraction of what Druid can do. If you are interested in more information about Druid, including setting up a more sophisticated Druid cluster, read more of the Druid documentation and blogs found on druid.io.
 
-And thus concludes our journey! Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
+Hopefully you learned a thing or two about Druid real-time ingestion, querying Druid, and how Druid can be used to solve problems. If you have additional questions, feel free to post in our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
