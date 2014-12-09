@@ -46,7 +46,7 @@ All nodes can be run in some highly available fashion, either as symmetric peers
 Aside from these nodes, there are 3 external dependencies to the system:
 
 1.  A running [ZooKeeper](ZooKeeper.html) cluster for cluster service discovery and maintenance of current data topology
-2.  A [MySQL instance](MySQL.html) for maintenance of metadata about the data segments that should be served by the system
+2.  A [MySQL instance](Metadata-storage.html) for maintenance of metadata about the data segments that should be served by the system
 3.  A ["deep storage" LOB store/file system](Deep-Storage.html) to hold the stored segments
 
 The following diagram illustrates the cluster's management layer, showing how certain nodes and dependencies help manage the cluster by tracking and exchanging metadata:

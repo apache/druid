@@ -25,7 +25,7 @@ The coordinator module uses several of the default modules in [Configuration](Co
 Dynamic Configuration
 ---------------------
 
-The coordinator has dynamic configuration to change certain behaviour on the fly. The coordinator a JSON spec object from the Druid [MySQL](MySQL.html) config table. This object is detailed below:
+The coordinator has dynamic configuration to change certain behaviour on the fly. The coordinator a JSON spec object from the Druid [MySQL](Metadata-storage.html) config table. This object is detailed below:
 
 It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the overlord via a POST request at:
 

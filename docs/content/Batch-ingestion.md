@@ -8,7 +8,7 @@ There are two choices for batch data ingestion to your Druid cluster, you can us
 Which should I use?
 -------------------
 
-The [Indexing service](Indexing-Service.html) is a set of nodes that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [metadata store](MySQL.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
+The [Indexing service](Indexing-Service.html) is a set of nodes that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [metadata store](Metadata-storage.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
 
 The `HadoopDruidIndexer` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](Indexing-Service.html) just yet.
 
@@ -160,7 +160,7 @@ This is a specification of the properties that tell the job how to update metada
 |type|String|"metadata" is the only value available.|yes|
 |connectURI|String|A valid JDBC url to MySQL.|yes|
 |user|String|Username for db.|yes|
-|password||tring|password for db.|yes|
+|password|String|password for db.|yes|
 |segmentTable|String|Table to use in DB.|yes|
 
 These properties should parrot what you have configured for your [Coordinator](Coordinator.html).
