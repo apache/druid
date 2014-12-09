@@ -8,113 +8,112 @@ There are two choices for batch data ingestion to your Druid cluster, you can us
 Which should I use?
 -------------------
 
-The [Indexing service](Indexing-Service.html) is a node that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [database](MySQL.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
+The [Indexing service](Indexing-Service.html) is a set of nodes that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [metadata store](MySQL.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
 
 The `HadoopDruidIndexer` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](Indexing-Service.html) just yet.
 
-Batch Ingestion using the HadoopDruidIndexer
---------------------------------------------
+## Batch Ingestion using the HadoopDruidIndexer
 
 The HadoopDruidIndexer can be run like so:
 
 ```
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path> io.druid.cli.Main index hadoop <config_file>
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path> io.druid.cli.Main index hadoop <spec_file>
 ```
 
-The interval is the [ISO8601 interval](http://en.wikipedia.org/wiki/ISO_8601#Time_intervals) of the data you are processing. The config\_file is a path to a file (the "specFile") that contains JSON and an example looks like:
+## Hadoop "specFile"
+
+The spec\_file is a path to a file that contains JSON and an example looks like:
 
 ```json
 {
-  "dataSource": "the_data_source",
-  "timestampSpec" : {
-    "column": "ts",
-    "format": "<iso, millis, posix, auto or any Joda time format>"
-  },
-  "dataSpec": {
-    "format": "<csv, tsv, or json>",
-    "columns": [
-      "ts",
-      "column_1",
-      "column_2",
-      "column_3",
-      "column_4",
-      "column_5"
-    ],
-    "dimensions": [
-      "column_1",
-      "column_2",
-      "column_3"
-    ]
-  },
-  "granularitySpec": {
-    "type": "uniform",
-    "intervals": [
-      "<ISO8601 interval:http:\/\/en.wikipedia.org\/wiki\/ISO_8601#Time_intervals>"
-    ],
-    "gran": "day"
-  },
-  "pathSpec": {
-    "type": "static",
-    "paths" : "example/path/data.gz,example/path/moredata.gz"
-  },
-  "rollupSpec": {
-    "aggs": [
+  "dataSchema" : {
+    "dataSource" : "wikipedia",
+    "parser" : {
+      "type" : "string",
+      "parseSpec" : {
+        "format" : "json",
+        "timestampSpec" : {
+          "column" : "timestamp",
+          "format" : "auto"
+        },
+        "dimensionsSpec" : {
+          "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+          "dimensionExclusions" : [],
+          "spatialDimensions" : []
+        }
+      }
+    },
+    "metricsSpec" : [
       {
-        "type": "count",
-        "name": "event_count"
+        "type" : "count",
+        "name" : "count"
       },
       {
-        "type": "doubleSum",
-        "fieldName": "column_4",
-        "name": "revenue"
+        "type" : "doubleSum",
+        "name" : "added",
+        "fieldName" : "added"
       },
       {
-        "type": "longSum",
-        "fieldName": "column_5",
-        "name": "clicks"
+        "type" : "doubleSum",
+        "name" : "deleted",
+        "fieldName" : "deleted"
+      },
+      {
+        "type" : "doubleSum",
+        "name" : "delta",
+        "fieldName" : "delta"
       }
     ],
-    "rollupGranularity": "minute"
+    "granularitySpec" : {
+      "type" : "uniform",
+      "segmentGranularity" : "DAY",
+      "queryGranularity" : "NONE",
+      "intervals" : [ "2013-08-31/2013-09-01" ]
+    }
   },
-  "workingPath": "\/tmp\/path\/on\/hdfs",
-  "segmentOutputPath": "s3n:\/\/billy-bucket\/the\/segments\/go\/here",
-  "leaveIntermediate": "false",
-  "partitionsSpec": {
-    "type": "hashed"
-    "targetPartitionSize": 5000000
+  "ioConfig" : {
+    "type" : "hadoop",
+    "inputSpec" : {
+      "type" : "static",
+      "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
+    },
+    "metadataUpdateSpec" : {
+      "type":"mysql",
+      "connectURI" : "jdbc:mysql://localhost:3306/druid",
+      "password" : "diurd",
+      "segmentTable" : "druid_segments",
+      "user" : "druid"
+    },
+    "segmentOutputPath" : "/MyDirectory/data/index/output"
   },
-  "updaterJobSpec": {
-    "type": "db",
-    "connectURI": "jdbc:mysql:\/\/localhost:7980\/test_db",
-    "user": "username",
-    "password": "passmeup",
-    "segmentTable": "segments"
-  },
-  "jobProperties": {
-    "mapreduce.job.queuename": "default"
+  "tuningConfig" : {
+    "type" : "hadoop",
+    "targetPartitionSize" : 5000000,
+    "jobProperties": {
+      "mapreduce.job.queuename": "default"
+    }
   }
 }
 ```
 
-### Hadoop Index Config
+### DataSchema
 
-|property|description|required?|
-|--------|-----------|---------|
-|dataSource|name of the dataSource the data will belong to|yes|
-|timestampSpec|includes the column that is to be used as the timestamp column and the format of the timestamps; auto = either iso or millis, Joda time formats can be found [here](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html).|yes|
-|dataSpec|a specification of the data format and an array that names all of the columns in the input data.|yes|
-|dimensions|the columns that are to be used as dimensions.|yes|
-|granularitySpec|the time granularity and interval to chunk segments up into.|yes|
-|pathSpec|a specification of where to pull the data in from|yes|
-|rollupSpec|a specification of the rollup to perform while processing the data|yes|
-|workingPath|the working path to use for intermediate results (results between Hadoop jobs).|yes|
-|segmentOutputPath|the path to dump segments into.|yes|
-|leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool).|no|
-|partitionsSpec|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.|no|
-|metadataUpdateSpec|a specification of how to update the metadata for the druid cluster these segments belong to.|yes|
-|jobProperties|a map of properties to add to the Hadoop job configuration.|no|
+This field is required.
 
-### Path specification
+See [Ingestion](Ingestion.html)
+
+### IOConfig
+
+This field is required.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|This should always be 'hadoop'.|yes|
+|pathSpec|Object|a specification of where to pull the data in from|yes|
+|segmentOutputPath|String|the path to dump segments into.|yes|
+|metadataUpdateSpec|Object|a specification of how to update the metadata for the druid cluster these segments belong to.|yes|
+
+#### Path specification
 
 There are multiple types of path specification:
 
@@ -122,9 +121,9 @@ There are multiple types of path specification:
 
 Is a type of data loader where a static path to where the data files are located is passed.
 
-|property|description|required?|
-|--------|-----------|---------|
-|paths|A String of input paths indicating where the raw data is located.|yes|
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|paths|Array of String|A String of input paths indicating where the raw data is located.|yes|
 
 For example, using the static input paths:
 
@@ -136,11 +135,11 @@ For example, using the static input paths:
 
 Is a type of data loader that expects data to be laid out in a specific path format. Specifically, it expects it to be segregated by day in this directory format `y=XXXX/m=XX/d=XX/H=XX/M=XX/S=XX` (dates are represented by lowercase, time is represented by uppercase).
 
-|property|description|required?|
-|--------|-----------|---------|
-|dataGranularity|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
-|inputPath|Base path to append the expected time path to.|yes|
-|filePattern|Pattern that files should match to be included.|yes|
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|dataGranularity|Object|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
+|inputPath|String|Base path to append the expected time path to.|yes|
+|filePattern|String|Pattern that files should match to be included.|yes|
 
 For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
 
@@ -151,14 +150,36 @@ s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=01
 s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
 ```
 
-### Rollup specification
+#### Metadata Update Job Spec
 
-The indexing process has the ability to roll data up as it processes the incoming data. If data has already been summarized, summarizing it again will produce the same results so either way is not a problem. This specifies how that rollup should take place.
+This is a specification of the properties that tell the job how to update metadata such that the Druid cluster will see the output segments and load them.
 
-|property|description|required?|
-|--------|-----------|---------|
-|aggs|specifies a list of aggregators to aggregate for each bucket (a bucket is defined by the tuple of the truncated timestamp and the dimensions). Aggregators available here are the same as available when querying.|yes|
-|rollupGranularity|The granularity to use when truncating incoming timestamps for bucketization.|yes|
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|"metadata" is the only value available.|yes|
+|connectURI|String|A valid JDBC url to MySQL.|yes|
+|user|String|Username for db.|yes|
+|password||tring|password for db.|yes|
+|segmentTable|String|Table to use in DB.|yes|
+
+These properties should parrot what you have configured for your [Coordinator](Coordinator.html).
+
+### TuningConfig
+
+The tuningConfig is optional and default parameters will be used if no tuningConfig is specified.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|workingPath|String|the working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
+|version|String|The version of created segments.|no (default == datetime that indexing starts at)|
+|leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool).|no (default == false)|
+|partitionsSpec|Object|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.More details below.|no (default == 'hashed'|
+|maxRowsInMemory|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size.|no (default == 5 million)|
+|cleanupOnFailure|Boolean|Cleans up intermediate files when the job fails as opposed to leaving them around for debugging.|no (default == true)|
+|overwriteFiles|Boolean|Override existing files found during indexing.|no (default == false)|
+|ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
+|jobProperties|Object|a map of properties to add to the Hadoop job configuration.|no (default == null)|
 
 ### Partitioning specification
 
@@ -215,24 +236,10 @@ The configuration options are:
 |partitionDimension|the dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|assume input data has already been grouped on time and dimensions. Ingestion will run faster, but can choose suboptimal partitions if the assumption is violated.|no|
 
-### Updater job spec
-
-This is a specification of the properties that tell the job how to update metadata such that the Druid cluster will see the output segments and load them.
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|"db" is the only value available.|yes|
-|connectURI|A valid JDBC url to MySQL.|yes|
-|user|Username for db.|yes|
-|password|password for db.|yes|
-|segmentTable|Table to use in DB.|yes|
-
-These properties should parrot what you have configured for your [Coordinator](Coordinator.html).
-
 Batch Ingestion Using the Indexing Service
 ------------------------------------------
 
-Batch ingestion for the indexing service is done by submitting a [Hadoop Index Task](Tasks.html). The indexing service can be started by issuing:
+Batch ingestion for the indexing service is done by submitting an [Index Task](Tasks.html) (for datasets < 1G) or a [Hadoop Index Task](Tasks.html). The indexing service can be started by issuing:
 
 ```
 java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/overlord io.druid.cli.Main server overlord
@@ -245,53 +252,86 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
 ```json
 {
   "type" : "index_hadoop",
-  "config": {
-    "dataSource" : "example",
-    "timestampSpec" : {
-      "column" : "timestamp",
-      "format" : "auto"
-    },
-    "dataSpec" : {
-      "format" : "json",
-      "dimensions" : ["dim1","dim2","dim3"]
-    },
-    "granularitySpec" : {
-      "type" : "uniform",
-      "gran" : "DAY",
-      "intervals" : [ "2013-08-31/2013-09-01" ]
-    },
-    "pathSpec" : {
-      "type" : "static",
-      "paths" : "data.json"
-    },
-    "targetPartitionSize" : 5000000,
-    "rollupSpec" : {
-      "aggs": [{
+  "schema" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia",
+      "parser" : {
+        "type" : "string",
+        "parseSpec" : {
+          "format" : "json",
+          "timestampSpec" : {
+            "column" : "timestamp",
+            "format" : "auto"
+          },
+          "dimensionsSpec" : {
+            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+            "dimensionExclusions" : [],
+            "spatialDimensions" : []
+          }
+        }
+      },
+      "metricsSpec" : [
+        {
           "type" : "count",
           "name" : "count"
-        }, {
+        },
+        {
           "type" : "doubleSum",
           "name" : "added",
           "fieldName" : "added"
-        }, {
+        },
+        {
           "type" : "doubleSum",
           "name" : "deleted",
           "fieldName" : "deleted"
-        }, {
+        },
+        {
           "type" : "doubleSum",
           "name" : "delta",
           "fieldName" : "delta"
-      }],
-      "rollupGranularity" : "none"
+        }
+      ],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "DAY",
+        "queryGranularity" : "NONE",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
+      }
+    },
+    "ioConfig" : {
+      "type" : "hadoop",
+      "inputSpec" : {
+        "type" : "static",
+        "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
+      }
+    },
+    "tuningConfig" : {
+      "type": "hadoop"
     }
   }
+}
 ```
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "index_hadoop".|yes|
-|config|A Hadoop Index Config (see above).|yes|
-|hadoopCoordinates|The Maven `<groupId>:<artifactId>:<version>` of Hadoop to use. The default is "org.apache.hadoop:hadoop-core:1.0.3".|no|
+### DataSchema
+
+This field is required.
+
+See [Ingestion](Ingestion.html)
+
+### IOConfig
+
+This field is required.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|This should always be 'hadoop'.|yes|
+|pathSpec|Object|a specification of where to pull the data in from|yes|
+
+### TuningConfig
+
+The tuningConfig is optional and default parameters will be used if no tuningConfig is specified. This is the same as the tuningConfig for the standalone Hadoop indexer. See above for more details.
+
+### Running the Task
 
 The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
 

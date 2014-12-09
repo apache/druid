@@ -76,7 +76,7 @@
     ],
     "granularitySpec": {
       "type": "uniform",
-      "segmentGranularity": "DAY",
+      "segmentGranularity": "HOUR",
       "queryGranularity": "NONE"
     }
   },

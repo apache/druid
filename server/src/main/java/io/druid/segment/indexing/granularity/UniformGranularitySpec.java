@@ -35,8 +35,8 @@ import java.util.SortedSet;
 
 public class UniformGranularitySpec implements GranularitySpec
 {
-  private static final Granularity defaultSegmentGranularity = Granularity.DAY;
-  private static final QueryGranularity defaultQueryGranularity = QueryGranularity.NONE;
+  private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularity.DAY;
+  private static final QueryGranularity DEFAULT_QUERY_GRANULARITY = QueryGranularity.NONE;
 
   private final Granularity segmentGranularity;
   private final QueryGranularity queryGranularity;
@@ -51,12 +51,8 @@ public class UniformGranularitySpec implements GranularitySpec
 
   )
   {
-    if (segmentGranularity != null) {
-      this.segmentGranularity = segmentGranularity;
-    } else {
-      this.segmentGranularity = defaultSegmentGranularity;
-    }
-    this.queryGranularity = queryGranularity == null ? defaultQueryGranularity : queryGranularity;
+    this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
+    this.queryGranularity = queryGranularity == null ? DEFAULT_QUERY_GRANULARITY : queryGranularity;
 
     if (inputIntervals != null) {
       List<Interval> granularIntervals = Lists.newArrayList();
