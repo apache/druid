@@ -310,7 +310,7 @@ Examining the contents of the file, you should find:
         "type" : "hadoop",
         "inputSpec" : {
           "type" : "static",
-          "paths" : "/Users/fangjin/Work/sandbox/demo/druid-services-0.6.62-SNAPSHOT/examples/indexing/wikipedia_data.json"
+          "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
         }
       }
     }
