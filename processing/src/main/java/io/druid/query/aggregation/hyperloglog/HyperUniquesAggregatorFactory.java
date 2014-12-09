@@ -40,12 +40,33 @@ import java.util.List;
  */
 public class HyperUniquesAggregatorFactory implements AggregatorFactory
 {
+  private static Object staticDeserialize(Object object)
+  {
+    if (object instanceof byte[]) {
+      return HyperLogLogCollector.makeCollector(ByteBuffer.wrap((byte[]) object));
+    } else if (object instanceof ByteBuffer) {
+      return HyperLogLogCollector.makeCollector((ByteBuffer) object);
+    } else if (object instanceof String) {
+      return HyperLogLogCollector.makeCollector(
+          ByteBuffer.wrap(Base64.decodeBase64(((String) object).getBytes(Charsets.UTF_8)))
+      );
+    } else {
+      throw new IllegalArgumentException(
+          String.format(
+              "HyperUniquesAggregatorFactory does not know how to handle class [%s]",
+              object.getClass().getCanonicalName()
+          )
+      );
+    }
+  }
   public static Object estimateCardinality(Object object)
   {
     if (object == null) {
-      return 0;
+      return 0.0;
     }
-
+    if(! (object  instanceof  HyperLogLogCollector)) {
+      object = staticDeserialize(object);
+    }
     return ((HyperLogLogCollector) object).estimateCardinality();
   }
 
@@ -142,16 +163,10 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    if (object instanceof byte[]) {
-      return HyperLogLogCollector.makeCollector(ByteBuffer.wrap((byte[]) object));
-    } else if (object instanceof ByteBuffer) {
-      return HyperLogLogCollector.makeCollector((ByteBuffer) object);
-    } else if (object instanceof String) {
-      return HyperLogLogCollector.makeCollector(
-          ByteBuffer.wrap(Base64.decodeBase64(((String) object).getBytes(Charsets.UTF_8)))
-      );
+    if(object instanceof HyperLogLogCollector){
+      return object;
     }
-    return object;
+    return staticDeserialize(object);
   }
 
   @Override
