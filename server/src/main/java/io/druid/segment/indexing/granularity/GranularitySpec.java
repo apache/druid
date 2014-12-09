@@ -35,7 +35,8 @@ import java.util.SortedSet;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UniformGranularitySpec.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "uniform", value = UniformGranularitySpec.class)
+    @JsonSubTypes.Type(name = "uniform", value = UniformGranularitySpec.class),
+    @JsonSubTypes.Type(name = "arbitrary", value = ArbitraryGranularitySpec.class)
 })
 public interface GranularitySpec
 {
