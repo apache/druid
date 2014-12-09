@@ -19,8 +19,12 @@
 
 package io.druid.query.aggregation.hyperloglog;
 
-import junit.framework.Assert;
+import com.google.common.base.Charsets;
+import org.apache.commons.codec.binary.Base64;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
 
 public class HyperUniquesAggregatorFactoryTest
 {
@@ -29,7 +33,7 @@ public class HyperUniquesAggregatorFactoryTest
       "uniques"
   );
   final static String V0_BASE64 = "AAYbEyQwFyQVASMCVFEQQgEQIxIhM4ISAQMhUkICEDFDIBMhMgFQFAFAMjAAEhEREyVAEiUBAhIjISATMCECMiERIRIiVRFRAyIAEgFCQSMEJAITATAAEAMQgCEBEjQiAyUTAyEQASJyAGURAAISAwISATETQhAREBYDIVIlFTASAzJgERIgRCcmUyAwNAMyEJMjIhQXQhEWECABQDETATEREjIRAgEyIiMxMBQiAkBBMDYAMEQQACMzMhIkMTQSkYIRABIBADMBAhIEISAENkEBQDAxETMAIEEwEzQiQSEVQSFBBAQDICIiAVIAMTAQIQYBIRABADMDEzEAQSMkEiAYFBAQI0AmECEyQSARRTIVMhEkMiKAMCUBxUghAkIBI3EmMAQiACEAJDJCAAADOzESEDBCRjMgEUQQETQwEWIhA6MlAiAAZDI1AgEIIDUyFDIHMQEEAwIRBRABBStCZCQhAgJSMQIiQEEURTBmM1MxACIAETGhMgQnBRICNiIREyIUNAEAAkABAwQSEBJBIhIhIRERAiIRACUhEUAVMkQGEVMjECYjACBwEQQSIRIgAAEyExQUFSEAIBJCIDIDYTAgMiNBIUADUiETADMoFEADETMCIwUEQkIAESMSIzIABDERIXEhIiACQgUSEgJiQCAUARIRAREDQiEUAkQgAgQiIEAzIxRCARIgBAAVAzMAECEwE0Qh8gAAASEhEiAiMhUxcRImIVABATYyUBAwIoE1QhRDIiYBIBEBEiQSQyERAAADMAARAEACFYUwQSQBIRIgURITARFSEzEHEBACOTMREBIAMjIgEhU0cxEQIRIhIi1wEgMRUBEgMQIRAnAVASURMHQBAiEyBSAAEBQTAWQ5EQA0IUMSISAUEiASIjIhMhMFJBBSEjEAECEwACASEQFBAjARITEQIgYTEKEAeAAiMkEyARowARFBAicRISIBIxAQAgEBARMCIRQgMSIVIAkjMxIAIEMyADASMgFRIjEyKjEjBBIEQCUAARYBEQMxMCIBACNCACRCMlEzUUAAUDM1MhAjEgAxAAISAVFQECAhQAMBMhEzEgASNxAhFRIxECMRJBQAERAToBgQMhJSRQFAEhAwMiIhMQAwAgQiBQJiIGMQQhEiQxR1MiAjIAIEEiAkARECEzQlMjECIRATBgIhEBQAIQAEATEjBCMwAgMBMhAhIyFBIxQAARI1AAEABCIDFBIRUzMBIgAgEiARQCASMQQDQCFBAQAUJwMUElAyIAIRBSIRITICEAIxMAEUBEYTcBMBEEIxMREwIRIDAGIAEgYxBAEANCAhBAI2UhIiIgIRABIEVRAwNEIQERQgEFMhFCQSIAEhQDMTEQMiAjJyEQ==";
-
+  final static double cardinality = 2950.0827550144822;
   @Test
   public void testDeserializeV0() throws Exception
   {
@@ -44,5 +48,23 @@ public class HyperUniquesAggregatorFactoryTest
     aggregatorFactory.combine(combined, aggregatorFactory.deserialize(V0_BASE64));
   }
 
-
+  @Test
+  public void testEstimateCardinalityNull(){
+    Object o = aggregatorFactory.estimateCardinality(null);
+    Assert.assertEquals(0.0, o);
+  }
+  @Test
+  public void testEstimateCardinalityByteArray(){
+    Object o = aggregatorFactory.estimateCardinality(Base64.decodeBase64((V0_BASE64).getBytes(Charsets.UTF_8)));
+    Assert.assertEquals(cardinality, o);
+  }
+  @Test
+  public void testEstimateCardinalityByteBuffer(){
+    Object o = aggregatorFactory.estimateCardinality(ByteBuffer.wrap(Base64.decodeBase64((V0_BASE64).getBytes(Charsets.UTF_8))));
+    Assert.assertEquals(cardinality, o);
+  }
+  @Test(expected = IllegalArgumentException.class)
+  public void testBadEstimateCardinalityObject(){
+    aggregatorFactory.estimateCardinality(0);
+  }
 }
