@@ -50,7 +50,7 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null, Granularity.HOUR)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null)
     );
 
     final Interval interval = new Interval("2013-01-01/2013-01-02");
@@ -65,7 +65,8 @@ public class SinkTest
         null,
         null,
         false,
-        false
+        false,
+        null
     );
     final Sink sink = new Sink(interval, schema, tuningConfig, version);
 

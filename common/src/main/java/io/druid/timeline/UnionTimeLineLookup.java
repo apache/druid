@@ -19,33 +19,44 @@
 
 package io.druid.timeline;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
-
-import java.util.List;
 
 
 public class UnionTimeLineLookup<VersionType, ObjectType> implements TimelineLookup<VersionType, ObjectType>
 {
-  Iterable<TimelineLookup<VersionType,ObjectType>> delegates;
-  public UnionTimeLineLookup( Iterable<TimelineLookup<VersionType,ObjectType>> delegates){
+  Iterable<TimelineLookup<VersionType, ObjectType>> delegates;
+
+  public UnionTimeLineLookup(Iterable<TimelineLookup<VersionType, ObjectType>> delegates)
+  {
     this.delegates = delegates;
   }
+
   @Override
-  public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval)
+  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookup(final Interval interval)
   {
-    List<TimelineObjectHolder<VersionType, ObjectType>> rv = Lists.newArrayList();
-    for(TimelineLookup<VersionType,ObjectType> delegate : delegates){
-      rv.addAll(delegate.lookup(interval));
-    }
-    return rv;
+    return Iterables.concat(
+        Iterables.transform(
+            delegates,
+            new Function<TimelineLookup<VersionType, ObjectType>, Iterable<TimelineObjectHolder<VersionType, ObjectType>>>()
+            {
+              @Override
+              public Iterable<TimelineObjectHolder<VersionType, ObjectType>> apply(TimelineLookup<VersionType, ObjectType> input)
+              {
+                return input.lookup(interval);
+              }
+            }
+        )
+    );
   }
 
-  public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version){
-    for(TimelineLookup<VersionType,ObjectType> delegate : delegates){
+  public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version)
+  {
+    for (TimelineLookup<VersionType, ObjectType> delegate : delegates) {
       final PartitionHolder<ObjectType> entry = delegate.findEntry(interval, version);
-      if(entry != null){
+      if (entry != null) {
         return entry;
       }
     }

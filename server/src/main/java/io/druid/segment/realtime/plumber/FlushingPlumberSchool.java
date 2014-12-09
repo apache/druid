@@ -58,15 +58,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
-      @JacksonInject @Processing ExecutorService queryExecutorService,
-      // Backwards compatible
-      @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("versioningPolicy") VersioningPolicy versioningPolicy,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicy,
-      @JsonProperty("rejectionPolicyFactory") RejectionPolicyFactory rejectionPolicyFactory,
-      @JsonProperty("maxPendingPersists") int maxPendingPersists
+      @JacksonInject @Processing ExecutorService queryExecutorService
   )
   {
     super(
@@ -76,14 +68,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         segmentAnnouncer,
         null,
         null,
-        queryExecutorService,
-        windowPeriod,
-        basePersistDirectory,
-        segmentGranularity,
-        versioningPolicy,
-        rejectionPolicy,
-        rejectionPolicyFactory,
-        maxPendingPersists
+        queryExecutorService
     );
 
     this.flushDuration = flushDuration == null ? defaultFlushDuration : flushDuration;

@@ -37,7 +37,7 @@ public interface TimelineLookup<VersionType, ObjectType>
    * @return Holders representing the interval that the objects exist for, PartitionHolders
    *         are guaranteed to be complete
    */
-  public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
+  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
 
   public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
 

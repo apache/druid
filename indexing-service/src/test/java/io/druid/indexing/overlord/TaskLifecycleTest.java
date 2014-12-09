@@ -19,8 +19,8 @@
 
 package io.druid.indexing.overlord;
 
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -42,8 +42,6 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -64,9 +62,10 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.metadata.SQLMetadataConnector;
+import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -87,8 +86,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.Handle;
 
 import java.io.File;
 import java.io.IOException;
@@ -99,16 +96,6 @@ import java.util.Set;
 
 public class TaskLifecycleTest
 {
-  private File tmp = null;
-  private TaskStorage ts = null;
-  private TaskLockbox tl = null;
-  private TaskQueue tq = null;
-  private TaskRunner tr = null;
-  private MockIndexerMetadataStorageCoordinator mdc = null;
-  private TaskActionClientFactory tac = null;
-  private TaskToolboxFactory tb = null;
-  TaskStorageQueryAdapter tsqa = null;
-
   private static final Ordering<DataSegment> byIntervalOrdering = new Ordering<DataSegment>()
   {
     @Override
@@ -117,6 +104,141 @@ public class TaskLifecycleTest
       return Comparators.intervalsByStartThenEnd().compare(dataSegment.getInterval(), dataSegment2.getInterval());
     }
   };
+  TaskStorageQueryAdapter tsqa = null;
+  private File tmp = null;
+  private TaskStorage ts = null;
+  private TaskLockbox tl = null;
+  private TaskQueue tq = null;
+  private TaskRunner tr = null;
+  private MockIndexerMetadataStorageCoordinator mdc = null;
+  private TaskActionClientFactory tac = null;
+  private TaskToolboxFactory tb = null;
+
+  private static MockIndexerMetadataStorageCoordinator newMockMDC()
+  {
+    return new MockIndexerMetadataStorageCoordinator();
+  }
+
+  private static ServiceEmitter newMockEmitter()
+  {
+    return new ServiceEmitter(null, null, null)
+    {
+      @Override
+      public void emit(Event event)
+      {
+
+      }
+
+      @Override
+      public void emit(ServiceEventBuilder builder)
+      {
+
+      }
+    };
+  }
+
+  private static InputRow IR(String dt, String dim1, String dim2, float met)
+  {
+    return new MapBasedInputRow(
+        new DateTime(dt).getMillis(),
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableMap.<String, Object>of(
+            "dim1", dim1,
+            "dim2", dim2,
+            "met", met
+        )
+    );
+  }
+
+  private static FirehoseFactory newMockExceptionalFirehoseFactory()
+  {
+    return new FirehoseFactory()
+    {
+      @Override
+      public Firehose connect(InputRowParser parser) throws IOException
+      {
+        return new Firehose()
+        {
+          @Override
+          public boolean hasMore()
+          {
+            return true;
+          }
+
+          @Override
+          public InputRow nextRow()
+          {
+            throw new RuntimeException("HA HA HA");
+          }
+
+          @Override
+          public Runnable commit()
+          {
+            return new Runnable()
+            {
+              @Override
+              public void run()
+              {
+
+              }
+            };
+          }
+
+          @Override
+          public void close() throws IOException
+          {
+
+          }
+        };
+      }
+    };
+  }
+
+  private static FirehoseFactory newMockFirehoseFactory(final Iterable<InputRow> inputRows)
+  {
+    return new FirehoseFactory()
+    {
+      @Override
+      public Firehose connect(InputRowParser parser) throws IOException
+      {
+        final Iterator<InputRow> inputRowIterator = inputRows.iterator();
+
+        return new Firehose()
+        {
+          @Override
+          public boolean hasMore()
+          {
+            return inputRowIterator.hasNext();
+          }
+
+          @Override
+          public InputRow nextRow()
+          {
+            return inputRowIterator.next();
+          }
+
+          @Override
+          public Runnable commit()
+          {
+            return new Runnable()
+            {
+              @Override
+              public void run()
+              {
+
+              }
+            };
+          }
+
+          @Override
+          public void close() throws IOException
+          {
+
+          }
+        };
+      }
+    };
+  }
 
   @Before
   public void setUp() throws Exception
@@ -234,26 +356,20 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        null,
-        "foo",
-        new UniformGranularitySpec(
+        new IndexTask.IndexIngestionSpec(new DataSchema("foo", null,new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},new UniformGranularitySpec(
             Granularity.DAY,
             null,
-            ImmutableList.of(new Interval("2010-01-01/P2D")),
-            Granularity.DAY
-        ),
-        new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-        QueryGranularity.NONE,
-        10000,
-        newMockFirehoseFactory(
-            ImmutableList.of(
-                IR("2010-01-01T01", "x", "y", 1),
-                IR("2010-01-01T01", "x", "z", 1),
-                IR("2010-01-02T01", "a", "b", 2),
-                IR("2010-01-02T01", "a", "c", 1)
-            )
-        ),
-        -1,
+            ImmutableList.of(new Interval("2010-01-01/P2D"))
+        ) ),
+                                         new IndexTask.IndexIOConfig(newMockFirehoseFactory(
+                                             ImmutableList.of(
+                                                 IR("2010-01-01T01", "x", "y", 1),
+                                                 IR("2010-01-01T01", "x", "z", 1),
+                                                 IR("2010-01-02T01", "a", "b", 2),
+                                                 IR("2010-01-02T01", "a", "c", 1)
+                                             )
+                                         )),
+                                         new IndexTask.IndexTuningConfig(10000, -1, -1)),
         TestUtils.MAPPER
     );
 
@@ -295,14 +411,20 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
-        null,
-        "foo",
-        new UniformGranularitySpec(Granularity.DAY, null, ImmutableList.of(new Interval("2010-01-01/P1D")), Granularity.DAY),
-        new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-        QueryGranularity.NONE,
-        10000,
-        newMockExceptionalFirehoseFactory(),
-        -1,
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularity.DAY,
+                    null,
+                    ImmutableList.of(new Interval("2010-01-01/P1D"))
+                )
+            ),
+            new IndexTask.IndexIOConfig(newMockExceptionalFirehoseFactory()),
+            new IndexTask.IndexTuningConfig(10000, -1, -1)
+        ),
         TestUtils.MAPPER
     );
 
@@ -563,143 +685,5 @@ public class TaskLifecycleTest
     {
       return ImmutableSet.copyOf(nuked);
     }
-  }
-
-  private static MockIndexerMetadataStorageCoordinator newMockMDC()
-  {
-    return new MockIndexerMetadataStorageCoordinator();
-  }
-
-  private static ServiceEmitter newMockEmitter()
-  {
-    return new ServiceEmitter(null, null, null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-
-      }
-
-      @Override
-      public void emit(ServiceEventBuilder builder)
-      {
-
-      }
-    };
-  }
-
-  private static InputRow IR(String dt, String dim1, String dim2, float met)
-  {
-    return new MapBasedInputRow(
-        new DateTime(dt).getMillis(),
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableMap.<String, Object>of(
-            "dim1", dim1,
-            "dim2", dim2,
-            "met", met
-        )
-    );
-  }
-
-  private static FirehoseFactory newMockExceptionalFirehoseFactory()
-  {
-    return new FirehoseFactory()
-    {
-      @Override
-      public Firehose connect(InputRowParser parser) throws IOException
-      {
-        return new Firehose()
-        {
-          @Override
-          public boolean hasMore()
-          {
-            return true;
-          }
-
-          @Override
-          public InputRow nextRow()
-          {
-            throw new RuntimeException("HA HA HA");
-          }
-
-          @Override
-          public Runnable commit()
-          {
-            return new Runnable()
-            {
-              @Override
-              public void run()
-              {
-
-              }
-            };
-          }
-
-          @Override
-          public void close() throws IOException
-          {
-
-          }
-        };
-      }
-
-      @Override
-      public InputRowParser getParser()
-      {
-        return null;
-      }
-    };
-  }
-
-  private static FirehoseFactory newMockFirehoseFactory(final Iterable<InputRow> inputRows)
-  {
-    return new FirehoseFactory()
-    {
-      @Override
-      public Firehose connect(InputRowParser parser) throws IOException
-      {
-        final Iterator<InputRow> inputRowIterator = inputRows.iterator();
-
-        return new Firehose()
-        {
-          @Override
-          public boolean hasMore()
-          {
-            return inputRowIterator.hasNext();
-          }
-
-          @Override
-          public InputRow nextRow()
-          {
-            return inputRowIterator.next();
-          }
-
-          @Override
-          public Runnable commit()
-          {
-            return new Runnable()
-            {
-              @Override
-              public void run()
-              {
-
-              }
-            };
-          }
-
-          @Override
-          public void close() throws IOException
-          {
-
-          }
-        };
-      }
-
-      @Override
-      public InputRowParser getParser()
-      {
-        return null;
-      }
-    };
   }
 }

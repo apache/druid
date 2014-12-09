@@ -4,7 +4,7 @@ layout: doc_page
 
 # Extending Druid With Custom Modules
 
-Druid version 0.6 introduces a new module system that allows for the addition of extensions at runtime.
+Druid uses a module system that allows for the addition of extensions at runtime.
 
 ## Specifying extensions
 
@@ -20,11 +20,12 @@ Druid has the ability to automatically load extension jars from maven at runtime
 
 ## Configuring the extensions
 
-Druid 0.6 introduces four new properties for configuring the loading of extensions:
-
+Druid provides the following settings to configure the loading of extensions:
 
 * `druid.extensions.coordinates`
-    This is a JSON Array list of "groupId:artifactId:version" maven coordinates.  Defaults to `[]`
+    This is a JSON array of "groupId:artifactId[:version]" maven coordinates. For artifacts without version specified, Druid will append the default version. Defaults to `[]`
+* `druid.extensions.defaultVersion`
+    Version to use for extension artifacts without version information. Defaults to the `druid-server` artifact version.
 * `druid.extensions.localRepository`
     This specifies where to look for the "local repository".  The way maven gets dependencies is that it downloads them to a "local repository" on your local disk and then collects the paths to each of the jars.  This specifies the directory to consider the "local repository".  Defaults to `~/.m2/repository`
 * `druid.extensions.remoteRepositories`

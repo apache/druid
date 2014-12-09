@@ -66,8 +66,8 @@ public class StorageNodeModule implements Module
     }
 
     return new DruidServerMetadata(
-        node.getHost(),
-        node.getHost(),
+        node.getHostAndPort(),
+        node.getHostAndPort(),
         config.getMaxSize(),
         nodeType.getNodeType(),
         config.getTier(),

@@ -32,6 +32,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Iterator;
@@ -94,7 +95,7 @@ public class IndexingServiceClient
   {
     try {
       return client.post(new URL(String.format("%s/task", baseUrl())))
-                   .setContent("application/json", jsonMapper.writeValueAsBytes(queryObject))
+                   .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject))
                    .go(RESPONSE_HANDLER)
                    .get();
     }

@@ -39,6 +39,7 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -57,14 +58,14 @@ public class TestIndex
   public static final String[] COLUMNS = new String[]{
       "ts",
       "market",
-      "quALIty",
-      "plAcEmEnT",
-      "pLacementish",
-      "iNdEx",
-      "qualiTy_Uniques"
+      "quality",
+      "placement",
+      "placementish",
+      "index",
+      "quality_uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"market", "quALIty", "plAcEmEnT", "pLacementish"};
-  public static final String[] METRICS = new String[]{"iNdEx"};
+  public static final String[] DIMENSIONS = new String[]{"market", "quality", "placement", "placementish"};
+  public static final String[] METRICS = new String[]{"index"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -156,20 +157,22 @@ public class TestIndex
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading index file[%s]", resource);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-                                          .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-                                          .withQueryGranularity(QueryGranularity.NONE)
-                                          .withMetrics(METRIC_AGGS)
-                                          .build();
+        .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withQueryGranularity(QueryGranularity.NONE)
+        .withMetrics(METRIC_AGGS)
+        .build();
     final IncrementalIndex retVal;
     if (useOffheap) {
       retVal = new OffheapIncrementalIndex(
           schema,
-          TestQueryRunners.pool
+          TestQueryRunners.pool,
+          true,
+          100 * 1024 * 1024
       );
     } else {
-      retVal = new IncrementalIndex(
+      retVal = new OnheapIncrementalIndex(
           schema,
-          TestQueryRunners.pool
+          10000
       );
     }
 
@@ -197,8 +200,7 @@ public class TestIndex
                     "\t",
                     "\u0001",
                     Arrays.asList(COLUMNS)
-                ),
-                null, null, null, null
+                )
             );
             boolean runOnce = false;
             int lineCount = 0;

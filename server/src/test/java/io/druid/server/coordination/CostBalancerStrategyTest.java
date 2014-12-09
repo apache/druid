@@ -19,7 +19,7 @@
 
 package io.druid.server.coordination;
 
-import com.google.api.client.util.Lists;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.BalancerStrategy;
@@ -27,11 +27,11 @@ import io.druid.server.coordinator.CostBalancerStrategy;
 import io.druid.server.coordinator.LoadQueuePeonTester;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
-import org.junit.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 

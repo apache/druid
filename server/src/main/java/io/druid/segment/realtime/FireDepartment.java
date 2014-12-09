@@ -21,19 +21,13 @@ package io.druid.segment.realtime;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.PlumberSchool;
-import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
-import org.joda.time.Interval;
 
 import java.io.IOException;
 
@@ -56,58 +50,17 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
   public FireDepartment(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") RealtimeIOConfig ioConfig,
-      @JsonProperty("tuningConfig") RealtimeTuningConfig tuningConfig,
-      // Backwards Compatability
-      @JsonProperty("schema") Schema schema,
-      @JsonProperty("config") FireDepartmentConfig config,
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("plumber") PlumberSchool plumberSchool
+      @JsonProperty("tuningConfig") RealtimeTuningConfig tuningConfig
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
+    Preconditions.checkNotNull(dataSchema, "dataSchema");
+    Preconditions.checkNotNull(ioConfig, "ioConfig");
 
-    // Backwards compatibility
-    if (dataSchema == null) {
-      Preconditions.checkNotNull(schema, "schema");
-      Preconditions.checkNotNull(config, "config");
-      Preconditions.checkNotNull(firehoseFactory, "firehoseFactory");
-      Preconditions.checkNotNull(plumberSchool, "plumberSchool");
+    this.dataSchema = dataSchema;
+    this.ioConfig = ioConfig;
+    this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig() : tuningConfig;
 
-      this.dataSchema = new DataSchema(
-          schema.getDataSource(),
-          firehoseFactory.getParser(),
-          schema.getAggregators(),
-          new UniformGranularitySpec(
-              plumberSchool.getSegmentGranularity(),
-              schema.getIndexGranularity(),
-              Lists.<Interval>newArrayList(),
-              plumberSchool.getSegmentGranularity()
-          )
-      );
-      this.ioConfig = new RealtimeIOConfig(
-          firehoseFactory,
-          plumberSchool
-      );
-      this.tuningConfig = new RealtimeTuningConfig(
-          config.getMaxRowsInMemory(),
-          config.getIntermediatePersistPeriod(),
-          ((RealtimePlumberSchool) plumberSchool).getWindowPeriod(),
-          ((RealtimePlumberSchool) plumberSchool).getBasePersistDirectory(),
-          ((RealtimePlumberSchool) plumberSchool).getVersioningPolicy(),
-          ((RealtimePlumberSchool) plumberSchool).getRejectionPolicyFactory(),
-          ((RealtimePlumberSchool) plumberSchool).getMaxPendingPersists(),
-          schema.getShardSpec(),
-          false,
-          false
-      );
-    } else {
-      Preconditions.checkNotNull(dataSchema, "dataSchema");
-      Preconditions.checkNotNull(ioConfig, "ioConfig");
-
-      this.dataSchema = dataSchema;
-      this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig() : tuningConfig;
-    }
   }
 
   /**

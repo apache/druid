@@ -7,6 +7,7 @@ import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/druid/historical/v1")
@@ -24,7 +25,7 @@ public class HistoricalResource
 
   @GET
   @Path("/loadstatus")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
     return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();

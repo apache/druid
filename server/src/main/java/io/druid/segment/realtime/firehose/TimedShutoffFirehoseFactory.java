@@ -59,12 +59,6 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     return new TimedShutoffFirehose(parser);
   }
 
-  @Override
-  public InputRowParser getParser()
-  {
-    return delegateFactory.getParser();
-  }
-
   public class TimedShutoffFirehose implements Firehose
   {
     private final Firehose firehose;

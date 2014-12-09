@@ -77,6 +77,12 @@ public class JavaScriptAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return (long) current;
+  }
+
+  @Override
   public String getName()
   {
     return name;

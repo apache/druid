@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+
 import java.util.Map;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
@@ -42,8 +43,11 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
+    if (Iterables.size(baseRunners) == 1) {
+      return Iterables.getOnlyElement(baseRunners).run(query, responseContext);
+    } else {
       return toolChest.mergeSequencesUnordered(
           Sequences.simple(
               Iterables.transform(
@@ -55,13 +59,14 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                     {
                       return singleRunner.run(
                           query,
-                          context
+                          responseContext
                       );
                     }
                   }
               )
           )
       );
+    }
   }
 
 }

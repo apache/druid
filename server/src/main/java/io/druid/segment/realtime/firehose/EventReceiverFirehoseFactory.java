@@ -38,6 +38,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Collection;
@@ -59,24 +60,19 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
   private final String serviceName;
   private final int bufferSize;
-  private final MapInputRowParser parser;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonCreator
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
-      @JsonProperty("parser") InputRowParser parser,
       @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    Preconditions.checkNotNull(parser, "parser");
     Preconditions.checkNotNull(serviceName, "serviceName");
 
     this.serviceName = serviceName;
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
-    // this is really for backwards compatibility
-    this.parser = new MapInputRowParser(parser.getParseSpec(), null, null, null, null);
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
   }
 
@@ -112,12 +108,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     return bufferSize;
   }
 
-  @JsonProperty
-  public MapInputRowParser getParser()
-  {
-    return parser;
-  }
-
   public class EventReceiverFirehose implements ChatHandler, Firehose
   {
     private final BlockingQueue<InputRow> buffer;
@@ -136,7 +126,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
     @POST
     @Path("/push-events")
-    @Produces("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response addAll(Collection<Map<String, Object>> events)
     {
       log.debug("Adding %,d events to firehose: %s", events.size(), serviceName);

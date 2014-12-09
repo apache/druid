@@ -57,26 +57,12 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   @JsonCreator
   public ProtoBufInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("descriptor") String descriptorFileInClasspath,
-      // Backwards compatible
-      @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("dimensions") List<String> dimensions,
-      @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
-      @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
+      @JsonProperty("descriptor") String descriptorFileInClasspath
   )
   {
-    // Backwards Compatible
-    if (parseSpec == null) {
-      this.parseSpec = new JSONParseSpec(
-          timestampSpec,
-          new DimensionsSpec(dimensions, dimensionExclusions, spatialDimensions)
-      );
-    } else {
-      this.parseSpec = parseSpec;
-    }
-
+    this.parseSpec = parseSpec;
     this.descriptorFileInClasspath = descriptorFileInClasspath;
-    this.mapParser = new MapInputRowParser(this.parseSpec, null, null, null, null);
+      this.mapParser = new MapInputRowParser(this.parseSpec);
   }
 
   @Override
@@ -88,7 +74,7 @@ public class ProtoBufInputRowParser implements ByteBufferInputRowParser
   @Override
   public ProtoBufInputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new ProtoBufInputRowParser(parseSpec, descriptorFileInClasspath, null, null, null, null);
+    return new ProtoBufInputRowParser(parseSpec, descriptorFileInClasspath);
   }
 
   @Override

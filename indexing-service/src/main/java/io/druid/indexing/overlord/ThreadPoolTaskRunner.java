@@ -19,9 +19,11 @@
 
 package io.druid.indexing.overlord;
 
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -46,6 +48,7 @@ import io.druid.query.UnionQueryRunner;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collection;
 import java.util.List;
@@ -154,40 +157,43 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     return getQueryRunnerImpl(query);
   }
 
-  private <T> QueryRunner<T> getQueryRunnerImpl(Query<T> query)
+  private <T> QueryRunner<T> getQueryRunnerImpl(final Query<T> query)
   {
-    final List<String> dataSources = query.getDataSource().getNames();
-    List<QueryRunner> runners = Lists.newArrayList();
-    for (String queryDataSource : dataSources) {
-      QueryRunner<T> queryRunner = null;
+    return new UnionQueryRunner<>(
+        Iterables.transform(
+            query.getDataSource().getNames(), new Function<String, QueryRunner>()
+            {
+              @Override
+              public QueryRunner apply(String queryDataSource)
+              {
+                QueryRunner<T> queryRunner = null;
 
-      for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
-        final Task task = taskRunnerWorkItem.getTask();
-        if (task.getDataSource().equals(queryDataSource)) {
-          final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
+                for (final ThreadPoolTaskRunnerWorkItem taskRunnerWorkItem : ImmutableList.copyOf(runningItems)) {
+                  final Task task = taskRunnerWorkItem.getTask();
+                  if (task.getDataSource().equals(queryDataSource)) {
+                    final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
-          if (taskQueryRunner != null) {
-            if (queryRunner == null) {
-              queryRunner = taskQueryRunner;
-            } else {
-              log.makeAlert("Found too many query runners for datasource")
-                 .addData("dataSource", queryDataSource)
-                 .emit();
+                    if (taskQueryRunner != null) {
+                      if (queryRunner == null) {
+                        queryRunner = taskQueryRunner;
+                      } else {
+                        log.makeAlert("Found too many query runners for datasource")
+                           .addData("dataSource", queryDataSource)
+                           .emit();
+                      }
+                    }
+                  }
+                }
+                if (queryRunner != null) {
+                  return queryRunner;
+                } else {
+                  return new NoopQueryRunner();
+                }
+              }
             }
-          }
-        }
-      }
-      if (queryRunner != null) {
-        runners.add(queryRunner);
-      }
-    }
-    if (runners.size() == 0) {
-      return new NoopQueryRunner();
-    } else if (runners.size() == 1) {
-      return runners.get(0);
-    } else {
-      return new UnionQueryRunner<>(runners, conglomerate.findFactory(query).getToolchest());
-    }
+        ), conglomerate.findFactory(query).getToolchest()
+    );
+
   }
 
   private static class ThreadPoolTaskRunnerWorkItem extends TaskRunnerWorkItem

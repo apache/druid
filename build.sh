@@ -1,27 +1,17 @@
-#!/bin/bash -e
+#!/bin/bash -eu
 
-PROJECT=druid
+BASE=$(cd $(dirname $0) && pwd)
 
-DIST_DIR=dist/tar
+VERSION=`cat pom.xml | grep '<version>' | head -1 | tail -1 | sed 's_.*<version>\([^<]*\)</version>.*_\1_'`
 
-SCRIPT_DIR=`dirname $0`
-pushd $SCRIPT_DIR
-SCRIPT_DIR=`pwd`
-popd
+echo "Building Version [${VERSION}]"
 
-VERSION=`cat pom.xml | grep version | head -4 | tail -1 | sed 's_.*<version>\([^<]*\)</version>.*_\1_'`
+mvn -U -B clean package
 
-echo Using Version[${VERSION}]
+JARS=$(find "$BASE" -name "*-$VERSION-selfcontained.jar" | sed -e 's/^/  /')
 
-mvn clean
-mvn package
+cat <<EOF
 
-if [ $? -ne "0" ]; then
-    echo "mvn package failed"
-    exit 2;
-fi
-
-echo " "
-echo "        The following self-contained jars (and more) have been built:"
-echo " "
-find . -name '*-selfcontained.jar'
+The following self-contained jars (and more) have been built:
+$JARS
+EOF

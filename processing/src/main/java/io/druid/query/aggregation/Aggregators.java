@@ -64,6 +64,12 @@ public class Aggregators
       {
 
       }
+
+      @Override
+      public long getLong()
+      {
+        return 0;
+      }
     };
   }
 

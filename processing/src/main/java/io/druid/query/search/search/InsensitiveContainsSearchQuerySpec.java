@@ -38,7 +38,7 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
       @JsonProperty("value") String value
   )
   {
-    this.value = value.toLowerCase();
+    this.value = value;
   }
 
   @JsonProperty
@@ -53,7 +53,7 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
     if (dimVal == null) {
       return false;
     }
-    return dimVal.toLowerCase().contains(value);
+    return dimVal.toLowerCase().contains(value.toLowerCase());
   }
 
   @Override
@@ -78,12 +78,18 @@ public class InsensitiveContainsSearchQuerySpec implements SearchQuerySpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     InsensitiveContainsSearchQuerySpec that = (InsensitiveContainsSearchQuerySpec) o;
 
-    if (value != null ? !value.equals(that.value) : that.value != null) return false;
+    if (value != null ? !value.equals(that.value) : that.value != null) {
+      return false;
+    }
 
     return true;
   }

@@ -19,8 +19,8 @@
 
 package io.druid.cli.convert;
 
-import com.google.api.client.util.Maps;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 import java.util.Map;
 import java.util.Properties;

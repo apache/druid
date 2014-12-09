@@ -20,9 +20,9 @@
 package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -404,7 +404,7 @@ public class RemoteTaskRunnerTest
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
-        new FillCapacityWorkerSelectStrategy(config)
+        new FillCapacityWorkerSelectStrategy()
     );
 
     remoteTaskRunner.start();

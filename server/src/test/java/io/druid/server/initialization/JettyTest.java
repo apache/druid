@@ -19,7 +19,7 @@
 
 package io.druid.server.initialization;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
@@ -33,12 +33,12 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Global;
-import io.druid.guice.GuiceInjectors;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
@@ -63,6 +63,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
@@ -275,7 +276,7 @@ public class JettyTest
 
     @GET
     @Path("/hello")
-    @Produces("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response hello()
     {
       try {
@@ -293,7 +294,7 @@ public class JettyTest
   {
     @GET
     @Path("/exception")
-    @Produces("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
     public Response exception(
         @Context HttpServletResponse resp
     ) throws IOException

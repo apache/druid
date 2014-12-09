@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteSource;
 import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
@@ -36,14 +37,15 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
-import io.druid.metadata.EntryExistsException;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.scaling.ResourceManagementScheduler;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.metadata.EntryExistsException;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -56,6 +58,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
@@ -77,6 +80,9 @@ public class OverlordResource
   private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
 
+  private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
+
+  @Deprecated
   private AtomicReference<WorkerSetupData> workerSetupDataRef = null;
 
   @Inject
@@ -94,30 +100,9 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/merge")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Deprecated
-  public Response doMerge(final Task task)
-  {
-    // legacy endpoint
-    return doIndex(task);
-  }
-
-  @POST
-  @Path("/index")
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Deprecated
-  public Response doIndex(final Task task)
-  {
-    return taskPost(task);
-  }
-
-  @POST
   @Path("/task")
-  @Consumes("application/json")
-  @Produces("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response taskPost(final Task task)
   {
     return asLeaderWith(
@@ -143,7 +128,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskPayload(@PathParam("taskid") String taskid)
   {
     return optionalTaskResponse(taskid, "payload", taskStorageQueryAdapter.getTask(taskid));
@@ -151,7 +136,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}/status")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
     return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getStatus(taskid));
@@ -159,7 +144,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}/segments")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
     final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
@@ -168,7 +153,7 @@ public class OverlordResource
 
   @POST
   @Path("/task/{taskid}/shutdown")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response doShutdown(@PathParam("taskid") final String taskid)
   {
     return asLeaderWith(
@@ -186,8 +171,38 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/worker")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getWorkerConfig()
+  {
+    if (workerConfigRef == null) {
+      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
+    }
+
+    return Response.ok(workerConfigRef.get()).build();
+  }
+
+  @POST
+  @Path("/worker")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response setWorkerConfig(
+      final WorkerBehaviorConfig workerBehaviorConfig
+  )
+  {
+    if (!configManager.set(WorkerBehaviorConfig.CONFIG_KEY, workerBehaviorConfig)) {
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    log.info("Updating Worker configs: %s", workerBehaviorConfig);
+
+    return Response.ok().build();
+  }
+
+
+  @Deprecated
+  @GET
   @Path("/worker/setup")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWorkerSetupData()
   {
     if (workerSetupDataRef == null) {
@@ -197,9 +212,10 @@ public class OverlordResource
     return Response.ok(workerSetupDataRef.get()).build();
   }
 
+  @Deprecated
   @POST
   @Path("/worker/setup")
-  @Consumes("application/json")
+  @Consumes(MediaType.APPLICATION_JSON)
   public Response setWorkerSetupData(
       final WorkerSetupData workerSetupData
   )
@@ -215,7 +231,7 @@ public class OverlordResource
 
   @POST
   @Path("/action")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public <T> Response doAction(final TaskActionHolder<T> holder)
   {
     return asLeaderWith(
@@ -249,7 +265,7 @@ public class OverlordResource
 
   @GET
   @Path("/waitingTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWaitingTasks()
   {
     return workItemsResponse(
@@ -296,7 +312,7 @@ public class OverlordResource
 
   @GET
   @Path("/pendingTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getPendingTasks()
   {
     return workItemsResponse(
@@ -313,7 +329,7 @@ public class OverlordResource
 
   @GET
   @Path("/runningTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasks()
   {
     return workItemsResponse(
@@ -330,7 +346,7 @@ public class OverlordResource
 
   @GET
   @Path("/completeTasks")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteTasks()
   {
     final List<TaskResponseObject> completeTasks = Lists.transform(
@@ -355,7 +371,7 @@ public class OverlordResource
 
   @GET
   @Path("/workers")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getWorkers()
   {
     return asLeaderWith(
@@ -373,7 +389,7 @@ public class OverlordResource
 
   @GET
   @Path("/scaling")
-  @Produces("application/json")
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getScalingState()
   {
     // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
@@ -394,9 +410,11 @@ public class OverlordResource
   )
   {
     try {
-      final Optional<InputSupplier<InputStream>> stream = taskLogStreamer.streamTaskLog(taskid, offset);
+      final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
-        return Response.ok(stream.get().getInput()).build();
+        try(InputStream istream = stream.get().openStream()) {
+          return Response.ok(istream).build();
+        }
       } else {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(

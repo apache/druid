@@ -27,7 +27,7 @@ import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import io.druid.query.RetryQueryRunner;
+import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.SegmentMissingException;
 
@@ -53,7 +53,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> input, final Map<String, Object> context)
+  public Sequence<T> run(final Query<T> input, final Map<String, Object> responseContext)
   {
     final Query<T> query = input.withQuerySegmentSpec(specificSpec);
 
@@ -67,7 +67,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
           @Override
           public Sequence<T> call() throws Exception
           {
-            return base.run(query, context);
+            return base.run(query, responseContext);
           }
         }
     );
@@ -87,10 +87,10 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
                   return baseSequence.accumulate(initValue, accumulator);
                 }
                 catch (SegmentMissingException e) {
-                  List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) context.get(RetryQueryRunner.MISSING_SEGMENTS_KEY);
+                  List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
                   if (missingSegments == null) {
                     missingSegments = Lists.newArrayList();
-                    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, missingSegments);
+                    responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
                   }
                   missingSegments.add(specificSpec.getDescriptor());
                   return initValue;

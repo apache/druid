@@ -21,13 +21,14 @@ package io.druid.segment.indexing.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Lists;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.guava.Comparators;
+import io.druid.common.utils.JodaUtils;
 import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -90,7 +91,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   public Optional<Interval> bucketInterval(DateTime dt)
   {
     // First interval with start time ≤ dt
-    final Interval interval = intervals.floor(new Interval(dt, new DateTime(Long.MAX_VALUE)));
+    final Interval interval = intervals.floor(new Interval(dt, new DateTime(JodaUtils.MAX_INSTANT)));
 
     if (interval != null && interval.contains(dt)) {
       return Optional.of(interval);
@@ -110,14 +111,5 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   public QueryGranularity getQueryGranularity()
   {
     return queryGranularity;
-  }
-
-  @Override
-  public GranularitySpec withQueryGranularity(QueryGranularity queryGranularity)
-  {
-    return new ArbitraryGranularitySpec(
-        queryGranularity,
-        Lists.newArrayList(intervals)
-    );
   }
 }

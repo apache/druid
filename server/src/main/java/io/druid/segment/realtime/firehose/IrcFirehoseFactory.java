@@ -43,43 +43,8 @@ import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * <p><b>Example Usage</b></p>
- *
- * <p>Decoder definition: <code>wikipedia-decoder.json</code></p>
- * <pre>{@code
- *
- * {
- *   "type": "wikipedia",
- *   "namespaces": {
- *     "#en.wikipedia": {
- *       "": "main",
- *       "Category": "category",
- *       "Template talk": "template talk",
- *       "Help talk": "help talk",
- *       "Media": "media",
- *       "MediaWiki talk": "mediawiki talk",
- *       "File talk": "file talk",
- *       "MediaWiki": "mediawiki",
- *       "User": "user",
- *       "File": "file",
- *       "User talk": "user talk",
- *       "Template": "template",
- *       "Help": "help",
- *       "Special": "special",
- *       "Talk": "talk",
- *       "Category talk": "category talk"
- *     }
- *   },
- *   "geoIpDatabase": "path/to/GeoLite2-City.mmdb"
- * }
- * }</pre>
- *
  * <p><b>Example code:</b></p>
  * <pre>{@code
- * IrcDecoder wikipediaDecoder = new ObjectMapper().readValue(
- *   new File("wikipedia-decoder.json"),
- *   IrcDecoder.class
- * );
  *
  * IrcFirehoseFactory factory = new IrcFirehoseFactory(
  *     "wiki123",
@@ -89,34 +54,28 @@ import java.util.concurrent.LinkedBlockingQueue;
  *         "#fr.wikipedia",
  *         "#de.wikipedia",
  *         "#ja.wikipedia"
- *     ),
- *     wikipediaDecoder
+ *     )
  * );
  * }</pre>
  */
-public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
+public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
 {
   private static final Logger log = new Logger(IrcFirehoseFactory.class);
 
   private final String nick;
   private final String host;
   private final List<String> channels;
-  private final IrcDecoder decoder;
-  private final IrcParser parser;
 
   @JsonCreator
   public IrcFirehoseFactory(
       @JsonProperty("name") String nick,
       @JsonProperty("host") String host,
-      @JsonProperty("channels") List<String> channels,
-      @JsonProperty("decoder") IrcDecoder decoder
+      @JsonProperty("channels") List<String> channels
   )
   {
     this.nick = nick;
     this.host = host;
     this.channels = channels;
-    this.decoder = decoder;
-    this.parser = new IrcParser(decoder);
   }
 
   @JsonProperty
@@ -137,14 +96,8 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
     return channels;
   }
 
-  @JsonProperty
-  public IrcDecoder getDecoder()
-  {
-    return decoder;
-  }
-
   @Override
-  public Firehose connect(final IrcParser firehoseParser) throws IOException
+  public Firehose connect(final IrcInputRowParser firehoseParser) throws IOException
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -267,12 +220,6 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcParser>
         irc.disconnect("");
       }
     };
-  }
-
-  @Override
-  public IrcParser getParser()
-  {
-    return parser;
   }
 }
 

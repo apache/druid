@@ -90,6 +90,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         new NoopQueryRunnerFactoryConglomerate(),
         new NoopServiceEmitter(),
         MoreExecutors.sameThreadExecutor(),
+        MoreExecutors.sameThreadExecutor(),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig()

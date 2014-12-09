@@ -19,38 +19,24 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
-
-import javax.annotation.Nullable;
+import io.druid.query.filter.ValueMatcher;
 
 public class FilteredAggregator implements Aggregator
 {
-  private final String name;
-  private final DimensionSelector dimSelector;
+  private final ValueMatcher matcher;
   private final Aggregator delegate;
-  private final IntPredicate predicate;
 
-  public FilteredAggregator(String name, DimensionSelector dimSelector, IntPredicate predicate, Aggregator delegate)
+  public FilteredAggregator(ValueMatcher matcher, Aggregator delegate)
   {
-    this.name = name;
-    this.dimSelector = dimSelector;
+    this.matcher = matcher;
     this.delegate = delegate;
-    this.predicate = predicate;
   }
 
   @Override
   public void aggregate()
   {
-    final IndexedInts row = dimSelector.getRow();
-    final int size = row.size();
-    for (int i = 0; i < size; ++i) {
-      if (predicate.apply(row.get(i))) {
-        delegate.aggregate();
-        break;
-      }
+    if (matcher.matches()) {
+      delegate.aggregate();
     }
   }
 
@@ -73,9 +59,15 @@ public class FilteredAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return delegate.getLong();
+  }
+
+  @Override
   public String getName()
   {
-    return name;
+    return delegate.getName();
   }
 
   @Override

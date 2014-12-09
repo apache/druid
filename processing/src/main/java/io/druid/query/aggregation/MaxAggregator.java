@@ -72,6 +72,12 @@ public class MaxAggregator implements Aggregator
   }
 
   @Override
+  public long getLong()
+  {
+    return (long) max;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

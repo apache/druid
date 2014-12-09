@@ -36,6 +36,7 @@ import io.druid.indexing.common.task.Task;
 import org.jboss.netty.channel.ChannelException;
 import org.joda.time.Duration;
 
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -94,7 +95,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
         try {
           response = httpClient.post(serviceUri.toURL())
-                               .setContent("application/json", dataToSend)
+                               .setContent(MediaType.APPLICATION_JSON, dataToSend)
                                .go(new StatusResponseHandler(Charsets.UTF_8))
                                .get();
         }

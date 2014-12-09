@@ -46,11 +46,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 {
   private static final Logger log = new Logger(IncrementalIndexAdapter.class);
   private final Interval dataInterval;
-  private final IncrementalIndex index;
+  private final IncrementalIndex<Object> index;
   private final Map<String, Map<String, MutableBitmap>> invertedIndexes;
 
   public IncrementalIndexAdapter(
-      Interval dataInterval, IncrementalIndex index, BitmapFactory bitmapFactory
+      Interval dataInterval, IncrementalIndex<Object> index, BitmapFactory bitmapFactory
   )
   {
     this.dataInterval = dataInterval;
@@ -205,8 +205,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
                 Object[] metrics = new Object[index.getMetricAggs().length];
                 for (int i = 0; i < metrics.length; i++) {
-                  metrics[i] = index.getAggregator(i)
-                                    .get(index.getMetricBuffer(), index.getMetricPosition(rowOffset, i));
+                  metrics[i] = index.getMetricObjectValue(rowOffset, i);
                 }
 
                 return new Rowboat(

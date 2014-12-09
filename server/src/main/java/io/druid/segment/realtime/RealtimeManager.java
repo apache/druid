@@ -19,6 +19,8 @@
 
 package io.druid.segment.realtime;
 
+
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -32,6 +34,7 @@ import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.Processing;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -42,18 +45,21 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.UnionQueryRunner;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.Sink;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -63,17 +69,24 @@ public class RealtimeManager implements QuerySegmentWalker
 
   private final List<FireDepartment> fireDepartments;
   private final QueryRunnerFactoryConglomerate conglomerate;
+  private ExecutorService executorService;
 
-  private final Map<String, FireChief> chiefs;
+  /**
+   * key=data source name,value=FireChiefs of all partition of that data source
+   */
+  private final Map<String, List<FireChief>> chiefs;
+
 
   @Inject
   public RealtimeManager(
       List<FireDepartment> fireDepartments,
-      QueryRunnerFactoryConglomerate conglomerate
+      QueryRunnerFactoryConglomerate conglomerate,
+      @JacksonInject @Processing ExecutorService executorService
   )
   {
     this.fireDepartments = fireDepartments;
     this.conglomerate = conglomerate;
+    this.executorService = executorService;
 
     this.chiefs = Maps.newHashMap();
   }
@@ -85,7 +98,12 @@ public class RealtimeManager implements QuerySegmentWalker
       DataSchema schema = fireDepartment.getDataSchema();
 
       final FireChief chief = new FireChief(fireDepartment);
-      chiefs.put(schema.getDataSource(), chief);
+      List<FireChief> chiefs = this.chiefs.get(schema.getDataSource());
+      if (chiefs == null) {
+        chiefs = new ArrayList<FireChief>();
+        this.chiefs.put(schema.getDataSource(), chiefs);
+      }
+      chiefs.add(chief);
 
       chief.setName(String.format("chief-%s", schema.getDataSource()));
       chief.setDaemon(true);
@@ -97,58 +115,69 @@ public class RealtimeManager implements QuerySegmentWalker
   @LifecycleStop
   public void stop()
   {
-    for (FireChief chief : chiefs.values()) {
-      CloseQuietly.close(chief);
+    for (Iterable<FireChief> chiefs : this.chiefs.values()) {
+      for (FireChief chief : chiefs) {
+        CloseQuietly.close(chief);
+      }
     }
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
   {
-    FireChief chief = chiefs.get(datasource);
-    if (chief == null) {
+    List<FireChief> chiefs = this.chiefs.get(datasource);
+    if (chiefs == null) {
       return null;
     }
-    return chief.getMetrics();
+    FireDepartmentMetrics snapshot = null;
+    for (FireChief chief : chiefs) {
+      if (snapshot == null) {
+        snapshot = chief.getMetrics().snapshot();
+      } else {
+        snapshot.merge(chief.getMetrics());
+      }
+    }
+    return snapshot;
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, Iterable<Interval> intervals)
   {
-    final FireChief chief = chiefs.get(getDataSourceName(query));
-
-    return chief == null ? new NoopQueryRunner<T>() : chief.getQueryRunner(query);
+    return getQueryRunnerForSegments(query, null);
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
   {
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     final List<String> names = query.getDataSource().getNames();
-    if (names.size() == 1) {
-      final FireChief chief = chiefs.get(names.get(0));
-      return chief == null ? new NoopQueryRunner() : chief.getQueryRunner(query);
-    } else {
-      return new UnionQueryRunner<>(
-          Iterables.transform(
-              names, new Function<String, QueryRunner>()
+    return new UnionQueryRunner<>(
+        Iterables.transform(
+            names, new Function<String, QueryRunner>()
+            {
+              @Override
+              public QueryRunner<T> apply(String input)
               {
-                @Nullable
-                @Override
-                public QueryRunner<T> apply(@Nullable String input)
-                {
-                  final FireChief chief = chiefs.get(input);
-                  return chief == null ? new NoopQueryRunner() : chief.getQueryRunner(query);
-                }
+                Iterable<FireChief> chiefsOfDataSource = chiefs.get(input);
+                return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
+                    factory.mergeRunners(
+                        executorService,
+                        Iterables.transform(
+                            chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
+                            {
+                              @Override
+                              public QueryRunner<T> apply(FireChief input)
+                              {
+                                return input.getQueryRunner(query);
+                              }
+                            }
+                        )
+                    )
+                );
               }
-          ), conglomerate.findFactory(query).getToolchest()
-      );
-    }
+            }
+        ), conglomerate.findFactory(query).getToolchest()
+    );
   }
-
-  private <T> String getDataSourceName(Query<T> query)
-  {
-    return Iterables.getOnlyElement(query.getDataSource().getNames());
-  }
-
 
   private class FireChief extends Thread implements Closeable
   {
@@ -216,19 +245,28 @@ public class RealtimeManager implements QuerySegmentWalker
               continue;
             }
 
-            int currCount = plumber.add(inputRow);
-            if (currCount == -1) {
+            boolean lateEvent = false;
+            boolean indexLimitExceeded = false;
+            try {
+              lateEvent = plumber.add(inputRow) == -1;
+            }
+            catch (IndexSizeExceededException e) {
+              log.info("Index limit exceeded: %s", e.getMessage());
+              indexLimitExceeded = true;
+            }
+            if (indexLimitExceeded || lateEvent) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
 
-              if (System.currentTimeMillis() > nextFlush) {
+              if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
                 plumber.persist(firehose.commit());
                 nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
               }
 
               continue;
             }
-            if (currCount >= config.getMaxRowsInMemory() || System.currentTimeMillis() > nextFlush) {
+            final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+            if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
               plumber.persist(firehose.commit());
               nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
             }

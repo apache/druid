@@ -41,8 +41,10 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
-        <apache.curator.version>2.6.0</apache.curator.version>
-        <druid.api.version>0.2.17</druid.api.version>
+        <apache.curator.version>2.7.0</apache.curator.version>
+        <jetty.version>9.2.5.v20141112</jetty.version>
+        <druid.api.version>0.3.0</druid.api.version>
+        <jackson.version>2.4.4</jackson.version>
     </properties>
 
     <modules>
@@ -54,15 +56,15 @@
         <module>server</module>
         <module>services</module>
         <!-- Non-default modules -->
-        <module>cassandra-storage</module>
-        <module>hdfs-storage</module>
-        <module>s3-extensions</module>
-        <module>kafka-seven</module>
-        <module>kafka-eight</module>
-        <module>rabbitmq</module>
-        <module>histogram</module>
-        <module>mysql-metadata-storage</module>
-        <module>postgresql-metadata-storage</module>
+        <module>extensions/cassandra-storage</module>
+        <module>extensions/hdfs-storage</module>
+        <module>extensions/s3-extensions</module>
+        <module>extensions/kafka-seven</module>
+        <module>extensions/kafka-eight</module>
+        <module>extensions/rabbitmq</module>
+        <module>extensions/histogram</module>
+        <module>extensions/mysql-metadata-storage</module>
+        <module>extensions/postgresql-metadata-storage</module>
     </modules>
 
     <dependencyManagement>
@@ -77,12 +79,12 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.2.12</version>
+                <version>0.2.13</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.9.6</version>
+                <version>0.9.7</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -140,12 +142,12 @@
                         <artifactId>mail</artifactId>
                     </exclusion>
                     <exclusion>
-                        <groupId>org.codehaus.jackson</groupId>
-                        <artifactId>jackson-core-asl</artifactId>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
                     </exclusion>
                     <exclusion>
-                        <groupId>org.codehaus.jackson</groupId>
-                        <artifactId>jackson-mapper-asl</artifactId>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-annotations</artifactId>
                     </exclusion>
                     <exclusion>
                         <groupId>commons-codec</groupId>
@@ -222,52 +224,42 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-guava</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-joda</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-smile</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
                 <artifactId>jackson-jaxrs-json-provider</artifactId>
-                <version>2.2.3</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
                 <artifactId>jackson-jaxrs-smile-provider</artifactId>
-                <version>2.2.3</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-                <version>1.9.13</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-                <version>1.9.13</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
@@ -327,27 +319,27 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlets</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-proxy</artifactId>
-                <version>9.2.3.v20140905</version>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.1</version>
+                <version>2.6</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -365,9 +357,9 @@
                 <version>1.6.2</version>
             </dependency>
             <dependency>
-                <groupId>com.google.code.simple-spring-memcached</groupId>
+                <groupId>net.spy</groupId>
                 <artifactId>spymemcached</artifactId>
-                <version>2.8.4</version>
+                <version>2.11.4</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
@@ -392,7 +384,7 @@
             <dependency>
                 <groupId>net.jpountz.lz4</groupId>
                 <artifactId>lz4</artifactId>
-                <version>1.2.0</version>
+                <version>1.3.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>

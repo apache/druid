@@ -22,9 +22,9 @@ package io.druid.indexing.firehose;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -217,12 +217,6 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       throw Throwables.propagate(e);
     }
 
-  }
-
-  @Override
-  public InputRowParser getParser()
-  {
-    return null;
   }
 
   public class IngestSegmentFirehose implements Firehose

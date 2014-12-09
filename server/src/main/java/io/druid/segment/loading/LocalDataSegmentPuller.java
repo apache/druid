@@ -73,24 +73,6 @@ public class LocalDataSegmentPuller implements DataSegmentPuller
     }
   }
 
-  @Override
-  public long getLastModified(DataSegment segment) throws SegmentLoadingException
-  {
-    final File file = getFile(segment);
-
-    long lastModified = Long.MAX_VALUE;
-    if (file.isDirectory()) {
-      for (File childFile : file.listFiles()) {
-        lastModified = Math.min(childFile.lastModified(), lastModified);
-      }
-    }
-    else {
-      lastModified = file.lastModified();
-    }
-
-    return lastModified;
-  }
-
   private File getFile(DataSegment segment) throws SegmentLoadingException
   {
     final Map<String, Object> loadSpec = segment.getLoadSpec();

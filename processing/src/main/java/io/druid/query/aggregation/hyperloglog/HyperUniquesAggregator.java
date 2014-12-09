@@ -63,7 +63,13 @@ public class HyperUniquesAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getFloat()");
+  }
+
+  @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getLong()");
   }
 
   @Override

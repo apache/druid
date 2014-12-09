@@ -93,7 +93,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()
@@ -115,7 +115,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
     Map<String, Object> context = new MapMaker().makeMap();
-    context.put(RetryQueryRunner.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
         runner.run(timeBoundaryQuery, context),
         Lists.<Result<TimeBoundaryResultValue>>newArrayList()

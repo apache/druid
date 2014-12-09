@@ -21,8 +21,8 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -55,12 +55,6 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
   public Firehose connect(InputRowParser parser) throws IOException
   {
     return new CombiningFirehose(parser);
-  }
-
-  @Override
-  public InputRowParser getParser()
-  {
-    return delegateFactoryList.get(0).getParser();
   }
 
   @JsonProperty("delegates")

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Maps;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -32,6 +31,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -93,7 +93,7 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", "localhost", -1)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null)
                 );
               }
             }
@@ -114,17 +114,21 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
-    //backwards compatibility
-    if (argSpec.containsKey("schema")) {
-      return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
-    } else {
-      return new HadoopDruidIndexerConfig(
-          HadoopDruidIndexerConfig.jsonMapper.convertValue(
-              argSpec,
-              HadoopIngestionSpec.class
-          )
+    // Eventually PathSpec needs to get rid of its Hadoop dependency, then maybe this can be ingested directly without
+    // the Map<> intermediary
+    
+    if(argSpec.containsKey("spec")){
+      return HadoopDruidIndexerConfig.jsonMapper.convertValue(
+          argSpec,
+          HadoopDruidIndexerConfig.class
       );
     }
+    return new HadoopDruidIndexerConfig(
+        HadoopDruidIndexerConfig.jsonMapper.convertValue(
+            argSpec,
+            HadoopIngestionSpec.class
+        )
+    );
   }
 
   @SuppressWarnings("unchecked")
@@ -147,12 +151,13 @@ public class HadoopDruidIndexerConfig
   @SuppressWarnings("unchecked")
   public static HadoopDruidIndexerConfig fromString(String str)
   {
+    // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
           (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
               str, new TypeReference<Map<String, Object>>()
-          {
-          }
+              {
+              }
           )
       );
     }
@@ -176,7 +181,7 @@ public class HadoopDruidIndexerConfig
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
-      final @JsonProperty("schema") HadoopIngestionSpec schema
+      final @JsonProperty("spec") HadoopIngestionSpec schema
   )
   {
     this.schema = schema;
@@ -207,7 +212,7 @@ public class HadoopDruidIndexerConfig
     this.rollupGran = schema.getDataSchema().getGranularitySpec().getQueryGranularity();
   }
 
-  @JsonProperty
+  @JsonProperty(value="spec")
   public HadoopIngestionSpec getSchema()
   {
     return schema;

@@ -154,7 +154,7 @@ public class TimeSeriesUnionQueryRunnerTest
                   {
                     return Sequences.simple(
                         Lists.newArrayList(
-                            new Result<TimeseriesResultValue>(
+                            new Result<>(
                                 new DateTime("2011-04-02"),
                                 new TimeseriesResultValue(
                                     ImmutableMap.<String, Object>of(
@@ -165,7 +165,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                     )
                                 )
                             ),
-                            new Result<TimeseriesResultValue>(
+                            new Result<>(
                                 new DateTime("2011-04-03"),
                                 new TimeseriesResultValue(
                                     ImmutableMap.<String, Object>of(
@@ -192,7 +192,7 @@ public class TimeSeriesUnionQueryRunnerTest
                     {
                       return Sequences.simple(
                           Lists.newArrayList(
-                              new Result<TimeseriesResultValue>(
+                              new Result<>(
                                   new DateTime("2011-04-01"),
                                   new TimeseriesResultValue(
                                       ImmutableMap.<String, Object>of(
@@ -204,7 +204,7 @@ public class TimeSeriesUnionQueryRunnerTest
 
                                   )
                               ),
-                              new Result<TimeseriesResultValue>(
+                              new Result<>(
                                   new DateTime("2011-04-02"),
                                   new TimeseriesResultValue(
                                       ImmutableMap.<String, Object>of(
@@ -215,7 +215,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                       )
                                   )
                               ),
-                              new Result<TimeseriesResultValue>(
+                              new Result<>(
                                   new DateTime("2011-04-04"),
                                   new TimeseriesResultValue(
                                       ImmutableMap.<String, Object>of(
@@ -237,25 +237,25 @@ public class TimeSeriesUnionQueryRunnerTest
     );
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 5L, "idx", 6L)
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 8L, "idx", 10L)
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             new DateTime("2011-04-03"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 3L, "idx", 4L)
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             new DateTime("2011-04-04"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 9L, "idx", 10L)

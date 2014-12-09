@@ -83,7 +83,7 @@ public class QueryRunnerTestHelper
   );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
-  public static final String marketDimension = "marKet";
+  public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
@@ -117,7 +117,7 @@ public class QueryRunnerTestHelper
       Arrays.asList("quality"),
       false
   );
-  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L, null);
+  public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
   public static final ArithmeticPostAggregator addRowsIndexConstant =
@@ -139,7 +139,7 @@ public class QueryRunnerTestHelper
   public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
       hyperUniqueFinalizingPostAggMetric,
       "+",
-      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1, 1))
+      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1))
   );
 
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(

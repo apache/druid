@@ -27,11 +27,18 @@ import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
-import junit.framework.Assert;
+import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -41,32 +48,88 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IncrementalIndexTest
 {
-
-  public static IncrementalIndex createCaseInsensitiveIndex(long timestamp)
+  interface IndexCreator
   {
-    IncrementalIndex index = new IncrementalIndex(
-        0L, QueryGranularity.NONE, new AggregatorFactory[]{},
-        TestQueryRunners.pool
-    );
+    public IncrementalIndex createIndex();
+  }
 
+  private final IndexCreator indexCreator;
+
+  public IncrementalIndexTest(
+      IndexCreator indexCreator
+  )
+  {
+    this.indexCreator = indexCreator;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex()
+                  {
+                    return IncrementalIndexTest.createIndex(true);
+                  }
+                }
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex()
+                  {
+                    return IncrementalIndexTest.createIndex(false);
+                  }
+                }
+            }
+
+        }
+    );
+  }
+
+  public static IncrementalIndex createIndex(boolean offheap)
+  {
+    if (offheap) {
+      return new OffheapIncrementalIndex(
+          0L,
+          QueryGranularity.NONE,
+          new AggregatorFactory[]{new CountAggregatorFactory("count")},
+          TestQueryRunners.pool,
+          true,
+          100 * 1024 * 1024
+      );
+    } else {
+      return new OnheapIncrementalIndex(
+          0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000
+      );
+    }
+  }
+
+  public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException
+  {
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("Dim1", "DiM2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "DIM1", "3", "dIM2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
         )
     );
 
     index.add(
         new MapBasedInputRow(
             timestamp,
-            Arrays.asList("diM1", "dIM2"),
-            ImmutableMap.<String, Object>of("Dim1", "1", "DiM2", "2", "dim1", "3", "dim2", "4")
+            Arrays.asList("dim1", "dim2"),
+            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
         )
     );
-    return index;
   }
 
   public static MapBasedInputRow getRow(long timestamp, int rowID, int dimensionCount)
@@ -82,12 +145,11 @@ public class IncrementalIndexTest
   }
 
   @Test
-  public void testCaseInsensitivity() throws Exception
+  public void testCaseSensitivity() throws Exception
   {
-    final long timestamp = System.currentTimeMillis();
-
-    IncrementalIndex index = createCaseInsensitiveIndex(timestamp);
-
+    long timestamp = System.currentTimeMillis();
+    IncrementalIndex index = indexCreator.createIndex();
+    populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensions());
     Assert.assertEquals(2, index.size());
 
@@ -106,12 +168,7 @@ public class IncrementalIndexTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = new IncrementalIndex(
-        0L,
-        QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        TestQueryRunners.pool
-    );
+    final IncrementalIndex index = indexCreator.createIndex();
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
@@ -147,9 +204,31 @@ public class IncrementalIndexTest
     while (iterator.hasNext()) {
       Row row = iterator.next();
       Assert.assertEquals(timestamp + curr, row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(threadCount), row.getFloatMetric("count"));
+      Assert.assertEquals(Float.valueOf(threadCount), (Float)row.getFloatMetric("count"));
       curr++;
     }
     Assert.assertEquals(elementsPerThread, curr);
+  }
+
+  @Test
+  public void testOffheapIndexIsFull() throws IndexSizeExceededException
+  {
+    OffheapIncrementalIndex index = new OffheapIncrementalIndex(
+        0L,
+        QueryGranularity.NONE,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        TestQueryRunners.pool,
+        true,
+        (10 + 2) * 1024 * 1024
+    );
+    int rowCount = 0;
+    for (int i = 0; i < 500; i++) {
+      rowCount = index.add(getRow(System.currentTimeMillis(), i, 100));
+      if (!index.canAppendRow()) {
+        break;
+      }
+    }
+
+    Assert.assertTrue("rowCount : " + rowCount, rowCount > 200 && rowCount < 600);
   }
 }

@@ -19,8 +19,8 @@
 
 package io.druid.cli;
 
-import com.google.api.client.util.Lists;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.airlift.command.Command;
 import io.airlift.command.Option;
@@ -67,7 +67,7 @@ public class PullDependencies implements Runnable
     try {
       final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
       for (final String coordinate : allCoordinates) {
-        Initialization.getClassLoaderForCoordinates(aetherClient, coordinate);
+        Initialization.getClassLoaderForCoordinates(aetherClient, coordinate, extensionsConfig.getDefaultVersion());
       }
     }
     catch (Exception e) {

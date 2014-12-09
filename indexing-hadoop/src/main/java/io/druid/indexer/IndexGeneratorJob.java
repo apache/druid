@@ -33,6 +33,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.offheap.OffheapBufferPool;
@@ -46,6 +47,7 @@ import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
@@ -307,7 +309,7 @@ public class IndexGeneratorJob implements Jobby
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
       for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
-        metricNames.add(factory.getName().toLowerCase());
+        metricNames.add(factory.getName());
       }
 
       parser = config.getParser();
@@ -322,10 +324,13 @@ public class IndexGeneratorJob implements Jobby
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
-      //final DataRollupSpec rollupSpec = config.getRollupSpec();
       final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
+      final int maxTotalBufferSize = config.getSchema().getTuningConfig().getBufferSize();
+      final int aggregationBufferSize = (int) ((double) maxTotalBufferSize
+                                               * config.getSchema().getTuningConfig().getAggregationBufferRatio());
 
-      IncrementalIndex index = makeIncrementalIndex(bucket, aggs);
+      final StupidPool<ByteBuffer> bufferPool = new OffheapBufferPool(aggregationBufferSize);
+      IncrementalIndex index = makeIncrementalIndex(bucket, aggs, bufferPool);
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
         baseFlushFile.delete();
@@ -348,7 +353,8 @@ public class IndexGeneratorJob implements Jobby
           int numRows = index.add(inputRow);
           ++lineCount;
 
-          if (numRows >= config.getSchema().getTuningConfig().getRowFlushBoundary()) {
+          if (!index.canAppendRow()) {
+            log.info(index.getOutOfRowsReason());
             log.info(
                 "%,d lines to %,d rows in %,d millis",
                 lineCount - runningTotalLineCount,
@@ -362,9 +368,9 @@ public class IndexGeneratorJob implements Jobby
 
             context.progress();
             persist(index, interval, file, progressIndicator);
-            // close this index and make a new one
+            // close this index and make a new one, reusing same buffer
             index.close();
-            index = makeIncrementalIndex(bucket, aggs);
+            index = makeIncrementalIndex(bucket, aggs, bufferPool);
 
             startTime = System.currentTimeMillis();
             ++indexCount;
@@ -629,14 +635,9 @@ public class IndexGeneratorJob implements Jobby
       return numRead;
     }
 
-    private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs)
+    private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs, StupidPool bufferPool)
     {
-      int aggsSize = 0;
-      for (AggregatorFactory agg : aggs) {
-        aggsSize += agg.getMaxIntermediateSize();
-      }
       final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
-      int bufferSize = aggsSize * tuningConfig.getRowFlushBoundary();
       final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
           .withMinTimestamp(theBucket.time.getMillis())
           .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
@@ -644,14 +645,17 @@ public class IndexGeneratorJob implements Jobby
           .withMetrics(aggs)
           .build();
       if (tuningConfig.isIngestOffheap()) {
+
         return new OffheapIncrementalIndex(
             indexSchema,
-            new OffheapBufferPool(bufferSize)
+            bufferPool,
+            true,
+            tuningConfig.getBufferSize()
         );
       } else {
-        return new IncrementalIndex(
+        return new OnheapIncrementalIndex(
             indexSchema,
-            new OffheapBufferPool(bufferSize)
+            tuningConfig.getRowFlushBoundary()
         );
       }
     }

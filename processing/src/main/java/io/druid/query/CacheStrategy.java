@@ -31,6 +31,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 
   public TypeReference<CacheType> getCacheObjectClazz();
 
+  // Resultant function must be THREAD SAFE
   public Function<T, CacheType> prepareForCache();
 
   public Function<CacheType, T> pullFromCache();

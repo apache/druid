@@ -36,7 +36,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BySegmentResultValue;
-import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunner;
 import io.druid.query.Query;
@@ -54,6 +53,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -78,6 +78,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   )
   {
     this.config = config;
+  }
+
+  protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories){
+    return Lists.transform(
+        aggregatorFactories, new Function<AggregatorFactory, String>()
+        {
+          @Nullable
+          @Override
+          public String apply(@Nullable AggregatorFactory input)
+          {
+            return input.getName();
+          }
+        }
+    ).toArray(new String[0]);
   }
 
   private static List<PostAggregator> prunePostAggregators(TopNQuery query)
@@ -156,6 +170,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
     {
       private String dimension = query.getDimensionSpec().getOutputName();
+      private final List<PostAggregator> prunedAggs = prunePostAggregators(query);
+      private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
+                                                                   .toArray(new AggregatorFactory[0]);
+      private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
 
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
@@ -168,16 +186,24 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   @Override
                   public Map<String, Object> apply(DimensionAndMetricValueExtractor input)
                   {
-                    final Map<String, Object> values = Maps.newHashMap();
-                    for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-                      values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
+                    final Map<String, Object> values = Maps.newHashMapWithExpectedSize(
+                        aggregatorFactories.length
+                        + prunedAggs.size()
+                        + 1
+                    );
+                    // JVM couldn't optimize this too well, so this is helping it out a bit.
+                    for (int i = 0; i < aggregatorFactories.length; ++i) {
+                      final String aggName = aggFactoryNames[i];
+                      values.put(aggName, fn.manipulate(aggregatorFactories[i], input.getMetric(aggName)));
                     }
-                    for (PostAggregator postAgg : prunePostAggregators(query)) {
-                      Object calculatedPostAgg = input.getMetric(postAgg.getName());
+
+                    for (PostAggregator postAgg : prunedAggs) {
+                      final String name = postAgg.getName();
+                      Object calculatedPostAgg = input.getMetric(name);
                       if (calculatedPostAgg != null) {
-                        values.put(postAgg.getName(), calculatedPostAgg);
+                        values.put(name, calculatedPostAgg);
                       } else {
-                        values.put(postAgg.getName(), postAgg.compute(values));
+                        values.put(name, postAgg.compute(values));
                       }
                     }
                     values.put(dimension, input.getDimensionValue(dimension));
@@ -204,6 +230,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
     {
       private String dimension = query.getDimensionSpec().getOutputName();
+      private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
+                                                                   .toArray(new AggregatorFactory[0]);
+      private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
+      private final PostAggregator[] postAggregators = query.getPostAggregatorSpecs().toArray(new PostAggregator[0]);
 
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
@@ -216,13 +246,19 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                   @Override
                   public Map<String, Object> apply(DimensionAndMetricValueExtractor input)
                   {
-                    final Map<String, Object> values = Maps.newHashMap();
+                    final Map<String, Object> values = Maps.newHashMapWithExpectedSize(
+                        aggregatorFactories.length
+                        + query.getPostAggregatorSpecs().size()
+                        + 1
+                    );
                     // put non finalized aggregators for calculating dependent post Aggregators
-                    for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-                      values.put(agg.getName(), input.getMetric(agg.getName()));
+                    // JVM is dumb about optimization
+                    for( int i = 0; i < aggFactoryNames.length; ++i){
+                      final String name = aggFactoryNames[i];
+                      values.put(name, input.getMetric(name));
                     }
 
-                    for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                    for (PostAggregator postAgg : postAggregators) {
                       Object calculatedPostAgg = input.getMetric(postAgg.getName());
                       if (calculatedPostAgg != null) {
                         values.put(postAgg.getName(), calculatedPostAgg);
@@ -230,8 +266,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         values.put(postAgg.getName(), postAgg.compute(values));
                       }
                     }
-                    for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-                      values.put(agg.getName(), fn.manipulate(agg, input.getMetric(agg.getName())));
+                    for( int i = 0; i < aggFactoryNames.length; ++i){
+                      final String name = aggFactoryNames[i];
+                      values.put(name, fn.manipulate(aggregatorFactories[i], input.getMetric(name)));
                     }
 
                     values.put(dimension, input.getDimensionValue(dimension));
@@ -261,7 +298,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
     {
-      private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+      private final List<AggregatorFactory> aggs = Lists.newArrayList(query.getAggregatorSpecs());
       private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
           query.getPostAggregatorSpecs(),
           query.getTopNMetricSpec()
@@ -305,6 +342,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       {
         return new Function<Result<TopNResultValue>, Object>()
         {
+          private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
+
           @Override
           public Object apply(final Result<TopNResultValue> input)
           {
@@ -314,10 +353,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             // make sure to preserve timezone information when caching results
             retVal.add(input.getTimestamp().getMillis());
             for (DimensionAndMetricValueExtractor result : results) {
-              List<Object> vals = Lists.newArrayListWithCapacity(aggs.size() + 2);
+              List<Object> vals = Lists.newArrayListWithCapacity(aggFactoryNames.length + 2);
               vals.add(result.getStringDimensionValue(query.getDimensionSpec().getOutputName()));
-              for (AggregatorFactory agg : aggs) {
-                vals.add(result.getMetric(agg.getName()));
+              for (String aggName : aggFactoryNames) {
+                vals.add(result.getMetric(aggName));
               }
               retVal.add(vals);
             }
@@ -413,7 +452,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     @Override
     public Sequence<Result<TopNResultValue>> run(
         Query<Result<TopNResultValue>> input,
-        Map<String, Object> context
+        Map<String, Object> responseContext
     )
     {
       if (!(input instanceof TopNQuery)) {
@@ -422,13 +461,13 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       final TopNQuery query = (TopNQuery) input;
       if (query.getThreshold() > minTopNThreshold) {
-        return runner.run(query, context);
+        return runner.run(query, responseContext);
       }
 
       final boolean isBySegment = query.getContextBySegment(false);
 
       return Sequences.map(
-          runner.run(query.withThreshold(minTopNThreshold), context),
+          runner.run(query.withThreshold(minTopNThreshold), responseContext),
           new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
           {
             @Override
