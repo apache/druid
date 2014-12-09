@@ -78,8 +78,8 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
       "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
     },
     "metadataUpdateSpec" : {
-      "type":"mysql",
-      "connectURI" : "jdbc:mysql://localhost:3306/druid",
+      "type":"metadata",
+      "connectURI" : "jdbc:metadata storage://localhost:3306/druid",
       "password" : "diurd",
       "segmentTable" : "druid_segments",
       "user" : "druid"
@@ -158,7 +158,7 @@ This is a specification of the properties that tell the job how to update metada
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |type|String|"metadata" is the only value available.|yes|
-|connectURI|String|A valid JDBC url to MySQL.|yes|
+|connectURI|String|A valid JDBC url to metadata storage.|yes|
 |user|String|Username for db.|yes|
 |password|String|password for db.|yes|
 |segmentTable|String|Table to use in DB.|yes|

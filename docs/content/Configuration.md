@@ -241,7 +241,7 @@ This module is used to read announcements of segments in ZooKeeper. The configs 
 
 ### Database Connector Module
 
-These properties specify the jdbc connection and other configuration around the database. The only processes that connect to the DB with these properties are the [Coordinator](Coordinator.html) and [Indexing service](Indexing-service.html). This is tested on MySQL.
+These properties specify the jdbc connection and other configuration around the database. The only processes that connect to the DB with these properties are the [Coordinator](Coordinator.html) and [Indexing service](Indexing-service.html). This is tested on metadata storage.
 
 |Property|Description|Default|
 |--------|-----------|-------|
