@@ -167,7 +167,7 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
           "type": "realtime"
         }
       },
-      "driverConfig": {
+      "tuningConfig": {
         "type" : "realtime",
         "maxRowsInMemory": 500000,
         "intermediatePersistPeriod": "PT10m",
