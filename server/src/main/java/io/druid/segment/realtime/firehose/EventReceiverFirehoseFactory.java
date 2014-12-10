@@ -59,24 +59,23 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
   private final String serviceName;
   private final int bufferSize;
-  private final MapInputRowParser parser;
+  private final InputRowParser parser;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonCreator
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
-      @JsonProperty("parser") InputRowParser parser,
+      @JsonProperty("parser") InputRowParser parser, // backwards compatible
       @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    Preconditions.checkNotNull(parser, "parser");
     Preconditions.checkNotNull(serviceName, "serviceName");
 
     this.serviceName = serviceName;
     this.bufferSize = bufferSize == null || bufferSize <= 0 ? DEFAULT_BUFFER_SIZE : bufferSize;
     // this is really for backwards compatibility
-    this.parser = new MapInputRowParser(parser.getParseSpec(), null, null, null, null);
+    this.parser = parser == null ? null : parser;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
   }
 
@@ -113,7 +112,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
   }
 
   @JsonProperty
-  public MapInputRowParser getParser()
+  public InputRowParser getParser()
   {
     return parser;
   }
