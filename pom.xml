@@ -30,7 +30,7 @@
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.131-SNAPSHOT</tag>
+        <tag>druid-0.6.165-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
