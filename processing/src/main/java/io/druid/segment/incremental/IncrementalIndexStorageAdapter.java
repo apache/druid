@@ -123,6 +123,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public DateTime getMaxIngestedEventTime()
+  {
+    return index.getMaxIngestedEventTime();
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
   {
     if (index.isEmpty()) {

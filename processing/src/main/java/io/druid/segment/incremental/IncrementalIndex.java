@@ -68,6 +68,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>, Closeable
 {
+  private volatile DateTime maxIngestedEventTime;
+
   protected static ColumnSelectorFactory makeColumnSelectorFactory(
       final AggregatorFactory agg,
       final ThreadLocal<InputRow> in,
@@ -428,7 +430,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
 
     final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
-    return addToFacts(metrics, deserializeComplexMetrics, row, numEntries, key, in);
+    final Integer rv = addToFacts(metrics, deserializeComplexMetrics, row, numEntries, key, in);
+    updateMaxIngestedTime(row.getTimestamp());
+    return rv;
+  }
+
+  public synchronized void updateMaxIngestedTime(DateTime eventTime)
+  {
+    if (maxIngestedEventTime == null || maxIngestedEventTime.isBefore(eventTime)) {
+      maxIngestedEventTime = eventTime;
+    }
   }
 
   public boolean isEmpty()
@@ -589,6 +600,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         );
       }
     };
+  }
+
+  public DateTime getMaxIngestedEventTime()
+  {
+    return maxIngestedEventTime;
   }
 
   class DimensionHolder

@@ -28,6 +28,8 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
+import io.druid.query.ingestmetadata.IngestMetadataQuery;
+import io.druid.query.ingestmetadata.IngestMetadataQueryRunnerFactory;
 import io.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryRunnerFactory;
@@ -57,6 +59,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(GroupByQuery.class, GroupByQueryRunnerFactory.class)
                   .put(SelectQuery.class, SelectQueryRunnerFactory.class)
                   .put(TopNQuery.class, TopNQueryRunnerFactory.class)
+                  .put(IngestMetadataQuery.class, IngestMetadataQueryRunnerFactory.class)
                   .build();
 
   @Override
