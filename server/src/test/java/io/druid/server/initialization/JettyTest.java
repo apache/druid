@@ -101,7 +101,7 @@ public class JettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", 9999)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
