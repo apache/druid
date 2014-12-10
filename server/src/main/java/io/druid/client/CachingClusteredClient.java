@@ -68,7 +68,6 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -326,18 +325,52 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                 continue;
               }
 
-              final Sequence<T> resultSeqToAdd;
               final MultipleSpecificSegmentSpec segmentSpec = new MultipleSpecificSegmentSpec(descriptors);
               List<Interval> intervals = segmentSpec.getIntervals();
 
+              final Sequence<T> resultSeqToAdd;
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
-                resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
+                if (!isBySegment) {
+                  resultSeqToAdd = clientQueryable.run(query.withQuerySegmentSpec(segmentSpec), responseContext);
+                } else {
+                  @SuppressWarnings("unchecked")
+                  final Query<Result<BySegmentResultValueClass<T>>> bySegmentQuery = (Query<Result<BySegmentResultValueClass<T>>>) query;
 
+                  @SuppressWarnings("unchecked")
+                  final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
+                      bySegmentQuery.withQuerySegmentSpec(segmentSpec),
+                      responseContext
+                  );
+
+                  resultSeqToAdd = (Sequence) Sequences.map(
+                      resultSequence,
+                      new Function<Result<BySegmentResultValueClass<T>>, Result<BySegmentResultValueClass<T>>>()
+                      {
+                        @Override
+                        public Result<BySegmentResultValueClass<T>> apply(Result<BySegmentResultValueClass<T>> input)
+                        {
+                          final BySegmentResultValueClass<T> bySegmentValue = input.getValue();
+                          return new Result<>(
+                              input.getTimestamp(),
+                              new BySegmentResultValueClass<T>(
+                                  Lists.transform(
+                                      bySegmentValue.getResults(),
+                                      toolChest.makePreComputeManipulatorFn(
+                                          query,
+                                          MetricManipulatorFns.deserializing()
+                                      )
+                                  ),
+                                  bySegmentValue.getSegmentId(),
+                                  bySegmentValue.getInterval()
+                              )
+                          );
+                        }
+                      }
+                  );
+                }
               } else { // Requires some manipulation on broker side
-
-                final QueryRunner<Result<BySegmentResultValueClass<T>>> clientQueryableWithSegments = clientQueryable;
-
-                final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryableWithSegments.run(
+                @SuppressWarnings("unchecked")
+                final Sequence<Result<BySegmentResultValueClass<T>>> runningSequence = clientQueryable.run(
                     rewrittenQuery.withQuerySegmentSpec(segmentSpec),
                     responseContext
                 );
@@ -415,7 +448,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                     )
                 );
               }
-
 
               listOfSequences.add(
                   Pair.of(
