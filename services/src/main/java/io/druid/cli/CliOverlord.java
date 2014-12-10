@@ -239,11 +239,15 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
-      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
       root.addFilter(GzipFilter.class, "/*", null);
 
-      // Can't use /* here because of Guice and Jetty static content conflicts
+      // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);
+
+      // redirect anything other than status to the current lead
+      root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+
+      // Can't use /* here because of Guice and Jetty static content conflicts
       root.addFilter(GuiceFilter.class, "/druid/*", null);
 
       HandlerList handlerList = new HandlerList();
