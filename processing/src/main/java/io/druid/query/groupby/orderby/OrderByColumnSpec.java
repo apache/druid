@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -183,8 +184,8 @@ public class OrderByColumnSpec
 
   public byte[] getCacheKey()
   {
-    final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
-    final byte[] directionBytes = direction.name().getBytes(Charsets.UTF_8);
+    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    final byte[] directionBytes = StringUtils.toUtf8(direction.name());
 
     return ByteBuffer.allocate(dimensionBytes.length + directionBytes.length)
                      .put(dimensionBytes)

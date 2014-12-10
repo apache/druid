@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
+import com.metamx.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
 
@@ -114,7 +115,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
     } else if (object instanceof ByteBuffer) {
       return Histogram.fromBytes((ByteBuffer) object);
     } else if (object instanceof String) {
-      byte[] bytes = Base64.decodeBase64(((String) object).getBytes(Charsets.UTF_8));
+      byte[] bytes = Base64.decodeBase64(StringUtils.toUtf8((String) object));
       return Histogram.fromBytes(bytes);
     }
     return object;
@@ -154,7 +155,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes(Charsets.UTF_8);
+    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 

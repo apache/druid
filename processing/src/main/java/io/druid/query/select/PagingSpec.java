@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Ints;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
@@ -66,7 +67,7 @@ public class PagingSpec
     int pagingKeysSize = 0;
     int pagingValuesSize = 0;
     for (Map.Entry<String, Integer> entry : pagingIdentifiers.entrySet()) {
-      pagingKeys[index] = entry.getKey().getBytes(Charsets.UTF_8);
+      pagingKeys[index] = StringUtils.toUtf8(entry.getKey());
       pagingValues[index] = ByteBuffer.allocate(Ints.BYTES).putInt(entry.getValue()).array();
       pagingKeysSize += pagingKeys[index].length;
       pagingValuesSize += Ints.BYTES;

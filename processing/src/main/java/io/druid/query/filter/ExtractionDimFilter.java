@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.metamx.common.StringUtils;
 import io.druid.query.extraction.DimExtractionFn;
 
 import java.nio.ByteBuffer;
@@ -72,8 +73,8 @@ public class ExtractionDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
-    byte[] valueBytes = value.getBytes(Charsets.UTF_8);
+    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    byte[] valueBytes = StringUtils.toUtf8(value);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
                      .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)

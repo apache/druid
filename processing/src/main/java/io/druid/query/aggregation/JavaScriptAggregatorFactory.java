@@ -26,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
+import com.metamx.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.mozilla.javascript.Context;
@@ -211,8 +212,8 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-1");
-      byte[] fieldNameBytes = Joiner.on(",").join(fieldNames).getBytes(Charsets.UTF_8);
-      byte[] sha1 = md.digest((fnAggregate + fnReset + fnCombine).getBytes(Charsets.UTF_8));
+      byte[] fieldNameBytes = StringUtils.toUtf8(Joiner.on(",").join(fieldNames));
+      byte[] sha1 = md.digest(StringUtils.toUtf8(fnAggregate + fnReset + fnCombine));
 
       return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
                        .put(CACHE_TYPE_ID)

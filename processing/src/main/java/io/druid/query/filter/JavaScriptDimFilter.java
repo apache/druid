@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
@@ -58,8 +59,8 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
-    final byte[] functionBytes = function.getBytes(Charsets.UTF_8);
+    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    final byte[] functionBytes = StringUtils.toUtf8(function);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + functionBytes.length)
         .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)

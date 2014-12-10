@@ -26,6 +26,7 @@ import com.google.common.base.Charsets;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
+import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -139,7 +140,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes(Charsets.UTF_8);
+    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
                      .put(CACHE_TYPE_ID)
                      .put(fieldNameBytes)

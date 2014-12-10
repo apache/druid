@@ -22,6 +22,7 @@ package io.druid.query.search.search;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -66,7 +67,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     int valuesBytesSize = 0;
     int index = 0;
     for (String value : values) {
-      valuesBytes[index] = value.getBytes(Charsets.UTF_8);
+      valuesBytes[index] = StringUtils.toUtf8(value);
       valuesBytesSize += valuesBytes[index].length;
       ++index;
     }
