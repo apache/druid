@@ -60,13 +60,16 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     } else {
       root.setResourceBase(config.getConsoleStatic());
     }
-
-    root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
     root.addFilter(GzipFilter.class, "/*", null);
+
+    // /status should not redirect, so add first
+    root.addFilter(GuiceFilter.class, "/status/*", null);
+
+    // redirect anything other than status to the current lead
+    root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
 
     // Can't use '/*' here because of Guice and Jetty static content conflicts
     // The coordinator really needs a standarized api path
-    root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/info/*", null);
     root.addFilter(GuiceFilter.class, "/druid/coordinator/*", null);
     // this will be removed in the next major release
