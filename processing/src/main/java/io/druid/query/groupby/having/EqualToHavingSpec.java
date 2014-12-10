@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
+import com.metamx.common.StringUtils;
 import io.druid.data.input.Row;
 
 import java.nio.ByteBuffer;
@@ -72,7 +73,7 @@ public class EqualToHavingSpec implements HavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] aggBytes = aggregationName.getBytes(Charsets.UTF_8);
+    final byte[] aggBytes = StringUtils.toUtf8(aggregationName);
     final byte[] valBytes = Bytes.toArray(Arrays.asList(value));
     return ByteBuffer.allocate(1 + aggBytes.length + valBytes.length)
                      .put(CACHE_KEY)

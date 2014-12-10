@@ -35,6 +35,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.BinaryFn;
+import com.metamx.common.StringUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.query.CacheStrategy;
@@ -159,7 +160,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         int dimensionsBytesSize = 0;
         int index = 0;
         for (String dimension : dimensions) {
-          dimensionsBytes[index] = dimension.getBytes(Charsets.UTF_8);
+          dimensionsBytes[index] = StringUtils.toUtf8(dimension);
           dimensionsBytesSize += dimensionsBytes[index].length;
           ++index;
         }

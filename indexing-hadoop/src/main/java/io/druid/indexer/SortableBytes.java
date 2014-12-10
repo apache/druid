@@ -20,6 +20,7 @@
 package io.druid.indexer;
 
 import com.google.common.base.Charsets;
+import com.metamx.common.StringUtils;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Job;
@@ -76,8 +77,8 @@ public class SortableBytes
   public String toString()
   {
     return "SortableBytes{" +
-           "groupKey='" + new String(groupKey, Charsets.UTF_8) + '\'' +
-           ", sortKey='" + new String(sortKey, Charsets.UTF_8) + '\'' +
+           "groupKey='" + StringUtils.fromUtf8(groupKey) + '\'' +
+           ", sortKey='" + StringUtils.fromUtf8(sortKey) + '\'' +
            '}';
   }
 

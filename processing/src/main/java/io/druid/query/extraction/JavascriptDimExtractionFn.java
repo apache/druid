@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
+import com.metamx.common.StringUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -81,7 +82,7 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    byte[] bytes = function.getBytes(Charsets.UTF_8);
+    byte[] bytes = StringUtils.toUtf8(function);
     return ByteBuffer.allocate(1 + bytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(bytes)

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.metamx.collections.spatial.search.Bound;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
@@ -49,7 +50,7 @@ public class SpatialDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimBytes = dimension.getBytes(Charsets.UTF_8);
+    byte[] dimBytes = StringUtils.toUtf8(dimension);
     byte[] boundBytes = bound.getCacheKey();
 
     return ByteBuffer.allocate(1 + dimBytes.length + boundBytes.length)

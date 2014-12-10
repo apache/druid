@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.StringUtils;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.BitmapIndex;
@@ -122,7 +123,7 @@ public class SegmentAnalyzer
         String value = bitmapIndex.getValue(i);
 
         if (value != null) {
-          size += value.getBytes(Charsets.UTF_8).length * bitmapIndex.getBitmap(value).size();
+          size += StringUtils.toUtf8(value).length * bitmapIndex.getBitmap(value).size();
         }
       }
 

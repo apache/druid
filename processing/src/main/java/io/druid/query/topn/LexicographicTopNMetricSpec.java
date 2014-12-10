@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.UnsignedBytes;
+import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -50,7 +51,10 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       if (s2 == null) {
         return 1;
       }
-      return UnsignedBytes.lexicographicalComparator().compare(s.getBytes(Charsets.UTF_8), s2.getBytes(Charsets.UTF_8));
+      return UnsignedBytes.lexicographicalComparator().compare(
+          StringUtils.toUtf8(s),
+          StringUtils.toUtf8(s2)
+      );
     }
   };
 
@@ -105,7 +109,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] previousStopBytes = previousStop == null ? new byte[]{} : previousStop.getBytes(Charsets.UTF_8);
+    byte[] previousStopBytes = previousStop == null ? new byte[]{} : StringUtils.toUtf8(previousStop);
 
     return ByteBuffer.allocate(1 + previousStopBytes.length)
                      .put(CACHE_TYPE_ID)

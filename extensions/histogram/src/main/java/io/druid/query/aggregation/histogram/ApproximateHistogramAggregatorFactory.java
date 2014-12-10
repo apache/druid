@@ -27,6 +27,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
+import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.Aggregators;
@@ -153,7 +154,7 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
 
       return ah;
     } else if (object instanceof String) {
-      byte[] bytes = Base64.decodeBase64(((String) object).getBytes(Charsets.UTF_8));
+      byte[] bytes = Base64.decodeBase64(StringUtils.toUtf8((String) object));
       final ApproximateHistogram ah = ApproximateHistogram.fromBytes(bytes);
       ah.setLowerLimit(lowerLimit);
       ah.setUpperLimit(upperLimit);
@@ -216,7 +217,7 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes(Charsets.UTF_8);
+    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
                      .put(CACHE_TYPE_ID)
                      .put(fieldNameBytes)

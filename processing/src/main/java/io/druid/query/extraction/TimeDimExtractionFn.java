@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.ibm.icu.text.SimpleDateFormat;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.text.ParseException;
@@ -56,7 +57,7 @@ public class TimeDimExtractionFn implements DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    byte[] timeFormatBytes = timeFormat.getBytes(Charsets.UTF_8);
+    byte[] timeFormatBytes = StringUtils.toUtf8(timeFormat);
     return ByteBuffer.allocate(1 + timeFormatBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(timeFormatBytes)

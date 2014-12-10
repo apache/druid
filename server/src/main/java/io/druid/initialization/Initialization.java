@@ -32,6 +32,7 @@ import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.StringUtils;
 import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
@@ -312,7 +313,7 @@ public class Initialization
 
                 }
               }
-          , false, Charsets.UTF_8.name())
+          , false, StringUtils.UTF8_STRING)
       );
       return new DefaultTeslaAether(
           config.getLocalRepository(),
