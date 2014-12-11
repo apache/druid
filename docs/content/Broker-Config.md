@@ -8,34 +8,93 @@ For general Broker Node information, see [here](Broker.html).
 Runtime Configuration
 ---------------------
 
-The broker module uses several of the default modules in [Configuration](Configuration.html) and has the following set of configurations as well:
+The broker node uses several of the global configs in [Configuration](Configuration.html) and has the following set of configurations as well:
+
+### Node Configs
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|none|
+|`druid.port`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|none|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|none|
+
+### Query Configs
+
+#### Query Prioritization
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to historical nodes. `random` choose randomly, `connectionCount` picks the node with the fewest number of active connections to|`random`|
 |`druid.broker.select.tier`|`highestPriority`, `lowestPriority`, `custom`|If segments are cross-replicated across tiers in a cluster, you can tell the broker to prefer to select segments in a tier with a certain priority.|`highestPriority`|
 |`druid.broker.select.tier.custom.priorities`|`An array of integer priorities.`|Select servers in tiers with a custom priority list.|None|
-|`druid.broker.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
-|`druid.broker.cache.numBackgroundThreads`|Non-negative integer|Number of background threads in the thread pool to use for eventual-consistency caching results if caching is used. It is recommended to set this value greater or equal to the number of processing threads. To force caching to execute in the same thread as the query (query results are blocked on caching completion), use a thread count of 0. Setups who use a Druid backend in programatic settings (sub-second re-querying) should consider setting this to 0 to prevent eventual consistency from biting overall performance in the ass. If this is you, please experiment to find out what setting works best. |`0`|
 
+#### Concurrent Requests
+
+Druid uses Jetty to serve HTTP requests.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.http.numThreads`|Number of threads for HTTP requests.|10|
+|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5m|
+|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time nodes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|5|
+|`druid.broker.http.readTimeout`|The timeout for data reads.|PT15M|
+
+#### Processing
+
+The broker only uses processing configs for nested groupBy queries.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
+|`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
+|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
+|`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
+
+#### General Query Configuration
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.chunkPeriod`|Long-interval queries (of any type) may be broken into shorter interval queries, reducing the impact on resources. Use ISO 8601 periods. For example, if this property is set to `P1M` (one month), then a query covering a year would be broken into 12 smaller queries. |0 (off)|
+
+##### GroupBy Query Config
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.groupBy.singleThreaded`|Run single threaded group By queries.|false|
+|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows.|50000|
+|`druid.query.groupBy.maxResults`|Maximum number of results.|500000|
+
+##### Search Query Config
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.search.maxSearchLimit`|Maximum number of search results to return.|1000|
+
+### Caching
+
+You can optionally only configure caching to be enabled on the broker by setting caching configs here.
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.broker.cache.useCache`|Enable the cache on the broker.|false|
+|`druid.broker.cache.populateCache`|Populate the cache on the broker.|false|
+|`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
+|`druid.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
 
 #### Local Cache
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
-|`druid.broker.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
-|`druid.broker.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
-|`druid.broker.cache.numBackgroundThreads`|Number of background threads in the thread pool to use for eventual-consistency caching results if caching is used. It is recommended to set this value greater or equal to the number of processing threads. To force caching to execute in the same thread as the query (query results are blocked on caching completion), use a thread count of 0. Setups who use a Druid backend in programatic settings (sub-second re-querying) should consider setting this to 0 to prevent eventual consistency from biting overall performance in the ass. If this is you, please experiment to find out what setting works best. |`0`|
-
+|`druid.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
+|`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
+|`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 
 #### Memcache
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
-|`druid.broker.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
-|`druid.broker.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`.|none|
-|`druid.broker.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
-|`druid.broker.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+|`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
+|`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
+|`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
+|`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
+|`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
