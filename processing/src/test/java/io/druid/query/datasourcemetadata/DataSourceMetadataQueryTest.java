@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -35,10 +36,13 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -107,7 +111,9 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testMaxIngestedEventTime() throws Exception
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
+    final IncrementalIndex rtIndex = new OnheapIncrementalIndex(
+        0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000
+    );;
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
