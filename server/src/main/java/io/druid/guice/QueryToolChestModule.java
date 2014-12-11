@@ -29,8 +29,8 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
-import io.druid.query.ingestmetadata.IngestMetadataQuery;
-import io.druid.query.ingestmetadata.IngestMetadataQueryQueryToolChest;
+import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
+import io.druid.query.datasourcemetadata.DataSourceQueryQueryToolChest;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchQueryQueryToolChest;
@@ -61,7 +61,7 @@ public class QueryToolChestModule implements Module
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
                   .put(SelectQuery.class, SelectQueryQueryToolChest.class)
                   .put(TopNQuery.class, TopNQueryQueryToolChest.class)
-                  .put(IngestMetadataQuery.class, IngestMetadataQueryQueryToolChest.class)
+                  .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
                   .build();
 
   @Override

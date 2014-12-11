@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.ingestmetadata;
+package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
@@ -46,15 +46,15 @@ import java.util.Map;
 
 /**
  */
-public class IngestMetadataQueryQueryToolChest
-    extends QueryToolChest<Result<IngestMetadataResultValue>, IngestMetadataQuery>
+public class DataSourceQueryQueryToolChest
+    extends QueryToolChest<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final TypeReference<Result<IngestMetadataResultValue>> TYPE_REFERENCE = new TypeReference<Result<IngestMetadataResultValue>>()
+  private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE = new TypeReference<Result<DataSourceMetadataResultValue>>()
   {
   };
 
   @Override
-  public <T extends LogicalSegment> List<T> filterSegments(IngestMetadataQuery query, List<T> segments)
+  public <T extends LogicalSegment> List<T> filterSegments(DataSourceMetadataQuery query, List<T> segments)
   {
     if (segments.size() <= 1) {
       return segments;
@@ -80,25 +80,25 @@ public class IngestMetadataQueryQueryToolChest
   }
 
   @Override
-  public QueryRunner<Result<IngestMetadataResultValue>> mergeResults(
-      final QueryRunner<Result<IngestMetadataResultValue>> runner
+  public QueryRunner<Result<DataSourceMetadataResultValue>> mergeResults(
+      final QueryRunner<Result<DataSourceMetadataResultValue>> runner
   )
   {
-    return new BySegmentSkippingQueryRunner<Result<IngestMetadataResultValue>>(runner)
+    return new BySegmentSkippingQueryRunner<Result<DataSourceMetadataResultValue>>(runner)
     {
       @Override
-      protected Sequence<Result<IngestMetadataResultValue>> doRun(
-          QueryRunner<Result<IngestMetadataResultValue>> baseRunner,
-          Query<Result<IngestMetadataResultValue>> input,
+      protected Sequence<Result<DataSourceMetadataResultValue>> doRun(
+          QueryRunner<Result<DataSourceMetadataResultValue>> baseRunner,
+          Query<Result<DataSourceMetadataResultValue>> input,
           Map<String, Object> context
       )
       {
-        IngestMetadataQuery query = (IngestMetadataQuery) input;
+        DataSourceMetadataQuery query = (DataSourceMetadataQuery) input;
         return Sequences.simple(
             query.mergeResults(
                 Sequences.toList(
                     baseRunner.run(query, context),
-                    Lists.<Result<IngestMetadataResultValue>>newArrayList()
+                    Lists.<Result<DataSourceMetadataResultValue>>newArrayList()
                 )
             )
         );
@@ -107,19 +107,19 @@ public class IngestMetadataQueryQueryToolChest
   }
 
   @Override
-  public Sequence<Result<IngestMetadataResultValue>> mergeSequences(Sequence<Sequence<Result<IngestMetadataResultValue>>> seqOfSequences)
+  public Sequence<Result<DataSourceMetadataResultValue>> mergeSequences(Sequence<Sequence<Result<DataSourceMetadataResultValue>>> seqOfSequences)
   {
     return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
-  public Sequence<Result<IngestMetadataResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<IngestMetadataResultValue>>> seqOfSequences)
+  public Sequence<Result<DataSourceMetadataResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<DataSourceMetadataResultValue>>> seqOfSequences)
   {
     return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
-  public ServiceMetricEvent.Builder makeMetricBuilder(IngestMetadataQuery query)
+  public ServiceMetricEvent.Builder makeMetricBuilder(DataSourceMetadataQuery query)
   {
     return new ServiceMetricEvent.Builder()
         .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
@@ -128,26 +128,26 @@ public class IngestMetadataQueryQueryToolChest
   }
 
   @Override
-  public Function<Result<IngestMetadataResultValue>, Result<IngestMetadataResultValue>> makePreComputeManipulatorFn(
-      IngestMetadataQuery query, MetricManipulationFn fn
+  public Function<Result<DataSourceMetadataResultValue>, Result<DataSourceMetadataResultValue>> makePreComputeManipulatorFn(
+      DataSourceMetadataQuery query, MetricManipulationFn fn
   )
   {
     return Functions.identity();
   }
 
   @Override
-  public TypeReference<Result<IngestMetadataResultValue>> getResultTypeReference()
+  public TypeReference<Result<DataSourceMetadataResultValue>> getResultTypeReference()
   {
     return TYPE_REFERENCE;
   }
 
   @Override
-  public CacheStrategy getCacheStrategy(IngestMetadataQuery query)
+  public CacheStrategy getCacheStrategy(DataSourceMetadataQuery query)
   {
     return null;
   }
 
-  public Ordering<Result<IngestMetadataResultValue>> getOrdering()
+  public Ordering<Result<DataSourceMetadataResultValue>> getOrdering()
   {
     return Ordering.natural();
   }

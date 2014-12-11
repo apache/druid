@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.ingestmetadata;
+package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -39,7 +39,7 @@ import java.util.Map;
 
 /**
  */
-public class IngestMetadataQuery extends BaseQuery<Result<IngestMetadataResultValue>>
+public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadataResultValue>>
 {
   public static final Interval MY_Y2K_INTERVAL = new Interval(
       new DateTime("0000-01-01"),
@@ -50,7 +50,7 @@ public class IngestMetadataQuery extends BaseQuery<Result<IngestMetadataResultVa
 
 
   @JsonCreator
-  public IngestMetadataQuery(
+  public DataSourceMetadataQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("context") Map<String, Object> context
@@ -73,13 +73,13 @@ public class IngestMetadataQuery extends BaseQuery<Result<IngestMetadataResultVa
   @Override
   public String getType()
   {
-    return Query.INGEST_METADATA;
+    return Query.DATASOURCE_METADATA;
   }
 
   @Override
-  public IngestMetadataQuery withOverriddenContext(Map<String, Object> contextOverrides)
+  public DataSourceMetadataQuery withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new IngestMetadataQuery(
+    return new DataSourceMetadataQuery(
         getDataSource(),
         getQuerySegmentSpec(),
         computeOverridenContext(contextOverrides)
@@ -87,9 +87,9 @@ public class IngestMetadataQuery extends BaseQuery<Result<IngestMetadataResultVa
   }
 
   @Override
-  public IngestMetadataQuery withQuerySegmentSpec(QuerySegmentSpec spec)
+  public DataSourceMetadataQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new IngestMetadataQuery(
+    return new DataSourceMetadataQuery(
         getDataSource(),
         spec,
         getContext()
@@ -97,38 +97,38 @@ public class IngestMetadataQuery extends BaseQuery<Result<IngestMetadataResultVa
   }
 
   @Override
-  public Query<Result<IngestMetadataResultValue>> withDataSource(DataSource dataSource)
+  public Query<Result<DataSourceMetadataResultValue>> withDataSource(DataSource dataSource)
   {
-    return new IngestMetadataQuery(
+    return new DataSourceMetadataQuery(
         dataSource,
         getQuerySegmentSpec(),
         getContext()
     );
   }
 
-  public Iterable<Result<IngestMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)
+  public Iterable<Result<DataSourceMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)
   {
-    List<Result<IngestMetadataResultValue>> results = Lists.newArrayList();
+    List<Result<DataSourceMetadataResultValue>> results = Lists.newArrayList();
     Map<String, Object> result = Maps.newHashMap();
 
     if (maxIngestedEventTime != null) {
       result.put(MAX_INGESTED_EVENT_TIME, maxIngestedEventTime);
     }
     if (!result.isEmpty()) {
-      results.add(new Result<>(timestamp, new IngestMetadataResultValue(result)));
+      results.add(new Result<>(timestamp, new DataSourceMetadataResultValue(result)));
     }
 
     return results;
   }
 
-  public Iterable<Result<IngestMetadataResultValue>> mergeResults(List<Result<IngestMetadataResultValue>> results)
+  public Iterable<Result<DataSourceMetadataResultValue>> mergeResults(List<Result<DataSourceMetadataResultValue>> results)
   {
     if (results == null || results.isEmpty()) {
       return Lists.newArrayList();
     }
 
     DateTime max = new DateTime(JodaUtils.MIN_INSTANT);
-    for (Result<IngestMetadataResultValue> result : results) {
+    for (Result<DataSourceMetadataResultValue> result : results) {
       DateTime currMaxIngestedEventTime = result.getValue().getMaxIngestedEventTime();
       if (currMaxIngestedEventTime != null && currMaxIngestedEventTime.isAfter(max)) {
         max = currMaxIngestedEventTime;
@@ -141,7 +141,7 @@ public class IngestMetadataQuery extends BaseQuery<Result<IngestMetadataResultVa
   @Override
   public String toString()
   {
-    return "IngestMetadataQuery{" +
+    return "DataSourceMetadataQuery{" +
            "dataSource='" + getDataSource() + '\'' +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", duration=" + getDuration() +

@@ -29,7 +29,7 @@ import io.druid.query.filter.NoopDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
-import io.druid.query.ingestmetadata.IngestMetadataQuery;
+import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
@@ -1102,88 +1102,88 @@ public class Druids
   }
 
   /**
-   * A Builder for IngestMetadataQuery.
+   * A Builder for DataSourceMetadataQuery.
    *
    * Required: dataSource() must be called before build()
    *
    * Usage example:
    * <pre><code>
-   *   IngestMetadataQueryBuilder query = new IngestMetadataQueryBuilder()
+   *   DataSourceMetadataQueryBuilder query = new DataSourceMetadataQueryBuilder()
    *                                  .dataSource("Example")
    *                                  .build();
    * </code></pre>
    *
-   * @see io.druid.query.ingestmetadata.IngestMetadataQuery
+   * @see io.druid.query.datasourcemetadata.DataSourceMetadataQuery
    */
-  public static class IngestMetadataQueryBuilder
+  public static class DataSourceMetadataQueryBuilder
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private Map<String, Object> context;
 
-    public IngestMetadataQueryBuilder()
+    public DataSourceMetadataQueryBuilder()
     {
       dataSource = null;
       querySegmentSpec = null;
       context = null;
     }
 
-    public IngestMetadataQuery build()
+    public DataSourceMetadataQuery build()
     {
-      return new IngestMetadataQuery(
+      return new DataSourceMetadataQuery(
           dataSource,
           querySegmentSpec,
           context
       );
     }
 
-    public IngestMetadataQueryBuilder copy(IngestMetadataQueryBuilder builder)
+    public DataSourceMetadataQueryBuilder copy(DataSourceMetadataQueryBuilder builder)
     {
-      return new IngestMetadataQueryBuilder()
+      return new DataSourceMetadataQueryBuilder()
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
           .context(builder.context);
     }
 
-    public IngestMetadataQueryBuilder dataSource(String ds)
+    public DataSourceMetadataQueryBuilder dataSource(String ds)
     {
       dataSource = new TableDataSource(ds);
       return this;
     }
 
-    public IngestMetadataQueryBuilder dataSource(DataSource ds)
+    public DataSourceMetadataQueryBuilder dataSource(DataSource ds)
     {
       dataSource = ds;
       return this;
     }
 
-    public IngestMetadataQueryBuilder intervals(QuerySegmentSpec q)
+    public DataSourceMetadataQueryBuilder intervals(QuerySegmentSpec q)
     {
       querySegmentSpec = q;
       return this;
     }
 
-    public IngestMetadataQueryBuilder intervals(String s)
+    public DataSourceMetadataQueryBuilder intervals(String s)
     {
       querySegmentSpec = new LegacySegmentSpec(s);
       return this;
     }
 
-    public IngestMetadataQueryBuilder intervals(List<Interval> l)
+    public DataSourceMetadataQueryBuilder intervals(List<Interval> l)
     {
       querySegmentSpec = new LegacySegmentSpec(l);
       return this;
     }
 
-    public IngestMetadataQueryBuilder context(Map<String, Object> c)
+    public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
       context = c;
       return this;
     }
   }
 
-  public static IngestMetadataQueryBuilder newIngestMetadataQueryBuilder()
+  public static DataSourceMetadataQueryBuilder newDataSourceMetadataQueryBuilder()
   {
-    return new IngestMetadataQueryBuilder();
+    return new DataSourceMetadataQueryBuilder();
   }
 }

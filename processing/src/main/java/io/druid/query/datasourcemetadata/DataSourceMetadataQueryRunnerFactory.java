@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.ingestmetadata;
+package io.druid.query.datasourcemetadata;
 
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
@@ -39,27 +39,27 @@ import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class IngestMetadataQueryRunnerFactory
-    implements QueryRunnerFactory<Result<IngestMetadataResultValue>, IngestMetadataQuery>
+public class DataSourceMetadataQueryRunnerFactory
+    implements QueryRunnerFactory<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final IngestMetadataQueryQueryToolChest toolChest = new IngestMetadataQueryQueryToolChest();
+  private static final DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest();
   private final QueryWatcher queryWatcher;
 
   @Inject
-  public IngestMetadataQueryRunnerFactory(QueryWatcher queryWatcher)
+  public DataSourceMetadataQueryRunnerFactory(QueryWatcher queryWatcher)
   {
     this.queryWatcher = queryWatcher;
   }
 
   @Override
-  public QueryRunner<Result<IngestMetadataResultValue>> createRunner(final Segment segment)
+  public QueryRunner<Result<DataSourceMetadataResultValue>> createRunner(final Segment segment)
   {
-    return new IngestMetadataQueryRunner(segment);
+    return new DataSourceMetadataQueryRunner(segment);
   }
 
   @Override
-  public QueryRunner<Result<IngestMetadataResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<IngestMetadataResultValue>>> queryRunners
+  public QueryRunner<Result<DataSourceMetadataResultValue>> mergeRunners(
+      ExecutorService queryExecutor, Iterable<QueryRunner<Result<DataSourceMetadataResultValue>>> queryRunners
   )
   {
     return new ChainedExecutionQueryRunner<>(
@@ -68,37 +68,37 @@ public class IngestMetadataQueryRunnerFactory
   }
 
   @Override
-  public QueryToolChest<Result<IngestMetadataResultValue>, IngestMetadataQuery> getToolchest()
+  public QueryToolChest<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery> getToolchest()
   {
     return toolChest;
   }
 
-  private static class IngestMetadataQueryRunner implements QueryRunner<Result<IngestMetadataResultValue>>
+  private static class DataSourceMetadataQueryRunner implements QueryRunner<Result<DataSourceMetadataResultValue>>
   {
     private final StorageAdapter adapter;
 
-    public IngestMetadataQueryRunner(Segment segment)
+    public DataSourceMetadataQueryRunner(Segment segment)
     {
       this.adapter = segment.asStorageAdapter();
     }
 
     @Override
-    public Sequence<Result<IngestMetadataResultValue>> run(
-        Query<Result<IngestMetadataResultValue>> input,
+    public Sequence<Result<DataSourceMetadataResultValue>> run(
+        Query<Result<DataSourceMetadataResultValue>> input,
         Map<String, Object> responseContext
     )
     {
-      if (!(input instanceof IngestMetadataQuery)) {
-        throw new ISE("Got a [%s] which isn't a %s", input.getClass(), IngestMetadataQuery.class);
+      if (!(input instanceof DataSourceMetadataQuery)) {
+        throw new ISE("Got a [%s] which isn't a %s", input.getClass().getCanonicalName(), DataSourceMetadataQuery.class);
       }
 
-      final IngestMetadataQuery legacyQuery = (IngestMetadataQuery) input;
+      final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) input;
 
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Result<IngestMetadataResultValue>, Iterator<Result<IngestMetadataResultValue>>>()
+          new BaseSequence.IteratorMaker<Result<DataSourceMetadataResultValue>, Iterator<Result<DataSourceMetadataResultValue>>>()
           {
             @Override
-            public Iterator<Result<IngestMetadataResultValue>> make()
+            public Iterator<Result<DataSourceMetadataResultValue>> make()
             {
               if (adapter == null) {
                 throw new ISE(
@@ -113,7 +113,7 @@ public class IngestMetadataQueryRunnerFactory
             }
 
             @Override
-            public void cleanup(Iterator<Result<IngestMetadataResultValue>> toClean)
+            public void cleanup(Iterator<Result<DataSourceMetadataResultValue>> toClean)
             {
 
             }

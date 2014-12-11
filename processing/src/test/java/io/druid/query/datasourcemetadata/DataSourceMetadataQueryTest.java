@@ -19,7 +19,7 @@
  * under the Druid Corporate Contributor License Agreement.
  */
 
-package io.druid.query.ingestmetadata;
+package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -50,14 +50,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class IngestMetadataQueryTest
+public class DataSourceMetadataQueryTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testQuerySerialization() throws IOException
   {
-    Query query = Druids.newIngestMetadataQueryBuilder()
+    Query query = Druids.newDataSourceMetadataQueryBuilder()
                         .dataSource("testing")
                         .build();
 
@@ -70,7 +70,7 @@ public class IngestMetadataQueryTest
   @Test
   public void testContextSerde() throws Exception
   {
-    final IngestMetadataQuery query = Druids.newIngestMetadataQueryBuilder()
+    final DataSourceMetadataQuery query = Druids.newDataSourceMetadataQueryBuilder()
                                             .dataSource("foo")
                                             .intervals("2013/2014")
                                             .context(
@@ -109,7 +109,7 @@ public class IngestMetadataQueryTest
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
-        (QueryRunnerFactory) new IngestMetadataQueryRunnerFactory(
+        (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ), new IncrementalIndexSegment(rtIndex, "test")
     );
@@ -121,16 +121,16 @@ public class IngestMetadataQueryTest
             ImmutableMap.<String, Object>of("dim1", "x")
         )
     );
-    IngestMetadataQuery ingestMetadataQuery = Druids.newIngestMetadataQueryBuilder()
+    DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                     .dataSource("testing")
                                                     .build();
     Map<String, Object> context = new MapMaker().makeMap();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    Iterable<Result<IngestMetadataResultValue>> results = Sequences.toList(
-        runner.run(ingestMetadataQuery, context),
-        Lists.<Result<IngestMetadataResultValue>>newArrayList()
+    Iterable<Result<DataSourceMetadataResultValue>> results = Sequences.toList(
+        runner.run(dataSourceMetadataQuery, context),
+        Lists.<Result<DataSourceMetadataResultValue>>newArrayList()
     );
-    IngestMetadataResultValue val = results.iterator().next().getValue();
+    DataSourceMetadataResultValue val = results.iterator().next().getValue();
     DateTime maxIngestedEventTime = val.getMaxIngestedEventTime();
 
     Assert.assertEquals(timestamp, maxIngestedEventTime);

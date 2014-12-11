@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.query.ingestmetadata;
+package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -28,12 +28,12 @@ import java.util.Map;
 
 /**
  */
-public class IngestMetadataResultValue
+public class DataSourceMetadataResultValue
 {
   private final Object value;
 
   @JsonCreator
-  public IngestMetadataResultValue(
+  public DataSourceMetadataResultValue(
       Object value
   )
   {
@@ -49,7 +49,7 @@ public class IngestMetadataResultValue
   public DateTime getMaxIngestedEventTime()
   {
     if (value instanceof Map) {
-      return getDateTimeValue(((Map) value).get(IngestMetadataQuery.MAX_INGESTED_EVENT_TIME));
+      return getDateTimeValue(((Map) value).get(DataSourceMetadataQuery.MAX_INGESTED_EVENT_TIME));
     } else {
       return getDateTimeValue(value);
     }
@@ -65,7 +65,7 @@ public class IngestMetadataResultValue
       return false;
     }
 
-    IngestMetadataResultValue that = (IngestMetadataResultValue) o;
+    DataSourceMetadataResultValue that = (DataSourceMetadataResultValue) o;
 
     if (value != null ? !value.equals(that.value) : that.value != null) {
       return false;
@@ -83,7 +83,7 @@ public class IngestMetadataResultValue
   @Override
   public String toString()
   {
-    return "IngestMetadataResultValue{" +
+    return "DataSourceMetadataResultValue{" +
            "value=" + value +
            '}';
   }
