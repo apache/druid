@@ -27,7 +27,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.BaseJettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -39,11 +39,10 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.AsyncGzipFilter;
 
 /**
  */
-public class RouterJettyServerInitializer implements JettyServerInitializer
+public class RouterJettyServerInitializer extends BaseJettyServerInitializer
 {
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -86,7 +85,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
             )
         ), "/druid/v2/*"
     );
-    queries.addFilter(AsyncGzipFilter.class, "/druid/v2/*", null);
+    queries.addFilter(defaultAsyncGzipFilterHolder(), "/druid/v2/*", null);
     queries.addFilter(GuiceFilter.class, "/status/*", null);
 
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
