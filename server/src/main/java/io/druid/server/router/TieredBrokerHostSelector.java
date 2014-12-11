@@ -184,7 +184,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     }
 
-    ServerDiscoverySelector retVal = selectorMap.get(CuratorServiceUtils.makeCanonicalServiceName(brokerServiceName));
+    ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
 
     if (retVal == null) {
       log.error(
@@ -192,7 +192,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
       );
-      retVal = selectorMap.get(CuratorServiceUtils.makeCanonicalServiceName(tierConfig.getDefaultBrokerServiceName()));
+      retVal = selectorMap.get(tierConfig.getDefaultBrokerServiceName());
     }
 
     return new Pair<>(brokerServiceName, retVal);
@@ -201,7 +201,7 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
   public Pair<String, ServerDiscoverySelector> getDefaultLookup()
   {
     final String brokerServiceName = tierConfig.getDefaultBrokerServiceName();
-    final ServerDiscoverySelector retVal = selectorMap.get(CuratorServiceUtils.makeCanonicalServiceName(brokerServiceName));
+    final ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
     return new Pair<>(brokerServiceName, retVal);
   }
 }
