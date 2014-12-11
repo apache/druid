@@ -15,7 +15,6 @@ The previous examples are for Kafka 7. To support Kafka 8, a couple changes need
   - `firehose.type`, `plumber.rejectionPolicyFactory`, and all of `firehose.consumerProps` changes.
 
 ```json
-
     "firehose" : {
         "type" : "kafka-0.8",
         "consumerProps" : {
@@ -28,27 +27,9 @@ The previous examples are for Kafka 7. To support Kafka 8, a couple changes need
             "auto.offset.reset": "largest",
             "auto.commit.enable": "false"
         },
-        "feed" : "druidtest",
-        "parser" : {
-            "timestampSpec" : {
-                "column" : "utcdt",
-                "format" : "iso"
-            },
-            "data" : {
-                "format" : "json"
-            },
-            "dimensionExclusions" : [
-                "wp"
-            ]
-        }
+        "feed" : "druidtest"
     },
     "plumber" : {
-        "type" : "realtime",
-        "windowPeriod" : "PT10m",
-        "segmentGranularity":"hour",
-        "basePersistDirectory" : "/tmp/realtime/basePersist",
-        "rejectionPolicyFactory": {
-            "type": "messageTime"
-        }
+        "type" : "realtime"
     }
 ```

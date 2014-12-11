@@ -17,7 +17,7 @@ Make sure that the `druid.publish.type` on your real-time nodes is set to `metad
 ```
 druid.publish.type=metadata
 
-druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.metadata.storage.connector.connectURI=jdbc\:metadata storage\://localhost\:3306/druid
 druid.metadata.storage.connector.user=druid
 druid.metadata.storage.connector.password=diurd
 

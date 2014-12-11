@@ -10,9 +10,8 @@ h2. Introduction
 h2. Getting Started
 * "Tutorial: A First Look at Druid":./Tutorial:-A-First-Look-at-Druid.html
 * "Tutorial: The Druid Cluster":./Tutorial:-The-Druid-Cluster.html
-* "Tutorial: Loading Your Data Part 1":./Tutorial:-Loading-Your-Data-Part-1.html
-* "Tutorial: Loading Your Data Part 2":./Tutorial:-Loading-Your-Data-Part-2.html
-* "Tutorial: All About Queries":./Tutorial:-All-About-Queries.html
+* "Tutorial: Loading Streaming Data":./Tutorial:-Loading-Streaming-Data.html
+* "Tutorial: Loading Batch Data":./Tutorial:-Loading-Batch-Data.html
 
 h2. Booting a Druid Cluster
 * "Simple Cluster Configuration":Simple-Cluster-Configuration.html
@@ -78,7 +77,7 @@ h2. Architecture
 *** "Peon":./Peons.html
 * External Dependencies
 ** "Deep Storage":./Deep-Storage.html
-** "Metadata Storage":./MySQL.html
+** "Metadata Storage":./Metadata-storage.html
 ** "ZooKeeper":./ZooKeeper.html
 
 h2. Experimental

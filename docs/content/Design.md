@@ -31,7 +31,7 @@ The node types that currently exist are:
 
 * [**Historical**](Historical.html) nodes are the workhorses that handle storage and querying on "historical" data (non-realtime). Historical nodes download segments from deep storage, respond to the queries from broker nodes about these segments, and return results to the broker nodes. They announce themselves and the segments they are serving in Zookeeper, and also use Zookeeper to monitor for signals to load or drop new segments.
 * [**Realtime**](Realtime.html) nodes ingest data in real time. They are in charge of listening to a stream of incoming data and making it available immediately inside the Druid system. Real-time nodes respond to query requests from Broker nodes, returning query results to those nodes. Aged data is pushed from Realtime nodes to Historical nodes.
-* [**Coordinator**](Coordinator.html) nodes monitor the grouping of historical nodes to ensure that data is available, replicated and in a generally "optimal" configuration. They do this by reading segment metadata information from MySQL to determine what segments should be loaded in the cluster, using Zookeeper to determine what Historical nodes exist, and creating Zookeeper entries to tell Historical nodes to load and drop new segments.
+* [**Coordinator**](Coordinator.html) nodes monitor the grouping of historical nodes to ensure that data is available, replicated and in a generally "optimal" configuration. They do this by reading segment metadata information from metadata storage to determine what segments should be loaded in the cluster, using Zookeeper to determine what Historical nodes exist, and creating Zookeeper entries to tell Historical nodes to load and drop new segments.
 * [**Broker**](Broker.html) nodes receive queries from external clients and forward those queries to Realtime and Historical nodes. When Broker nodes receive results, they merge these results and return them to the caller. For knowing topology, Broker nodes use Zookeeper to determine what Realtime and Historical nodes exist.
 * [**Indexer**](Indexing-Service.html) nodes form a cluster of workers to load batch and real-time data into the system as well as allow for alterations to the data stored in the system (also known as the Indexing Service).
 
@@ -46,7 +46,7 @@ All nodes can be run in some highly available fashion, either as symmetric peers
 Aside from these nodes, there are 3 external dependencies to the system:
 
 1.  A running [ZooKeeper](ZooKeeper.html) cluster for cluster service discovery and maintenance of current data topology
-2.  A [MySQL instance](MySQL.html) for maintenance of metadata about the data segments that should be served by the system
+2.  A [metadata storage instance](Metadata-storage.html) for maintenance of metadata about the data segments that should be served by the system
 3.  A ["deep storage" LOB store/file system](Deep-Storage.html) to hold the stored segments
 
 The following diagram illustrates the cluster's management layer, showing how certain nodes and dependencies help manage the cluster by tracking and exchanging metadata:
@@ -70,7 +70,7 @@ The output of the indexing process is stored in a "deep storage" LOB store/file 
 
 If a Historical node dies, it will no longer serve its segments, but given that the segments are still available on the "deep storage", any other node can simply download the segment and start serving it. This means that it is possible to actually remove all historical nodes from the cluster and then re-provision them without any data loss. It also means that if the "deep storage" is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
 
-In order for a segment to exist inside of the cluster, an entry has to be added to a table in a MySQL instance. This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its location on deep storage. These entries are what the Coordinator uses to know what data **should** be available on the cluster.
+In order for a segment to exist inside of the cluster, an entry has to be added to a table in a metadata storage instance. This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its location on deep storage. These entries are what the Coordinator uses to know what data **should** be available on the cluster.
 
 ### Fault Tolerance
 
@@ -79,7 +79,7 @@ In order for a segment to exist inside of the cluster, an entry has to be added 
 -   **Broker** Can be run in parallel or in hot fail-over.
 -   **Realtime** Depending on the semantics of the delivery stream, multiple of these can be run in parallel processing the exact same stream. They periodically checkpoint to disk and eventually push out to the Historical nodes. Steps are taken to be able to recover from process death, but loss of access to the local disk can result in data loss if this is the only method of adding data to the system.
 -   **"deep storage" file system** If this is not available, new data will not be able to enter the cluster, but the cluster will continue operating as is.
--   **MySQL** If this is not available, the Coordinator will be unable to find out about new segments in the system, but it will continue with its current view of the segments that should exist in the cluster.
+-   **metadata storage** If this is not available, the Coordinator will be unable to find out about new segments in the system, but it will continue with its current view of the segments that should exist in the cluster.
 -   **ZooKeeper** If this is not available, data topology changes cannot be made, but the Brokers will maintain their most recent view of the data topology and continue serving requests accordingly.
 
 ### Query processing
