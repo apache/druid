@@ -210,22 +210,22 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
       };
 
       private long rowCount = 0L;
-      private boolean waitIfmax = (maxEventCount < 0L);
+      private boolean waitIfmax = (getMaxEventCount() < 0L);
       private final Map<String, Object> theMap = new HashMap<String, Object>(2);
       // DIY json parsing // private final ObjectMapper omapper = new ObjectMapper();
 
       private boolean maxTimeReached()
       {
-        if (maxRunMinutes <= 0) {
+        if (getMaxRunMinutes() <= 0) {
           return false;
         } else {
-          return (System.currentTimeMillis() - startMsec) / 60000L >= maxRunMinutes;
+          return (System.currentTimeMillis() - startMsec) / 60000L >= getMaxRunMinutes();
         }
       }
 
       private boolean maxCountReached()
       {
-        return maxEventCount >= 0 && rowCount >= maxEventCount;
+        return getMaxEventCount() >= 0 && rowCount >= getMaxEventCount();
       }
 
       @Override
@@ -311,4 +311,15 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
     };
   }
 
+  @JsonProperty
+  public int getMaxEventCount()
+  {
+    return maxEventCount;
+  }
+
+  @JsonProperty
+  public int getMaxRunMinutes()
+  {
+    return maxRunMinutes;
+  }
 }
