@@ -54,7 +54,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
   private final CuratorFramework curator;
 
   private volatile PathChildrenCache loadQueueCache;
-  private volatile boolean started;
+  private volatile boolean started = false;
   private final ListeningExecutorService loadingExec;
 
   public BaseZkCoordinator(
