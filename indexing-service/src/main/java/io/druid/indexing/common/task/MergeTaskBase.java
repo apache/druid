@@ -75,6 +75,8 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
         computeMergedInterval(segments)
     );
 
+    this.priority = Priority.LOW;
+
     // Verify segment list is nonempty
     Preconditions.checkArgument(segments.size() > 0, "segments nonempty");
     // Verify segments are all in the correct datasource
@@ -251,19 +253,19 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     final String segmentIDs = Joiner.on("_").join(
         Iterables.transform(
             Ordering.natural().sortedCopy(segments), new Function<DataSegment, String>()
-        {
-          @Override
-          public String apply(DataSegment x)
-          {
-            return String.format(
-                "%s_%s_%s_%s",
-                x.getInterval().getStart(),
-                x.getInterval().getEnd(),
-                x.getVersion(),
-                x.getShardSpec().getPartitionNum()
-            );
-          }
-        }
+            {
+              @Override
+              public String apply(DataSegment x)
+              {
+                return String.format(
+                    "%s_%s_%s_%s",
+                    x.getInterval().getStart(),
+                    x.getInterval().getEnd(),
+                    x.getVersion(),
+                    x.getShardSpec().getPartitionNum()
+                );
+              }
+            }
         )
     );
 

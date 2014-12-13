@@ -467,23 +467,20 @@ public class RealtimePlumber implements Plumber
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_persist_%d", maxPendingPersists
+          "plumber_persist_%d", maxPendingPersists, Thread.MIN_PRIORITY
       );
     }
     if (mergeExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       mergeExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_merge_%d", 1
+          "plumber_merge_%d", 1, Thread.MIN_PRIORITY
       );
     }
 
     if (scheduledExecutor == null) {
       scheduledExecutor = Executors.newScheduledThreadPool(
           1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("plumber_scheduled_%d")
-              .build()
+          Execs.makeThreadFactory("plumber_scheduled_%d", Thread.MIN_PRIORITY)
       );
     }
   }
@@ -696,7 +693,7 @@ public class RealtimePlumber implements Plumber
    * being created.
    *
    * @param truncatedTime sink key
-   * @param sink sink to unannounce
+   * @param sink          sink to unannounce
    */
   protected void abandonSegment(final long truncatedTime, final Sink sink)
   {
@@ -735,8 +732,8 @@ public class RealtimePlumber implements Plumber
    * Persists the given hydrant and returns the number of rows persisted
    *
    * @param indexToPersist hydrant to persist
-   * @param schema datasource schema
-   * @param interval interval to persist
+   * @param schema         datasource schema
+   * @param interval       interval to persist
    *
    * @return the number of rows persisted
    */
@@ -845,13 +842,13 @@ public class RealtimePlumber implements Plumber
                 && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 && Iterables.any(
                     sinks.keySet(), new Predicate<Long>()
-                {
-                  @Override
-                  public boolean apply(Long sinkKey)
-                  {
-                    return segment.getInterval().contains(sinkKey);
-                  }
-                }
+                    {
+                      @Override
+                      public boolean apply(Long sinkKey)
+                      {
+                        return segment.getInterval().contains(sinkKey);
+                      }
+                    }
                 );
           }
         }

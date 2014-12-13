@@ -56,8 +56,33 @@ import io.druid.query.QueryRunner;
 })
 public interface Task
 {
+  public static enum Priority
+  {
+    // NOTE: Setting negative nice values on linux sysetems (priority > Thread.NORM_PRIORITY) requires running
+    // as *ROOT*. This is, in general, not advisable.
+    // In order to have these priorities honored on linux systems, the JVM must be launched with the following options:
+    //      -XX:+UseThreadPriorities -XX:ThreadPriorityPolicy=42
+    // This induces a bug which allows the setting of thread priority even when executed by a non-root user.
+    // See : http://www.akshaal.info/2008/04/javas-thread-priorities-in-linux.html for an explanation
+    // See : http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/file/b0c7e7f1bbbe/src/os/linux/vm/os_linux.cpp#l3933 for
+    // the bug in action
+    NORMAL(Thread.NORM_PRIORITY), LOW(Thread.MIN_PRIORITY);
+    private final Integer priority;
+
+    private Priority(int threadPriority)
+    {
+      this.priority = threadPriority;
+    }
+
+    public Integer getPriority()
+    {
+      return this.priority;
+    }
+  }
+
   /**
    * Returns ID of this task. Must be unique across all tasks ever created.
+   *
    * @return task ID
    */
   public String getId();
@@ -65,6 +90,7 @@ public interface Task
   /**
    * Returns group ID of this task. Tasks with the same group ID can share locks. If tasks do not need to share locks,
    * a common convention is to set group ID equal to task ID.
+   *
    * @return task group ID
    */
   public String getGroupId();
@@ -72,12 +98,14 @@ public interface Task
   /**
    * Returns a {@link io.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
    * worker requirements a task may require.
+   *
    * @return {@link io.druid.indexing.common.task.TaskResource} for this task
    */
   public TaskResource getTaskResource();
 
   /**
    * Returns a descriptive label for this task type. Used for metrics emission and logging.
+   *
    * @return task type label
    */
   public String getType();
@@ -86,7 +114,7 @@ public interface Task
    * Get the nodeType for if/when this task publishes on zookeeper.
    *
    * @return the nodeType to use when publishing the server to zookeeper. null if the task doesn't expect to
-   *         publish to zookeeper.
+   * publish to zookeeper.
    */
   public String getNodeType();
 
@@ -98,7 +126,9 @@ public interface Task
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.
+   *
    * @param <T> query result type
+   *
    * @return query runners for this task
    */
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
@@ -113,7 +143,7 @@ public interface Task
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
    * coordinator. If this method throws an exception, the task should be considered a failure.
-   *
+   * <p/>
    * This method must be idempotent, as it may be run multiple times per task.
    *
    * @param taskActionClient action client for this task (not the full toolbox)
@@ -136,4 +166,11 @@ public interface Task
    * @throws Exception if this task failed
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
+
+  /**
+   * Returns the priority to be hinted when executing the thread
+   *
+   * @return an integer representing the thread priority, see {@link java.lang.Thread#setPriority(int) setPriority} for {@link java.lang.Thread}
+   */
+  public Priority getPriority();
 }

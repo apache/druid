@@ -42,9 +42,19 @@ public class Execs
     return Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat));
   }
 
+  public static ExecutorService singleThreaded(String nameFormat, Integer priority)
+  {
+    return Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat, priority));
+  }
+
   public static ExecutorService multiThreaded(int threads, String nameFormat)
   {
     return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat));
+  }
+
+  public static ExecutorService multiThreaded(int threads, String nameFormat, Integer priority)
+  {
+    return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat, priority));
   }
 
   public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat)
@@ -52,17 +62,37 @@ public class Execs
     return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat));
   }
 
+  public static ScheduledExecutorService scheduledSingleThreaded(String nameFormat, Integer priority)
+  {
+    return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat, priority));
+  }
+
   public static ThreadFactory makeThreadFactory(String nameFormat)
   {
     return new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build();
   }
 
+  public static ThreadFactory makeThreadFactory(String nameFormat, Integer priority)
+  {
+    return new ThreadFactoryBuilder().setDaemon(true).setPriority(priority).setNameFormat(nameFormat).build();
+  }
+
   /**
    * @param nameFormat nameformat for threadFactory
-   * @param capacity maximum capacity after which the executorService will block on accepting new tasks
+   * @param capacity   maximum capacity after which the executorService will block on accepting new tasks
+   *
    * @return ExecutorService which blocks accepting new tasks when the capacity reached
    */
   public static ExecutorService newBlockingSingleThreaded(final String nameFormat, final int capacity)
+  {
+    return newBlockingSingleThreaded(nameFormat, capacity, Thread.NORM_PRIORITY);
+  }
+
+  public static ExecutorService newBlockingSingleThreaded(
+      final String nameFormat,
+      final int capacity,
+      final Integer priority
+  )
   {
     final BlockingQueue<Runnable> queue;
     if (capacity > 0) {
