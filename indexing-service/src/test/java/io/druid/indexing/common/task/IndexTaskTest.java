@@ -19,7 +19,8 @@
 
 package io.druid.indexing.common.task;
 
-import com.google.api.client.util.Lists;
+import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -57,7 +58,10 @@ public class IndexTaskTest
   @Test
   public void testDeterminePartitions() throws Exception
   {
-    File tmpFile = File.createTempFile("druid", "index");
+    File tmpDir = Files.createTempDir();
+    tmpDir.deleteOnExit();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
     tmpFile.deleteOnExit();
 
     PrintWriter writer = new PrintWriter(tmpFile);
@@ -99,7 +103,7 @@ public class IndexTaskTest
             ),
             new IndexTask.IndexIOConfig(
                 new LocalFirehoseFactory(
-                    tmpFile.getParentFile(),
+                    tmpDir,
                     "druid*",
                     null
                 )
