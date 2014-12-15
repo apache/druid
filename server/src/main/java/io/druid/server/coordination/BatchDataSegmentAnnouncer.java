@@ -121,6 +121,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   {
     final SegmentZNode segmentZNode = segmentLookup.remove(segment);
     if (segmentZNode == null) {
+      log.warn("No path to unannounce segment[%s]", segment.getIdentifier());
       return;
     }
 
