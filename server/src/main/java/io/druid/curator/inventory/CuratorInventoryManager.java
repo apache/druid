@@ -263,12 +263,13 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             final ContainerClass container = strategy.deserializeContainer(child.getData());
 
-            ContainerHolder oldContainer = containers.get(containerKey);
-            if (oldContainer == null) {
+            log.info("Container[%s] updated.", child.getPath());
+            ContainerHolder holder = containers.get(containerKey);
+            if (holder == null) {
               log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
             } else {
-              synchronized (oldContainer) {
-                oldContainer.setContainer(strategy.updateContainer(oldContainer.getContainer(), container));
+              synchronized (holder) {
+                holder.setContainer(strategy.updateContainer(holder.getContainer(), container));
               }
             }
 
