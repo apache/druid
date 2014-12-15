@@ -26,7 +26,7 @@ public class CuratorServiceUtils
    * <a href="http://curator.apache.org/curator-x-discovery-server/">curator-x-discovery-server</a>
    *
    * This method is marked protected because it should never be used outside of the io.druid.curator.discovery
-   * packakge. If you are tempted to use this method anywhere else you are most likely doing something wrong.
+   * package. If you are tempted to use this method anywhere else you are most likely doing something wrong.
    * Mapping the actual service name to the name used within curator should be left to {@link CuratorServiceAnnouncer}
    * and {@link ServerDiscoveryFactory}
    *
