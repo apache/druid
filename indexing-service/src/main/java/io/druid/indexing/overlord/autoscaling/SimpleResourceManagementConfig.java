@@ -27,7 +27,7 @@ import org.joda.time.Period;
 public class SimpleResourceManagementConfig
 {
   @JsonProperty
-  private Period workerIdleTimeout = new Period("PT10m");
+  private Period workerIdleTimeout = new Period("PT90m");
 
   @JsonProperty
   private Period maxScalingDuration = new Period("PT15M");
