@@ -41,6 +41,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -167,10 +168,10 @@ public class WorkerResource
     final Optional<ByteSource> stream = taskRunner.streamTaskLog(taskid, offset);
 
     if (stream.isPresent()) {
-      try (InputStream logStream = stream.get().openStream()) {
-        return Response.ok(logStream).build();
+      try {
+        return Response.ok(stream.get().openStream()).build();
       }
-      catch (Exception e) {
+      catch (IOException e) {
         log.warn(e, "Failed to read log for task: %s", taskid);
         return Response.serverError().build();
       }
