@@ -45,12 +45,10 @@ import io.druid.server.DruidNode;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,6 +58,7 @@ import org.junit.Test;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
@@ -68,6 +67,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Random;
@@ -81,6 +81,7 @@ public class JettyTest
 {
   private Lifecycle lifecycle;
   private HttpClient client;
+  private int port = -1;
 
   public static void setProperties()
   {
@@ -106,11 +107,15 @@ public class JettyTest
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
+                Jerseys.addResource(binder, DefaultResource.class);
                 LifecycleModule.register(binder, Server.class);
               }
             }
         )
     );
+    final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
+    port = node.getPort();
+
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);
@@ -142,7 +147,7 @@ public class JettyTest
                       long startTime2 = 0;
                       try {
                         ListenableFuture<StatusResponseHolder> go =
-                            client.get(new URL("http://localhost:9999/slow/hello"))
+                            client.get(new URL("http://localhost:" + port + "/slow/hello"))
                                   .go(new StatusResponseHandler(Charset.defaultCharset()));
                         startTime2 = System.currentTimeMillis();
                         go.get();
@@ -173,6 +178,21 @@ public class JettyTest
     latch.await();
   }
 
+  @Test
+  public void testGzipCompression() throws Exception
+  {
+    final URL url = new URL("http://localhost:" + port + "/default");
+    final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+    get.setRequestProperty("Accept-Encoding", "gzip");
+    Assert.assertEquals("gzip", get.getContentEncoding());
+
+    final HttpURLConnection post = (HttpURLConnection) url.openConnection();
+    post.setRequestProperty("Accept-Encoding", "gzip");
+    post.setRequestMethod("POST");
+
+    Assert.assertEquals("gzip", post.getContentEncoding());
+  }
+
   // Tests that threads are not stuck when partial chunk is not finalized
   // https://bugs.eclipse.org/bugs/show_bug.cgi?id=424107
   @Test
@@ -181,7 +201,7 @@ public class JettyTest
   public void testChunkNotFinalized() throws Exception
   {
     ListenableFuture<InputStream> go =
-        client.get(new URL("http://localhost:9999/exception/exception"))
+        client.get(new URL("http://localhost:" + port + "/exception/exception"))
               .go(new InputStreamResponseHandler());
     try {
       StringWriter writer = new StringWriter();
@@ -207,7 +227,7 @@ public class JettyTest
             try {
               ListenableFuture<InputStream> go = client.get(
                   new URL(
-                      "http://localhost:9999/exception/exception"
+                      "http://localhost:" + port + "/exception/exception"
                   )
 
               )
@@ -251,7 +271,7 @@ public class JettyTest
     }
   }
 
-  public static class JettyServerInit implements JettyServerInitializer
+  public static class JettyServerInit extends BaseJettyServerInitializer
   {
 
     @Override
@@ -259,11 +279,11 @@ public class JettyTest
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      root.addFilter(GzipFilter.class, "/*", null);
+      root.addFilter(defaultGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root, new DefaultHandler()});
+      handlerList.setHandlers(new Handler[]{root});
       server.setHandler(handlerList);
     }
   }
@@ -287,6 +307,25 @@ public class JettyTest
       }
       return Response.ok("hello").build();
     }
+  }
+
+  @Path("/default")
+  public static class DefaultResource
+  {
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response get()
+    {
+      return Response.ok("hello").build();
+    }
+
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response post()
+    {
+      return Response.ok("hello").build();
+    }
+
   }
 
   @Path("/exception")
