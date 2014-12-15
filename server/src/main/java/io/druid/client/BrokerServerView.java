@@ -66,6 +66,8 @@ public class BrokerServerView implements TimelineServerView
   private final ServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
 
+  private volatile boolean initialized = false;
+
   @Inject
   public BrokerServerView(
       QueryToolChestWarehouse warehouse,
@@ -109,6 +111,7 @@ public class BrokerServerView implements TimelineServerView
           @Override
           public CallbackAction segmentViewInitialized()
           {
+            initialized = true;
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -126,6 +129,11 @@ public class BrokerServerView implements TimelineServerView
           }
         }
     );
+  }
+
+  public boolean isInitialized()
+  {
+    return initialized;
   }
 
   public void clear()

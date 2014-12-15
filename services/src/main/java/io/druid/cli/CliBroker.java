@@ -48,6 +48,7 @@ import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.broker.DruidBroker;
+import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.router.TieredBrokerConfig;
@@ -87,6 +88,7 @@ public class CliBroker extends ServerRunnable
             binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
+            binder.bind(BrokerServerView.class).in(LazySingleton.class);
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
             binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
@@ -101,6 +103,7 @@ public class CliBroker extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
+            Jerseys.addResource(binder, BrokerResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
             LifecycleModule.register(binder, QueryResource.class);
             LifecycleModule.register(binder, DruidBroker.class);

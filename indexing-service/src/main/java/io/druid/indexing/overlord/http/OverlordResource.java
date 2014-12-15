@@ -412,9 +412,7 @@ public class OverlordResource
     try {
       final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {
-        try(InputStream istream = stream.get().openStream()) {
-          return Response.ok(istream).build();
-        }
+        return Response.ok(stream.get().openStream()).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(
