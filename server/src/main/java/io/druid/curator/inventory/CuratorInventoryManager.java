@@ -46,10 +46,10 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * An InventoryManager watches updates to inventory on Zookeeper (or some other discovery-like service publishing
  * system).  It is built up on two object types: containers and inventory objects.
- * 
+ * <p/>
  * The logic of the InventoryManager just maintains a local cache of the containers and inventory it sees on ZK.  It
  * provides methods for getting at the container objects, which house the actual individual pieces of inventory.
- * 
+ * <p/>
  * A Strategy is provided to the constructor of an Inventory manager, this strategy provides all of the
  * object-specific logic to serialize, deserialize, compose and alter the container and inventory objects.
  */
@@ -277,9 +277,9 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         case INITIALIZED:
           synchronized (lock) {
             // must await initialized of all containerholders
-            for(ContainerHolder holder : containers.values()) {
+            for (ContainerHolder holder : containers.values()) {
               synchronized (holder) {
-                if(!holder.initialized) {
+                if (!holder.initialized) {
                   uninitializedInventory.add(holder);
                 }
               }
@@ -301,12 +301,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
     private void maybeDoneInitializing()
     {
-      if(doneInitializing) {
+      if (doneInitializing) {
         return;
       }
 
       // only fire if we are done initializing the parent PathChildrenCache
-      if(containersInitialized && uninitializedInventory.isEmpty()) {
+      if (containersInitialized && uninitializedInventory.isEmpty()) {
         doneInitializing = true;
         strategy.inventoryInitialized();
       }
@@ -337,6 +337,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_ADDED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
+            log.info("CHILD_ADDED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
 
             final InventoryClass addedInventory = strategy.deserializeInventory(child.getData());
 
@@ -349,6 +350,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_UPDATED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
+            log.info("CHILD_UPDATED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
 
             final InventoryClass updatedInventory = strategy.deserializeInventory(child.getData());
 
@@ -362,6 +364,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_REMOVED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
+            log.info("CHILD_REMOVED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
 
             synchronized (holder) {
               holder.setContainer(strategy.removeInventory(holder.getContainer(), inventoryKey));
