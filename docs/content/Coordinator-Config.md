@@ -8,7 +8,17 @@ For general Coordinator Node information, see [here](Coordinator.html).
 Runtime Configuration
 ---------------------
 
-The coordinator module uses several of the default modules in [Configuration](Configuration.html) and has the following set of configurations as well:
+The coordinator node uses several of the global configs in [Configuration](Configuration.html) and has the following set of configurations as well:
+
+### Node Config
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|none|
+|`druid.port`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|none|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|none|
+
+### Coordinator Operation
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -17,7 +27,13 @@ The coordinator module uses several of the default modules in [Configuration](Co
 |`druid.coordinator.startDelay`|The operation of the Coordinator works on the assumption that it has an up-to-date view of the state of the world when it runs, the current ZK interaction code, however, is written in a way that doesn’t allow the Coordinator to know for a fact that it’s done loading the current state of the world. This delay is a hack to give it enough time to believe that it has all the data.|PT300S|
 |`druid.coordinator.merge.on`|Boolean flag for whether or not the coordinator should try and merge small segments into a more optimal segment size.|false|
 |`druid.coordinator.conversion.on`|Boolean flag for converting old segment indexing versions to the latest segment indexing version.|false|
-|`druid.coordinator.load.timeout`|The timeout duration for when the coordinator assigns a segment to a historical node.|15 minutes|
+|`druid.coordinator.load.timeout`|The timeout duration for when the coordinator assigns a segment to a historical node.|PT15M|
+
+### Metadata Retrieval
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.manager.config.pollDuration`|How often the manager polls the config table for updates.|PT1m|
 |`druid.manager.segment.pollDuration`|The duration between polls the Coordinator does for updates to the set of active segments. Generally defines the amount of lag time it can take for the coordinator to notice new segments.|PT1M|
 |`druid.manager.rules.pollDuration`|The duration between polls the Coordinator does for updates to the set of active rules. Generally defines the amount of lag time it can take for the coordinator to notice rules.|PT1M|
 |`druid.manager.rules.defaultTier`|The default tier from which default rules will be loaded from.|_default|
