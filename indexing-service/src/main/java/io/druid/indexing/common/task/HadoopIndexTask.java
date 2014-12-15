@@ -111,13 +111,11 @@ public class HadoopIndexTask extends AbstractTask
     this.spec = spec;
 
     // Some HadoopIngestionSpec stuff doesn't make sense in the context of the indexing service
-    if (this.spec.getTuningConfig().getWorkingPath() != null) {
-      log.error("workingPath should be absent in your spec! Ignoring");
-    }
     Preconditions.checkArgument(
         this.spec.getIOConfig().getSegmentOutputPath() == null,
         "segmentOutputPath must be absent"
     );
+    Preconditions.checkArgument(this.spec.getTuningConfig().getWorkingPath() == null, "workingPath must be absent");
     Preconditions.checkArgument(
         this.spec.getIOConfig().getMetadataUpdateSpec() == null,
         "metadataUpdateSpec must be absent"
