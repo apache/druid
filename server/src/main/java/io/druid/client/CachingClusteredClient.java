@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -61,6 +62,7 @@ import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
@@ -157,7 +159,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     }
     contextBuilder.put("intermediate", true);
 
-    VersionedIntervalTimeline<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+    TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+
     if (timeline == null) {
       return Sequences.empty();
     }
@@ -168,7 +171,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
 
     for (Interval interval : query.getIntervals()) {
-      serversLookup.addAll(timeline.lookup(interval));
+      Iterables.addAll(serversLookup, timeline.lookup(interval));
     }
 
     // Let tool chest filter out unneeded segments

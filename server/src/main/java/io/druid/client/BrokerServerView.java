@@ -20,6 +20,8 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Lists;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -38,10 +40,16 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineLookup;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.UnionTimeLineLookup;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -254,11 +262,27 @@ public class BrokerServerView implements TimelineServerView
 
 
   @Override
-  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
+  public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
   {
-    String table = Iterables.getOnlyElement(dataSource.getNames());
+    final List<String> tables = dataSource.getNames();
     synchronized (lock) {
-      return timelines.get(table);
+      if (tables.size() == 1) {
+        return timelines.get(tables.get(0));
+      } else {
+        return new UnionTimeLineLookup<>(
+            Iterables.transform(
+                tables, new Function<String, TimelineLookup<String, ServerSelector>>()
+                {
+
+                  @Override
+                  public TimelineLookup<String, ServerSelector> apply(String input)
+                  {
+                    return timelines.get(input);
+                  }
+                }
+            )
+        );
+      }
     }
   }
 

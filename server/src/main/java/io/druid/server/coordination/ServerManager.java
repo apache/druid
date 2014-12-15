@@ -32,6 +32,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.selector.ServerSelector;
 import io.druid.collections.CountingMap;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Processing;
@@ -42,6 +43,7 @@ import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -58,7 +60,9 @@ import io.druid.segment.Segment;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.UnionTimeLineLookup;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
@@ -68,6 +72,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -167,7 +172,7 @@ public class ServerManager implements QuerySegmentWalker
       VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals = dataSources.get(dataSource);
 
       if (loadedIntervals == null) {
-        loadedIntervals = new VersionedIntervalTimeline<String, ReferenceCountingSegment>(Ordering.natural());
+        loadedIntervals = new VersionedIntervalTimeline<>(Ordering.natural());
         dataSources.put(dataSource, loadedIntervals);
       }
 
@@ -254,12 +259,11 @@ public class ServerManager implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
     DataSource dataSource = query.getDataSource();
-    if (!(dataSource instanceof TableDataSource)) {
+    if (dataSource instanceof QueryDataSource) {
       throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
     }
-    String dataSourceName = getDataSourceName(dataSource);
 
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
+    final TimelineLookup<String, ReferenceCountingSegment> timeline = getTimelineLookup(query.getDataSource());
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -307,7 +311,6 @@ public class ServerManager implements QuerySegmentWalker
                                     holder.getVersion(),
                                     input.getChunkNumber()
                                 )
-
                             );
                           }
                         }
@@ -322,9 +325,26 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-  private String getDataSourceName(DataSource dataSource)
+  private TimelineLookup<String, ReferenceCountingSegment> getTimelineLookup(DataSource dataSource)
   {
-    return Iterables.getOnlyElement(dataSource.getNames());
+    final List<String> names = dataSource.getNames();
+    if(names.size() == 1){
+      return dataSources.get(names.get(0));
+    } else {
+      return new UnionTimeLineLookup<>(
+          Iterables.transform(
+              names, new Function<String, TimelineLookup<String, ReferenceCountingSegment>>()
+              {
+
+                @Override
+                public TimelineLookup<String, ReferenceCountingSegment> apply(String input)
+                {
+                  return dataSources.get(input);
+                }
+              }
+          )
+      );
+    }
   }
 
   @Override
@@ -340,11 +360,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    String dataSourceName = getDataSourceName(query.getDataSource());
-
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(
-        dataSourceName
-    );
+    final TimelineLookup<String, ReferenceCountingSegment> timeline = getTimelineLookup(query.getDataSource());
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -359,6 +375,7 @@ public class ServerManager implements QuerySegmentWalker
               @SuppressWarnings("unchecked")
               public Iterable<QueryRunner<T>> apply(SegmentDescriptor input)
               {
+
                 final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
                     input.getInterval(), input.getVersion()
                 );

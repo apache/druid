@@ -17,18 +17,28 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.client;
+package io.druid.timeline;
 
-import io.druid.client.selector.ServerSelector;
-import io.druid.query.DataSource;
-import io.druid.query.QueryRunner;
-import io.druid.timeline.TimelineLookup;
-import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.PartitionHolder;
+import org.joda.time.Interval;
 
-/**
- */
-public interface TimelineServerView extends ServerView
+import java.util.List;
+
+
+public interface TimelineLookup<VersionType, ObjectType>
 {
-  TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource);
-  <T> QueryRunner<T> getQueryRunner(DruidServer server);
+
+  /**
+   * Does a lookup for the objects representing the given time interval.  Will *only* return
+   * PartitionHolders that are complete.
+   *
+   * @param interval interval to find objects for
+   *
+   * @return Holders representing the interval that the objects exist for, PartitionHolders
+   *         are guaranteed to be complete
+   */
+  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
+
+  public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
+
 }
