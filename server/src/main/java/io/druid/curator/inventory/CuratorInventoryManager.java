@@ -337,7 +337,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_ADDED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
-            log.info("CHILD_ADDED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
+            log.info("CHILD_ADDED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
 
             final InventoryClass addedInventory = strategy.deserializeInventory(child.getData());
 
@@ -350,7 +350,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_UPDATED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
-            log.info("CHILD_UPDATED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
+            log.info("CHILD_UPDATED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
 
             final InventoryClass updatedInventory = strategy.deserializeInventory(child.getData());
 
@@ -364,7 +364,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_REMOVED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
-            log.info("CHILD_REMOVED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
+            log.info("CHILD_REMOVED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
 
             synchronized (holder) {
               holder.setContainer(strategy.removeInventory(holder.getContainer(), inventoryKey));
