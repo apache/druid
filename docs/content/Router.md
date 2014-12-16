@@ -51,7 +51,7 @@ druid.service=druid/prod/router
 
 druid.extensions.remoteRepositories=[]
 druid.extensions.localRepository=lib
-druid.extensions.coordinates=["io.druid.extensions:druid-histogram:0.6.165"]
+druid.extensions.coordinates=["io.druid.extensions:druid-histogram:0.6.166"]
 
 druid.zk.service.host=#{ZK_IPs}
 druid.zk.paths.base=/druid/prod
