@@ -27,7 +27,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.common.IAE;
 import com.metamx.common.MapUtils;
+import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -46,7 +48,9 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -105,7 +109,7 @@ public class DatabaseRuleManager
                     .bind("id", String.format("%s_%s", defaultDatasourceName, version))
                     .bind("dataSource", defaultDatasourceName)
                     .bind("version", version)
-                    .bind("payload", jsonMapper.writeValueAsString(defaultRules))
+                    .bind("payload", jsonMapper.writeValueAsBytes(defaultRules))
                     .execute();
 
               return null;
@@ -214,35 +218,52 @@ public class DatabaseRuleManager
                           + "ON r.datasource = ds.datasource and r.version = ds.version",
                           getRulesTable()
                       )
-                  ).fold(
-                      Maps.<String, List<Rule>>newHashMap(),
-                      new Folder3<Map<String, List<Rule>>, Map<String, Object>>()
-                      {
-                        @Override
-                        public Map<String, List<Rule>> fold(
-                            Map<String, List<Rule>> retVal,
-                            Map<String, Object> stringObjectMap,
-                            FoldController foldController,
-                            StatementContext statementContext
-                        ) throws SQLException
-                        {
-
-                          try {
-                            String dataSource = MapUtils.getString(stringObjectMap, "dataSource");
-                            List<Rule> rules = jsonMapper.readValue(
-                                MapUtils.getString(stringObjectMap, "payload"), new TypeReference<List<Rule>>()
+                  )
+                      .map(
+                          new ResultSetMapper<Pair<String, byte[]>>()
+                          {
+                            @Override
+                            public Pair<String, byte[]> map(int index, ResultSet r, StatementContext ctx)
+                                throws SQLException
                             {
+                              return Pair.of(
+                                  r.getString("dataSource"),
+                                  r.getBytes("payload")
+                              );
                             }
-                            );
-                            retVal.put(dataSource, rules);
-                            return retVal;
                           }
-                          catch (Exception e) {
-                            throw Throwables.propagate(e);
-                          }
-                        }
-                      }
-                  );
+                      )
+                               .fold(
+                                   Maps.<String, List<Rule>>newHashMap(),
+                                   new Folder3<Map<String, List<Rule>>, Pair<String, byte[]>>()
+                                   {
+                                     @Override
+                                     public Map<String, List<Rule>> fold(
+                                         Map<String, List<Rule>> retVal,
+                                         Pair<String, byte[]> dataSourcePayload,
+                                         FoldController foldController,
+                                         StatementContext statementContext
+                                     ) throws SQLException
+                                     {
+
+                                       try {
+                                         String dataSource = dataSourcePayload.lhs;
+                                         if(dataSource == null) {
+                                           throw new IAE("dataSource cannot be null");
+                                         }
+                                         List<Rule> rules = jsonMapper.readValue(
+                                             dataSourcePayload.rhs,
+                                             new TypeReference<List<Rule>>() {}
+                                         );
+                                         retVal.put(dataSource, rules);
+                                         return retVal;
+                                       }
+                                       catch (Exception e) {
+                                         throw Throwables.propagate(e);
+                                       }
+                                     }
+                                   }
+                               );
                 }
               }
           )
@@ -301,7 +322,7 @@ public class DatabaseRuleManager
                       .bind("id", String.format("%s_%s", dataSource, version))
                       .bind("dataSource", dataSource)
                       .bind("version", version)
-                      .bind("payload", jsonMapper.writeValueAsString(newRules))
+                      .bind("payload", jsonMapper.writeValueAsBytes(newRules))
                       .execute();
 
                 return null;

@@ -84,7 +84,7 @@ public class DbUpdaterJob implements Jobby
                       .put("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
                       .put("version", segment.getVersion())
                       .put("used", true)
-                      .put("payload", HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(segment))
+                      .put("payload", HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(segment))
                       .build()
               );
 

@@ -30,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
 import com.metamx.common.RetryUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -45,12 +46,17 @@ import io.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.DBIException;
 import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
+import org.skife.jdbi.v2.util.ByteArrayMapper;
 
+import java.io.IOException;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
@@ -189,7 +195,7 @@ public class DbTaskStorage implements TaskStorage
           @Override
           public Optional<Task> withHandle(Handle handle) throws Exception
           {
-            final List<Map<String, Object>> dbTasks =
+            final List<byte[]> dbTasks =
                 handle.createQuery(
                     String.format(
                         "SELECT payload FROM %s WHERE id = :id",
@@ -197,13 +203,14 @@ public class DbTaskStorage implements TaskStorage
                     )
                 )
                       .bind("id", taskid)
+                      .map(ByteArrayMapper.FIRST)
                       .list();
 
             if (dbTasks.size() == 0) {
               return Optional.absent();
             } else {
-              final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbTasks);
-              return Optional.of(jsonMapper.readValue((byte[]) dbStatus.get("payload"), Task.class));
+              final byte[] dbStatus = Iterables.getOnlyElement(dbTasks);
+              return Optional.of(jsonMapper.readValue(dbStatus, Task.class));
             }
           }
         }
@@ -219,21 +226,22 @@ public class DbTaskStorage implements TaskStorage
           @Override
           public Optional<TaskStatus> withHandle(Handle handle) throws Exception
           {
-            final List<Map<String, Object>> dbStatuses =
+            final List<byte[]> dbStatuses =
                 handle.createQuery(
                     String.format(
                         "SELECT status_payload FROM %s WHERE id = :id",
                         dbTables.getTasksTable()
                     )
                 )
+                      .map(ByteArrayMapper.FIRST)
                       .bind("id", taskid)
                       .list();
 
             if (dbStatuses.size() == 0) {
               return Optional.absent();
             } else {
-              final Map<String, Object> dbStatus = Iterables.getOnlyElement(dbStatuses);
-              return Optional.of(jsonMapper.readValue((byte[]) dbStatus.get("status_payload"), TaskStatus.class));
+              final byte[] dbStatus = Iterables.getOnlyElement(dbStatuses);
+              return Optional.of(jsonMapper.readValue(dbStatus, TaskStatus.class));
             }
           }
         }
@@ -249,30 +257,42 @@ public class DbTaskStorage implements TaskStorage
           @Override
           public List<Task> withHandle(Handle handle) throws Exception
           {
-            final List<Map<String, Object>> dbTasks =
+            final List<Pair<Task, TaskStatus>> dbTasks =
                 handle.createQuery(
                     String.format(
                         "SELECT id, payload, status_payload FROM %s WHERE active = 1 ORDER BY created_date",
                         dbTables.getTasksTable()
                     )
                 )
+                    .map(
+                        new ResultSetMapper<Pair<Task, TaskStatus>>()
+                        {
+                          @Override
+                          public Pair<Task, TaskStatus> map(int index, ResultSet r, StatementContext ctx)
+                              throws SQLException
+                          {
+                            try {
+                              return Pair.of(
+                                  jsonMapper.readValue(r.getBytes("payload"), Task.class),
+                                  jsonMapper.readValue(r.getBytes("status_payload"), TaskStatus.class)
+                              );
+                            } catch(IOException e) {
+                              log.makeAlert(e, "Failed to parse task payload").addData("task", r.getString("id")).emit();
+                              throw new SQLException(e);
+                            }
+                          }
+                        }
+                    )
                       .list();
 
             final ImmutableList.Builder<Task> tasks = ImmutableList.builder();
-            for (final Map<String, Object> row : dbTasks) {
-              final String id = row.get("id").toString();
-
-              try {
-                final Task task = jsonMapper.readValue((byte[]) row.get("payload"), Task.class);
-                final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
+            for (final Pair<Task, TaskStatus> taskAndStatus : dbTasks) {
+                final Task task = taskAndStatus.lhs;
+                final TaskStatus status = taskAndStatus.rhs;
 
                 if (status.isRunnable()) {
                   tasks.add(task);
                 }
-              }
-              catch (Exception e) {
-                log.makeAlert(e, "Failed to parse task payload").addData("task", id).emit();
-              }
             }
 
             return tasks.build();
@@ -291,20 +311,35 @@ public class DbTaskStorage implements TaskStorage
           @Override
           public List<TaskStatus> withHandle(Handle handle) throws Exception
           {
-            final List<Map<String, Object>> dbTasks =
+            final List<Pair<String, byte[]>> dbTasks =
                 handle.createQuery(
                     String.format(
                         "SELECT id, status_payload FROM %s WHERE active = 0 AND created_date >= :recent ORDER BY created_date DESC",
                         dbTables.getTasksTable()
                     )
-                ).bind("recent", recent.toString()).list();
+                ).bind("recent", recent.toString())
+                      .map(
+                          new ResultSetMapper<Pair<String, byte[]>>()
+                          {
+                            @Override
+                            public Pair<String, byte[]> map(int index, ResultSet r, StatementContext ctx)
+                                throws SQLException
+                            {
+                              return Pair.of(
+                                  r.getString("id"),
+                                  r.getBytes("status_payload")
+                              );
+                            }
+                          }
+                      )
+                      .list();
 
             final ImmutableList.Builder<TaskStatus> statuses = ImmutableList.builder();
-            for (final Map<String, Object> row : dbTasks) {
-              final String id = row.get("id").toString();
+            for (final Pair<String, byte[]> row : dbTasks) {
+              final String id = row.lhs;
 
               try {
-                final TaskStatus status = jsonMapper.readValue((byte[]) row.get("status_payload"), TaskStatus.class);
+                final TaskStatus status = jsonMapper.readValue(row.rhs, TaskStatus.class);
                 if (status.isComplete()) {
                   statuses.add(status);
                 }
@@ -442,7 +477,7 @@ public class DbTaskStorage implements TaskStorage
           @Override
           public List<TaskAction> withHandle(Handle handle) throws Exception
           {
-            final List<Map<String, Object>> dbTaskLogs =
+            final List<byte[]> dbTaskLogs =
                 handle.createQuery(
                     String.format(
                         "SELECT log_payload FROM %s WHERE task_id = :task_id",
@@ -450,12 +485,13 @@ public class DbTaskStorage implements TaskStorage
                     )
                 )
                       .bind("task_id", taskid)
+                      .map(ByteArrayMapper.FIRST)
                       .list();
 
             final List<TaskAction> retList = Lists.newArrayList();
-            for (final Map<String, Object> dbTaskLog : dbTaskLogs) {
+            for (final byte[] dbTaskLog : dbTaskLogs) {
               try {
-                retList.add(jsonMapper.readValue((byte[]) dbTaskLog.get("log_payload"), TaskAction.class));
+                retList.add(jsonMapper.readValue(dbTaskLog, TaskAction.class));
               }
               catch (Exception e) {
                 log.makeAlert(e, "Failed to deserialize TaskLog")
@@ -478,7 +514,7 @@ public class DbTaskStorage implements TaskStorage
           @Override
           public Map<Long, TaskLock> withHandle(Handle handle) throws Exception
           {
-            final List<Map<String, Object>> dbTaskLocks =
+            final List<Pair<Long, byte[]>> dbTaskLocks =
                 handle.createQuery(
                     String.format(
                         "SELECT id, lock_payload FROM %s WHERE task_id = :task_id",
@@ -486,14 +522,28 @@ public class DbTaskStorage implements TaskStorage
                     )
                 )
                       .bind("task_id", taskid)
+                      .map(
+                          new ResultSetMapper<Pair<Long, byte[]>>()
+                          {
+                            @Override
+                            public Pair<Long, byte[]> map(int index, ResultSet r, StatementContext ctx)
+                                throws SQLException
+                            {
+                              return Pair.of(
+                                 r.getLong("id"),
+                                 r.getBytes("lock_payload")
+                              );
+                            }
+                          }
+                      )
                       .list();
 
             final Map<Long, TaskLock> retMap = Maps.newHashMap();
-            for (final Map<String, Object> row : dbTaskLocks) {
+            for (final Pair<Long, byte[]> row : dbTaskLocks) {
               try {
                 retMap.put(
-                    (Long) row.get("id"),
-                    jsonMapper.readValue((byte[]) row.get("lock_payload"), TaskLock.class)
+                    row.lhs,
+                    jsonMapper.readValue(row.rhs, TaskLock.class)
                 );
               }
               catch (Exception e) {
