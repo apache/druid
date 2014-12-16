@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.granularity.QueryGranularity;
@@ -70,14 +71,14 @@ public class QueryRunnerTestHelper
   public static final UnionDataSource unionDataSource = new UnionDataSource(
       Lists.transform(
           Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), new Function<String, TableDataSource>()
-      {
-        @Nullable
-        @Override
-        public TableDataSource apply(@Nullable String input)
-        {
-          return new TableDataSource(input);
-        }
-      }
+          {
+            @Nullable
+            @Override
+            public TableDataSource apply(@Nullable String input)
+            {
+              return new TableDataSource(input);
+            }
+          }
       )
   );
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
@@ -218,7 +219,8 @@ public class QueryRunnerTestHelper
 
   @SuppressWarnings("unchecked")
   public static Collection<?> makeUnionQueryRunners(
-      QueryRunnerFactory factory
+      QueryRunnerFactory factory,
+      DataSource unionDataSource
   )
       throws IOException
   {
@@ -230,16 +232,20 @@ public class QueryRunnerTestHelper
     return Arrays.asList(
         new Object[][]{
             {
-                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), unionDataSource)
             },
             {
-                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
+                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), unionDataSource)
             },
             {
-                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+                makeUnionQueryRunner(
+                    factory,
+                    new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
+                    unionDataSource
+                )
             },
             {
-                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId), unionDataSource)
             }
         }
     );
@@ -260,17 +266,28 @@ public class QueryRunnerTestHelper
   }
 
   public static <T> QueryRunner<T> makeUnionQueryRunner(
-      QueryRunnerFactory<T, Query<T>> factory,
-      Segment adapter
+      final QueryRunnerFactory<T, Query<T>> factory,
+      final Segment adapter,
+      final DataSource unionDataSource
   )
   {
     return new FinalizeResultsQueryRunner<T>(
         factory.getToolchest().postMergeQueryDecoration(
             factory.getToolchest().mergeResults(
                 new UnionQueryRunner<T>(
-                    new BySegmentQueryRunner<T>(
-                        segmentId, adapter.getDataInterval().getStart(),
-                        factory.createRunner(adapter)
+                    Iterables.transform(
+                        unionDataSource.getNames(), new Function<String, QueryRunner>()
+                        {
+                          @Nullable
+                          @Override
+                          public QueryRunner apply(@Nullable String input)
+                          {
+                            return new BySegmentQueryRunner<T>(
+                                segmentId, adapter.getDataInterval().getStart(),
+                                factory.createRunner(adapter)
+                            );
+                          }
+                        }
                     ),
                     factory.getToolchest()
                 )

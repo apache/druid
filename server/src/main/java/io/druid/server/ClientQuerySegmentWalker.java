@@ -37,7 +37,6 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.RetryQueryRunner;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -87,28 +86,25 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                new UnionQueryRunner<T>(
-                    new MetricsEmittingQueryRunner<T>(
-                        emitter,
-                        new Function<Query<T>, ServiceMetricEvent.Builder>()
-                        {
-                          @Override
-                          public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
-                          {
-                            return toolChest.makeMetricBuilder(query);
-                          }
-                        },
-                        toolChest.preMergeQueryDecoration(
-                            new RetryQueryRunner<T>(
-                                baseClient,
-                                toolChest,
-                                retryConfig,
-                                objectMapper
-                            )
+                new MetricsEmittingQueryRunner<T>(
+                    emitter,
+                    new Function<Query<T>, ServiceMetricEvent.Builder>()
+                    {
+                      @Override
+                      public ServiceMetricEvent.Builder apply(@Nullable Query<T> input)
+                      {
+                        return toolChest.makeMetricBuilder(query);
+                      }
+                    },
+                    toolChest.preMergeQueryDecoration(
+                        new RetryQueryRunner<T>(
+                            baseClient,
+                            toolChest,
+                            retryConfig,
+                            objectMapper
                         )
-                    ).withWaitMeasuredFromNow(),
-                    toolChest
-                )
+                    )
+                ).withWaitMeasuredFromNow()
             )
         ),
         toolChest

@@ -66,13 +66,14 @@ public class HadoopIndexTask extends AbstractTask
   private static final ExtensionsConfig extensionsConfig;
 
   final static Injector injector = GuiceInjectors.makeStartupInjector();
+
   static {
     extensionsConfig = injector.getInstance(ExtensionsConfig.class);
   }
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
   {
-      return spec.getDataSchema().getDataSource();
+    return spec.getDataSchema().getDataSource();
   }
 
   @JsonIgnore
@@ -85,7 +86,7 @@ public class HadoopIndexTask extends AbstractTask
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
-   *             
+   *             <p/>
    *             Here, we will ensure that the DbConnectorConfig field of the spec is set to null, such that the
    *             job does not push a list of published segments the database. Instead, we will use the method
    *             IndexGeneratorJob.getPublishedSegments() to simply return a list of the published

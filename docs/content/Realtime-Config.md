@@ -2,118 +2,62 @@
 layout: doc_page
 ---
 Realtime Node Configuration
-===========================
-For general Real-time Node information, see [here](Realtime.html).
+==============================
+For general Realtime Node information, see [here](Realtime.html).
 
-For Real-time Ingestion, see [Realtime Ingestion](Realtime-ingestion.html).
+Runtime Configuration
+---------------------
 
-Quick Start
------------
-Run:
+The realtime node uses several of the global configs in [Configuration](Configuration.html) and has the following set of configurations as well:
 
-```
-io.druid.cli.Main server realtime
-```
+### Node Config
 
-With the following JVM configuration:
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|none|
+|`druid.port`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|none|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|none|
 
-```
--server
--Xmx256m
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
+### Realtime Operation
 
-druid.host=localhost
-druid.service=realtime
-druid.port=8083
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.publish.type`|Where to publish segments. Choices are "noop" or "metadata".|metadata|
+|`druid.realtime.specFile`|File location of realtime specFile.|none|
 
-druid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.160"]
+### Storing Intermediate Segments
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.segmentCache.locations`|Where intermediate segments are stored. The maxSize should always be zero.|none|
 
 
-druid.zk.service.host=localhost
+### Query Configs
 
-# The realtime config file.
-druid.realtime.specFile=/path/to/specFile
+#### Processing
 
-# Choices: metadata (hand off segments), noop (do not hand off segments).
-druid.publish.type=metadata
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
+|`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
+|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
+|`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
 
-druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.metadata.storage.connector.user=druid
-druid.metadata.storage.connector.password=diurd
+#### General Query Configuration
 
-druid.processing.buffer.sizeBytes=100000000
-```
+##### GroupBy Query Config
 
-Production Configs
-------------------
-These production configs are using S3 as a deep store.
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.groupBy.singleThreaded`|Run single threaded group By queries.|false|
+|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows.|50000|
+|`druid.query.groupBy.maxResults`|Maximum number of results.|500000|
 
-JVM settings:
+##### Search Query Config
 
-```
--server
--Xmx#{HEAP_MAX}g
--Xms#{HEAP_MIN}g
--XX:NewSize=#{NEW_SIZE}g
--XX:MaxNewSize=#{MAX_NEW_SIZE}g
--XX:+UseConcMarkSweepGC
--XX:+PrintGCDetails
--XX:+PrintGCTimeStamps
--Duser.timezone=UTC
--Dfile.encoding=UTF-8
--Djava.io.tmpdir=/mnt/tmp
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.search.maxSearchLimit`|Maximum number of search results to return.|1000|
 
--Dcom.sun.management.jmxremote.port=17071
--Dcom.sun.management.jmxremote.authenticate=false
--Dcom.sun.management.jmxremote.ssl=false
-```
 
-Runtime.properties:
 
-```
-druid.host=#{IP_ADDR}:8080
-druid.port=8080
-druid.service=druid/prod/realtime
-
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.160","io.druid.extensions:druid-kafka-seven:0.6.160"]
-
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.s3.accessKey=#{ACCESS_KEY}
-druid.s3.secretKey=#{SECRET_KEY}
-
-druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.metadata.storage.connector.user=#{MYSQL_USER}
-druid.metadata.storage.connector.password=#{MYSQL_PW}
-druid.metadata.storage.connector.useValidationQuery=true
-druid.metadata.storage.tables.base=prod
-
-druid.publish.type=metadata
-
-druid.processing.numThreads=3
-
-druid.request.logging.type=file
-druid.request.logging.dir=request_logs/
-
-druid.realtime.specFile=conf/schemas.json
-
-druid.segmentCache.locations=[{"path": "/mnt/persistent/zk_druid", "maxSize": 0}]
-
-druid.storage.type=s3
-druid.storage.bucket=#{S3_STORAGE_BUCKET}
-druid.storage.baseKey=prod-realtime/v1
-
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor", "io.druid.segment.realtime.RealtimeMetricsMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
-```
-
-The realtime module also uses several of the default modules in [Configuration](Configuration.html). For more information on the realtime spec file (or configuration file), see [realtime ingestion](Realtime-ingestion.html) page.

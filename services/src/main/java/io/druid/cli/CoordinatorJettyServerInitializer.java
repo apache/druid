@@ -24,7 +24,7 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.RedirectFilter;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.BaseJettyServerInitializer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -32,12 +32,11 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.resource.Resource;
 
 /**
  */
-class CoordinatorJettyServerInitializer implements JettyServerInitializer
+class CoordinatorJettyServerInitializer extends BaseJettyServerInitializer
 {
   private final DruidCoordinatorConfig config;
 
@@ -60,13 +59,16 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     } else {
       root.setResourceBase(config.getConsoleStatic());
     }
+    root.addFilter(defaultGzipFilterHolder(), "/*", null);
 
-    root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
-    root.addFilter(GzipFilter.class, "/*", null);
-
-    // Can't use '/*' here because of Guice and Jetty static content conflicts
-    // The coordinator really needs a standarized api path
+    // /status should not redirect, so add first
     root.addFilter(GuiceFilter.class, "/status/*", null);
+
+    // redirect anything other than status to the current lead
+    root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
+
+    // The coordinator really needs a standarized api path
+    // Can't use '/*' here because of Guice and Jetty static content conflicts
     root.addFilter(GuiceFilter.class, "/info/*", null);
     root.addFilter(GuiceFilter.class, "/druid/coordinator/*", null);
     // this will be removed in the next major release

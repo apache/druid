@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime;
 
+
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -43,6 +44,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.UnionQueryRunner;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -98,7 +100,7 @@ public class RealtimeManager implements QuerySegmentWalker
       final FireChief chief = new FireChief(fireDepartment);
       List<FireChief> chiefs = this.chiefs.get(schema.getDataSource());
       if (chiefs == null) {
-        chiefs = new ArrayList<RealtimeManager.FireChief>();
+        chiefs = new ArrayList<FireChief>();
         this.chiefs.put(schema.getDataSource(), chiefs);
       }
       chiefs.add(chief);
@@ -121,8 +123,8 @@ public class RealtimeManager implements QuerySegmentWalker
   }
 
   public FireDepartmentMetrics getMetrics(String datasource)
-	{
-		List<FireChief> chiefs = this.chiefs.get(datasource);
+  {
+    List<FireChief> chiefs = this.chiefs.get(datasource);
     if (chiefs == null) {
       return null;
     }
@@ -139,37 +141,43 @@ public class RealtimeManager implements QuerySegmentWalker
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, Iterable<Interval> intervals)
-	{
-		return getQueryRunnerForSegments(query, null);
+  {
+    return getQueryRunnerForSegments(query, null);
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    Iterable<FireChief> chiefsOfDataSource = chiefs.get(getDataSourceName(query));
-    return chiefsOfDataSource == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
-        factory.mergeRunners(
-            executorService,
-            Iterables.transform(
-                chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
-                {
-                  @Override
-                  public QueryRunner<T> apply(FireChief input)
-                  {
-                    return input.getQueryRunner(query);
-                  }
-                }
-            )
-        )
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    final List<String> names = query.getDataSource().getNames();
+    return new UnionQueryRunner<>(
+        Iterables.transform(
+            names, new Function<String, QueryRunner>()
+            {
+              @Override
+              public QueryRunner<T> apply(String input)
+              {
+                Iterable<FireChief> chiefsOfDataSource = chiefs.get(input);
+                return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
+                    factory.mergeRunners(
+                        executorService,
+                        Iterables.transform(
+                            chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
+                            {
+                              @Override
+                              public QueryRunner<T> apply(FireChief input)
+                              {
+                                return input.getQueryRunner(query);
+                              }
+                            }
+                        )
+                    )
+                );
+              }
+            }
+        ), conglomerate.findFactory(query).getToolchest()
     );
   }
-
-  private <T> String getDataSourceName(Query<T> query)
-  {
-    return Iterables.getOnlyElement(query.getDataSource().getNames());
-  }
-
 
   private class FireChief extends Thread implements Closeable
   {
@@ -241,7 +249,8 @@ public class RealtimeManager implements QuerySegmentWalker
             boolean indexLimitExceeded = false;
             try {
               lateEvent = plumber.add(inputRow) == -1;
-            } catch (IndexSizeExceededException e) {
+            }
+            catch (IndexSizeExceededException e) {
               log.info("Index limit exceeded: %s", e.getMessage());
               indexLimitExceeded = true;
             }

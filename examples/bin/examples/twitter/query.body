@@ -1,24 +1,31 @@
 {
-  "queryType": "timeseries",
-  "dataSource": "twitterstream",
-  "granularity": "all",
+  "description": "Simple data split up by hour",
   "aggregations": [
     {
-      "type": "count",
-      "name": "rows"
+      "name": "tweets",
+      "type": "longSum",
+      "fieldName": "tweets"
     },
     {
-      "type": "doubleSum",
-      "fieldName": "tweets",
-      "name": "tweets"
+      "fieldName": "text_hll",
+      "name": "text_hll",
+      "type": "hyperUnique"
+    },
+    {
+      "fieldName": "htags_hll",
+      "name": "htag_hll",
+      "type": "hyperUnique"
+    },
+    {
+      "fieldName": "user_id_hll",
+      "name": "user_id_hll",
+      "type": "hyperUnique"
     }
   ],
-  "filter": {
-    "type": "selector",
-    "dimension": "lang",
-    "value": "en"
-  },
+  "dataSource": "twitterstream",
+  "granularity": "hour",
   "intervals": [
-    "2012-10-01T00:00\/2020-01-01T00"
-  ]
+    "1970-01-01T00:00:00.000/2019-01-03T00:00:00.000"
+  ],
+  "queryType": "timeseries"
 }

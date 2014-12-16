@@ -3,7 +3,7 @@ layout: doc_page
 ---
 
 # Tutorial: The Druid Cluster
-Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like? How does Druid load available static data?
+Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like?
 
 This tutorial will hopefully answer these questions!
 
@@ -28,9 +28,9 @@ You can also [Build From Source](Build-from-source.html).
 
 Druid requires 3 external dependencies. A "deep" storage that acts as a backup data repository, a relational database such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
 
-For deep storage, we have made a public S3 bucket (static.druid.io) available where data for this particular tutorial can be downloaded. More on the data later.
+For deep storage, we will use local disk in this tutorial.
 
-#### Setting up MySQL
+#### Set up Metadata storage
 
 1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
 2. Install MySQL.
@@ -45,7 +45,7 @@ GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
 CREATE database druid;
 ```
 
-#### Setting up Zookeeper
+#### Set up Zookeeper
 
 ```bash
 Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
@@ -92,13 +92,56 @@ Metrics (things to aggregate over):
 
 ## The Cluster
 
-Let's start up a few nodes and download our data. First, let's make sure we have configs in the config directory for our various nodes. Issue the following from the Druid home directory:
+Before we get started, let's make sure we have configs in the config directory for our various nodes. Issue the following from the Druid home directory:
 
 ```
 ls config
 ```
 
 If you are interested in learning more about Druid configuration files, check out this [link](Configuration.html). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
+
+#### Common Configuration
+
+There are a couple of cluster wide configuration options we have to define. The common/cluster configuration files should exist under:
+
+```
+config/_common
+```
+
+In the directory, there should be a `common.runtime.properties` file with the following contents:
+
+```
+# Extensions
+druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-seven","io.druid.extensions:mysql-metadata-storage"]
+
+# Zookeeper
+druid.zk.service.host=localhost
+
+# Metadata Storage
+druid.metadata.storage.type=mysql
+druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
+druid.metadata.storage.connector.user=druid
+druid.metadata.storage.connector.password=diurd
+
+# Deep storage
+druid.storage.type=local
+druid.storage.storage.storageDirectory=/tmp/druid/localStorage
+
+# Cache (we use a simple 10mb heap-based local cache on the broker)
+druid.cache.type=local
+druid.cache.sizeInBytes=10000000
+
+# Indexing service discovery
+druid.selectors.indexing.serviceName=overlord
+
+# Monitoring (disabled for examples)
+# druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
+
+# Metrics logging (disabled for examples)
+druid.emitter=noop
+```
+
+In this file we define our external dependencies and cluster wide configs.
 
 #### Start a Coordinator Node
 
@@ -115,15 +158,11 @@ In the directory, there should be a `runtime.properties` file with the following
 
 ```
 druid.host=localhost
-druid.service=coordinator
 druid.port=8082
+druid.service=coordinator
 
-druid.zk.service.host=localhost
-
-druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.metadata.storage.connector.user=druid
-druid.metadata.storage.connector.password=diurd
-
+# The coordinator begins assignment operations after the start delay.
+# We override the default here to start things up faster for examples.
 druid.coordinator.startDelay=PT70s
 ```
 
@@ -135,7 +174,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/
 
 #### Start a Historical Node
 
-Historical nodes are the workhorses of a cluster and are in charge of loading historical segments and making them available for queries. Our Wikipedia segment will be downloaded by a historical node.
+Historical nodes are the workhorses of a cluster and are in charge of loading historical segments and making them available for queries. Realtime nodes hand off segments to historical nodes.
 For more information about Historical nodes, see [here](Historical.html).
 
 The historical config file should exist at:
@@ -148,24 +187,16 @@ In the directory we just created, we should have the file `runtime.properties` w
 
 ```
 druid.host=localhost
-druid.service=historical
 druid.port=8081
+druid.service=historical
 
-druid.zk.service.host=localhost
-
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.160"]
-
-# Dummy read only AWS account (used to download example data)
-druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
-druid.s3.accessKey=AKIAIMKECRUYKDQGR6YQ
-
-druid.server.maxSize=10000000000
-
-# Change these to make Druid faster
+# We can only 1 scan segment in parallel with these configs.
+# Our intermediate buffer is also very small so longer topNs will be slow.
 druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1
 
 druid.segmentCache.locations=[{"path": "/tmp/druid/indexCache", "maxSize"\: 10000000000}]
+druid.server.maxSize=10000000000
 ```
 
 To start the historical node:
@@ -189,10 +220,15 @@ In the directory, there should be a `runtime.properties` file with the following
 
 ```
 druid.host=localhost
-druid.service=broker
 druid.port=8080
+druid.service=broker
 
-druid.zk.service.host=localhost
+druid.broker.cache.useCache=true
+druid.broker.cache.populateCache=true
+
+# Bump these up only for faster nested groupBy
+druid.processing.buffer.sizeBytes=100000000
+druid.processing.numThreads=1
 ```
 
 To start the broker node:
@@ -201,33 +237,45 @@ To start the broker node:
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/broker io.druid.cli.Main server broker
 ```
 
-## Loading the Data
+#### Start a Realtime Node
 
-The MySQL dependency we introduced earlier on contains a 'segments' table that contains entries for segments that should be loaded into our cluster. The Druid coordinator compares this table with segments that already exist in the cluster to determine what should be loaded and dropped. To load our wikipedia segment, we need to create an entry in our MySQL segment table.
+Our goal is to ingest some data and hand-off that data to the rest of our Druid cluster. To accomplish this goal, we need to make some small configuration changes.
 
-Usually, when new segments are created, these MySQL entries are created directly so you never have to do this by hand. For this tutorial, we can do this manually by going back into MySQL and issuing:
-
-``` sql
-use druid;
-INSERT INTO druid_segments (id, dataSource, created_date, start, end, partitioned, version, used, payload) VALUES ('wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z', 'wikipedia', '2013-08-08T21:26:23.799Z', '2013-08-01T00:00:00.000Z', '2013-08-02T00:00:00.000Z', '0', '2013-08-08T21:22:48.989Z', '1', '{\"dataSource\":\"wikipedia\",\"interval\":\"2013-08-01T00:00:00.000Z/2013-08-02T00:00:00.000Z\",\"version\":\"2013-08-08T21:22:48.989Z\",\"loadSpec\":{\"type\":\"s3_zip\",\"bucket\":\"static.druid.io\",\"key\":\"data/segments/wikipedia/20130801T000000.000Z_20130802T000000.000Z/2013-08-08T21_22_48.989Z/0/index.zip\"},\"dimensions\":\"dma_code,continent_code,geo,area_code,robot,country_name,network,city,namespace,anonymous,unpatrolled,page,postal_code,language,newpage,user,region_lookup\",\"metrics\":\"count,delta,variation,added,deleted\",\"shardSpec\":{\"type\":\"none\"},\"binaryVersion\":9,\"size\":24664730,\"identifier\":\"wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z\"}');
-```
-
-If you look in your coordinator node logs, you should, after a maximum of a minute or so, see logs of the following form:
+In your favorite editor, open up:
 
 ```
-2013-08-08 22:48:41,967 INFO [main-EventThread] com.metamx.druid.coordinator.LoadQueuePeon - Server[/druid/loadQueue/127.0.0.1:8081] done processing [/druid/loadQueue/127.0.0.1:8081/wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z]
-2013-08-08 22:48:41,969 INFO [ServerInventoryView-0] com.metamx.druid.client.SingleServerInventoryView - Server[127.0.0.1:8081] added segment[wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z]
+examples/wikipedia/wikipedia_realtime.spec
 ```
 
-When the segment completes downloading and ready for queries, you should see the following message on your historical node logs:
+We need to change some configuration in order to force hand-off faster.
+
+Let's change:
 
 ```
-2013-08-08 22:48:41,959 INFO [ZkCoordinator-0] com.metamx.druid.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-01T00:00:00.000Z_2013-08-02T00:00:00.000Z_2013-08-08T21:22:48.989Z] at path[/druid/segments/127.0.0.1:8081/2013-08-08T22:48:41.959Z]
+"segmentGranularity": "HOUR",
 ```
 
-At this point, we can query the segment. For more information on querying, see this [link](Querying.html).
+to
 
-### Bonus Round: Start a Realtime Node
+```
+"segmentGranularity": "FIVE_MINUTE",
+```
+
+and
+
+```
+"intermediatePersistPeriod": "PT10m",
+"windowPeriod": "PT10m",
+```
+
+to
+
+```
+"intermediatePersistPeriod": "PT3m",
+"windowPeriod": "PT1m",
+```
+
+Now we should be handing off segments every 6 minutes or so.
 
 To start the realtime node that was used in our first tutorial, you simply have to issue:
 
@@ -239,26 +287,21 @@ The configurations are located in `config/realtime/runtime.properties` and shoul
 
 ```
 druid.host=localhost
-druid.service=realtime
 druid.port=8083
+druid.service=realtime
 
-druid.zk.service.host=localhost
-
-druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.160","io.druid.extensions:druid-kafka-seven:0.6.160"]
-
-# Change this config to db to hand off to the rest of the Druid cluster
-druid.publish.type=noop
-
-# These configs are only required for real hand off
-# druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-# druid.metadata.storage.connector.user=druid
-# druid.metadata.storage.connector.password=diurd
-
+# We can only 1 scan segment in parallel with these configs.
+# Our intermediate buffer is also very small so longer topNs will be slow.
 druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1
 
-druid.monitoring.monitors=["io.druid.segment.realtime.RealtimeMetricsMonitor"]
+# Enable Real monitoring
+# druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor","io.druid.segment.realtime.RealtimeMetricsMonitor"]
 ```
+
+Once the real-time node starts up, it should begin ingesting data and handing that data off to the rest of the Druid cluster. You can use a web UI located at coordinator_ip:port to view the status of data being loaded. Once data is handed off from the real-time nodes to historical nodes, the historical nodes should begin serving segments.
+
+At any point during ingestion, we can query for data. The queries should span across both real-time and historical nodes. For more information on querying, see this [link](Querying.html).
 
 Next Steps
 ----------
