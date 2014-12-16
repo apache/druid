@@ -23,14 +23,14 @@
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.166</version>
+    <version>0.6.167-SNAPSHOT</version>
     <name>druid</name>
     <description>druid</description>
     <scm>
         <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
         <url>http://www.github.com/metamx/druid</url>
-        <tag>druid-0.6.166</tag>
+        <tag>druid-0.6.166-SNAPSHOT</tag>
     </scm>
 
     <prerequisites>
