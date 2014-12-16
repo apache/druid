@@ -42,8 +42,7 @@ import java.util.Map;
 public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadataResultValue>>
 {
   public static final Interval MY_Y2K_INTERVAL = new Interval(
-      new DateTime("0000-01-01"),
-      new DateTime("3000-01-01")
+      JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
   );
 
   public static String MAX_INGESTED_EVENT_TIME = "maxIngestedEventTime";
@@ -108,17 +107,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
 
   public Iterable<Result<DataSourceMetadataResultValue>> buildResult(DateTime timestamp, DateTime maxIngestedEventTime)
   {
-    List<Result<DataSourceMetadataResultValue>> results = Lists.newArrayList();
-    Map<String, Object> result = Maps.newHashMap();
-
-    if (maxIngestedEventTime != null) {
-      result.put(MAX_INGESTED_EVENT_TIME, maxIngestedEventTime);
-    }
-    if (!result.isEmpty()) {
-      results.add(new Result<>(timestamp, new DataSourceMetadataResultValue(result)));
-    }
-
-    return results;
+    return Arrays.asList(new Result<>(timestamp, new DataSourceMetadataResultValue(maxIngestedEventTime)));
   }
 
   public Iterable<Result<DataSourceMetadataResultValue>> mergeResults(List<Result<DataSourceMetadataResultValue>> results)

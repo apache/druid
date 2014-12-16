@@ -21,38 +21,26 @@ package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.metamx.common.IAE;
 import org.joda.time.DateTime;
-
-import java.util.Map;
 
 /**
  */
 public class DataSourceMetadataResultValue
 {
-  private final Object value;
+  private final DateTime maxIngestedEventTime;
 
   @JsonCreator
   public DataSourceMetadataResultValue(
-      Object value
+      DateTime maxIngestedEventTime
   )
   {
-    this.value = value;
+    this.maxIngestedEventTime = maxIngestedEventTime;
   }
 
   @JsonValue
-  public Object getBaseObject()
-  {
-    return value;
-  }
-
   public DateTime getMaxIngestedEventTime()
   {
-    if (value instanceof Map) {
-      return getDateTimeValue(((Map) value).get(DataSourceMetadataQuery.MAX_INGESTED_EVENT_TIME));
-    } else {
-      return getDateTimeValue(value);
-    }
+    return maxIngestedEventTime;
   }
 
   @Override
@@ -67,7 +55,9 @@ public class DataSourceMetadataResultValue
 
     DataSourceMetadataResultValue that = (DataSourceMetadataResultValue) o;
 
-    if (value != null ? !value.equals(that.value) : that.value != null) {
+    if (maxIngestedEventTime != null
+        ? !maxIngestedEventTime.equals(that.maxIngestedEventTime)
+        : that.maxIngestedEventTime != null) {
       return false;
     }
 
@@ -77,29 +67,14 @@ public class DataSourceMetadataResultValue
   @Override
   public int hashCode()
   {
-    return value != null ? value.hashCode() : 0;
+    return maxIngestedEventTime != null ? maxIngestedEventTime.hashCode() : 0;
   }
 
   @Override
   public String toString()
   {
     return "DataSourceMetadataResultValue{" +
-           "value=" + value +
+           "maxIngestedEventTime=" + maxIngestedEventTime +
            '}';
-  }
-
-  private DateTime getDateTimeValue(Object val)
-  {
-    if (val == null) {
-      return null;
-    }
-
-    if (val instanceof DateTime) {
-      return (DateTime) val;
-    } else if (val instanceof String) {
-      return new DateTime(val);
-    } else {
-      throw new IAE("Cannot get time from type[%s]", val.getClass());
-    }
   }
 }
