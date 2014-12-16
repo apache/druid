@@ -43,7 +43,7 @@
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
         <apache.curator.version>2.7.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
-        <druid.api.version>0.3.0</druid.api.version>
+        <druid.api.version>0.3.1</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
     </properties>
 
