@@ -47,6 +47,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -150,21 +151,22 @@ public class DatabaseSegmentManager
                   String.format("SELECT payload FROM %s WHERE dataSource = :dataSource", getSegmentsTable())
               )
                            .bind("dataSource", ds)
+                           .map(ByteArrayMapper.FIRST)
                            .fold(
                                new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
-                               new Folder3<VersionedIntervalTimeline<String, DataSegment>, Map<String, Object>>()
+                               new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
                                {
                                  @Override
                                  public VersionedIntervalTimeline<String, DataSegment> fold(
                                      VersionedIntervalTimeline<String, DataSegment> timeline,
-                                     Map<String, Object> stringObjectMap,
+                                     byte[] payload,
                                      FoldController foldController,
                                      StatementContext statementContext
                                  ) throws SQLException
                                  {
                                    try {
                                      DataSegment segment = jsonMapper.readValue(
-                                         (String) stringObjectMap.get("payload"),
+                                         payload,
                                          DataSegment.class
                                      );
 
@@ -401,28 +403,28 @@ public class DatabaseSegmentManager
 
       ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<String, DruidDataSource>();
 
-      List<Map<String, Object>> segmentRows = dbi.withHandle(
-          new HandleCallback<List<Map<String, Object>>>()
+      List<byte[]> payloadRows = dbi.withHandle(
+          new HandleCallback<List<byte[]>>()
           {
             @Override
-            public List<Map<String, Object>> withHandle(Handle handle) throws Exception
+            public List<byte[]> withHandle(Handle handle) throws Exception
             {
               return handle.createQuery(
                   String.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable())
-              ).list();
+              ).map(ByteArrayMapper.FIRST).list();
             }
           }
       );
 
-      if (segmentRows == null || segmentRows.isEmpty()) {
+      if (payloadRows == null || payloadRows.isEmpty()) {
         log.warn("No segments found in the database!");
         return;
       }
 
-      log.info("Polled and found %,d segments in the database", segmentRows.size());
+      log.info("Polled and found %,d segments in the database", payloadRows.size());
 
-      for (Map<String, Object> segmentRow : segmentRows) {
-        DataSegment segment = jsonMapper.readValue((String) segmentRow.get("payload"), DataSegment.class);
+      for (byte[] payload : payloadRows) {
+        DataSegment segment = jsonMapper.readValue(payload, DataSegment.class);
 
         String datasourceName = segment.getDataSource();
 

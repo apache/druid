@@ -108,7 +108,7 @@ public class DbSegmentPublisher implements SegmentPublisher
                     .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
                     .bind("version", segment.getVersion())
                     .bind("used", true)
-                    .bind("payload", jsonMapper.writeValueAsString(segment))
+                    .bind("payload", jsonMapper.writeValueAsBytes(segment))
                     .execute();
 
               return null;
