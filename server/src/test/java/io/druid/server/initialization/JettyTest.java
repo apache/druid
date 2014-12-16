@@ -23,13 +23,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.HttpClientConfig;
+import com.metamx.http.client.HttpClientInit;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
@@ -38,7 +39,6 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
@@ -49,12 +49,14 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -259,10 +261,17 @@ public class JettyTest
   {
     HttpClient client;
 
-    @Inject
-    ClientHolder(@Global HttpClient client)
+    ClientHolder()
     {
-      this.client = client;
+      try {
+        this.client = HttpClientInit.createClient(
+            new HttpClientConfig(1, SSLContext.getDefault(), Duration.ZERO),
+            new Lifecycle()
+        );
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
     }
 
     public HttpClient getClient()
