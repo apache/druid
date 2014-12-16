@@ -84,7 +84,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.9.7</version>
+                <version>0.9.12</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
