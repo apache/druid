@@ -125,6 +125,8 @@ public class CliPeon extends GuiceRunnable
                                  .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
             handlerProviderBinder.addBinding("noop")
                                  .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
+            binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);;
+            binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
