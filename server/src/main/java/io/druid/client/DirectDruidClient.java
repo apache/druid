@@ -214,15 +214,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public InputStream nextElement()
                     {
-                      synchronized (done) {
-                        try {
-                          // Ensures more elements are expected via `done`
-                          return queue.take();
-                        }
-                        catch (InterruptedException e) {
-                          Thread.currentThread().interrupt();
-                          throw Throwables.propagate(e);
-                        }
+                      try {
+                        return queue.take();
+                      }
+                      catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw Throwables.propagate(e);
                       }
                     }
                   }
