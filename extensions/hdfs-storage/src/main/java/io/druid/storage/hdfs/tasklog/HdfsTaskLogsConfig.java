@@ -27,15 +27,9 @@ import javax.validation.constraints.NotNull;
  */
 public class HdfsTaskLogsConfig
 {
-
   @JsonProperty
   @NotNull
   private String directory;
-
-  public HdfsTaskLogsConfig(String directory)
-  {
-    this.directory = directory;
-  }
 
   public String getDirectory()
   {
