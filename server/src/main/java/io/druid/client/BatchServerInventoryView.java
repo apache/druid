@@ -118,7 +118,7 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   @Override
   protected DruidServer removeInnerInventory(final DruidServer container, String inventoryKey)
   {
-    log.info("Server[%s] removed container[%s]", container.getName(), inventoryKey);
+    log.debug("Server[%s] removed container[%s]", container.getName(), inventoryKey);
     Set<DataSegment> segments = zNodes.remove(inventoryKey);
 
     if (segments == null) {
