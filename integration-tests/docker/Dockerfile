@@ -35,7 +35,9 @@ RUN adduser --system --group --no-create-home druid
 RUN mkdir -p /var/lib/druid
 RUN chown druid:druid /var/lib/druid
 
-ADD druid-*.jar /usr/local/druid/lib/
+# Add druid jars
+ADD lib/* /usr/local/druid/lib/
+
 WORKDIR /
 
 # Setup metadata store

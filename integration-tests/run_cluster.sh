@@ -1,11 +1,11 @@
-# Add druid jar
-cp ./target/druid-integration-tests-*-selfcontained.jar docker/
+# cleanup 
+for node in druid-historical druid-coordinator druid-overlord druid-router druid-broker druid-middlemanager druid-zookeeper druid-mysql;
+do
+docker stop $node
+docker rm $node
+done
 
-# Build Druid Cluster Image
-docker build -t druid/cluster docker/
-
-# remove copied jar 
-rm docker/*.jar
+# environment variables
 DIR=$(cd $(dirname $0) && pwd)
 DOCKERDIR=$DIR/docker
 SHARED_DIR=${HOME}/shared
@@ -15,6 +15,14 @@ RESOURCEDIR=$DIR/src/test/resources
 # Make directories if they dont exist
 mkdir -p $SHARED_DIR/logs
 mkdir -p $SHARED_DIR/tasklogs
+
+# install druid jars 
+rm -rf $SHARED_DIR/docker
+cp -R docker $SHARED_DIR/docker
+mvn dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
+
+# Build Druid Cluster Image
+docker build -t druid/cluster $SHARED_DIR/docker
 
 # Start zookeeper
 docker run -d --name druid-zookeeper -p 2181:2181 -v $SHARED_DIR:/shared -v $DOCKERDIR/zookeeper.conf:$SUPERVISORDIR/zookeeper.conf druid/cluster
