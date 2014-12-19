@@ -18,6 +18,7 @@
  */
 package io.druid.storage.hdfs.tasklog;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
@@ -30,6 +31,12 @@ public class HdfsTaskLogsConfig
   @JsonProperty
   @NotNull
   private String directory;
+
+  @JsonCreator
+  public HdfsTaskLogsConfig(@JsonProperty("directory") String directory)
+  {
+    this.directory = directory;
+  }
 
   public String getDirectory()
   {
