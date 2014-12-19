@@ -102,7 +102,7 @@ public class InitializationTest
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(
-        startupInjector, ImmutableList.<Object>of(
+        startupInjector, ImmutableList.<com.google.inject.Module>of(
             new com.google.inject.Module()
             {
               @Override

@@ -19,6 +19,7 @@
 
 package io.druid.guice;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
@@ -27,15 +28,16 @@ import com.google.inject.Module;
 import io.druid.jackson.JacksonModule;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
 public class GuiceInjectors
 {
-  public static Injector makeStartupInjector()
+  public static Collection<Module> makeDefaultStartupModules()
   {
-    return Guice.createInjector(
+    return ImmutableList.<Module>of(
         new DruidGuiceExtensions(),
         new JacksonModule(),
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
@@ -52,29 +54,18 @@ public class GuiceInjectors
     );
   }
 
-  public static Injector makeStartupInjectorWithModules(Iterable<Module> modules)
+  public static Injector makeStartupInjector()
+  {
+    return Guice.createInjector(makeDefaultStartupModules());
+  }
+
+  public static Injector makeStartupInjectorWithModules(Iterable<? extends Module> modules)
   {
     List<Module> theModules = Lists.newArrayList();
-    theModules.add(new DruidGuiceExtensions());
-    theModules.add(new JacksonModule());
-    theModules.add(new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")));
-    theModules.add(new ConfigModule());
-    theModules.add(
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bind(DruidSecondaryModule.class);
-            JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-          }
-        }
-    );
+    theModules.addAll(makeDefaultStartupModules());
     for (Module theModule : modules) {
       theModules.add(theModule);
     }
-
-
     return Guice.createInjector(theModules);
   }
 }
