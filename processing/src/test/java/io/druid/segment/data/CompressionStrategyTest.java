@@ -25,16 +25,12 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.segment.CompressedPools;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,12 +40,10 @@ import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @RunWith(Parameterized.class)
 public class CompressionStrategyTest
@@ -124,8 +118,8 @@ public class CompressionStrategyTest
     Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
   }
 
-  @Test
-  public void testConcurrency() throws InterruptedException, ExecutionException, TimeoutException
+  @Test(timeout = 60000)
+  public void testConcurrency() throws Exception
   {
     final int numThreads = 20;
     BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(numThreads);
@@ -159,13 +153,13 @@ public class CompressionStrategyTest
     }
     threadPoolExecutor.shutdown();
     for (Future result : results) {
-      Assert.assertTrue((Boolean) result.get(100, TimeUnit.MILLISECONDS));
+      Assert.assertTrue((Boolean) result.get());
     }
   }
 
 
-  @Test(timeout = 120000)
-  public void testKnownSizeConcurrency() throws InterruptedException, ExecutionException, TimeoutException
+  @Test(timeout = 60000)
+  public void testKnownSizeConcurrency() throws Exception
   {
     final int numThreads = 20;
 
