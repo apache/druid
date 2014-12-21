@@ -25,13 +25,23 @@ import org.eclipse.jetty.servlets.GzipFilter;
 
 public abstract class BaseJettyServerInitializer implements JettyServerInitializer
 {
-  public FilterHolder defaultGzipFilterHolder() {
+  public FilterHolder defaultGzipFilterHolder()
+  {
     final FilterHolder gzipFilterHolder = new FilterHolder(GzipFilter.class);
+    setDefaultGzipFilterHolderParameters(gzipFilterHolder);
     return gzipFilterHolder;
   }
 
-  public FilterHolder defaultAsyncGzipFilterHolder() {
+  public FilterHolder defaultAsyncGzipFilterHolder()
+  {
     final FilterHolder gzipFilterHolder = new FilterHolder(AsyncGzipFilter.class);
+    setDefaultGzipFilterHolderParameters(gzipFilterHolder);
     return gzipFilterHolder;
+  }
+
+  private static void setDefaultGzipFilterHolderParameters(final FilterHolder filterHolder)
+  {
+    // We don't actually have any precomputed .gz resources, and checking for them inside jars is expensive.
+    filterHolder.setInitParameter("checkGzExists", String.valueOf(false));
   }
 }
