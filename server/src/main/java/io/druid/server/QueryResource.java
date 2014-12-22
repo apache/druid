@@ -130,7 +130,6 @@ public class QueryResource
   {
     final long start = System.currentTimeMillis();
     Query query = null;
-    byte[] requestQuery = null;
     String queryId = null;
 
     final String reqContentType = req.getContentType();
@@ -267,9 +266,10 @@ public class QueryResource
       ).build();
     }
     catch (Exception e) {
+      // Input stream has already been consumed by the json object mapper if query == null
       final String queryString =
           query == null
-          ? (isSmile ? "smile_unknown" : new String(requestQuery, Charsets.UTF_8))
+          ? "unparsable query"
           : query.toString();
 
       log.warn(e, "Exception occurred on request [%s]", queryString);
