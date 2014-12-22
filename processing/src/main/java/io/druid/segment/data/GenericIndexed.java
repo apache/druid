@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
@@ -30,6 +31,7 @@ import com.metamx.common.logger.Logger;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
@@ -377,9 +379,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
     @Override
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      final byte[] bytes = new byte[numBytes];
-      buffer.get(bytes);
-      return new String(bytes, Charsets.UTF_8);
+      return com.metamx.common.StringUtils.fromUtf8(buffer, numBytes);
     }
 
     @Override
@@ -388,7 +388,7 @@ public class GenericIndexed<T> implements Indexed<T>, Closeable
       if (val == null) {
         return new byte[]{};
       }
-      return val.getBytes(Charsets.UTF_8);
+      return com.metamx.common.StringUtils.toUtf8(val);
     }
 
     @Override

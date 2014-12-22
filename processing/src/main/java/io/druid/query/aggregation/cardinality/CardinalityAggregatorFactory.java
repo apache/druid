@@ -27,6 +27,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.Aggregators;
@@ -171,7 +172,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
       return HyperLogLogCollector.makeCollector((ByteBuffer) object);
     } else if (object instanceof String) {
       return HyperLogLogCollector.makeCollector(
-          ByteBuffer.wrap(Base64.decodeBase64(((String) object).getBytes(Charsets.UTF_8)))
+          ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)))
       );
     }
     return object;
@@ -212,7 +213,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = Joiner.on("\u0001").join(fieldNames).getBytes(Charsets.UTF_8);
+    byte[] fieldNameBytes = StringUtils.toUtf8(Joiner.on("\u0001").join(fieldNames));
 
     return ByteBuffer.allocate(2 + fieldNameBytes.length)
                      .put(CACHE_TYPE_ID)

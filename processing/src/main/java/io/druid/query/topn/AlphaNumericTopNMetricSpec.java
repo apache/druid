@@ -23,6 +23,7 @@ import com.davekoelle.alphanum.AlphanumComparator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -54,7 +55,7 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] previousStopBytes = previousStop.getBytes(Charsets.UTF_8);
+    byte[] previousStopBytes = StringUtils.toUtf8(previousStop);
 
     return ByteBuffer.allocate(1 + previousStopBytes.length)
                      .put(CACHE_TYPE_ID)

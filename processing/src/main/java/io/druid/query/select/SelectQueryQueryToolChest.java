@@ -30,6 +30,7 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
+import com.metamx.common.StringUtils;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
@@ -160,7 +161,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         int dimensionsBytesSize = 0;
         int index = 0;
         for (String dimension : dimensions) {
-          dimensionsBytes[index] = dimension.getBytes(Charsets.UTF_8);
+          dimensionsBytes[index] = StringUtils.toUtf8(dimension);
           dimensionsBytesSize += dimensionsBytes[index].length;
           ++index;
         }
@@ -174,7 +175,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         int metricBytesSize = 0;
         index = 0;
         for (String metric : metrics) {
-          metricBytes[index] = metric.getBytes(Charsets.UTF_8);
+          metricBytes[index] = StringUtils.toUtf8(metric);
           metricBytesSize += metricBytes[index].length;
           ++index;
         }

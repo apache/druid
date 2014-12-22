@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
@@ -60,8 +61,8 @@ public class RegexDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
-    final byte[] patternBytes = pattern.getBytes(Charsets.UTF_8);
+    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    final byte[] patternBytes = StringUtils.toUtf8(pattern);
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + patternBytes.length)
         .put(DimFilterCacheHelper.REGEX_CACHE_ID)

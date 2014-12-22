@@ -28,6 +28,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.StringUtils;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
@@ -145,7 +146,7 @@ public class SQLRunner
     URL url = new URL(String.format("http://%s/druid/v2/?pretty", hostname));
     final URLConnection urlConnection = url.openConnection();
     urlConnection.addRequestProperty("content-type", MediaType.APPLICATION_JSON);
-    urlConnection.getOutputStream().write(queryStr.getBytes(Charsets.UTF_8));
+    urlConnection.getOutputStream().write(StringUtils.toUtf8(queryStr));
     BufferedReader stdInput = new BufferedReader(new InputStreamReader(urlConnection.getInputStream(), Charsets.UTF_8));
 
     Object res = objectMapper.readValue(stdInput, typeRef);

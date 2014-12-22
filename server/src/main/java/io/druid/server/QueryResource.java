@@ -33,6 +33,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
+import com.metamx.common.StringUtils;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
@@ -269,7 +270,7 @@ public class QueryResource
     catch (Exception e) {
       final String queryString =
           query == null
-          ? (isSmile ? "smile_unknown" : new String(requestQuery, Charsets.UTF_8))
+          ? (isSmile ? "smile_unknown" : StringUtils.fromUtf8(requestQuery))
           : query.toString();
 
       log.warn(e, "Exception occurred on request [%s]", queryString);
