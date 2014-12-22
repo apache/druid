@@ -27,9 +27,9 @@
     <name>druid</name>
     <description>druid</description>
     <scm>
-        <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
-        <url>http://www.github.com/metamx/druid</url>
+        <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
+        <url>https://github.com/druid-io/druid</url>
         <tag>druid-0.6.166-SNAPSHOT</tag>
     </scm>
 
