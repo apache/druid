@@ -353,7 +353,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             log.info("CHILD_UPDATED[%s] with version[%s]", inventoryKey, event.getData().getStat().getVersion());
 
             final InventoryClass updatedInventory = strategy.deserializeInventory(child.getData());
-‰
+
             synchronized (holder) {
               holder.setContainer(strategy.updateInventory(holder.getContainer(), inventoryKey, updatedInventory));
             }
