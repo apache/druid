@@ -6,7 +6,7 @@ layout: doc_page
 The other way to setup Druid is from source via git. To do so, run these commands:
 
 ```
-git clone git@github.com:metamx/druid.git
+git clone git@github.com:druid-io/druid.git
 cd druid
 ./build.sh
 ```

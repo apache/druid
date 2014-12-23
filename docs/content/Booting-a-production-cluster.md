@@ -25,7 +25,7 @@ Clone the code from [https://github.com/druid-io/whirr](https://github.com/druid
     git checkout trunk
     mvn clean install -Dmaven.test.failure.ignore=true
 
-In order to run the test below, you'll also need two files that available only from a [standard install of Druid](http://druid.io/downloads.html) or the [Druid repo](https://github.com/metamx/druid/tree/master/examples/bin/examples):
+In order to run the test below, you'll also need two files that available only from a [standard install of Druid](http://druid.io/downloads.html) or the [Druid repo](https://github.com/druid-io/druid/tree/master/examples/bin/examples):
 
 * `druid/examples/bin/examples/wikipedia/wikipedia_realtime.spec`
 * `druid/examples/bin/examples/indexing/wikipedia_realtime_task.json`
