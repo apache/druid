@@ -110,7 +110,7 @@ This just walks through getting the relevant software installed and running.  Yo
 
 1. Clone the git repository for druid, checkout a "stable" tag and build 
 
-        git clone https://github.com/metamx/druid.git druid
+        git clone https://github.com/druid-io/druid.git druid
         pushd druid
         git checkout druid-0.4.12
         export LANGUAGE=C

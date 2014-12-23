@@ -4,7 +4,7 @@ layout: doc_page
 Examples
 ========
 
-The examples on this page are setup in order to give you a feel for what Druid does in practice. They are quick demos of Druid based on [CliRealtimeExample](https://github.com/metamx/druid/blob/master/services/src/main/java/io/druid/cli/CliRealtimeExample.java). While you wouldn’t run it this way in production you should be able to see how ingestion works and the kind of exploratory queries that are possible. Everything that can be done on your box here can be scaled out to 10’s of billions of events and terabytes of data per day in a production cluster while still giving the snappy responsive exploratory queries.
+The examples on this page are setup in order to give you a feel for what Druid does in practice. They are quick demos of Druid based on [CliRealtimeExample](https://github.com/druid-io/druid/blob/master/services/src/main/java/io/druid/cli/CliRealtimeExample.java). While you wouldn’t run it this way in production you should be able to see how ingestion works and the kind of exploratory queries that are possible. Everything that can be done on your box here can be scaled out to 10’s of billions of events and terabytes of data per day in a production cluster while still giving the snappy responsive exploratory queries.
 
 Installing Standalone Druid
 ---------------------------
@@ -16,7 +16,7 @@ There are two options for installing standalone Druid. Building from source, and
 Clone Druid and build it:
 
 ``` bash
-git clone https://github.com/metamx/druid.git druid
+git clone https://github.com/druid-io/druid.git druid
 cd druid
 git fetch --tags
 git checkout druid-0.6.160
@@ -37,7 +37,7 @@ Twitter Example
 
 For a full tutorial based on the twitter example, check out this [Twitter Tutorial](Twitter-Tutorial.html).
 
-This Example uses a feature of Twitter that allows for sampling of it’s stream. We sample the Twitter stream via our [TwitterSpritzerFirehoseFactory](https://github.com/metamx/druid/blob/master/examples/src/main/java/druid/examples/twitter/TwitterSpritzerFirehoseFactory.java) class and use it to simulate the kinds of data you might ingest into Druid. Then, with the client part, the sample shows what kinds of analytics explorations you can do during and after the data is loaded.
+This Example uses a feature of Twitter that allows for sampling of it’s stream. We sample the Twitter stream via our [TwitterSpritzerFirehoseFactory](https://github.com/druid-io/druid/blob/master/examples/src/main/java/druid/examples/twitter/TwitterSpritzerFirehoseFactory.java) class and use it to simulate the kinds of data you might ingest into Druid. Then, with the client part, the sample shows what kinds of analytics explorations you can do during and after the data is loaded.
 
 ### What you’ll learn
 * See how large amounts of data gets ingested into Druid in real-time
