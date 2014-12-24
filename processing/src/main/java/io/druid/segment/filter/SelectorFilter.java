@@ -19,8 +19,8 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import io.druid.query.aggregation.Aggregators;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -62,9 +62,9 @@ public class SelectorFilter implements Filter
   {
     final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension);
 
-    // Missing columns are treated the same way as selector.getBitmapIndex, always returning false
+    // Missing columns match a null or empty string value and don't match anything else
     if (dimensionSelector == null) {
-      return new BooleanValueMatcher(false);
+      return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
     } else {
       final int valueId = dimensionSelector.lookupId(value);
       return new ValueMatcher()

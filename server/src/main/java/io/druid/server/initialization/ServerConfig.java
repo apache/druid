@@ -46,4 +46,13 @@ public class ServerConfig
   {
     return maxIdleTime;
   }
+
+  @Override
+  public String toString()
+  {
+    return "ServerConfig{" +
+        "numThreads=" + numThreads +
+        ", maxIdleTime=" + maxIdleTime +
+        '}';
+  }
 }

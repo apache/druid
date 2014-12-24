@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
@@ -114,30 +115,18 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   {
     final Column column = index.getColumn(dimension);
     if (column == null) {
-      return bitmapFactory.makeEmptyImmutableBitmap();
+      if (Strings.isNullOrEmpty(value)) {
+        return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
+      } else {
+        return bitmapFactory.makeEmptyImmutableBitmap();
+      }
     }
+
     if (!column.getCapabilities().hasBitmapIndexes()) {
       bitmapFactory.makeEmptyImmutableBitmap();
     }
 
     return column.getBitmapIndex().getBitmap(value);
-  }
-
-  @Override
-  public ImmutableBitmap getBitmapIndex(String dimension, int idx)
-  {
-    final Column column = index.getColumn(dimension);
-    if (column == null || column.getCapabilities() == null) {
-      bitmapFactory.makeEmptyImmutableBitmap();
-    }
-    if (!column.getCapabilities().hasBitmapIndexes()) {
-      bitmapFactory.makeEmptyImmutableBitmap();
-    }
-
-    // This is a workaround given the current state of indexing, I feel shame
-    final int index1 = column.getBitmapIndex().hasNulls() ? idx + 1 : idx;
-
-    return column.getBitmapIndex().getBitmap(index1);
   }
 
   @Override

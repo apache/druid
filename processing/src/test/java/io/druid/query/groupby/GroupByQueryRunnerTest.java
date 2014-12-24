@@ -552,13 +552,11 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularity.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>()
-        {
+        new QueryRunner<Row>() {
           @Override
           public Sequence<Row> run(
               Query<Row> query, Map<String, Object> responseContext
-          )
-          {
+          ) {
             // simulate two daily segments
             final Query query1 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
@@ -1193,15 +1191,15 @@ public class GroupByQueryRunnerTest
     final GroupByQuery query = builder.build();
 
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "business", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "entertainment", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "health", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "mezzanine", "rows", 6L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "news", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "premium", "rows", 6L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "technology", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "travel", "rows", 2L)
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "automotive", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "business", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "entertainment", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "health", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "mezzanine", "rows", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "news", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "premium", "rows", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "technology", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "index", null, "quality", "travel", "rows", 2L)
     );
 
     Map<String, Object> context = Maps.newHashMap();
@@ -1248,15 +1246,15 @@ public class GroupByQueryRunnerTest
     final GroupByQuery query = builder.build();
 
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "automotive", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "business", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "entertainment", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "health", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "mezzanine", "rows", 6L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "news", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "premium", "rows", 6L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "technology", "rows", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "quality", "travel", "rows", 2L)
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "automotive", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "business", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "entertainment", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "health", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "mezzanine", "rows", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "news", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "premium", "rows", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "technology", "rows", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
     Map<String, Object> context = Maps.newHashMap();
