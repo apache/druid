@@ -499,9 +499,4 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
       return partitionHolder;
     }
   }
-
-  public static void main(String[] args)
-  {
-    System.out.println(new Interval(new DateTime(), (DateTime) null));
-  }
 }

@@ -277,7 +277,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             )
         );
 
-        return new Result<TopNResultValue>(
+        return new Result<>(
             result.getTimestamp(),
             new TopNResultValue(serializedValues)
         );
@@ -400,7 +400,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               retVal.add(vals);
             }
 
-            return new Result<TopNResultValue>(timestamp, new TopNResultValue(retVal));
+            return new Result<>(timestamp, new TopNResultValue(retVal));
           }
         };
       }
@@ -408,7 +408,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public Sequence<Result<TopNResultValue>> mergeSequences(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
       {
-        return new MergeSequence<Result<TopNResultValue>>(getOrdering(), seqOfSequences);
+        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }
@@ -416,10 +416,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public QueryRunner<Result<TopNResultValue>> preMergeQueryDecoration(QueryRunner<Result<TopNResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<TopNResultValue>>(
-        runner,
-        config.getChunkPeriod()
-    );
+    return new IntervalChunkingQueryRunner<>(runner, config.getChunkPeriod());
   }
 
   @Override
@@ -485,7 +482,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                               @Override
                               public Result<TopNResultValue> apply(Result<TopNResultValue> input)
                               {
-                                return new Result<TopNResultValue>(
+                                return new Result<>(
                                     input.getTimestamp(),
                                     new TopNResultValue(
                                         Lists.<Object>newArrayList(
@@ -505,7 +502,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                 );
               }
 
-              return new Result<TopNResultValue>(
+              return new Result<>(
                   input.getTimestamp(),
                   new TopNResultValue(
                       Lists.<Object>newArrayList(

@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 
 /**
  */
-public class PartialDimExtractionFn implements DimExtractionFn
+public class MatchingDimExtractionFn implements DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x2;
 
@@ -35,7 +35,7 @@ public class PartialDimExtractionFn implements DimExtractionFn
   private final Pattern pattern;
 
   @JsonCreator
-  public PartialDimExtractionFn(
+  public MatchingDimExtractionFn(
       @JsonProperty("expr") String expr
   )
   {
@@ -70,7 +70,7 @@ public class PartialDimExtractionFn implements DimExtractionFn
   @Override
   public boolean preservesOrdering()
   {
-    return true;
+    return false;
   }
 
   @Override

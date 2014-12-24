@@ -49,6 +49,8 @@ import java.util.Map;
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
+  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
+
   private final QueryableIndex index;
 
   public QueryableIndexStorageAdapter(
@@ -274,8 +276,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     {
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
                       final Column columnDesc = index.getColumn(dimension);
+                      if (columnDesc == null) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
 
-                      if (cachedColumn == null && columnDesc != null) {
+                      if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
                         dictionaryColumnCache.put(dimension, cachedColumn);
                       }
@@ -283,8 +288,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final DictionaryEncodedColumn column = cachedColumn;
 
                       if (column == null) {
-                        return null;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
+                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
