@@ -1,5 +1,5 @@
 # cleanup 
-for node in druid-historical druid-coordinator druid-overlord druid-router druid-broker druid-middlemanager druid-zookeeper druid-mysql;
+for node in druid-historical druid-coordinator druid-overlord druid-router druid-broker druid-middlemanager druid-zookeeper druid-metadata-storage;
 do
 docker stop $node
 docker rm $node
@@ -28,13 +28,13 @@ docker build -t druid/cluster $SHARED_DIR/docker
 docker run -d --name druid-zookeeper -p 2181:2181 -v $SHARED_DIR:/shared -v $DOCKERDIR/zookeeper.conf:$SUPERVISORDIR/zookeeper.conf druid/cluster
 
 # Start MYSQL 
-docker run -d --name druid-mysql -v $SHARED_DIR:/shared -v $DOCKERDIR/mysql.conf:$SUPERVISORDIR/mysql.conf druid/cluster
+docker run -d --name druid-metadata-storage -v $SHARED_DIR:/shared -v $DOCKERDIR/metadata-storage.conf:$SUPERVISORDIR/metadata-storage.conf druid/cluster
 
 # Start Overlord
-docker run -d --name druid-overlord -p 8090:8090 -v $SHARED_DIR:/shared -v $DOCKERDIR/overlord.conf:$SUPERVISORDIR/overlord.conf --link druid-mysql:druid-mysql --link druid-zookeeper:druid-zookeeper druid/cluster
+docker run -d --name druid-overlord -p 8090:8090 -v $SHARED_DIR:/shared -v $DOCKERDIR/overlord.conf:$SUPERVISORDIR/overlord.conf --link druid-metadata-storage:druid-metadata-storage --link druid-zookeeper:druid-zookeeper druid/cluster
 
 # Start coordinator 
-docker run -d --name druid-coordinator -p 8081:8081 -v $SHARED_DIR:/shared -v $DOCKERDIR/coordinator.conf:$SUPERVISORDIR/coordinator.conf --link druid-overlord:druid-overlord --link druid-mysql:druid-mysql --link druid-zookeeper:druid-zookeeper druid/cluster
+docker run -d --name druid-coordinator -p 8081:8081 -v $SHARED_DIR:/shared -v $DOCKERDIR/coordinator.conf:$SUPERVISORDIR/coordinator.conf --link druid-overlord:druid-overlord --link druid-metadata-storage:druid-metadata-storage --link druid-zookeeper:druid-zookeeper druid/cluster
 
 # Start Historical 
 docker run -d --name druid-historical -v $SHARED_DIR:/shared -v $DOCKERDIR/historical.conf:$SUPERVISORDIR/historical.conf --link druid-zookeeper:druid-zookeeper druid/cluster
