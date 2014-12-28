@@ -40,6 +40,13 @@ public class RemoteTaskRunnerConfig
   @Min(10 * 1024)
   private long maxZnodeBytes = 512 * 1024;
 
+  @JsonProperty
+  private boolean strategyTaskAscOrder = true;
+
+  public boolean isStrategyTaskAscOrder() {
+    return strategyTaskAscOrder;
+  }
+
   public Period getTaskAssignmentTimeout()
   {
     return taskAssignmentTimeout;

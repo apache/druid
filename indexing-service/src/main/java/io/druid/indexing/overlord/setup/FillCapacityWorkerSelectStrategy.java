@@ -54,7 +54,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
               retVal = zkWorker.getWorker().getHost().compareTo(zkWorker2.getWorker().getHost());
             }
 
-            return retVal;
+            return config.isStrategyTaskAscOrder() ? retVal : -retVal;
           }
         }
     );
