@@ -25,16 +25,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
-import io.druid.query.*;
+import io.druid.query.BySegmentResultValueClass;
+import io.druid.query.Druids;
+import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.Result;
+import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -1637,6 +1644,111 @@ public class TopNQueryRunnerTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+  }
+
+  @Test
+  public void testTopNWithNullOrEmptyDimExtractionFn()
+  {
+    final DimExtractionFn emptyStringDimExtraction = new DimExtractionFn()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[]{(byte) 0xFF};
+      }
+
+      @Override
+      public String apply(String dimValue)
+      {
+        return dimValue.equals("total_market") ? "" : dimValue;
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+    };
+
+    final DimExtractionFn nullStringDimExtraction = new DimExtractionFn()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[]{(byte) 0xFF};
+      }
+
+      @Override
+      public String apply(String dimValue)
+      {
+        return dimValue.equals("total_market") ? "" : dimValue;
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+    };
+
+    final TopNQueryBuilder builder = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant));
+
+    TopNQuery emptyStringQuery = builder.dimension(
+        new ExtractionDimensionSpec(
+            marketDimension, marketDimension, emptyStringDimExtraction
+        )
+    ).build();
+
+    TopNQuery nullQuery = builder.dimension(
+        new ExtractionDimensionSpec(
+            marketDimension, marketDimension, nullStringDimExtraction
+        )
+    ).build();
+
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        marketDimension, "spot",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    new LinkedHashMap(){{
+                      put(marketDimension, null);
+                      putAll(ImmutableMap.of(
+                                 "rows", 4L,
+                                 "index", 5351.814697265625D,
+                                 "addRowsIndexConstant", 5356.814697265625D,
+                                 "uniques", QueryRunnerTestHelper.UNIQUES_2
+                             ));
+                    }},
+                    ImmutableMap.<String, Object>of(
+                        marketDimension, "upfront",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, runner.run(emptyStringQuery, Maps.newHashMap()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(nullQuery, Maps.newHashMap()));
+
   }
 
   @Test

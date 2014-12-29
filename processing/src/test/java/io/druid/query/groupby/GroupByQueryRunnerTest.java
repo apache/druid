@@ -52,6 +52,7 @@ import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
@@ -282,50 +283,107 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithDimExtractionFn()
   {
-    GroupByQuery query = GroupByQuery
+    final DimExtractionFn fn1 = new RegexDimExtractionFn("(\\w{1})");
+    final DimExtractionFn nullExtractionFn = new DimExtractionFn()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[]{(byte) 0xFF};
+      }
+
+      @Override
+      public String apply(String dimValue)
+      {
+        return dimValue.equals("mezzanine") ? null : fn1.apply(dimValue);
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+    };
+
+    final DimExtractionFn emptyStringExtractionFn = new DimExtractionFn()
+    {
+      @Override
+      public byte[] getCacheKey()
+      {
+        return new byte[]{(byte) 0xFF};
+      }
+
+      @Override
+      public String apply(String dimValue)
+      {
+        return dimValue.equals("mezzanine") ? "" : fn1.apply(dimValue);
+      }
+
+      @Override
+      public boolean preservesOrdering()
+      {
+        return false;
+      }
+    };
+
+    GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(
-            Lists.<DimensionSpec>newArrayList(
-                new ExtractionDimensionSpec(
-                    "quality",
-                    "alias",
-                    new RegexDimExtractionFn("(\\w{1})")
-                )
-            )
-        )
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 QueryRunnerTestHelper.rowsCount,
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setGranularity(QueryRunnerTestHelper.dayGran);
+
+    GroupByQuery queryNull = builder
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new ExtractionDimensionSpec(
+                    "quality",
+                    "alias",
+                    nullExtractionFn
+                )
+            )
+        )
+        .build();
+
+    GroupByQuery queryEmptyString = builder
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new ExtractionDimensionSpec(
+                    "quality",
+                    "alias",
+                    emptyStringExtractionFn
+                )
+            )
+        )
         .build();
 
     List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "a", "rows", 1L, "idx", 135L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "b", "rows", 1L, "idx", 118L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "e", "rows", 1L, "idx", 158L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "h", "rows", 1L, "idx", 120L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "m", "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "n", "rows", 1L, "idx", 121L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "p", "rows", 3L, "idx", 2900L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "t", "rows", 2L, "idx", 197L),
 
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 3L, "idx", 2447L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "a", "rows", 1L, "idx", 147L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "b", "rows", 1L, "idx", 112L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "e", "rows", 1L, "idx", 166L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "h", "rows", 1L, "idx", 113L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "m", "rows", 3L, "idx", 2447L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "n", "rows", 1L, "idx", 114L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "p", "rows", 3L, "idx", 2505L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNull), "");
+    TestHelper.assertExpectedObjects(expectedResults, GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryEmptyString), "");
   }
 
   @Test
