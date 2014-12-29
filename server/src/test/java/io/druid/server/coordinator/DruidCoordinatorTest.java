@@ -99,7 +99,7 @@ public class DruidCoordinatorTest
         {
 
           @Override
-          public String getZkBasePath()
+          public String getBase()
           {
             return "";
           }

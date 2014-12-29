@@ -19,22 +19,50 @@
 
 package io.druid.curator;
 
-import org.skife.config.Config;
-import org.skife.config.Default;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import javax.validation.constraints.Min;
 
 /**
  */
-public abstract class CuratorConfig
+public class CuratorConfig
 {
-  @Config("druid.zk.service.host")
-  @Default("localhost")
-  public abstract String getZkHosts();
+  @JsonProperty
+  private String zkHosts = "localhost";
 
-  @Config("druid.zk.service.sessionTimeoutMs")
-  @Default("30000")
-  public abstract int getZkSessionTimeoutMs();
+  @JsonProperty
+  @Min(0)
+  private Integer zkSessionTimeoutMs = 30000;
 
-  @Config("druid.curator.compress")
-  @Default("true")
-  public abstract boolean enableCompression();
+  @JsonProperty
+  private Boolean enableCompression = true;
+
+  public String getZkHosts()
+  {
+    return zkHosts;
+  }
+
+  public void setZkHosts(String zkHosts)
+  {
+    this.zkHosts = zkHosts;
+  }
+
+  public Integer getZkSessionTimeoutMs()
+  {
+    return zkSessionTimeoutMs;
+  }
+
+  public void setZkSessionTimeoutMs(Integer zkSessionTimeoutMs)
+  {
+    this.zkSessionTimeoutMs = zkSessionTimeoutMs;
+  }
+
+  public Boolean getEnableCompression()
+  {
+    return enableCompression;
+  }
+
+  public void setEnableCompression(Boolean enableCompression)
+  {
+    this.enableCompression = enableCompression;
+  }
 }
