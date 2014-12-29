@@ -21,6 +21,7 @@ package io.druid.indexing.overlord.setup;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import io.druid.indexing.common.task.Task;
@@ -41,22 +42,21 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
       final Task task
   )
   {
-    TreeSet<ImmutableZkWorker> sortedWorkers = Sets.newTreeSet(
-        new Comparator<ImmutableZkWorker>()
+    Ordering<ImmutableZkWorker> ordering = new Ordering<ImmutableZkWorker>() {
+        @Override
+        public int compare(
+                ImmutableZkWorker zkWorker, ImmutableZkWorker zkWorker2
+        )
         {
-          @Override
-          public int compare(
-              ImmutableZkWorker zkWorker, ImmutableZkWorker zkWorker2
-          )
-          {
             int retVal = Ints.compare(zkWorker2.getCurrCapacityUsed(), zkWorker.getCurrCapacityUsed());
             if (retVal == 0) {
-              retVal = zkWorker.getWorker().getHost().compareTo(zkWorker2.getWorker().getHost());
+                retVal = zkWorker.getWorker().getHost().compareTo(zkWorker2.getWorker().getHost());
             }
-
-            return config.isStrategyTaskAscOrder() ? retVal : -retVal;
-          }
+            return retVal;
         }
+    };
+    TreeSet<ImmutableZkWorker> sortedWorkers = Sets.newTreeSet(
+            config.isStrategyTaskAscOrder() ? ordering : ordering.reverse()
     );
     sortedWorkers.addAll(zkWorkers.values());
     final String minWorkerVer = config.getMinWorkerVersion();
