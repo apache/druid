@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.io.OutputSupplier;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,7 +48,7 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
     final int sizePer = 999;
     CompressedFloatsSupplierSerializer serializer = new CompressedFloatsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
+        new GenericIndexedWriter<ResourcePool.ResourceHolder<FloatBuffer>>(
             new IOPeonForTesting(),
             "test",
             CompressedFloatBufferObjectStrategy.getBufferForOrder(

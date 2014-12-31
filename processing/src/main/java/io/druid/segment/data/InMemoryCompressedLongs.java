@@ -24,7 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.metamx.common.guava.CloseQuietly;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidResourceHolder;
 
 import java.io.IOException;
@@ -46,7 +46,7 @@ public class InMemoryCompressedLongs implements IndexedLongs
   private int numInserted = 0;
   private int numCompressed = 0;
 
-  private ResourceHolder<LongBuffer> holder = null;
+  private ResourcePool.ResourceHolder<LongBuffer> holder = null;
   private LongBuffer loadBuffer = null;
   private int loadBufferIndex = -1;
 
@@ -185,19 +185,19 @@ public class InMemoryCompressedLongs implements IndexedLongs
         numInserted,
         sizePer,
         GenericIndexed.fromIterable(
-            Iterables.<ResourceHolder<LongBuffer>>concat(
+            Iterables.<ResourcePool.ResourceHolder<LongBuffer>>concat(
                 Iterables.transform(
                     compressedBuffers,
-                    new Function<byte[], ResourceHolder<LongBuffer>>()
+                    new Function<byte[], ResourcePool.ResourceHolder<LongBuffer>>()
                     {
                       @Override
-                      public ResourceHolder<LongBuffer> apply(byte[] input)
+                      public ResourcePool.ResourceHolder<LongBuffer> apply(byte[] input)
                       {
                         return strategy.fromByteBuffer(ByteBuffer.wrap(input), input.length);
                       }
                     }
                 ),
-                Arrays.<ResourceHolder<LongBuffer>>asList(StupidResourceHolder.create(longBufCopy))
+                Arrays.<ResourcePool.ResourceHolder<LongBuffer>>asList(StupidResourceHolder.create(longBufCopy))
             ),
             strategy
         ),

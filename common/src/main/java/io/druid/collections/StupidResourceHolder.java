@@ -23,7 +23,7 @@ import java.io.IOException;
 
 /**
  */
-public class StupidResourceHolder<T> implements ResourceHolder<T>
+public class StupidResourceHolder<T> implements ResourcePool.ResourceHolder<T>
 {
   private final T obj;
 

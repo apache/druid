@@ -32,7 +32,7 @@ import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.query.AbstractPrioritizedCallable;
@@ -66,7 +66,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private final QueryWatcher queryWatcher;
   private final Supplier<GroupByQueryConfig> config;
   private final GroupByQueryQueryToolChest toolChest;
-  private final StupidPool<ByteBuffer> computationBufferPool;
+  private final ResourcePool<ByteBuffer> computationBufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
@@ -74,7 +74,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
       QueryWatcher queryWatcher,
       Supplier<GroupByQueryConfig> config,
       GroupByQueryQueryToolChest toolChest,
-      @Global StupidPool<ByteBuffer> computationBufferPool
+      @Global ResourcePool<ByteBuffer> computationBufferPool
   )
   {
     this.engine = engine;

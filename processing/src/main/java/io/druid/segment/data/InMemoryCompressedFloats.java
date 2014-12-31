@@ -23,7 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.CloseQuietly;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidResourceHolder;
 
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class InMemoryCompressedFloats implements IndexedFloats
   private int numInserted = 0;
   private int numCompressed = 0;
 
-  private ResourceHolder<FloatBuffer> holder = null;
+  private ResourcePool.ResourceHolder<FloatBuffer> holder = null;
   private FloatBuffer loadBuffer = null;
   private int loadBufferIndex = -1;
 
@@ -174,19 +174,19 @@ public class InMemoryCompressedFloats implements IndexedFloats
         numInserted,
         sizePer,
         GenericIndexed.fromIterable(
-            Iterables.<ResourceHolder<FloatBuffer>>concat(
+            Iterables.<ResourcePool.ResourceHolder<FloatBuffer>>concat(
                 Iterables.transform(
                     compressedBuffers,
-                    new Function<byte[], ResourceHolder<FloatBuffer>>()
+                    new Function<byte[], ResourcePool.ResourceHolder<FloatBuffer>>()
                     {
                       @Override
-                      public ResourceHolder<FloatBuffer> apply(byte[] input)
+                      public ResourcePool.ResourceHolder<FloatBuffer> apply(byte[] input)
                       {
                         return strategy.fromByteBuffer(ByteBuffer.wrap(input), input.length);
                       }
                     }
                 ),
-                Arrays.<ResourceHolder<FloatBuffer>>asList(StupidResourceHolder.create(endBufCopy))
+                Arrays.<ResourcePool.ResourceHolder<FloatBuffer>>asList(StupidResourceHolder.create(endBufCopy))
             ),
             strategy
         ),

@@ -20,7 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.io.OutputSupplier;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ResourcePool;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,7 +48,7 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
     final int sizePer = 999;
     CompressedLongsSupplierSerializer serializer = new CompressedLongsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
+        new GenericIndexedWriter<ResourcePool.ResourceHolder<LongBuffer>>(
             new IOPeonForTesting(),
             "test",
             CompressedLongBufferObjectStrategy.getBufferForOrder(order, compressionStrategy, sizePer)

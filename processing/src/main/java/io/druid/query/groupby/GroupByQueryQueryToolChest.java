@@ -37,7 +37,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
@@ -86,7 +86,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
   private final Supplier<GroupByQueryConfig> configSupplier;
 
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final ResourcePool<ByteBuffer> bufferPool;
   private final ObjectMapper jsonMapper;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
 
@@ -96,7 +96,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       Supplier<GroupByQueryConfig> configSupplier,
       ObjectMapper jsonMapper,
       GroupByQueryEngine engine,
-      @Global StupidPool<ByteBuffer> bufferPool
+      @Global ResourcePool<ByteBuffer> bufferPool
   )
   {
     this.configSupplier = configSupplier;

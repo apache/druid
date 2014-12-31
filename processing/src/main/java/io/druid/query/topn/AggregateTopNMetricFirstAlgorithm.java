@@ -21,7 +21,7 @@ package io.druid.query.topn;
 
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
@@ -40,12 +40,12 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final ResourcePool<ByteBuffer> bufferPool;
 
   public AggregateTopNMetricFirstAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      StupidPool<ByteBuffer> bufferPool
+      ResourcePool<ByteBuffer> bufferPool
   )
   {
     this.capabilities = capabilities;

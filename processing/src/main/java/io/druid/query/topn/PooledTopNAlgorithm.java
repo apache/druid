@@ -21,8 +21,7 @@ package io.druid.query.topn;
 
 import com.metamx.common.Pair;
 import com.metamx.common.guava.CloseQuietly;
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidPool;
+import io.druid.collections.ResourcePool;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
@@ -39,13 +38,13 @@ public class PooledTopNAlgorithm
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
-  private final StupidPool<ByteBuffer> bufferPool;
+  private final ResourcePool<ByteBuffer> bufferPool;
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      StupidPool<ByteBuffer> bufferPool
+      ResourcePool<ByteBuffer> bufferPool
   )
   {
     super(capabilities);
@@ -60,7 +59,7 @@ public class PooledTopNAlgorithm
       DimensionSelector dimSelector, Cursor cursor
   )
   {
-    ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
+    ResourcePool.ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
     ByteBuffer resultsBuf = resultsBufHolder.get();
     resultsBuf.clear();
 
@@ -313,7 +312,7 @@ public class PooledTopNAlgorithm
   @Override
   public void cleanup(PooledTopNParams params)
   {
-    ResourceHolder<ByteBuffer> resultsBufHolder = params.getResultsBufHolder();
+    ResourcePool.ResourceHolder<ByteBuffer> resultsBufHolder = params.getResultsBufHolder();
 
     if (resultsBufHolder != null) {
       resultsBufHolder.get().clear();
@@ -323,7 +322,7 @@ public class PooledTopNAlgorithm
 
   public static class PooledTopNParams extends TopNParams
   {
-    private final ResourceHolder<ByteBuffer> resultsBufHolder;
+    private final ResourcePool.ResourceHolder<ByteBuffer> resultsBufHolder;
     private final ByteBuffer resultsBuf;
     private final int[] aggregatorSizes;
     private final int numBytesPerRecord;
@@ -333,7 +332,7 @@ public class PooledTopNAlgorithm
         DimensionSelector dimSelector,
         Cursor cursor,
         int cardinality,
-        ResourceHolder<ByteBuffer> resultsBufHolder,
+        ResourcePool.ResourceHolder<ByteBuffer> resultsBufHolder,
         ByteBuffer resultsBuf,
         int[] aggregatorSizes,
         int numBytesPerRecord,
@@ -355,7 +354,7 @@ public class PooledTopNAlgorithm
       return new Builder();
     }
 
-    public ResourceHolder<ByteBuffer> getResultsBufHolder()
+    public ResourcePool.ResourceHolder<ByteBuffer> getResultsBufHolder()
     {
       return resultsBufHolder;
     }
@@ -385,7 +384,7 @@ public class PooledTopNAlgorithm
       private DimensionSelector dimSelector;
       private Cursor cursor;
       private int cardinality;
-      private ResourceHolder<ByteBuffer> resultsBufHolder;
+      private ResourcePool.ResourceHolder<ByteBuffer> resultsBufHolder;
       private ByteBuffer resultsBuf;
       private int[] aggregatorSizes;
       private int numBytesPerRecord;
@@ -423,7 +422,7 @@ public class PooledTopNAlgorithm
         return this;
       }
 
-      public Builder withResultsBufHolder(ResourceHolder<ByteBuffer> resultsBufHolder)
+      public Builder withResultsBufHolder(ResourcePool.ResourceHolder<ByteBuffer> resultsBufHolder)
       {
         this.resultsBufHolder = resultsBufHolder;
         return this;

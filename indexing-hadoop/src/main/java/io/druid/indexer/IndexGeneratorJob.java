@@ -33,10 +33,11 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.ResourcePool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.offheap.OffheapBufferPool;
+import io.druid.offheap.MappedBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
@@ -329,7 +330,7 @@ public class IndexGeneratorJob implements Jobby
       final int aggregationBufferSize = (int) ((double) maxTotalBufferSize
                                                * config.getSchema().getTuningConfig().getAggregationBufferRatio());
 
-      final StupidPool<ByteBuffer> bufferPool = new OffheapBufferPool(aggregationBufferSize);
+      final ResourcePool<ByteBuffer> bufferPool = new MappedBufferPool(aggregationBufferSize);
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs, bufferPool);
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
@@ -635,7 +636,7 @@ public class IndexGeneratorJob implements Jobby
       return numRead;
     }
 
-    private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs, StupidPool bufferPool)
+    private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs, ResourcePool bufferPool)
     {
       final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
       final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
