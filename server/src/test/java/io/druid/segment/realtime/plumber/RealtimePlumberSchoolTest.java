@@ -190,7 +190,7 @@ public class RealtimePlumberSchoolTest
     EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testPersist() throws Exception
   {
     final MutableBoolean committed = new MutableBoolean(false);
@@ -212,12 +212,8 @@ public class RealtimePlumberSchoolTest
         }
     );
 
-    Stopwatch stopwatch = Stopwatch.createStarted();
     while (!committed.booleanValue()) {
       Thread.sleep(100);
-      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
-        throw new ISE("Taking too long to set perist value");
-      }
     }
     plumber.getSinks().clear();
     plumber.finishJob();
