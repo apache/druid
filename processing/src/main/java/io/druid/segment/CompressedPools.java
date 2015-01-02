@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
-import com.ning.compress.lzf.ChunkEncoder;
+import com.ning.compress.BufferRecycler;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 
@@ -36,23 +36,23 @@ public class CompressedPools
   private static final Logger log = new Logger(CompressedPools.class);
 
   public static final int BUFFER_SIZE = 0x10000;
-  private static final StupidPool<ChunkEncoder> chunkEncoderPool = new StupidPool<ChunkEncoder>(
-      new Supplier<ChunkEncoder>()
+  private static final StupidPool<BufferRecycler> bufferRecyclerPool = new StupidPool<BufferRecycler>(
+      new Supplier<BufferRecycler>()
       {
         private final AtomicLong counter = new AtomicLong(0);
 
         @Override
-        public ChunkEncoder get()
+        public BufferRecycler get()
         {
-          log.info("Allocating new chunkEncoder[%,d]", counter.incrementAndGet());
-          return new ChunkEncoder(BUFFER_SIZE);
+          log.info("Allocating new bufferRecycler[%,d]", counter.incrementAndGet());
+          return new BufferRecycler();
         }
       }
   );
 
-  public static ResourceHolder<ChunkEncoder> getChunkEncoder()
+  public static ResourceHolder<BufferRecycler> getBufferRecycler()
   {
-    return chunkEncoderPool.take();
+    return bufferRecyclerPool.take();
   }
 
   private static final StupidPool<byte[]> outputBytesPool = new StupidPool<byte[]>(
