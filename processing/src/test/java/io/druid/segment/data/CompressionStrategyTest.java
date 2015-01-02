@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.segment.CompressedPools;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -71,8 +72,7 @@ public class CompressionStrategyTest
     this.compressionStrategy = compressionStrategy;
   }
 
-  // MUST be smaller than CompressedPools.BUFFER_SIZE
-  private static final int DATA_SIZER = 0xFFFF;
+  private static final int DATA_SIZER = CompressedPools.BUFFER_SIZE;
   private static byte[] originalData;
 
   @BeforeClass
