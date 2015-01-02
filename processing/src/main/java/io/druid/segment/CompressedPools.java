@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
 import com.ning.compress.lzf.ChunkEncoder;
+import com.ning.compress.lzf.LZFChunk;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 
@@ -45,7 +46,7 @@ public class CompressedPools
         public ChunkEncoder get()
         {
           log.info("Allocating new chunkEncoder[%,d]", counter.incrementAndGet());
-          return new ChunkEncoder(BUFFER_SIZE);
+          return new ChunkEncoder(Math.min(LZFChunk.MAX_CHUNK_LEN, BUFFER_SIZE));
         }
       }
   );

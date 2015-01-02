@@ -30,6 +30,7 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.lz4.LZ4SafeDecompressor;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -205,19 +206,46 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   {
     private static final LZFCompressor defaultCompressor = new LZFCompressor();
 
-    @Override
-    public byte[] compress(byte[] bytes)
+    // Recursively encode one chunk length at a time
+    private ByteArrayOutputStream chunkCompress(ByteBuffer bytes)
     {
+      ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
       try (final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
-        final LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
-        return chunk.getData();
+        final int len = Math.min(LZFChunk.MAX_CHUNK_LEN, bytes.remaining());
+        final LZFChunk chunk = encoder.get().encodeChunk(bytes.array(), bytes.position(), len);
+
+        byteArrayOutputStream.write(chunk.getData());
+
+        if (len < bytes.remaining()) {
+          ByteArrayOutputStream subChunk = chunkCompress(
+              (ByteBuffer) bytes
+                  .duplicate()
+                  .position(bytes.position() + len)
+          );
+          if (null == subChunk) {
+            return null; // Maintain prior behavior on IOException
+          }
+          byteArrayOutputStream.write(subChunk.toByteArray());
+        }
+
+        return byteArrayOutputStream;
       }
       catch (IOException e) {
         log.error(e, "IOException thrown while closing ChunkEncoder.");
       }
       // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never happen
       return null;
+    }
+
+    @Override
+    public byte[] compress(byte[] bytes)
+    {
+      final ByteArrayOutputStream compressedBytes = chunkCompress(ByteBuffer.wrap(bytes));
+      if (null == compressedBytes) {
+        return null; // Maintain prior behavior on IOException
+      }
+      return compressedBytes.toByteArray();
     }
   }
 
@@ -232,7 +260,14 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     {
       // Since decompressed size is NOT known, must use lz4Safe
       // lz4Safe.decompress does not modify buffer positions
-      final int numDecompressedBytes = lz4Safe.decompress(in, in.position(), numBytes, out, out.position(), out.remaining());
+      final int numDecompressedBytes = lz4Safe.decompress(
+          in,
+          in.position(),
+          numBytes,
+          out,
+          out.position(),
+          out.remaining()
+      );
       out.limit(out.position() + numDecompressedBytes);
     }
 
