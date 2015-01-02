@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.ning.compress.BufferRecycler;
@@ -215,9 +216,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       }
       catch (IOException e) {
         log.error(e, "Error compressing data");
+        throw Throwables.propagate(e);
       }
-      // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never happen
-      return null;
     }
   }
 
