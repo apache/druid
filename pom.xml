@@ -158,7 +158,7 @@
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
-                <version>0.8.4</version>
+                <version>1.0.3</version>
             </dependency>
             <dependency>
                 <groupId>io.airlift</groupId>
