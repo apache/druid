@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -82,6 +83,9 @@ public class HadoopDruidIndexerConfig
   public static final Splitter tabSplitter = Splitter.on("\t");
   public static final Joiner tabJoiner = Joiner.on("\t");
   public static final ObjectMapper jsonMapper;
+
+  // workaround to pass down druid.processing.bitmap.type, see IndexGeneratorJob.run()
+  protected static final Properties properties;
 
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
@@ -102,6 +106,7 @@ public class HadoopDruidIndexerConfig
         )
     );
     jsonMapper = injector.getInstance(ObjectMapper.class);
+    properties = injector.getInstance(Properties.class);
   }
 
   public static enum IndexJobCounters
