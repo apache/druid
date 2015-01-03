@@ -64,12 +64,12 @@ import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
-import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -191,8 +191,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     final byte[] queryCacheKey;
 
-    if ( (populateCache || useCache) // implies strategy != null
-        && !isBySegment ) // explicit bySegment queries are never cached
+    if ((populateCache || useCache) // implies strategy != null
+        && !isBySegment) // explicit bySegment queries are never cached
     {
       queryCacheKey = strategy.computeCacheKey(query);
     } else {
@@ -400,7 +400,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                 String.format("%s_%s", value.getSegmentId(), value.getInterval())
                             );
 
-                            final List<Object> cacheData = Lists.newLinkedList();
+                            final Collection<Object> cacheData = new ConcurrentLinkedQueue<>();
 
                             return Sequences.<T>withEffect(
                                 Sequences.<T, T>map(
@@ -446,6 +446,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                       try {
                                         Futures.allAsList(cacheFutures).get();
                                         cachePopulator.populate(cacheData);
+                                        // Help out GC by making sure all references are gone
+                                        cacheFutures.clear();
+                                        cacheData.clear();
                                       }
                                       catch (Exception e) {
                                         log.error(e, "Error populating cache");
