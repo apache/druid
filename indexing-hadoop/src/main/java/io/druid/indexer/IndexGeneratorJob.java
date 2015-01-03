@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -44,6 +45,8 @@ import io.druid.segment.LoggingProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.data.BitmapSerde;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
@@ -180,6 +183,19 @@ public class IndexGeneratorJob implements Jobby
 
       config.addInputPaths(job);
       config.addJobProperties(job);
+
+      // hack to get druid.processing.bitmap property passed down to hadoop job.
+      // once IndexIO doesn't rely on globally injected properties, we can move this into the HadoopTuningConfig.
+      final String bitmapProperty = "druid.processing.bitmap.type";
+      final String bitmapType = HadoopDruidIndexerConfig.properties.getProperty(bitmapProperty);
+      if(bitmapType != null) {
+        for(String property : new String[] {"mapreduce.reduce.java.opts", "mapreduce.map.java.opts"}) {
+          // prepend property to allow overriding using hadoop.xxx properties by JobHelper.injectSystemProperties above
+          String value = Strings.nullToEmpty(job.getConfiguration().get(property));
+          job.getConfiguration().set(property, String.format("-D%s=%s %s", bitmapProperty, bitmapType, value));
+        }
+      }
+
       config.intoConfiguration(job);
 
       JobHelper.setupClasspath(config, job);
