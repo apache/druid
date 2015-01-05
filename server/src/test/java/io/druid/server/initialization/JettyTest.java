@@ -97,7 +97,7 @@ public class JettyTest
   {
     setProperties();
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Object>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
             new Module()
             {
               @Override
