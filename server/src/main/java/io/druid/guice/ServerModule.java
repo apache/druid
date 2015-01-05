@@ -45,8 +45,7 @@ public class ServerModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, ZkPathsConfig.class);
-
+    JsonConfigProvider.bind(binder, "druid.zk.paths", ZkPathsConfig.class);
     JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
   }
 

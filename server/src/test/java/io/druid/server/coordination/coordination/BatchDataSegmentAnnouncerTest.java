@@ -107,7 +107,7 @@ public class BatchDataSegmentAnnouncerTest
         new ZkPathsConfig()
         {
           @Override
-          public String getZkBasePath()
+          public String getBase()
           {
             return testBasePath;
           }

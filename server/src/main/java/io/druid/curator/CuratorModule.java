@@ -25,6 +25,7 @@ import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.ConfigProvider;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -41,7 +42,9 @@ public class CuratorModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    ConfigProvider.bind(binder, CuratorConfig.class);
+    JsonConfigProvider.bind(
+        binder, "druid.zk.service",
+        CuratorConfig.class);
   }
 
   @Provides @LazySingleton
@@ -52,7 +55,7 @@ public class CuratorModule implements Module
                                .connectString(config.getZkHosts())
                                .sessionTimeoutMs(config.getZkSessionTimeoutMs())
             .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
-            .compressionProvider(new PotentiallyGzippedCompressionProvider(config.enableCompression()))
+            .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
             .build();
 
     lifecycle.addHandler(
