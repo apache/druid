@@ -155,7 +155,7 @@ public class IndexerZkConfigTest
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Object>of(simpleZkConfigModule)
+        ImmutableList.<Module>of(simpleZkConfigModule)
     );
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
