@@ -55,6 +55,7 @@
         <module>processing</module>
         <module>server</module>
         <module>services</module>
+        <module>integration-tests</module>
         <!-- Non-default modules -->
         <module>extensions/cassandra-storage</module>
         <module>extensions/hdfs-storage</module>
@@ -508,6 +509,11 @@
                         <artifactId>httpcore</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>6.8.7</version>
             </dependency>
 
         </dependencies>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+~ Druid - a distributed column store.
+~ Copyright (C) 2012, 2013  Metamarkets Group Inc.
+~
+~ This program is free software; you can redistribute it and/or
+~ modify it under the terms of the GNU General Public License
+~ as published by the Free Software Foundation; either version 2
+~ of the License, or (at your option) any later version.
+~
+~ This program is distributed in the hope that it will be useful,
+~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+~ GNU General Public License for more details.
+~
+~ You should have received a copy of the GNU General Public License
+~ along with this program; if not, write to the Free Software
+~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.druid</groupId>
+  <artifactId>druid-integration-tests</artifactId>
+  <name>druid-integration-tests</name>
+  <description>druid-integration-tests</description>
+  <parent>
+    <groupId>io.druid</groupId>
+    <artifactId>druid</artifactId>
+    <version>0.7.0-SNAPSHOT</version>
+  </parent>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-common</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid.extensions</groupId>
+      <artifactId>druid-s3-extensions</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid.extensions</groupId>
+      <artifactId>druid-histogram</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid.extensions</groupId>
+      <artifactId>mysql-metadata-storage</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-services</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+
+    <!-- Tests -->
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/IT*.java</exclude>
+          </excludes>
+          <systemPropertyVariables>
+            <user.timezone>UTC</user.timezone>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>integration-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2.1</version>
+            <executions>
+              <execution>
+                <id>build-and-start-druid-cluster</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>pre-integration-test</phase>
+                <configuration>
+                  <executable>${project.basedir}/run_cluster.sh</executable>
+                </configuration>
+              </execution>
+              <execution>
+                <id>stop-druid-cluster</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+                <configuration>
+                  <executable>${project.basedir}/stop_cluster.sh</executable>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>integration-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <argLine>-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dtestrunfactory=org.testng.DruidTestRunnerFactory
+                -Ddruid.test.config.dockerIp=${env.DOCKER_IP} -Ddruid.zk.service.host=${env.DOCKER_IP}
+              </argLine>
+              <suiteXmlFiles>
+                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+              </suiteXmlFiles>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
+
