@@ -77,7 +77,12 @@ public class QueryResourceTestClient
                                                 .go(responseHandler)
                                                 .get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
+        throw new ISE(
+            "Error while querying[%s] status[%s] content[%s]",
+            getBrokerURL(),
+            response.getStatus(),
+            response.getContent()
+        );
       }
 
       return jsonMapper.readValue(
@@ -90,6 +95,4 @@ public class QueryResourceTestClient
       throw Throwables.propagate(e);
     }
   }
-
-
 }

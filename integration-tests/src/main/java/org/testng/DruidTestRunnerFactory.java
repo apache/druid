@@ -143,7 +143,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
                 return false;
               }
             }
-          }, "Waiting for instance to be ready :" + host
+          }, "Waiting for instance to be ready: [" + host + "]"
       );
     }
   }

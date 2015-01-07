@@ -30,26 +30,29 @@ import io.druid.guice.annotations.Global;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
+import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.ServerDiscoveryUtil;
 import org.joda.time.DateTime;
-import org.junit.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITUnionQueryTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITUnionQueryTest.class);
-  private static String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
-  private static String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
-  private static String UNION_DATA_FILE = "/indexer/wikipedia_index_data.json";
-  private static String UNION_QUERIES_RESOURCE = "/indexer/union_queries.json";
-  private static String UNION_DATASOURCE = "wikipedia_index_test";
+  private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
+  private static final String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
+  private static final String UNION_DATA_FILE = "/indexer/wikipedia_index_data.json";
+  private static final String UNION_QUERIES_RESOURCE = "/indexer/union_queries.json";
+  private static final String UNION_DATASOURCE = "wikipedia_index_test";
+
   @Inject
   ServerDiscoveryFactory factory;
+
   @Inject
   @Global
   HttpClient httpClient;
@@ -60,6 +63,8 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   @Test
   public void testRealtimeIndexTask() throws Exception
   {
+    final int numTasks = 4;
+
     try {
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
@@ -67,7 +72,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
       List<String> taskIDs = Lists.newArrayList();
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < numTasks; i++) {
         taskIDs.add(
             indexer.submitTask(
                 withServiceName(
@@ -77,21 +82,38 @@ public class ITUnionQueryTest extends AbstractIndexerTest
             )
         );
       }
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < numTasks; i++) {
         postEvents(i);
       }
+
       // sleep for a while to let the events ingested
       TimeUnit.SECONDS.sleep(5);
+
       // should hit the queries on realtime task
-      System.out.println("Running Queries..");
+      LOG.info("Running Union Queries..");
       this.queryHelper.testQueriesFromFile(UNION_QUERIES_RESOURCE, 2);
+
       // wait for the task to complete
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < numTasks; i++) {
         indexer.waitUntilTaskCompletes(taskIDs.get(i));
       }
       // task should complete only after the segments are loaded by historical node
-      for (int i = 0; i < 4; i++) {
-        Assert.assertTrue(coordinator.areSegmentsLoaded(UNION_DATASOURCE + i));
+      for (int i = 0; i < numTasks; i++) {
+        final int taskNum = i;
+        RetryUtil.retryUntil(
+            new Callable<Boolean>()
+            {
+              @Override
+              public Boolean call() throws Exception
+              {
+                return coordinator.areSegmentsLoaded(UNION_DATASOURCE + taskNum);
+              }
+            },
+            true,
+            60000,
+            10,
+            "Real-time generated segments loaded"
+        );
       }
       // run queries on historical nodes
       this.queryHelper.testQueriesFromFile(UNION_QUERIES_RESOURCE, 2);
@@ -99,10 +121,10 @@ public class ITUnionQueryTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       e.printStackTrace();
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < numTasks; i++) {
         unloadAndKillData(UNION_DATASOURCE + i);
       }
     }
@@ -132,9 +154,12 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       ServerDiscoveryUtil.waitUntilInstanceReady(eventReceiverSelector, "Event Receiver");
       // Access the docker VM mapped host and port instead of service announced in zookeeper
       String host = config.getMiddleManagerHost() + ":" + eventReceiverSelector.pick().getPort();
-      LOG.info("Event Receiver Found at host %s", host);
+
+      LOG.info("Event Receiver Found at host [%s]", host);
+
       EventReceiverFirehoseTestClient client = new EventReceiverFirehoseTestClient(
-          host, EVENT_RECEIVER_SERVICE_PREFIX + id,
+          host,
+          EVENT_RECEIVER_SERVICE_PREFIX + id,
           jsonMapper,
           httpClient
       );
@@ -144,5 +169,4 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       eventReceiverSelector.stop();
     }
   }
-
 }

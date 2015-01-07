@@ -29,6 +29,7 @@ import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
@@ -57,7 +58,8 @@ public class EventReceiverFirehoseTestClient
   {
     return String.format(
         "http://%s/druid/worker/v1/chat/%s/push-events/",
-        host, chatID
+        host,
+        chatID
     );
   }
 
@@ -73,14 +75,15 @@ public class EventReceiverFirehoseTestClient
     try {
       StatusResponseHolder response = httpClient.post(new URL(getURL()))
                                                 .setContent(
-                                                    "application/json",
+                                                    MediaType.APPLICATION_JSON,
                                                     this.jsonMapper.writeValueAsBytes(events)
                                                 )
                                                 .go(responseHandler)
                                                 .get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while submitting task to indexer response [%s %s]",
+            "Error while posting events to url[%s] status[%s] content[%s]",
+            getURL(),
             response.getStatus(),
             response.getContent()
         );
@@ -129,6 +132,4 @@ public class EventReceiverFirehoseTestClient
     }
 
   }
-
-
 }

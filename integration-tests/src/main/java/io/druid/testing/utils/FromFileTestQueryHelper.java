@@ -44,6 +44,7 @@ public class FromFileTestQueryHelper
 
   public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
   {
+    LOG.info("Starting query tests for [%s]", filePath);
     List<QueryWithResults> queries =
         jsonMapper.readValue(
             FromFileTestQueryHelper.class.getResourceAsStream(filePath),

@@ -68,14 +68,14 @@ public class CoordinatorResourceTestClient
     );
   }
 
-  private Map<String, Double> getLoadStatus()
+  private Map<String, Integer> getLoadStatus()
   {
-    Map<String, Double> status = null;
+    Map<String, Integer> status = null;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getCoordinatorURL() + "loadstatus");
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getCoordinatorURL() + "loadstatus?simple");
 
       status = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, Double>>()
+          response.getContent(), new TypeReference<Map<String, Integer>>()
           {
           }
       );
@@ -88,12 +88,8 @@ public class CoordinatorResourceTestClient
 
   public boolean areSegmentsLoaded(String dataSource)
   {
-    Map<String, Double> status = getLoadStatus();
-    if (status.containsKey(dataSource) && (status.get(dataSource)).doubleValue() == 100.0) {
-      return true;
-    } else {
-      return false;
-    }
+    final Map<String, Integer> status = getLoadStatus();
+    return (status.containsKey(dataSource) && status.get(dataSource) == 0);
   }
 
   public void unloadSegmentsForDataSource(String dataSource, Interval interval)
@@ -133,7 +129,12 @@ public class CoordinatorResourceTestClient
           .go(responseHandler)
           .get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
       }
       return response;
     }

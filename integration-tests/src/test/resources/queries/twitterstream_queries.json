@@ -20,7 +20,8 @@
             ],
             "context": {
                 "useCache": "true",
-                "populateCache": "true"
+                "populateCache": "true",
+                "timeout": 60000
             }
         },
         "expectedResults": [
@@ -92,7 +93,8 @@
             "threshold": 2,
             "context": {
                 "useCache": "true",
-                "populateCache": "true"
+                "populateCache": "true",
+                "timeout": 60000
             }
         },
         "expectedResults": [
@@ -195,7 +197,8 @@
             "threshold": 2,
             "context": {
                 "useCache": "true",
-                "populateCache": "true"
+                "populateCache": "true",
+                "timeout": 60000
             }
         },
         "expectedResults": [
@@ -318,7 +321,8 @@
             "threshold": 2,
             "context": {
                 "useCache": "true",
-                "populateCache": "true"
+                "populateCache": "true",
+                "timeout": 60000
             }
         },
         "expectedResults": [
@@ -470,7 +474,8 @@
             "limit": 3,
             "context": {
                 "useCache": "true",
-                "populateCache": "true"
+                "populateCache": "true",
+                "timeout": 60000
             }
         },
         "expectedResults": [
@@ -702,7 +707,8 @@
             "threshold": 2,
             "context": {
                 "useCache": "true",
-                "populateCache": "true"
+                "populateCache": "true",
+                "timeout": 60000
             }
         },
         "expectedResults": [

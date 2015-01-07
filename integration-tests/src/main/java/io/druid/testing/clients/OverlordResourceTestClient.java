@@ -172,7 +172,7 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID)
   {
-    RetryUtil.retryUntilTrue(
+    RetryUtil.retryUntil(
         new Callable<Boolean>()
         {
           @Override
@@ -184,7 +184,11 @@ public class OverlordResourceTestClient
             }
             return status == TaskStatus.Status.SUCCESS;
           }
-        }, "Index Task to complete"
+        },
+        true,
+        60000,
+        10,
+        "Index Task to complete"
     );
   }
 

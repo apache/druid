@@ -35,7 +35,6 @@ public class RetryUtil
 
   public static long DEFAULT_RETRY_SLEEP = TimeUnit.SECONDS.toMillis(30);
 
-
   public static void retryUntilTrue(Callable<Boolean> callable, String task)
   {
     retryUntil(callable, true, DEFAULT_RETRY_SLEEP, DEFAULT_RETRY_COUNT, task);

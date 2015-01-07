@@ -29,12 +29,13 @@ import io.druid.guice.annotations.Global;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
+import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.ServerDiscoveryUtil;
 import org.joda.time.DateTime;
-import org.junit.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -50,11 +51,11 @@ import java.util.concurrent.TimeUnit;
 public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITRealtimeIndexTaskTest.class);
-  private static String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
-  private static String EVENT_RECEIVER_SERVICE_NAME = "eventReceiverServiceName";
-  private static String EVENT_DATA_FILE = "/indexer/wikipedia_index_data.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_index_test";
+  private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
+  private static final String EVENT_RECEIVER_SERVICE_NAME = "eventReceiverServiceName";
+  private static final String EVENT_DATA_FILE = "/indexer/wikipedia_index_data.json";
+  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
+  private static final String INDEX_DATASOURCE = "wikipedia_index_test";
   @Inject
   ServerDiscoveryFactory factory;
   @Inject
@@ -75,14 +76,31 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       );
       String taskID = indexer.submitTask(task);
       postEvents();
+
       // sleep for a while to let the events ingested
       TimeUnit.SECONDS.sleep(5);
+
       // should hit the queries on realtime task
       this.queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
       // wait for the task to complete
       indexer.waitUntilTaskCompletes(taskID);
+
       // task should complete only after the segments are loaded by historical node
-      Assert.assertTrue(coordinator.areSegmentsLoaded(INDEX_DATASOURCE));
+      RetryUtil.retryUntil(
+          new Callable<Boolean>()
+          {
+            @Override
+            public Boolean call() throws Exception
+            {
+              return coordinator.areSegmentsLoaded(INDEX_DATASOURCE);
+            }
+          },
+          true,
+          60000,
+          10,
+          "Real-time generated segments loaded"
+      );
+
       // run queries on historical nodes
       this.queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
     }
@@ -93,7 +111,6 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
     finally {
       unloadAndKillData(INDEX_DATASOURCE);
     }
-
   }
 
   private String setShutOffTime(String taskAsString, DateTime time)
@@ -111,7 +128,8 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       String host = config.getMiddleManagerHost() + ":" + eventReceiverSelector.pick().getPort();
       LOG.info("Event Receiver Found at host %s", host);
       EventReceiverFirehoseTestClient client = new EventReceiverFirehoseTestClient(
-          host, EVENT_RECEIVER_SERVICE_NAME,
+          host,
+          EVENT_RECEIVER_SERVICE_NAME,
           jsonMapper,
           httpClient
       );
@@ -121,5 +139,4 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       eventReceiverSelector.stop();
     }
   }
-
 }

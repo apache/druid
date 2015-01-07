@@ -13,6 +13,7 @@
         },
         "context": {
             "useCache": "false",
-            "populateCache": "false"
+            "populateCache": "false",
+            "timeout": 60000
         }
     }
