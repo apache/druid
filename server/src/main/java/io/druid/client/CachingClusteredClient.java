@@ -31,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -411,7 +412,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                           @Override
                                           public T apply(final T input)
                                           {
-                                            if(cachePopulator != null) {
+                                            if (cachePopulator != null) {
                                               // only compute cache data if populating cache
                                               cacheFutures.add(
                                                   backgroundExecutorService.submit(
@@ -443,21 +444,31 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                                   public void run()
                                   {
                                     if (cachePopulator != null) {
-                                      try {
-                                        Futures.allAsList(cacheFutures).get();
-                                        cachePopulator.populate(cacheData);
-                                        // Help out GC by making sure all references are gone
-                                        cacheFutures.clear();
-                                        cacheData.clear();
-                                      }
-                                      catch (Exception e) {
-                                        log.error(e, "Error populating cache");
-                                        throw Throwables.propagate(e);
-                                      }
+                                      Futures.addCallback(
+                                          Futures.allAsList(cacheFutures),
+                                          new FutureCallback<List<Object>>()
+                                          {
+                                            @Override
+                                            public void onSuccess(List<Object> objects)
+                                            {
+                                              cachePopulator.populate(cacheData);
+                                              // Help out GC by making sure all references are gone
+                                              cacheFutures.clear();
+                                              cacheData.clear();
+                                            }
+
+                                            @Override
+                                            public void onFailure(Throwable throwable)
+                                            {
+                                              log.error(throwable, "Background caching failed");
+                                            }
+                                          },
+                                          backgroundExecutorService
+                                      );
                                     }
                                   }
                                 },
-                                backgroundExecutorService
+                                MoreExecutors.sameThreadExecutor()
                             );// End withEffect
                           }
                         }

@@ -43,6 +43,7 @@ import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -57,6 +58,7 @@ import org.junit.Test;
 
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class RemoteTaskRunnerTest
 {
@@ -66,6 +68,7 @@ public class RemoteTaskRunnerTest
   private static final String announcementsPath = String.format("%s/indexer/announcements/worker", basePath);
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
+  private static final int TIMEOUT_SECONDS = 5;
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -282,7 +285,7 @@ public class RemoteTaskRunnerTest
 
     cf.delete().forPath(joiner.join(statusPath, task.getId()));
 
-    TaskStatus status = future.get();
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(status.getStatusCode(), TaskStatus.Status.FAILED);
   }
@@ -335,7 +338,7 @@ public class RemoteTaskRunnerTest
 
     ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
 
-    TaskStatus status = future.get();
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
   }
@@ -353,7 +356,7 @@ public class RemoteTaskRunnerTest
 
     cf.delete().forPath(announcementsPath);
 
-    TaskStatus status = future.get();
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
   }
@@ -393,14 +396,14 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         config,
-        new ZkPathsConfig()
+        new IndexerZkConfig().setZkPathsConfig(new ZkPathsConfig()
         {
           @Override
-          public String getZkBasePath()
+          public String getBase()
           {
             return basePath;
           }
-        },
+        }),
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,

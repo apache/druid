@@ -38,6 +38,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
@@ -74,7 +75,7 @@ public class TaskMaster
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       @Self final DruidNode node,
-      final ZkPathsConfig zkPaths,
+      final IndexerZkConfig zkPaths,
       final TaskRunnerFactory runnerFactory,
       final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
@@ -85,7 +86,7 @@ public class TaskMaster
     this.taskActionClientFactory = taskActionClientFactory;
     this.leaderSelector = new LeaderSelector(
         curator,
-        zkPaths.getIndexerLeaderLatchPath(),
+        zkPaths.getLeaderLatchPath(),
         new LeaderSelectorListener()
         {
           @Override

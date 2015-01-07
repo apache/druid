@@ -62,9 +62,9 @@ public class CliBridge extends ServerRunnable
   }
 
   @Override
-  protected List<Object> getModules()
+  protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Object>of(
+    return ImmutableList.<Module>of(
         new Module()
         {
           @Override
@@ -109,7 +109,7 @@ public class CliBridge extends ServerRunnable
                                        .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
                                        .compressionProvider(
                                            new PotentiallyGzippedCompressionProvider(
-                                               bridgeCuratorConfig.enableCompression()
+                                               bridgeCuratorConfig.getEnableCompression()
                                            )
                                        )
                                        .build();

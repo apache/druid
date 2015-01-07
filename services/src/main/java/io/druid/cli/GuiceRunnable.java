@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.initialization.Initialization;
@@ -48,7 +49,7 @@ public abstract class GuiceRunnable implements Runnable
     this.baseInjector = injector;
   }
 
-  protected abstract List<Object> getModules();
+  protected abstract List<? extends Module> getModules();
 
   public Injector makeInjector()
   {

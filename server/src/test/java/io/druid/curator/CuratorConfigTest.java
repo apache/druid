@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,21 +17,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.guice;
+package io.druid.curator;
 
-import com.google.inject.Binder;
-import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
-import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.guice.JsonConfigTesterBase;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class IndexingServiceModuleHelper
+import java.lang.reflect.InvocationTargetException;
+
+public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {
-  public static void configureTaskRunnerConfigs(Binder binder)
+  @Test
+  public void testHostName() throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
   {
-    JsonConfigProvider.bind(binder, "druid.indexer.runner", ForkingTaskRunnerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.indexer.runner", RemoteTaskRunnerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.zk.paths.indexer", IndexerZkConfig.class);
+    propertyValues.put(getPropertyKey("host"),"fooHost");
+    testProperties.putAll(propertyValues);
+    configProvider.inject(testProperties, configurator);
+    CuratorConfig config = configProvider.get().get();
+    Assert.assertEquals("fooHost", config.getZkHosts());
   }
 }

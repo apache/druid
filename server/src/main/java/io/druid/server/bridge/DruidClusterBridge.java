@@ -43,6 +43,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.coordination.AbstractDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
@@ -80,6 +81,9 @@ public class DruidClusterBridge
   private final BridgeZkCoordinator bridgeZkCoordinator;
   private final Announcer announcer;
   private final ServerInventoryView<Object> serverInventoryView;
+  private final ZkPathsConfig zkPathsConfig;
+
+  private final DruidServerMetadata druidServerMetadata;
 
   private final Map<DataSegment, Integer> segments = Maps.newHashMap();
   private final Object lock = new Object();
@@ -91,6 +95,8 @@ public class DruidClusterBridge
   public DruidClusterBridge(
       ObjectMapper jsonMapper,
       DruidClusterBridgeConfig config,
+      ZkPathsConfig zkPathsConfig,
+      DruidServerMetadata druidServerMetadata,
       ScheduledExecutorFactory scheduledExecutorFactory,
       @Self DruidNode self,
       CuratorFramework curator,
@@ -104,10 +110,12 @@ public class DruidClusterBridge
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.bridgeZkCoordinator = bridgeZkCoordinator;
+    this.zkPathsConfig = zkPathsConfig;
     this.announcer = announcer;
     this.serverInventoryView = serverInventoryView;
     this.curator = curator;
     this.leaderLatch = leaderLatch;
+    this.druidServerMetadata = druidServerMetadata;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
     this.self = self;
@@ -212,7 +220,7 @@ public class DruidClusterBridge
   private LeaderLatch createNewLeaderLatch()
   {
     final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, ZKPaths.makePath(config.getConnectorPath(), BRIDGE_OWNER_NODE), self.getHostAndPort()
+        curator, ZKPaths.makePath(zkPathsConfig.getConnectorPath(), BRIDGE_OWNER_NODE), self.getHostAndPort()
     );
 
     newLeaderLatch.addListener(
@@ -309,13 +317,13 @@ public class DruidClusterBridge
                         self.getHostAndPort(),
                         totalMaxSize,
                         NODE_TYPE,
-                        config.getTier(),
-                        config.getPriority()
+                        druidServerMetadata.getTier(),
+                        druidServerMetadata.getPriority()
                     );
 
                     try {
-                      final String path = ZKPaths.makePath(config.getAnnouncementsPath(), self.getHostAndPort());
-                      log.info("Updating [%s] to have a maxSize of[%,d] bytes", self.getHostAndPort(), totalMaxSize);
+                      final String path = ZKPaths.makePath(zkPathsConfig.getAnnouncementsPath(), self.getHostAndPort());
+                      log.info("Updating [%s] to have a maxSize of[%,d] bytes", self.getHost(), totalMaxSize);
                       announcer.update(path, jsonMapper.writeValueAsBytes(me));
                     }
                     catch (Exception e) {
