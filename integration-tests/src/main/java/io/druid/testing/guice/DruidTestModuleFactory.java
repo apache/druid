@@ -33,7 +33,6 @@ import java.util.List;
 
 public class DruidTestModuleFactory implements IModuleFactory
 {
-
   private static final Module module = new DruidTestModule();
   private static final Injector injector = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
@@ -45,10 +44,10 @@ public class DruidTestModuleFactory implements IModuleFactory
     return injector;
   }
 
-  private static List<Object> getModules()
+  private static List<? extends Module> getModules()
   {
     return ImmutableList.of(
-        DruidTestModule.class,
+        new DruidTestModule(),
         new IndexingServiceFirehoseModule()
     );
   }
