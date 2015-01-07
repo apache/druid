@@ -31,17 +31,26 @@ public abstract class BaseJettyServerInitializer implements JettyServerInitializ
 
   public static final String GZIP_METHODS = Joiner.on(",").join(HttpMethod.GET, HttpMethod.POST);
 
-  public FilterHolder defaultGzipFilterHolder() {
+  public FilterHolder defaultGzipFilterHolder()
+  {
     final FilterHolder gzipFilterHolder = new FilterHolder(GzipFilter.class);
-    gzipFilterHolder.setInitParameter("minGzipSize", "0");
-    gzipFilterHolder.setInitParameter("methods", GZIP_METHODS);
+    setDefaultGzipFilterHolderParameters(gzipFilterHolder);
     return gzipFilterHolder;
   }
 
-  public FilterHolder defaultAsyncGzipFilterHolder() {
+  public FilterHolder defaultAsyncGzipFilterHolder()
+  {
     final FilterHolder gzipFilterHolder = new FilterHolder(AsyncGzipFilter.class);
-    gzipFilterHolder.setInitParameter("minGzipSize", "0");
-    gzipFilterHolder.setInitParameter("methods", GZIP_METHODS);
+    setDefaultGzipFilterHolderParameters(gzipFilterHolder);
     return gzipFilterHolder;
+  }
+
+  private static void setDefaultGzipFilterHolderParameters(final FilterHolder filterHolder)
+  {
+    filterHolder.setInitParameter("minGzipSize", "0");
+    filterHolder.setInitParameter("methods", GZIP_METHODS);
+
+    // We don't actually have any precomputed .gz resources, and checking for them inside jars is expensive.
+    filterHolder.setInitParameter("checkGzExists", String.valueOf(false));
   }
 }

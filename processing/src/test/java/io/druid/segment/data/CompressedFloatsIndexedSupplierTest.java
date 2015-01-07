@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
+import io.druid.segment.CompressedPools;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,6 +35,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.channels.Channels;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -87,6 +91,11 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
         0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f
     };
 
+    makeWithSerde(chunkSize);
+  }
+
+  private void makeWithSerde(int chunkSize) throws IOException
+  {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedFloatsIndexedSupplier theSupplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
         FloatBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
@@ -100,28 +109,53 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
     indexed = supplier.get();
   }
 
+  private void setupLargeChunks(final int chunkSize, final int totalSize) throws IOException
+  {
+    vals = new float[totalSize];
+    Random rand = new Random(0);
+    for(int i = 0; i < vals.length; ++i) {
+      vals[i] = (float)rand.nextGaussian();
+    }
+
+    makeWithSerde(chunkSize);
+  }
+
   @Test
   public void testSanity() throws Exception
   {
     setupSimple(5);
-
     Assert.assertEquals(4, supplier.getBaseFloatBuffers().size());
-
-    Assert.assertEquals(vals.length, indexed.size());
-    for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
-    }
+    assertIndexMatchesVals();
 
     // test powers of 2
     setupSimple(2);
-
     Assert.assertEquals(9, supplier.getBaseFloatBuffers().size());
+    assertIndexMatchesVals();
+  }
 
-    Assert.assertEquals(vals.length, indexed.size());
-    for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
-    }
+  @Test
+  public void testLargeChunks() throws Exception
+  {
+    final int maxChunkSize = CompressedPools.BUFFER_SIZE / Floats.BYTES;
 
+    setupLargeChunks(maxChunkSize, 10 * maxChunkSize);
+    Assert.assertEquals(10, supplier.getBaseFloatBuffers().size());
+    assertIndexMatchesVals();
+
+    setupLargeChunks(maxChunkSize, 10 * maxChunkSize + 1);
+    Assert.assertEquals(11, supplier.getBaseFloatBuffers().size());
+    assertIndexMatchesVals();
+
+    setupLargeChunks(maxChunkSize - 1, 10 * (maxChunkSize - 1) + 1);
+    Assert.assertEquals(11, supplier.getBaseFloatBuffers().size());
+    assertIndexMatchesVals();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testChunkTooBig() throws Exception
+  {
+    final int maxChunkSize = CompressedPools.BUFFER_SIZE / Floats.BYTES;
+    setupLargeChunks(maxChunkSize + 1, 10 * (maxChunkSize + 1));
   }
 
   @Test
@@ -149,20 +183,14 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 
     Assert.assertEquals(4, supplier.getBaseFloatBuffers().size());
 
-    Assert.assertEquals(vals.length, indexed.size());
-    for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
-    }
+    assertIndexMatchesVals();
 
     // test powers of 2
     setupSimpleWithSerde(2);
 
     Assert.assertEquals(9, supplier.getBaseFloatBuffers().size());
 
-    Assert.assertEquals(vals.length, indexed.size());
-    for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
-    }
+    assertIndexMatchesVals();
   }
 
   @Test
@@ -294,6 +322,25 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 
     for (int i = startIndex; i < filled.length; i++) {
       Assert.assertEquals(vals[i + startIndex], filled[i], 0.0);
+    }
+  }
+
+  private void assertIndexMatchesVals()
+  {
+    Assert.assertEquals(vals.length, indexed.size());
+
+    // sequential access
+    int[] indices = new int[vals.length];
+    for (int i = 0; i < indexed.size(); ++i) {
+      Assert.assertEquals(vals[i], indexed.get(i), 0.0);
+      indices[i] = i;
+    }
+
+    Collections.shuffle(Arrays.asList(indices));
+    // random access
+    for (int i = 0; i < indexed.size(); ++i) {
+      int k = indices[i];
+      Assert.assertEquals(vals[k], indexed.get(k), 0.0);
     }
   }
 }

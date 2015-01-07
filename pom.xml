@@ -28,9 +28,9 @@
     <name>druid</name>
     <description>druid</description>
     <scm>
-        <connection>scm:git:ssh://git@github.com/metamx/druid.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/metamx/druid.git</developerConnection>
-        <url>http://www.github.com/metamx/druid</url>
+        <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
+        <url>https://github.com/druid-io/druid</url>
         <tag>druid-0.7.0-SNAPSHOT</tag>
     </scm>
 
@@ -43,7 +43,7 @@
         <metamx.java-util.version>0.26.9</metamx.java-util.version>
         <apache.curator.version>2.7.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
-        <druid.api.version>0.3.0</druid.api.version>
+        <druid.api.version>0.3.1</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
     </properties>
 
@@ -85,7 +85,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>0.9.7</version>
+                <version>0.9.12</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -159,7 +159,7 @@
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
-                <version>0.8.4</version>
+                <version>1.0.3</version>
             </dependency>
             <dependency>
                 <groupId>io.airlift</groupId>
