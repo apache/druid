@@ -19,9 +19,9 @@
 
 package io.druid.segment.realtime;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.google.common.base.Preconditions;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -31,6 +31,9 @@ public class FireDepartmentMetrics
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
   private final AtomicLong unparseableCount = new AtomicLong(0);
   private final AtomicLong rowOutputCount = new AtomicLong(0);
+  private final AtomicLong numPersists = new AtomicLong(0);
+  private final AtomicLong persistTimeMillis = new AtomicLong(0);
+  private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
 
   public void incrementProcessed()
   {
@@ -50,6 +53,21 @@ public class FireDepartmentMetrics
   public void incrementRowOutputCount(long numRows)
   {
     rowOutputCount.addAndGet(numRows);
+  }
+
+  public void incrementNumPersists()
+  {
+    numPersists.incrementAndGet();
+  }
+
+  public void incrementPersistTimeMillis(long millis)
+  {
+    persistTimeMillis.addAndGet(millis);
+  }
+
+  public void incrementPersistBackPressureMillis(long millis)
+  {
+    persistBackPressureMillis.addAndGet(millis);
   }
 
   public long processed()
@@ -72,6 +90,21 @@ public class FireDepartmentMetrics
     return rowOutputCount.get();
   }
 
+  public long numPersists()
+  {
+    return numPersists.get();
+  }
+
+  public long persistTimeMillis()
+  {
+    return persistTimeMillis.get();
+  }
+
+  public long persistBackPressureMillis()
+  {
+    return persistBackPressureMillis.get();
+  }
+
   public FireDepartmentMetrics snapshot()
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
@@ -79,6 +112,9 @@ public class FireDepartmentMetrics
     retVal.thrownAwayCount.set(thrownAwayCount.get());
     retVal.unparseableCount.set(unparseableCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
+    retVal.numPersists.set(numPersists.get());
+    retVal.persistTimeMillis.set(persistTimeMillis.get());
+    retVal.persistBackPressureMillis.set(persistBackPressureMillis.get());
     return retVal;
   }
 
@@ -95,6 +131,9 @@ public class FireDepartmentMetrics
     thrownAwayCount.addAndGet(otherSnapshot.thrownAway());
     rowOutputCount.addAndGet(otherSnapshot.rowOutput());
     unparseableCount.addAndGet(otherSnapshot.unparseable());
+    numPersists.addAndGet(otherSnapshot.numPersists());
+    persistTimeMillis.addAndGet(otherSnapshot.persistTimeMillis());
+    persistBackPressureMillis.addAndGet(otherSnapshot.persistBackPressureMillis());
     return this;
   }
 }
