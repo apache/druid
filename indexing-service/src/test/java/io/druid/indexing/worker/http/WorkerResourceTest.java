@@ -77,14 +77,14 @@ public class WorkerResourceTest
 
     curatorCoordinator = new WorkerCuratorCoordinator(
         jsonMapper,
-        new IndexerZkConfig().setZkPathsConfig(new ZkPathsConfig()
+        new IndexerZkConfig(new ZkPathsConfig()
         {
           @Override
           public String getBase()
           {
             return basePath;
           }
-        }),
+        },null,null,null,null,null),
         new RemoteTaskRunnerConfig(),
         cf,
         worker
