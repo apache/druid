@@ -42,11 +42,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 public class ChainedExecutionQueryRunnerTest
 {
-  @Test
+  @Test(timeout = 60000)
   public void testQueryCancellation() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -124,8 +123,8 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     // wait for query to register and start
-    Assert.assertTrue(queryIsRegistered.await(1, TimeUnit.SECONDS));
-    Assert.assertTrue(queriesStarted.await(1, TimeUnit.SECONDS));
+    queryIsRegistered.await();
+    queriesStarted.await();
 
     // cancel the query
     Assert.assertTrue(capturedFuture.hasCaptured());
@@ -139,14 +138,16 @@ public class ChainedExecutionQueryRunnerTest
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
       cause = (QueryInterruptedException)e.getCause();
     }
-    Assert.assertTrue(queriesInterrupted.await(500, TimeUnit.MILLISECONDS));
+    queriesInterrupted.await();
     Assert.assertNotNull(cause);
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(runner1.hasStarted);
     Assert.assertTrue(runner2.hasStarted);
     Assert.assertTrue(runner1.interrupted);
     Assert.assertTrue(runner2.interrupted);
-    Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
+    synchronized (runner3) {
+      Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
+    }
     Assert.assertFalse(runner1.hasCompleted);
     Assert.assertFalse(runner2.hasCompleted);
     Assert.assertFalse(runner3.hasCompleted);
@@ -154,7 +155,7 @@ public class ChainedExecutionQueryRunnerTest
     EasyMock.verify(watcher);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testQueryTimeout() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -233,8 +234,8 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     // wait for query to register and start
-    Assert.assertTrue(queryIsRegistered.await(1, TimeUnit.SECONDS));
-    Assert.assertTrue(queriesStarted.await(1, TimeUnit.SECONDS));
+    queryIsRegistered.await();
+    queriesStarted.await();
 
     Assert.assertTrue(capturedFuture.hasCaptured());
     ListenableFuture future = capturedFuture.getValue();
@@ -248,14 +249,16 @@ public class ChainedExecutionQueryRunnerTest
       Assert.assertEquals("Query timeout", e.getCause().getMessage());
       cause = (QueryInterruptedException)e.getCause();
     }
-    Assert.assertTrue(queriesInterrupted.await(500, TimeUnit.MILLISECONDS));
+    queriesInterrupted.await();
     Assert.assertNotNull(cause);
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(runner1.hasStarted);
     Assert.assertTrue(runner2.hasStarted);
     Assert.assertTrue(runner1.interrupted);
     Assert.assertTrue(runner2.interrupted);
-    Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
+    synchronized (runner3) {
+      Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
+    }
     Assert.assertFalse(runner1.hasCompleted);
     Assert.assertFalse(runner2.hasCompleted);
     Assert.assertFalse(runner3.hasCompleted);
@@ -268,9 +271,9 @@ public class ChainedExecutionQueryRunnerTest
     private final CountDownLatch start;
     private final CountDownLatch stop;
 
-    private boolean hasStarted = false;
-    private boolean hasCompleted = false;
-    private boolean interrupted = false;
+    private volatile boolean hasStarted = false;
+    private volatile boolean hasCompleted = false;
+    private volatile boolean interrupted = false;
 
     public DyingQueryRunner(CountDownLatch start, CountDownLatch stop)
     {
@@ -281,17 +284,19 @@ public class ChainedExecutionQueryRunnerTest
     @Override
     public Sequence<Integer> run(Query<Integer> query, Map<String, Object> responseContext)
     {
-      hasStarted = true;
-      start.countDown();
-      if (Thread.interrupted()) {
-        interrupted = true;
-        stop.countDown();
-        throw new QueryInterruptedException("I got killed");
+      synchronized (this) { // ensure hasStarted and interrupted are updated simultaneously
+        hasStarted = true;
+        start.countDown();
+        if (Thread.interrupted()) {
+          interrupted = true;
+          stop.countDown();
+          throw new QueryInterruptedException("I got killed");
+        }
       }
 
       // do a lot of work
       try {
-        Thread.sleep(500);
+        Thread.sleep(5000);
       }
       catch (InterruptedException e) {
         interrupted = true;
