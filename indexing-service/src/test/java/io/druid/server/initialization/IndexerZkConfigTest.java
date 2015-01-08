@@ -34,6 +34,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -42,7 +43,9 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 /**
@@ -52,7 +55,7 @@ public class IndexerZkConfigTest
 {
   private static final String indexerPropertyString = "test.druid.zk.paths.indexer";
   private static final String zkServiceConfigString = "test.druid.zk.paths";
-  private static final Collection<String> clobberableProperties = new ArrayList<>();
+  private static final Collection<String> clobberableProperties = new HashSet<>();
 
   private static final Module simpleZkConfigModule = new Module()
   {
@@ -65,12 +68,10 @@ public class IndexerZkConfigTest
       JsonConfigProvider.bind(binder, indexerPropertyString, IndexerZkConfig.class);
       JsonConfigProvider.bind(
           binder, zkServiceConfigString,
-          CuratorConfig.class
+          ZkPathsConfig.class
       );
     }
   };
-
-  private static final Map<String, String> priorValues = new HashMap<>();
 
   @BeforeClass
   public static void setup()
@@ -85,22 +86,9 @@ public class IndexerZkConfigTest
         clobberableProperties.add(String.format("%s.%s", zkServiceConfigString, field.getName()));
       }
     }
-    for (String clobberableProperty : clobberableProperties) {
-      priorValues.put(clobberableProperty, System.getProperty(clobberableProperty));
-    }
   }
 
-  @AfterClass
-  public static void cleanup()
-  {
-    for (Map.Entry<String, String> entry : priorValues.entrySet()) {
-      if (null != entry.getKey() && null != entry.getValue()) {
-        System.setProperty(entry.getKey(), entry.getValue());
-      }
-    }
-  }
-
-  private Map<String, String> propertyValues = new HashMap<>();
+  private Properties propertyValues = new Properties();
   private int assertions = 0;
 
   @Before
@@ -109,7 +97,6 @@ public class IndexerZkConfigTest
     for (String property : clobberableProperties) {
       propertyValues.put(property, UUID.randomUUID().toString());
     }
-    System.getProperties().putAll(propertyValues);
     assertions = 0;
   }
 
@@ -151,6 +138,28 @@ public class IndexerZkConfigTest
   }
 
   @Test
+  public void testNullConfig(){
+    propertyValues.clear();
+
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.<Module>of(simpleZkConfigModule)
+    );
+    JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
+
+    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(zkServiceConfigString, ZkPathsConfig.class);
+    zkPathsConfig.inject(propertyValues, configurator);
+
+    JsonConfigProvider<IndexerZkConfig> indexerZkConfig = JsonConfigProvider.of(
+        indexerPropertyString,
+        IndexerZkConfig.class
+    );
+    indexerZkConfig.inject(propertyValues, configurator);
+
+    Assert.assertEquals("/druid/indexer/leaderLatchPath", indexerZkConfig.get().get().getLeaderLatchPath());
+  }
+
+  @Test
   public void testSimpleConfig() throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
   {
     final Injector injector = Initialization.makeInjectorWithModules(
@@ -160,16 +169,46 @@ public class IndexerZkConfigTest
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
     JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(zkServiceConfigString, ZkPathsConfig.class);
-    zkPathsConfig.inject(System.getProperties(), configurator);
+    zkPathsConfig.inject(propertyValues, configurator);
 
     JsonConfigProvider<IndexerZkConfig> indexerZkConfig = JsonConfigProvider.of(
         indexerPropertyString,
         IndexerZkConfig.class
     );
-    indexerZkConfig.inject(System.getProperties(), configurator);
+    indexerZkConfig.inject(propertyValues, configurator);
 
-    validateEntries(indexerZkConfig.get().get());
-    validateEntries(zkPathsConfig.get().get());
+
+    IndexerZkConfig zkConfig = indexerZkConfig.get().get();
+    ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get().get();
+
+    validateEntries(zkConfig);
+    validateEntries(zkPathsConfig1);
     Assert.assertEquals(clobberableProperties.size(), assertions);
+  }
+
+  @Test
+  public void testExactConfig(){
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.<Module>of(simpleZkConfigModule)
+    );
+    propertyValues.setProperty(zkServiceConfigString + ".base", "/druid/metrics");
+
+
+    JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
+
+    JsonConfigProvider<ZkPathsConfig> zkPathsConfig = JsonConfigProvider.of(
+        zkServiceConfigString,
+        ZkPathsConfig.class
+    );
+
+    zkPathsConfig.inject(propertyValues, configurator);
+
+    ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get().get();
+
+    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1,null,null,null,null,null);
+
+    Assert.assertEquals("indexer", indexerZkConfig.getBase());
+    Assert.assertEquals("/druid/metrics/indexer/announcements", indexerZkConfig.getAnnouncementsPath());
   }
 }

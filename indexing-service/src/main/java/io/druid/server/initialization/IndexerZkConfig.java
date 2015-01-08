@@ -19,9 +19,9 @@
 
 package io.druid.server.initialization;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Inject;
 import org.apache.curator.utils.ZKPaths;
 
 /**
@@ -29,19 +29,41 @@ import org.apache.curator.utils.ZKPaths;
  */
 public class IndexerZkConfig
 {
-  @Inject
-  @JsonIgnore
-  private ZkPathsConfig zkPathsConfig = new ZkPathsConfig();
+  @JsonCreator
+  public IndexerZkConfig(
+      @JacksonInject ZkPathsConfig zkPathsConfig,
+      @JsonProperty("base") String base,
+      @JsonProperty("announcementsPath") String announcementsPath,
+      @JsonProperty("tasksPath") String tasksPath,
+      @JsonProperty("status") String status,
+      @JsonProperty("leaderLatchPath") String leaderLatchPath
+  )
+  {
+    this.zkPathsConfig = zkPathsConfig;
+    this.base = base;
+    this.announcementsPath = announcementsPath;
+    this.tasksPath = tasksPath;
+    this.status = status;
+    this.leaderLatchPath = leaderLatchPath;
+  }
+
+  @JacksonInject
+  private final ZkPathsConfig zkPathsConfig;
+
   @JsonProperty
-  private String base;
+  private final String base;
+
   @JsonProperty
-  private String announcementsPath;
+  private final String announcementsPath;
+
   @JsonProperty
-  private String tasksPath;
+  private final String tasksPath;
+
   @JsonProperty
-  private String status;
+  private final String status;
+
   @JsonProperty
-  private String leaderLatchPath;
+  private final String leaderLatchPath;
 
   private String defaultIndexerPath(final String subPath)
   {
@@ -76,12 +98,5 @@ public class IndexerZkConfig
   public ZkPathsConfig getZkPathsConfig()
   {
     return zkPathsConfig;
-  }
-
-  // Setter required for easy debugging
-  public IndexerZkConfig setZkPathsConfig(ZkPathsConfig zkPathsConfig)
-  {
-    this.zkPathsConfig = zkPathsConfig;
-    return this;
   }
 }

@@ -396,14 +396,14 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         config,
-        new IndexerZkConfig().setZkPathsConfig(new ZkPathsConfig()
+        new IndexerZkConfig(new ZkPathsConfig()
         {
           @Override
           public String getBase()
           {
             return basePath;
           }
-        }),
+        },null,null,null,null,null),
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,

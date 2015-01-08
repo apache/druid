@@ -140,7 +140,7 @@ public class WorkerTaskMonitorTest
 
     workerCuratorCoordinator = new WorkerCuratorCoordinator(
         jsonMapper,
-        new IndexerZkConfig().setZkPathsConfig(
+        new IndexerZkConfig(
         new ZkPathsConfig()
         {
           @Override
@@ -148,7 +148,7 @@ public class WorkerTaskMonitorTest
           {
             return basePath;
           }
-        }),
+        },null,null,null,null,null),
         new TestRemoteTaskRunnerConfig(),
         cf,
         worker
