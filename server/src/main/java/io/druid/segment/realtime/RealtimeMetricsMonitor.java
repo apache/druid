@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
-*/
+ */
 public class RealtimeMetricsMonitor extends AbstractMonitor
 {
   private final Map<FireDepartment, FireDepartmentMetrics> previousValues;
@@ -60,6 +60,14 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("events/unparseable", metrics.unparseable() - previous.unparseable()));
       emitter.emit(builder.build("events/processed", metrics.processed() - previous.processed()));
       emitter.emit(builder.build("rows/output", metrics.rowOutput() - previous.rowOutput()));
+      emitter.emit(builder.build("persists/num", metrics.numPersists() - previous.numPersists()));
+      emitter.emit(builder.build("persists/time", metrics.persistTimeMillis() - previous.persistTimeMillis()));
+      emitter.emit(
+          builder.build(
+              "persists/backPressure",
+              metrics.persistBackPressureMillis() - previous.persistBackPressureMillis()
+          )
+      );
 
       previousValues.put(fireDepartment, metrics);
     }

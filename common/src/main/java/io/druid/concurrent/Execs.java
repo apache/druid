@@ -59,7 +59,8 @@ public class Execs
 
   /**
    * @param nameFormat nameformat for threadFactory
-   * @param capacity maximum capacity after which the executorService will block on accepting new tasks
+   * @param capacity   maximum capacity after which the executorService will block on accepting new tasks
+   *
    * @return ExecutorService which blocks accepting new tasks when the capacity reached
    */
   public static ExecutorService newBlockingSingleThreaded(final String nameFormat, final int capacity)
