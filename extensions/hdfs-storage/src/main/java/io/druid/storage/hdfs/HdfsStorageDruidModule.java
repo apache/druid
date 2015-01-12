@@ -30,6 +30,7 @@ import io.druid.initialization.DruidModule;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 import java.util.List;
@@ -64,6 +65,7 @@ public class HdfsStorageDruidModule implements DruidModule
 
     // Walk around a typical case that "maven-assembly" causes bug about "No FileSystem for scheme: hdfs" while loading hadoop-hdfs dependency
     conf.set("fs.hdfs.impl", DistributedFileSystem.class.getName());
+    conf.set("fs.file.impl", LocalFileSystem.class.getName());
 
     if (props != null) {
       for (String propName : System.getProperties().stringPropertyNames()) {
