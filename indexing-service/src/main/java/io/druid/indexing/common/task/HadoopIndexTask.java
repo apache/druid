@@ -283,7 +283,7 @@ public class HadoopIndexTask extends AbstractTask
               schema,
               HadoopIngestionSpec.class
           );
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
           theSchema
               .withTuningConfig(theSchema.getTuningConfig().withVersion(version))
       );
@@ -312,7 +312,7 @@ public class HadoopIndexTask extends AbstractTask
               schema,
               HadoopIngestionSpec.class
           );
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
           theSchema
               .withIOConfig(theSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
               .withTuningConfig(theSchema.getTuningConfig().withWorkingPath(workingPath))
@@ -322,7 +322,7 @@ public class HadoopIndexTask extends AbstractTask
 
       log.info("Starting a hadoop determine configuration job...");
       if (job.run()) {
-        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(config.getSchema());
+        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(config.getSpec());
       }
 
       return null;

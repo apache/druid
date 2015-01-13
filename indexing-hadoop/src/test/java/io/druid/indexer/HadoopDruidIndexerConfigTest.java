@@ -21,12 +21,10 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Lists;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
-import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.JSONDataSpec;
 import io.druid.data.input.impl.TimestampSpec;
@@ -34,7 +32,6 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.rollup.DataRollupSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -67,10 +64,10 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void shouldMakeHDFSCompliantSegmentOutputPath()
   {
-    HadoopIngestionSpec schema;
+    HadoopIngestionSpec spec;
 
     try {
-      schema = jsonReadWriteRead(
+      spec = jsonReadWriteRead(
           "{"
           + "\"dataSource\": \"source\","
           + " \"granularitySpec\":{"
@@ -88,12 +85,13 @@ public class HadoopDruidIndexerConfigTest
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withTuningConfig(
-            schema.getTuningConfig()
+        spec.withTuningConfig(
+            spec.getTuningConfig()
                   .withVersion(
                       "some:brand:new:version"
                   )
-        )
+        ),
+        null
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
@@ -107,10 +105,10 @@ public class HadoopDruidIndexerConfigTest
   @Test
   public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
   {
-    final HadoopIngestionSpec schema;
+    final HadoopIngestionSpec spec;
 
     try {
-      schema = jsonReadWriteRead(
+      spec = jsonReadWriteRead(
           "{"
           + "\"dataSource\": \"the:data:source\","
           + " \"granularitySpec\":{"
@@ -128,12 +126,13 @@ public class HadoopDruidIndexerConfigTest
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withTuningConfig(
-            schema.getTuningConfig()
+        spec.withTuningConfig(
+            spec.getTuningConfig()
                   .withVersion(
                       "some:brand:new:version"
                   )
-        )
+        ),
+        null
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
@@ -184,7 +183,7 @@ public class HadoopDruidIndexerConfigTest
         null,
         null
     );
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(spec);
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
     final ImmutableMap<String, Object> values = ImmutableMap.<String, Object>of(
         "Dim1",

@@ -231,6 +231,7 @@ public class TaskLifecycleTest
     final Task indexTask = new IndexTask(
         null,
         null,
+        null,
         "foo",
         new UniformGranularitySpec(
             Granularity.DAY,
@@ -290,6 +291,7 @@ public class TaskLifecycleTest
   public void testIndexTaskFailure() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         null,
         null,
         "foo",
