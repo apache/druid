@@ -21,7 +21,6 @@ package io.druid.segment.incremental;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
@@ -30,8 +29,8 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -41,16 +40,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
-  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
-  private final List<Aggregator[]> aggList = Lists.newArrayList();
-  private final int maxRowCount;
+  private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts = new ConcurrentSkipListMap<>();
+  private final AtomicInteger indexIncrement = new AtomicInteger(0);
+  protected final int maxRowCount;
 
   private String outOfRowsReason = null;
 
-  public OnheapIncrementalIndex(IncrementalIndexSchema incrementalIndexSchema, boolean deserializeComplexMetrics, int maxRowCount)
+  public OnheapIncrementalIndex(
+      IncrementalIndexSchema incrementalIndexSchema,
+      boolean deserializeComplexMetrics,
+      int maxRowCount
+  )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics);
-    this.facts = new ConcurrentSkipListMap<>();
     this.maxRowCount = maxRowCount;
   }
 
@@ -127,45 +130,75 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       ThreadLocal<InputRow> in
   ) throws IndexSizeExceededException
   {
-    Integer rowOffset;
-    synchronized (this) {
-      rowOffset = numEntries.get();
-      if(rowOffset >= maxRowCount && !facts.containsKey(key)) {
+    final Integer priorIndex = facts.get(key);
+
+    Aggregator[] aggs;
+
+    if (null != priorIndex) {
+      aggs = concurrentGet(priorIndex);
+    } else {
+      aggs = new Aggregator[metrics.length];
+      for (int i = 0; i < metrics.length; i++) {
+        final AggregatorFactory agg = metrics[i];
+        aggs[i] = agg.factorize(
+            makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
+        );
+      }
+      final Integer rowIndex = indexIncrement.getAndIncrement();
+
+      concurrentSet(rowIndex, aggs);
+
+      // Last ditch sanity checks
+      if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
         throw new IndexSizeExceededException("Maximum number of rows reached");
       }
-      final Integer prev = facts.putIfAbsent(key, rowOffset);
-      if (prev != null) {
-        rowOffset = prev;
-      } else {
-        Aggregator[] aggs = new Aggregator[metrics.length];
-        for (int i = 0; i < metrics.length; i++) {
-          final AggregatorFactory agg = metrics[i];
-          aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
-          );
-        }
-        aggList.add(aggs);
+      final Integer prev = facts.putIfAbsent(key, rowIndex);
+      if (null == prev) {
         numEntries.incrementAndGet();
+      } else {
+        // We lost a race
+        aggs = concurrentGet(prev);
+        // Free up the misfire
+        concurrentRemove(rowIndex);
+        // This is expected to occur ~80% of the time in the worst scenarios
       }
     }
 
     in.set(row);
 
-    final Aggregator[] aggs = aggList.get(rowOffset);
-    for (int i = 0; i < aggs.length; i++) {
-      synchronized (aggs[i]) {
-        aggs[i].aggregate();
+    for (Aggregator agg : aggs) {
+      synchronized (agg) {
+        agg.aggregate();
       }
     }
+
     in.set(null);
+
+
     return numEntries.get();
+  }
+
+  protected Aggregator[] concurrentGet(int offset)
+  {
+    // All get operations should be fine
+    return aggregators.get(offset);
+  }
+
+  protected void concurrentSet(int offset, Aggregator[] value)
+  {
+    aggregators.put(offset, value);
+  }
+
+  protected void concurrentRemove(int offset)
+  {
+    aggregators.remove(offset);
   }
 
   @Override
   public boolean canAppendRow()
   {
     final boolean canAdd = size() < maxRowCount;
-    if(!canAdd) {
+    if (!canAdd) {
       outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
     }
     return canAdd;
@@ -180,7 +213,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   @Override
   protected Aggregator[] getAggsForRow(int rowOffset)
   {
-    return aggList.get(rowOffset);
+    return concurrentGet(rowOffset);
   }
 
   @Override
@@ -192,19 +225,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    return aggList.get(rowOffset)[aggOffset].getFloat();
+    return concurrentGet(rowOffset)[aggOffset].getFloat();
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    return aggList.get(rowOffset)[aggOffset].getLong();
+    return concurrentGet(rowOffset)[aggOffset].getLong();
   }
 
   @Override
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    return aggList.get(rowOffset)[aggOffset].get();
+    return concurrentGet(rowOffset)[aggOffset].get();
   }
 
   private static class OnHeapDimDim implements DimDim
