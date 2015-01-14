@@ -115,34 +115,34 @@ public class DefaultLimitSpec implements LimitSpec
       }
     };
 
-    Map<String, Object> possibleOrderDims = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    for (DimensionSpec spec : dimensions) {
-      possibleOrderDims.put(spec.getOutputName(), spec);
+    Map<String, Function<OrderByColumnSpec, Ordering<Row>>> possibleOrderDims = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    for (final DimensionSpec spec : dimensions) {
+      possibleOrderDims.put(
+          spec.getOutputName(),
+          dimensionOrdering(spec.getOutputName())
+      );
     }
 
     for (final AggregatorFactory agg : aggs) {
-      possibleOrderDims.put(agg.getName(), agg);
+      possibleOrderDims.put(
+          agg.getName(),
+          metricOrdering(agg.getName(), agg.getComparator())
+      );
     }
 
-    for (PostAggregator postAgg : postAggs) {
-      possibleOrderDims.put(postAgg.getName(), postAgg);
+    for (final PostAggregator postAgg : postAggs) {
+      possibleOrderDims.put(
+          postAgg.getName(),
+          metricOrdering(postAgg.getName(), postAgg.getComparator())
+      );
     }
 
     for (OrderByColumnSpec columnSpec : columns) {
-      String dimension = columnSpec.getDimension();
-      Object dimObj = possibleOrderDims.get(dimension);
-      if (dimObj == null) {
+      Function<OrderByColumnSpec, Ordering<Row>> genOrderingFunc = possibleOrderDims.get(columnSpec.getDimension());
+      if (genOrderingFunc == null) {
         throw new ISE("Unknown column in order clause[%s]", columnSpec);
       }
-      Ordering<Row> nextOrdering;
-      if (dimObj instanceof DimensionSpec) {
-        nextOrdering = dimensionOrdering(dimension, columnSpec.asNumber());
-      } else if (dimObj instanceof AggregatorFactory) {
-        nextOrdering = metricOrdering(dimension, ((AggregatorFactory) dimObj).getComparator());
-      } else {
-        nextOrdering = metricOrdering(dimension, ((PostAggregator) dimObj).getComparator());
-      }
-
+      Ordering<Row> nextOrdering = genOrderingFunc.apply(columnSpec);
       switch (columnSpec.getDirection()) {
         case DESCENDING:
           nextOrdering = nextOrdering.reverse();
@@ -154,85 +154,100 @@ public class DefaultLimitSpec implements LimitSpec
     return ordering;
   }
 
-  private Ordering<Row> metricOrdering(final String column, final Comparator comparator)
+  private Function<OrderByColumnSpec, Ordering<Row>> metricOrdering(final String column, final Comparator comparator)
   {
-    return new Ordering<Row>()
+    return new Function<OrderByColumnSpec, Ordering<Row>>()
     {
-      @SuppressWarnings("unchecked")
       @Override
-      public int compare(Row left, Row right)
+      public Ordering<Row> apply(OrderByColumnSpec input)
       {
-        return comparator.compare(left.getRaw(column), right.getRaw(column));
+
+        return new Ordering<Row>()
+        {
+          @SuppressWarnings("unchecked")
+          @Override
+          public int compare(Row left, Row right)
+          {
+            return comparator.compare(left.getRaw(column), right.getRaw(column));
+          }
+        };
       }
     };
   }
 
-  private Ordering<Row> dimensionOrdering(final String dimension, final boolean asNumber)
+  private Function<OrderByColumnSpec, Ordering<Row>> dimensionOrdering(final String dimension)
   {
-    if (asNumber) {
-      // Order: null < string < number , and number only means "long" here.
-      return new Ordering<Comparable>()
+    return new Function<OrderByColumnSpec, Ordering<Row>>()
+    {
+      @Override
+      public Ordering<Row> apply(OrderByColumnSpec columnSpec)
       {
-        @Override
-        public int compare(
-            Comparable left, Comparable right
-        )
-        {
-          if (left instanceof Long && right instanceof Long) {
-            return ((Long) left).compareTo((Long) right);
-          } else if (left instanceof String) {
-            return -1;
-          } else if (right instanceof String) {
-            return 1;
-          } else {
-            return ((String) left).compareTo((String) right);
-          }
-        }
-      }.nullsFirst().onResultOf(
-          new Function<Row, Comparable>()
+        if (columnSpec.asNumber()) {
+          // Order: null < string < number , and number only means "long" here.
+          return new Ordering<Comparable>()
           {
             @Override
-            public Comparable apply(Row input)
+            public int compare(
+                Comparable left, Comparable right
+            )
             {
-              // Multi-value dimensions have all been flattened at this point;
-              final List<String> dimList = input.getDimension(dimension.toLowerCase());
-              if (dimList.isEmpty()) {
-                return null;
+              if (left instanceof Long && right instanceof Long) {
+                return ((Long) left).compareTo((Long) right);
+              } else if (left instanceof String) {
+                return -1;
+              } else if (right instanceof String) {
+                return 1;
+              } else {
+                return ((String) left).compareTo((String) right);
               }
+            }
+          }.nullsFirst().onResultOf(
+              new Function<Row, Comparable>()
+              {
+                @Override
+                public Comparable apply(Row input)
+                {
+                  // Multi-value dimensions have all been flattened at this point;
+                  final List<String> dimList = input.getDimension(dimension.toLowerCase());
+                  if (dimList.isEmpty()) {
+                    return null;
+                  }
 
-              String dimValue = dimList.get(0);
-              // Make sure dimValue is number parsable.
-              if (dimValue.isEmpty()) {
-                return dimValue;
-              }
-              for (int i = 0; i < dimValue.length(); i++) {
-                if (!Character.isDigit(dimValue.charAt(i))) {
-                  return dimValue;
+                  String dimValue = dimList.get(0);
+                  // Make sure dimValue is number parsable.
+                  if (dimValue.isEmpty()) {
+                    return dimValue;
+                  }
+                  for (int i = 0; i < dimValue.length(); i++) {
+                    if (!Character.isDigit(dimValue.charAt(i))) {
+                      return dimValue;
+                    }
+                  }
+                  try {
+                    return Long.parseLong(dimValue);
+                  }
+                  catch (NumberFormatException e) {
+                    return dimList.get(0);
+                  }
                 }
               }
-              try {
-                return Long.parseLong(dimValue);
+          );
+        } else {
+          return Ordering.natural().nullsFirst().onResultOf(
+              new Function<Row, String>()
+              {
+                @Override
+                public String apply(Row input)
+                {
+                  // Multi-value dimensions have all been flattened at this point;
+                  final List<String> dimList = input.getDimension(dimension.toLowerCase());
+                  return dimList.isEmpty() ? null : dimList.get(0);
+                }
               }
-              catch (NumberFormatException e) {
-                return dimList.get(0);
-              }
-            }
-          }
-      );
-    } else {
-      return Ordering.natural().nullsFirst().onResultOf(
-          new Function<Row, String>()
-          {
-            @Override
-            public String apply(Row input)
-            {
-              // Multi-value dimensions have all been flattened at this point;
-              final List<String> dimList = input.getDimension(dimension.toLowerCase());
-              return dimList.isEmpty() ? null : dimList.get(0);
-            }
-          }
-      );
-    }
+          );
+        }
+      }
+    };
   }
 
   @Override

@@ -26,6 +26,7 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.LineProcessor;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -57,6 +58,7 @@ public class TestIndex
 {
   public static final String[] COLUMNS = new String[]{
       "ts",
+      "id",
       "market",
       "quality",
       "placement",
@@ -64,7 +66,7 @@ public class TestIndex
       "index",
       "quality_uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"market", "quality", "placement", "placementish"};
+  public static final String[] DIMENSIONS = new String[]{"id", "market", "quality", "placement", "placementish"};
   public static final String[] METRICS = new String[]{"index"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");

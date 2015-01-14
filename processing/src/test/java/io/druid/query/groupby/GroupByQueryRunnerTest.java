@@ -146,7 +146,6 @@ public class GroupByQueryRunnerTest
         pool
     );
 
-
     Function<Object, Object> function = new Function<Object, Object>()
     {
       @Override
@@ -1070,6 +1069,45 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+  }
+
+  @Test
+  public void testGroupByWithOrderAsNumber() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-14/2011-04-16")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("id", "id")))
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn("id", "desc", true)
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "2084", "rows", 1L, "idx", 753L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "100", "rows", 1L, "idx", 1029L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "12", "rows", 2L, "idx", 1083L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "3", "rows", 3L, "idx", 337L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "0", "rows", 1L, "idx", 962L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "default", "rows", 13L, "idx", 3081L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "c1", "rows", 1L, "idx", 94L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "b8", "rows", 1L, "idx", 135L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "id", "23b", "rows", 3L, "idx", 2150L)
+        );
+
+    Map<String, Object> context = Maps.newHashMap();
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+    );
   }
 
   @Test

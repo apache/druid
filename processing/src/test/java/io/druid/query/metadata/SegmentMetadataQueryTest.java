@@ -26,7 +26,6 @@ import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -42,7 +41,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 public class SegmentMetadataQueryTest
 {
@@ -82,7 +80,7 @@ public class SegmentMetadataQueryTest
     );
     SegmentAnalysis val = results.iterator().next();
     Assert.assertEquals("testSegment", val.getId());
-    Assert.assertEquals(69843, val.getSize());
+    Assert.assertEquals(79452, val.getSize());
     Assert.assertEquals(
         Arrays.asList(new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         val.getIntervals()
