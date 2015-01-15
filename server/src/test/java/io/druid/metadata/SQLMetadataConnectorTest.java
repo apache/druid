@@ -66,7 +66,7 @@ public class SQLMetadataConnectorTest
           {
             for (String table : tables) {
               Assert.assertTrue(
-                  String.format("table $s was not created!", table),
+                  String.format("table %s was not created!", table),
                   connector.tableExists(handle, table)
               );
             }
