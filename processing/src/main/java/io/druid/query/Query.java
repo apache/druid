@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.select.SelectQuery;
@@ -44,7 +45,9 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
-    @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class)
+    @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
+    @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
+
 })
 public interface Query<T>
 {
@@ -55,6 +58,7 @@ public interface Query<T>
   public static final String SEGMENT_METADATA = "segmentMetadata";
   public static final String SELECT = "select";
   public static final String TOPN = "topN";
+  public static final String DATASOURCE_METADATA = "dataSourceMetadata";
 
   public DataSource getDataSource();
 
