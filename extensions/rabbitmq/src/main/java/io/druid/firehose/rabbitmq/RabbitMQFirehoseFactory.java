@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.StringUtils;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -234,7 +235,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
           return null;
         }
 
-        return stringParser.parse(new String(delivery.getBody(), Charsets.UTF_8));
+        return stringParser.parse(StringUtils.fromUtf8(delivery.getBody()));
       }
 
       @Override

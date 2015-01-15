@@ -22,6 +22,7 @@ package io.druid.client.cache;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -54,7 +55,7 @@ public interface Cache
     }
 
     public byte[] toByteArray() {
-      final byte[] nsBytes = this.namespace.getBytes(Charsets.UTF_8);
+      final byte[] nsBytes = StringUtils.toUtf8(this.namespace);
       return ByteBuffer.allocate(Ints.BYTES + nsBytes.length + this.key.length)
           .putInt(nsBytes.length)
           .put(nsBytes)

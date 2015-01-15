@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.base.Charsets;
+import com.metamx.common.StringUtils;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2UserData;
 import io.druid.indexing.overlord.autoscaling.ec2.GalaxyEC2UserData;
@@ -52,11 +53,11 @@ public class WorkerSetupDataTest
     Assert.assertEquals("hey :ver:", userData.getData());
     Assert.assertEquals("1234", userData.getVersion());
     Assert.assertEquals(
-        Base64.encodeBase64String("hey 1234".getBytes(Charsets.UTF_8)),
+        Base64.encodeBase64String(StringUtils.toUtf8("hey 1234")),
         userData.getUserDataBase64()
     );
     Assert.assertEquals(
-        Base64.encodeBase64String("hey xyz".getBytes(Charsets.UTF_8)),
+        Base64.encodeBase64String(StringUtils.toUtf8("hey xyz")),
         userData.withVersion("xyz").getUserDataBase64()
     );
   }

@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
@@ -48,7 +49,7 @@ public class PartialDimExtractionFn implements DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    byte[] exprBytes = expr.getBytes(Charsets.UTF_8);
+    byte[] exprBytes = StringUtils.toUtf8(expr);
     return ByteBuffer.allocate(1 + exprBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(exprBytes)

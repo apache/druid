@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
+import com.metamx.common.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -93,7 +94,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
 
           for (String dimensionValue : dimValues) {
             collector.add(
-                hashFn.hashBytes(dimensionValue.getBytes(Charsets.UTF_8)).asBytes()
+                hashFn.hashBytes(StringUtils.toUtf8(dimensionValue)).asBytes()
             );
           }
           return collector;

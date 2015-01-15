@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.metamx.common.StringUtils;
 import io.druid.query.search.search.SearchQuerySpec;
 
 import java.nio.ByteBuffer;
@@ -60,7 +61,7 @@ public class SearchQueryDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] dimensionBytes = dimension.getBytes(Charsets.UTF_8);
+    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] queryBytes = query.getCacheKey();
 
     return ByteBuffer.allocate(1 + dimensionBytes.length + queryBytes.length)

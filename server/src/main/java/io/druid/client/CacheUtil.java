@@ -40,7 +40,7 @@ public class CacheUtil
   )
   {
     final Interval segmentQueryInterval = descriptor.getInterval();
-    final byte[] versionBytes = descriptor.getVersion().getBytes(Charsets.UTF_8);
+    final byte[] versionBytes = com.metamx.common.StringUtils.toUtf8(descriptor.getVersion());
 
     return new Cache.NamedKey(
         segmentIdentifier, ByteBuffer

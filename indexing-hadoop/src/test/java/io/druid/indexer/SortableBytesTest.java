@@ -20,6 +20,7 @@
 package io.druid.indexer;
 
 import com.google.common.base.Charsets;
+import com.metamx.common.StringUtils;
 import org.apache.hadoop.io.WritableComparator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -108,11 +109,11 @@ public class SortableBytesTest
 
   private byte[] toBytes(String string)
   {
-    return string.getBytes(Charsets.UTF_8);
+    return StringUtils.toUtf8(string);
   }
 
   private String fromBytes(byte[] bytes)
   {
-    return new String(bytes, Charsets.UTF_8);
+    return StringUtils.fromUtf8(bytes);
   }
 }

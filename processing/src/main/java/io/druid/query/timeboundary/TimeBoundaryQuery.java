@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.StringUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -125,7 +126,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public byte[] getCacheKey()
   {
-    final byte[] boundBytes = bound.getBytes(Charsets.UTF_8);
+    final byte[] boundBytes = StringUtils.toUtf8(bound);
     return ByteBuffer.allocate(1 + boundBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(boundBytes)
