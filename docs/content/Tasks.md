@@ -191,7 +191,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
     "type": "merge",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "segments": <JSON list of DataSegment objects to append>
+    "segments": <JSON list of DataSegment objects to merge>
 }
 ```
 
@@ -207,7 +207,7 @@ Delete tasks create empty segments with no data. The grammar is:
     "type": "delete",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "segments": <JSON list of DataSegment objects to append>
+    "segments": <JSON list of DataSegment objects to delete>
 }
 ```
 
