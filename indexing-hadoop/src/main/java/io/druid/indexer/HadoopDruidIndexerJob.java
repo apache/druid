@@ -77,7 +77,9 @@ public class HadoopDruidIndexerJob implements Jobby
     if (metadataStorageUpdaterJob != null) {
       jobs.add(metadataStorageUpdaterJob);
     } else {
-      log.info("No updaterJobSpec set, not uploading to database");
+      log.info(
+          "No metadataStorageUpdaterJob set in the config. This is cool if you are running a hadoop index task, otherwise nothing will be uploaded to database."
+      );
     }
 
     jobs.add(

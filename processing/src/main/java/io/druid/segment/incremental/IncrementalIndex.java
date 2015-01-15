@@ -260,7 +260,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
     this.metrics = incrementalIndexSchema.getMetrics();
-    this.rowTransformers = Lists.newCopyOnWriteArrayList();
+    this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
 
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();

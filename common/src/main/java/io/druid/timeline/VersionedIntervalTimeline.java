@@ -58,7 +58,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * to achieve "atomic" updates.  First add new items, then check if those items caused anything to be overshadowed, if
  * so, remove the overshadowed elements and you have effectively updated your data set without any user impact.
  */
-public class VersionedIntervalTimeline<VersionType, ObjectType>
+public class VersionedIntervalTimeline<VersionType, ObjectType> implements TimelineLookup<VersionType, ObjectType>
 {
   private static final Logger log = new Logger(VersionedIntervalTimeline.class);
 

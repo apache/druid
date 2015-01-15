@@ -27,23 +27,21 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.server.AsyncQueryForwardingServlet;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.BaseJettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.AsyncGzipFilter;
 
 /**
  */
-public class RouterJettyServerInitializer implements JettyServerInitializer
+public class RouterJettyServerInitializer extends BaseJettyServerInitializer
 {
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -73,8 +71,10 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   @Override
   public void initialize(Server server, Injector injector)
   {
-    final ServletContextHandler queries = new ServletContextHandler(ServletContextHandler.SESSIONS);
-    queries.addServlet(
+    final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+
+    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+    root.addServlet(
         new ServletHolder(
             new AsyncQueryForwardingServlet(
                 jsonMapper,
@@ -86,15 +86,12 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
             )
         ), "/druid/v2/*"
     );
-    queries.addFilter(AsyncGzipFilter.class, "/druid/v2/*", null);
-    queries.addFilter(GuiceFilter.class, "/status/*", null);
-
-    final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
-    root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addFilter(GuiceFilter.class, "/*", null);
+    root.addFilter(defaultAsyncGzipFilterHolder(), "/*", null);
+    // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
+    root.addFilter(GuiceFilter.class, "/status/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{queries, root, new DefaultHandler()});
+    handlerList.setHandlers(new Handler[]{root});
     server.setHandler(handlerList);
   }
 }

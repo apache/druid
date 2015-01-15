@@ -88,10 +88,27 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
   },
   "tuningConfig" : {
     "type" : "hadoop",
-    "targetPartitionSize" : 5000000,
-    "jobProperties": {
-      "mapreduce.job.queuename": "default"
-    }
+    "workingPath": "/tmp",
+    "partitionsSpec" : {
+      "type" : "dimension",
+      "partitionDimension" : null,
+      "targetPartitionSize" : 5000000,
+      "maxPartitionSize" : 7500000,
+      "assumeGrouped" : false,
+      "numShards" : -1
+    },
+    "shardSpecs" : { },
+    "leaveIntermediate" : false,
+    "cleanupOnFailure" : true,
+    "overwriteFiles" : false,
+    "ignoreInvalidRows" : false,
+    "jobProperties" : { },
+    "combineText" : false,
+    "persistInHeap" : false,
+    "ingestOffheap" : false,
+    "bufferSize" : 134217728,
+    "aggregationBufferRatio" : 0.5,
+    "rowFlushBoundary" : 300000
   }
 }
 ```

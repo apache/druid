@@ -127,6 +127,10 @@ public class JettyHttpClientModule implements Module
               public void start() throws Exception
               {
                 httpClient.start();
+
+                // forwards raw bytes, don't decode gzip
+                // decoders are populated on start, so this has to be done after start() is called
+                httpClient.getContentDecoderFactories().clear();
               }
 
               @Override

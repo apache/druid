@@ -41,6 +41,7 @@ public class PartialDimExtractionFnTest
       "Vancouver",
       "Pretoria",
       "Wellington",
+      null,
       "Ontario"
   };
 

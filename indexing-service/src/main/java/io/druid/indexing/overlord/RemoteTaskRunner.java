@@ -32,8 +32,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -53,6 +51,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.tasklogs.TaskLogStreamer;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -104,7 +103,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
-  private final ZkPathsConfig zkPaths;
+  private final IndexerZkConfig indexerZkConfig;
   private final CuratorFramework cf;
   private final PathChildrenCacheFactory pathChildrenCacheFactory;
   private final PathChildrenCache workerPathCache;
@@ -131,7 +130,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   public RemoteTaskRunner(
       ObjectMapper jsonMapper,
       RemoteTaskRunnerConfig config,
-      ZkPathsConfig zkPaths,
+      IndexerZkConfig indexerZkConfig,
       CuratorFramework cf,
       PathChildrenCacheFactory pathChildrenCacheFactory,
       HttpClient httpClient,
@@ -140,10 +139,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.zkPaths = zkPaths;
+    this.indexerZkConfig = indexerZkConfig;
     this.cf = cf;
     this.pathChildrenCacheFactory = pathChildrenCacheFactory;
-    this.workerPathCache = pathChildrenCacheFactory.make(cf, zkPaths.getIndexerAnnouncementPath());
+    this.workerPathCache = pathChildrenCacheFactory.make(cf, indexerZkConfig.getAnnouncementsPath());
     this.httpClient = httpClient;
     this.strategy = strategy;
   }
@@ -498,7 +497,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     } else {
       final String workerId = worker.getHost();
       log.info("Cleaning up task[%s] on worker[%s]", taskId, workerId);
-      final String statusPath = JOINER.join(zkPaths.getIndexerStatusPath(), workerId, taskId);
+      final String statusPath = JOINER.join(indexerZkConfig.getStatus(), workerId, taskId);
       try {
         cf.delete().guaranteed().forPath(statusPath);
       }
@@ -584,7 +583,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
     }
 
-    String taskPath = JOINER.join(zkPaths.getIndexerTaskPath(), theWorker.getHost(), task.getId());
+    String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), theWorker.getHost(), task.getId());
 
     if (cf.checkExists().forPath(taskPath) == null) {
       cf.create()
@@ -644,7 +643,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     log.info("Worker[%s] reportin' for duty!", worker.getHost());
 
     try {
-      final String workerStatusPath = JOINER.join(zkPaths.getIndexerStatusPath(), worker.getHost());
+      final String workerStatusPath = JOINER.join(indexerZkConfig.getStatus(), worker.getHost());
       final PathChildrenCache statusCache = pathChildrenCacheFactory.make(cf, workerStatusPath);
       final SettableFuture<ZkWorker> retVal = SettableFuture.create();
       final ZkWorker zkWorker = new ZkWorker(
@@ -789,7 +788,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     if (zkWorker != null) {
       try {
         List<String> tasksToFail = Lists.newArrayList(
-            cf.getChildren().forPath(JOINER.join(zkPaths.getIndexerTaskPath(), worker.getHost()))
+            cf.getChildren().forPath(JOINER.join(indexerZkConfig.getTasksPath(), worker.getHost()))
         );
         log.info("[%s]: Found %d tasks assigned", worker.getHost(), tasksToFail.size());
 
@@ -807,7 +806,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         for (String assignedTask : tasksToFail) {
           RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
           if (taskRunnerWorkItem != null) {
-            String taskPath = JOINER.join(zkPaths.getIndexerTaskPath(), worker.getHost(), assignedTask);
+            String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), worker.getHost(), assignedTask);
             if (cf.checkExists().forPath(taskPath) != null) {
               cf.delete().guaranteed().forPath(taskPath);
             }

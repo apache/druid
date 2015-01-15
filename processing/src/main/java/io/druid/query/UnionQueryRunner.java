@@ -22,43 +22,43 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterables;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
-import java.util.List;
 import java.util.Map;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
-  private final QueryRunner<T> baseRunner;
+  private final Iterable<QueryRunner> baseRunners;
   private final QueryToolChest<T, Query<T>> toolChest;
 
   public UnionQueryRunner(
-      QueryRunner<T> baseRunner,
+      Iterable<QueryRunner> baseRunners,
       QueryToolChest<T, Query<T>> toolChest
   )
   {
-    this.baseRunner = baseRunner;
+    this.baseRunners = baseRunners;
     this.toolChest = toolChest;
   }
 
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    DataSource dataSource = query.getDataSource();
-    if (dataSource instanceof UnionDataSource) {
+    if (Iterables.size(baseRunners) == 1) {
+      return Iterables.getOnlyElement(baseRunners).run(query, responseContext);
+    } else {
       return toolChest.mergeSequencesUnordered(
           Sequences.simple(
-              Lists.transform(
-                  ((UnionDataSource) dataSource).getDataSources(),
-                  new Function<DataSource, Sequence<T>>()
+              Iterables.transform(
+                  baseRunners,
+                  new Function<QueryRunner, Sequence<T>>()
                   {
                     @Override
-                    public Sequence<T> apply(DataSource singleSource)
+                    public Sequence<T> apply(QueryRunner singleRunner)
                     {
-                      return baseRunner.run(
-                          query.withDataSource(singleSource),
+                      return singleRunner.run(
+                          query,
                           responseContext
                       );
                     }
@@ -66,8 +66,6 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
               )
           )
       );
-    } else {
-      return baseRunner.run(query, responseContext);
     }
   }
 

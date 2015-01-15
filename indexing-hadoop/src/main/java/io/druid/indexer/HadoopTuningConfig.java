@@ -36,7 +36,6 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
-  private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
   private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
@@ -46,7 +45,7 @@ public class HadoopTuningConfig implements TuningConfig
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
     return new HadoopTuningConfig(
-        DEFAULT_WORKING_PATH,
+        null,
         new DateTime().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
@@ -99,7 +98,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio
   )
   {
-    this.workingPath = workingPath == null ? DEFAULT_WORKING_PATH : workingPath;
+    this.workingPath = workingPath;
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;

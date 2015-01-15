@@ -19,11 +19,13 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
+import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.ChunkEncoder;
-import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
+import com.ning.compress.lzf.LZFEncoder;
 import io.druid.collections.ResourceHolder;
 import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
@@ -190,7 +192,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
         out.flip();
       }
       catch (IOException e) {
-        log.error(e, "IOException thrown while closing ChunkEncoder.");
+        log.error(e, "Error decompressing data");
       }
     }
 
@@ -209,15 +211,13 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     public byte[] compress(byte[] bytes)
     {
 
-      try (final ResourceHolder<ChunkEncoder> encoder = CompressedPools.getChunkEncoder()) {
-        final LZFChunk chunk = encoder.get().encodeChunk(bytes, 0, bytes.length);
-        return chunk.getData();
+      try (final ResourceHolder<BufferRecycler> bufferRecycler = CompressedPools.getBufferRecycler()) {
+        return LZFEncoder.encode(bytes, 0, bytes.length, bufferRecycler.get());
       }
       catch (IOException e) {
-        log.error(e, "IOException thrown while closing ChunkEncoder.");
+        log.error(e, "Error compressing data");
+        throw Throwables.propagate(e);
       }
-      // IOException should be on ResourceHolder.close(), not encodeChunk, so this *should* never happen
-      return null;
     }
   }
 

@@ -74,6 +74,7 @@ import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
+import io.druid.server.initialization.BaseJettyServerInitializer;
 import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.tasklogs.TaskLogs;
@@ -84,7 +85,6 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 
 import java.util.List;
@@ -105,9 +105,9 @@ public class CliOverlord extends ServerRunnable
   }
 
   @Override
-  protected List<Object> getModules()
+  protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Object>of(
+    return ImmutableList.<Module>of(
         new Module()
         {
           @Override
@@ -221,7 +221,7 @@ public class CliOverlord extends ServerRunnable
 
   /**
    */
-  private static class OverlordJettyServerInitializer implements JettyServerInitializer
+  private static class OverlordJettyServerInitializer extends BaseJettyServerInitializer
   {
     @Override
     public void initialize(Server server, Injector injector)
@@ -239,7 +239,7 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
-      root.addFilter(GzipFilter.class, "/*", null);
+      root.addFilter(defaultGzipFilterHolder(), "/*", null);
 
       // /status should not redirect, so add first
       root.addFilter(GuiceFilter.class, "/status/*", null);

@@ -34,7 +34,7 @@ public class ResourceManagementSchedulerConfig
   private Period provisionPeriod = new Period("PT1M");
 
   @JsonProperty
-  private Period terminatePeriod = new Period("PT1H");
+  private Period terminatePeriod = new Period("PT5M");
 
   @JsonProperty
   private DateTime originTime = new DateTime("2012-01-01T00:55:00.000Z");

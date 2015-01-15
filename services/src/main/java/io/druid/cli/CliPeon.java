@@ -101,9 +101,9 @@ public class CliPeon extends GuiceRunnable
   }
 
   @Override
-  protected List<Object> getModules()
+  protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Object>of(
+    return ImmutableList.<Module>of(
         new Module()
         {
           @Override
@@ -116,7 +116,7 @@ public class CliPeon extends GuiceRunnable
                 binder,
                 "druid.indexer.task.chathandler.type",
                 Key.get(ChatHandlerProvider.class),
-                Key.get(NoopChatHandlerProvider.class)
+                Key.get(ServiceAnnouncingChatHandlerProvider.class)
             );
             final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
                 binder, Key.get(ChatHandlerProvider.class)
@@ -125,6 +125,8 @@ public class CliPeon extends GuiceRunnable
                                  .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
             handlerProviderBinder.addBinding("noop")
                                  .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
+            binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);;
+            binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 

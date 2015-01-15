@@ -25,6 +25,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
@@ -76,14 +77,14 @@ public class WorkerResourceTest
 
     curatorCoordinator = new WorkerCuratorCoordinator(
         jsonMapper,
-        new ZkPathsConfig()
+        new IndexerZkConfig(new ZkPathsConfig()
         {
           @Override
-          public String getZkBasePath()
+          public String getBase()
           {
             return basePath;
           }
-        },
+        },null,null,null,null,null),
         new RemoteTaskRunnerConfig(),
         cf,
         worker

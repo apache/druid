@@ -50,6 +50,7 @@ import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.OmniSegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import junit.framework.Assert;
 import org.apache.curator.framework.CuratorFramework;
@@ -139,14 +140,15 @@ public class WorkerTaskMonitorTest
 
     workerCuratorCoordinator = new WorkerCuratorCoordinator(
         jsonMapper,
+        new IndexerZkConfig(
         new ZkPathsConfig()
         {
           @Override
-          public String getZkBasePath()
+          public String getBase()
           {
             return basePath;
           }
-        },
+        },null,null,null,null,null),
         new TestRemoteTaskRunnerConfig(),
         cf,
         worker
@@ -180,7 +182,8 @@ public class WorkerTaskMonitorTest
                     }
                 )
             ), jsonMapper
-            )
+            ),
+            null
         ),
         new WorkerConfig().setCapacity(1)
     );

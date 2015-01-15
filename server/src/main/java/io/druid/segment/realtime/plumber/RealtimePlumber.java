@@ -3,6 +3,7 @@ package io.druid.segment.realtime.plumber;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -11,6 +12,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Granularity;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.guava.FunctionalIterable;
@@ -29,6 +31,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
+import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -69,12 +72,15 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
+  private static final int WARN_DELAY = 1000;
+
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
   private final RejectionPolicy rejectionPolicy;
@@ -91,6 +97,7 @@ public class RealtimePlumber implements Plumber
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
       String.CASE_INSENSITIVE_ORDER
   );
+
   private volatile boolean shuttingDown = false;
   private volatile boolean stopped = false;
   private volatile ExecutorService persistExecutor = null;
@@ -238,7 +245,22 @@ public class RealtimePlumber implements Plumber
                       @Override
                       public QueryRunner<T> apply(TimelineObjectHolder<String, Sink> holder)
                       {
+                        if (holder == null) {
+                          throw new ISE("No timeline entry at all!");
+                        }
+
                         final Sink theSink = holder.getObject().getChunk(0).getObject();
+
+                        if (theSink == null) {
+                          throw new ISE("Missing sink for timeline entry[%s]!", holder);
+                        }
+
+                        final SegmentDescriptor descriptor = new SegmentDescriptor(
+                            holder.getInterval(),
+                            theSink.getSegment().getVersion(),
+                            theSink.getSegment().getShardSpec().getPartitionNum()
+                        );
+
                         return new SpecificSegmentQueryRunner<T>(
                             new MetricsEmittingQueryRunner<T>(
                                 emitter,
@@ -252,6 +274,13 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
+                                            // It is possible that we got a query for a segment, and while that query
+                                            // is in the jetty queue, the segment is abandoned. Here, we need to retry
+                                            // the query for the segment.
+                                            if (input == null || input.getSegment() == null) {
+                                              return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor);
+                                            }
+
                                             // Prevent the underlying segment from closing when its being iterated
                                             final Closeable closeable = input.getSegment().increment();
                                             try {
@@ -271,11 +300,7 @@ public class RealtimePlumber implements Plumber
                                 )
                             ).withWaitMeasuredFromNow(),
                             new SpecificSegmentSpec(
-                                new SegmentDescriptor(
-                                    holder.getInterval(),
-                                    theSink.getSegment().getVersion(),
-                                    theSink.getSegment().getShardSpec().getPartitionNum()
-                                )
+                                descriptor
                             )
                         );
                       }
@@ -297,19 +322,35 @@ public class RealtimePlumber implements Plumber
 
     log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
+    final Stopwatch runExecStopwatch = Stopwatch.createStarted();
+    final Stopwatch persistStopwatch = Stopwatch.createStarted();
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
         {
           @Override
           public void doRun()
           {
-            for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
-              metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs));
+            try {
+              for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
+                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs));
+              }
+              commitRunnable.run();
             }
-            commitRunnable.run();
+            finally {
+              metrics.incrementNumPersists();
+              metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
+              persistStopwatch.stop();
+            }
           }
         }
     );
+
+    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    metrics.incrementPersistBackPressureMillis(startDelay);
+    if (startDelay > WARN_DELAY) {
+      log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
+    }
+    runExecStopwatch.stop();
   }
 
   // Submits persist-n-merge task for a Sink to the mergeExecutor
@@ -696,7 +737,7 @@ public class RealtimePlumber implements Plumber
    * being created.
    *
    * @param truncatedTime sink key
-   * @param sink sink to unannounce
+   * @param sink          sink to unannounce
    */
   protected void abandonSegment(final long truncatedTime, final Sink sink)
   {
@@ -735,8 +776,8 @@ public class RealtimePlumber implements Plumber
    * Persists the given hydrant and returns the number of rows persisted
    *
    * @param indexToPersist hydrant to persist
-   * @param schema datasource schema
-   * @param interval interval to persist
+   * @param schema         datasource schema
+   * @param interval       interval to persist
    *
    * @return the number of rows persisted
    */
@@ -845,13 +886,13 @@ public class RealtimePlumber implements Plumber
                 && config.getShardSpec().getPartitionNum() == segment.getShardSpec().getPartitionNum()
                 && Iterables.any(
                     sinks.keySet(), new Predicate<Long>()
-                {
-                  @Override
-                  public boolean apply(Long sinkKey)
-                  {
-                    return segment.getInterval().contains(sinkKey);
-                  }
-                }
+                    {
+                      @Override
+                      public boolean apply(Long sinkKey)
+                      {
+                        return segment.getInterval().contains(sinkKey);
+                      }
+                    }
                 );
           }
         }

@@ -19,34 +19,50 @@
 
 package io.druid.server.bridge;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Inject;
 import io.druid.client.DruidServer;
-import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.client.DruidServerConfig;
 import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
 
 /**
  */
-public abstract class DruidClusterBridgeConfig extends ZkPathsConfig
+public abstract class DruidClusterBridgeConfig
 {
-  @Config("druid.server.tier")
-  @Default(DruidServer.DEFAULT_TIER)
-  public abstract String getTier();
+  @JsonProperty
+  private Duration startDelay = new Duration("PT300s");
+  @JsonProperty
+  private Duration period = new Duration("PT60s");
+  @JsonProperty
+  private String brokerServiceName = "broker";
 
-  @Config("druid.bridge.startDelay")
-  @Default("PT300s")
-  public abstract Duration getStartDelay();
-
-  @Config("druid.bridge.period")
-  @Default("PT60s")
-  public abstract Duration getPeriod();
-
-  @Config("druid.bridge.broker.serviceName")
-  public abstract String getBrokerServiceName();
-
-  @Config("druid.server.priority")
-  public int getPriority()
+  public Duration getStartDelay()
   {
-    return DruidServer.DEFAULT_PRIORITY;
+    return startDelay;
+  }
+
+  public void setStartDelay(Duration startDelay)
+  {
+    this.startDelay = startDelay;
+  }
+
+  public Duration getPeriod()
+  {
+    return period;
+  }
+
+  public void setPeriod(Duration period)
+  {
+    this.period = period;
+  }
+
+  public String getBrokerServiceName()
+  {
+    return brokerServiceName;
+  }
+
+  public void setBrokerServiceName(String brokerServiceName)
+  {
+    this.brokerServiceName = brokerServiceName;
   }
 }

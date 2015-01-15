@@ -48,18 +48,22 @@ import org.joda.time.DateTime;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.UUID;
@@ -116,26 +120,29 @@ public class QueryResource
   }
 
   @POST
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE, APPLICATION_SMILE})
   public Response doPost(
-      @Context HttpServletRequest req,
-      @Context final HttpServletResponse resp
-  ) throws ServletException, IOException
+      InputStream in,
+      @QueryParam("pretty") String pretty,
+      @Context HttpServletRequest req // used only to get request content-type and remote address
+  ) throws IOException
   {
     final long start = System.currentTimeMillis();
     Query query = null;
-    byte[] requestQuery = null;
     String queryId = null;
 
-    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType()) || APPLICATION_SMILE.equals(req.getContentType());
+    final String reqContentType = req.getContentType();
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType) || APPLICATION_SMILE.equals(reqContentType);
     final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
-    final ObjectWriter jsonWriter = req.getParameter("pretty") == null
-                                    ? objectMapper.writer()
-                                    : objectMapper.writerWithDefaultPrettyPrinter();
+    final ObjectWriter jsonWriter = pretty != null
+                                    ? objectMapper.writerWithDefaultPrettyPrinter()
+                                    : objectMapper.writer();
 
     try {
-      query = objectMapper.readValue(req.getInputStream(), Query.class);
+      query = objectMapper.readValue(in, Query.class);
       queryId = query.getId();
       if (queryId == null) {
         queryId = UUID.randomUUID().toString();
@@ -259,9 +266,10 @@ public class QueryResource
       ).build();
     }
     catch (Exception e) {
+      // Input stream has already been consumed by the json object mapper if query == null
       final String queryString =
           query == null
-          ? (isSmile ? "smile_unknown" : new String(requestQuery, Charsets.UTF_8))
+          ? "unparsable query"
           : query.toString();
 
       log.warn(e, "Exception occurred on request [%s]", queryString);

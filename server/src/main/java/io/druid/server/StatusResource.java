@@ -34,7 +34,7 @@ import java.util.List;
 
 /**
  */
-@Path("/{a:status|health}")
+@Path("/status")
 public class StatusResource
 {
   @GET

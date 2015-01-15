@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -83,10 +84,15 @@ public class HadoopDruidIndexerConfig
   public static final Joiner tabJoiner = Joiner.on("\t");
   public static final ObjectMapper jsonMapper;
 
+  // workaround to pass down druid.processing.bitmap.type, see IndexGeneratorJob.run()
+  protected static final Properties properties;
+
+  private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
+
   static {
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Object>of(
+        ImmutableList.<Module>of(
             new Module()
             {
               @Override
@@ -100,6 +106,7 @@ public class HadoopDruidIndexerConfig
         )
     );
     jsonMapper = injector.getInstance(ObjectMapper.class);
+    properties = injector.getInstance(Properties.class);
   }
 
   public static enum IndexJobCounters
@@ -116,8 +123,8 @@ public class HadoopDruidIndexerConfig
   {
     // Eventually PathSpec needs to get rid of its Hadoop dependency, then maybe this can be ingested directly without
     // the Map<> intermediary
-    
-    if(argSpec.containsKey("spec")){
+
+    if (argSpec.containsKey("spec")) {
       return HadoopDruidIndexerConfig.jsonMapper.convertValue(
           argSpec,
           HadoopDruidIndexerConfig.class
@@ -138,8 +145,8 @@ public class HadoopDruidIndexerConfig
       return fromMap(
           (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
               file, new TypeReference<Map<String, Object>>()
-          {
-          }
+              {
+              }
           )
       );
     }
@@ -175,7 +182,7 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
-  private volatile Map<DateTime,ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
+  private volatile Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
   private volatile Map<ShardSpec, HadoopyShardSpec> hadoopShardSpecLookup = Maps.newHashMap();
   private final QueryGranularity rollupGran;
 
@@ -193,17 +200,17 @@ public class HadoopDruidIndexerConfig
       final ShardSpec actualSpec = entry.getValue().get(0).getActualSpec();
       shardSpecLookups.put(
           entry.getKey(), actualSpec.getLookup(
-          Lists.transform(
-              entry.getValue(), new Function<HadoopyShardSpec, ShardSpec>()
-          {
-            @Override
-            public ShardSpec apply(HadoopyShardSpec input)
-            {
-              return input.getActualSpec();
-            }
-          }
+              Lists.transform(
+                  entry.getValue(), new Function<HadoopyShardSpec, ShardSpec>()
+                  {
+                    @Override
+                    public ShardSpec apply(HadoopyShardSpec input)
+                    {
+                      return input.getActualSpec();
+                    }
+                  }
+              )
           )
-      )
       );
       for (HadoopyShardSpec hadoopyShardSpec : entry.getValue()) {
         hadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
@@ -212,7 +219,7 @@ public class HadoopDruidIndexerConfig
     this.rollupGran = schema.getDataSchema().getGranularitySpec().getQueryGranularity();
   }
 
-  @JsonProperty(value="spec")
+  @JsonProperty(value = "spec")
   public HadoopIngestionSpec getSchema()
   {
     return schema;
@@ -333,7 +340,11 @@ public class HadoopDruidIndexerConfig
       return Optional.absent();
     }
 
-    final ShardSpec actualSpec = shardSpecLookups.get(timeBucket.get().getStart()).getShardSpec(rollupGran.truncate(inputRow.getTimestampFromEpoch()), inputRow);
+    final ShardSpec actualSpec = shardSpecLookups.get(timeBucket.get().getStart())
+                                                 .getShardSpec(
+                                                     rollupGran.truncate(inputRow.getTimestampFromEpoch()),
+                                                     inputRow
+                                                 );
     final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(actualSpec);
 
     return Optional.of(
@@ -403,6 +414,12 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().isPersistInHeap();
   }
 
+  public String getWorkingPath()
+  {
+    final String workingPath = schema.getTuningConfig().getWorkingPath();
+    return workingPath == null ? DEFAULT_WORKING_PATH : workingPath;
+  }
+
   /******************************************
    Path helper logic
    ******************************************/
@@ -418,7 +435,7 @@ public class HadoopDruidIndexerConfig
     return new Path(
         String.format(
             "%s/%s/%s",
-            schema.getTuningConfig().getWorkingPath(),
+            getWorkingPath(),
             schema.getDataSchema().getDataSource(),
             schema.getTuningConfig().getVersion().replace(":", "")
         )

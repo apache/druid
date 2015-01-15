@@ -56,7 +56,7 @@ public class HdfsTaskLogs implements TaskLogs
     final Path path = getTaskLogFileFromId(taskId);
     log.info("Writing task log to: %s", path);
     Configuration conf = new Configuration();
-    final FileSystem fs = FileSystem.get(conf);
+    final FileSystem fs = path.getFileSystem(conf);
     FileUtil.copy(logFile, fs, path, false, conf);
     log.info("Wrote task log to: %s", path);
   }
@@ -65,7 +65,7 @@ public class HdfsTaskLogs implements TaskLogs
   public Optional<ByteSource> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final Path path = getTaskLogFileFromId(taskId);
-    final FileSystem fs = FileSystem.get(new Configuration());
+    final FileSystem fs = path.getFileSystem(new Configuration());
     if (fs.exists(path)) {
       return Optional.<ByteSource>of(
           new ByteSource()
