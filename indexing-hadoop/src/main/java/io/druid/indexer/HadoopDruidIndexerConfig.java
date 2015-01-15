@@ -114,9 +114,9 @@ public class HadoopDruidIndexerConfig
     INVALID_ROW_COUNTER
   }
 
-  public static HadoopDruidIndexerConfig fromSchema(HadoopIngestionSpec schema)
+  public static HadoopDruidIndexerConfig fromSpec(HadoopIngestionSpec spec)
   {
-    return new HadoopDruidIndexerConfig(schema);
+    return new HadoopDruidIndexerConfig(spec);
   }
 
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
@@ -188,12 +188,12 @@ public class HadoopDruidIndexerConfig
 
   @JsonCreator
   public HadoopDruidIndexerConfig(
-      final @JsonProperty("spec") HadoopIngestionSpec schema
+      final @JsonProperty("spec") HadoopIngestionSpec spec
   )
   {
-    this.schema = schema;
-    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
-    for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : schema.getTuningConfig().getShardSpecs().entrySet()) {
+    this.schema = spec;
+    this.pathSpec = jsonMapper.convertValue(spec.getIOConfig().getPathSpec(), PathSpec.class);
+    for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : spec.getTuningConfig().getShardSpecs().entrySet()) {
       if (entry.getValue() == null || entry.getValue().isEmpty()) {
         continue;
       }
@@ -216,7 +216,7 @@ public class HadoopDruidIndexerConfig
         hadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
       }
     }
-    this.rollupGran = schema.getDataSchema().getGranularitySpec().getQueryGranularity();
+    this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
   }
 
   @JsonProperty(value = "spec")

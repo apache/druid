@@ -286,7 +286,7 @@ public class HadoopIndexTask extends AbstractTask
               schema,
               HadoopIngestionSpec.class
           );
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
           theSchema
               .withTuningConfig(theSchema.getTuningConfig().withVersion(version))
       );
@@ -324,7 +324,7 @@ public class HadoopIndexTask extends AbstractTask
               schema,
               HadoopIngestionSpec.class
           );
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
           theSchema
               .withIOConfig(theSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
               .withTuningConfig(theSchema.getTuningConfig().withWorkingPath(workingPath))
