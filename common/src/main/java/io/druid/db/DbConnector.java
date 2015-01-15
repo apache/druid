@@ -196,6 +196,20 @@ public class DbConnector
               if ( isPostgreSQL ) {
                 table = handle.select(String.format("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE '%s'", tableName));
               } else {
+                // ensure database defaults to utf8, otherwise bail
+                boolean isUtf8 =
+                    handle.createQuery("SHOW VARIABLES where variable_name = 'character_set_database' and value = 'utf8'")
+                          .list()
+                          .size() == 1;
+
+                if(!isUtf8) {
+                  throw new ISE(
+                      "Database default character set is not UTF-8." + System.lineSeparator()
+                    + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
+                    + " If you are upgrading from previous version of Druid, please make all tables have been converted to utf8 and change the database default."
+                    + " For more information on how to convert and set the default, please refer to section on updating in the Druid 0.6.170 release notes."
+                    );
+                }
                 table = handle.select(String.format("SHOW tables LIKE '%s'", tableName));
               }
 
