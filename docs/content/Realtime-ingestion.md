@@ -94,7 +94,92 @@ This describes the data schema for the output Druid segment. More information ab
 |aggregators|Array of Objects|The list of aggregators to use to aggregate colliding rows together.|yes|
 |dataSource|String|The name of the dataSource that the segment belongs to.|yes|
 |indexGranularity|String|The granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows.|yes|
-|shardSpec|Object|This describes the shard that is represented by this server. This must be specified properly in order to have multiple realtime nodes indexing the same data stream in a sharded fashion.|no|
+|shardSpec|Object|This describes the shard that is represented by this server. This must be specified properly in order to have multiple realtime nodes indexing the same data stream in a [sharded fashion](#sharding).|no|
+
+
+####<a id="sharding"></a> Sharding 
+Druid uses shards, or partitioned segments, to more efficiently handle large amounts of incoming data. In Druid, shards represent the segments that together cover a time interval based on the value of `segmentGranularity`. If, for example, `segmentGranularity` is set to "hour", then a number of shards (segments) may be used to store the data for that hour. Sharding along dimensions may also occur to optimize efficiency.
+
+Segments are identified by datasource, time interval, and version. When sharded, a segment is also identified by a partition number. Typically, each shard will have the same version but a different partition number to uniquely identify it.
+
+In small-data scenarios, sharding is unnecessary and can be set to none (the default):
+
+    "shardSpec": {"type": "none"}
+    
+However, in scenarios with multiple realtime nodes, `none` is less useful as it cannot provide scale (see below). Note that for the batch indexing service, no explicit configuration is required; sharding is provided automatically.
+
+Druid uses sharding based on the `shardSpec` setting you configure. The recommended choices, `linear` and `numbered`, are discussed below; other types have been useful for internal Druid development but are not appropriate for production setups.
+ 
+##### Linear
+This strategy is highly recommended for the following reasons:
+
+* There is no need to update the fileSpec configurations of existing nodes when adding new nodes.
+* All unique shards are queried, regardless of whether the partition numbering is sequential or not (it allows querying of partitions 0 and 2, even if partition 1 is missing).
+
+Configure `linear` under `schema`:
+
+    "schema": {
+    ...
+        "shardSpec": {
+            "type": "linear",
+            "partitionNum": 0
+        }
+    }
+            
+
+##### Numbered
+This strategy is similar to `linear` except that it does not tolerate non-sequential partition numbering (it will *not* allow querying of partitions 0 and 2 if partition 1 is missing). It also requires explicitly setting the total number of partitions.
+
+Configure `numbered` under `schema`:
+
+    "schema": {
+    ...
+        "shardSpec": {
+            "type": "numbered",
+            "partitionNum": 0,
+            "partitions": 2
+        }
+    }
+            
+
+##### Scale and Redundancy
+The `shardSpec` configuration can be used to create redundancy by having the same `partitionNum` values on different nodes.
+
+For example, if RealTimeNode1 has:
+
+    "schema": {
+    ...
+        "shardSpec": {
+            "type": "linear",
+            "partitionNum": 0
+        }
+    }
+            
+and RealTimeNode2 has:
+
+    "schema": {
+    ...
+        "shardSpec": {
+            "type": "linear",
+            "partitionNum": 0
+        }
+    }
+
+then two realtime nodes can store segments with the same datasource, version, time interval, and partition number. Brokers that query for data in such segments will assume that they hold the same data, and the query will target only one of the segments.
+
+`shardSpec` can also help achieve scale. For this, add nodes with a different `partionNum`. Continuing with the example, if RealTimeNode3 has:
+
+    "schema": {
+    ...
+        "shardSpec": {
+            "type": "linear",
+            "partitionNum": 1
+        }
+    }
+
+then it can store segments with the same datasource, time interval, and version as in the first two nodes, but with a different partition number. Brokers that query for data in such segments will assume that a segment from RealTimeNode3 holds *different* data, and the query will target it along with a segment from the first two nodes.
+
+You can use type `numbered` similarly. Note that type `none` is essentially type `linear` with all shards having a fixed `partitionNum` of 0.
 
 
 ### Config
