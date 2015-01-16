@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Sequences;
-import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
@@ -59,6 +58,7 @@ import org.junit.runners.Parameterized;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -116,78 +116,16 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected Aggregator[] concurrentGet(int offset)
+    protected List<Aggregator> concurrentGet(int offset)
     {
       // All get operations should be fine
-      return indexedMap.get(offset);
+      return Arrays.asList(indexedMap.get(offset));
     }
 
     @Override
-    protected void concurrentSet(int offset, Aggregator[] value)
+    protected void concurrentSet(int offset, List<Aggregator> value)
     {
-      indexedMap.put(offset, value);
-    }
-
-    @Override
-    protected Integer addToFacts(
-        AggregatorFactory[] metrics,
-        boolean deserializeComplexMetrics,
-        InputRow row,
-        AtomicInteger numEntries,
-        TimeAndDims key,
-        ThreadLocal<InputRow> in
-    ) throws IndexSizeExceededException
-    {
-
-      final Integer priorIdex = getFacts().get(key);
-
-      Aggregator[] aggs;
-
-      if (null != priorIdex) {
-        aggs = indexedMap.get(priorIdex);
-      } else {
-        aggs = new Aggregator[metrics.length];
-        for (int i = 0; i < metrics.length; i++) {
-          final AggregatorFactory agg = metrics[i];
-          aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
-          );
-        }
-        Integer rowIndex;
-
-        do {
-          rowIndex = indexIncrement.incrementAndGet();
-        } while (null != indexedMap.putIfAbsent(rowIndex, aggs));
-
-
-        // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && !getFacts().containsKey(key)) {
-          throw new IndexSizeExceededException("Maximum number of rows reached");
-        }
-        final Integer prev = getFacts().putIfAbsent(key, rowIndex);
-        if (null == prev) {
-          numEntries.incrementAndGet();
-        } else {
-          // We lost a race
-          aggs = indexedMap.get(prev);
-          // Free up the misfire
-          indexedMap.remove(rowIndex);
-          // This is expected to occur ~80% of the time in the worst scenarios
-        }
-      }
-
-      in.set(row);
-
-      for (Aggregator agg : aggs) {
-        synchronized (agg) {
-          agg.aggregate();
-        }
-      }
-
-      in.set(null);
-
-
-      return numEntries.get();
+      indexedMap.put(offset, value.toArray(new Aggregator[0]));
     }
   }
 

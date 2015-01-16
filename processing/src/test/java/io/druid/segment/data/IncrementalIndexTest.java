@@ -53,6 +53,7 @@ import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -66,11 +67,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -172,6 +170,8 @@ public class IncrementalIndexTest
       dimensionList.add(dimName);
       builder.put(dimName, dimName + rowID);
     }
+    dimensionList.add("DimLong");
+    builder.put("DimLong", (long) rowID);
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
@@ -182,7 +182,7 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = String.format("Dim_%d", i);
       dimensionList.add(dimName);
-      builder.put(dimName, (Long) 1l);
+      builder.put(dimName, i);
     }
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
@@ -300,8 +300,8 @@ public class IncrementalIndexTest
                   currentlyRunning.incrementAndGet();
                   try {
                     for (int i = 0; i < elementsPerThread; i++) {
-                      someoneRan.incrementAndGet();
                       index.add(getLongRow(timestamp + i, i, dimensionCount));
+                      someoneRan.incrementAndGet();
                     }
                   }
                   catch (IndexSizeExceededException e) {
@@ -331,17 +331,18 @@ public class IncrementalIndexTest
                                                 .build();
                   Map<String, Object> context = new HashMap<String, Object>();
                   for (Result<TimeseriesResultValue> result :
-                      Sequences.toList(
-                          runner.run(query, context),
-                          new LinkedList<Result<TimeseriesResultValue>>()
-                      )
+                      Sequences.toList(runner.run(query, context), new LinkedList<Result<TimeseriesResultValue>>())
                       ) {
-                    final Integer ranCount = someoneRan.get();
-                    if (ranCount > 0) {
+                    final Integer maxRanCount = someoneRan.get()
+                                                + concurrentThreads; // is race condition between the index.add and the incrementAndGet
+                    if (maxRanCount > 0) {
                       final Double sumResult = result.getValue().getDoubleMetric("doubleSumResult0");
                       // Eventually consistent, but should be somewhere in that range
                       // Actual result is validated after all writes are guaranteed done.
-                      Assert.assertTrue(String.format("%d >= %g >= 0 violated", ranCount, sumResult), sumResult >= 0 && sumResult <= ranCount);
+                      Assert.assertTrue(
+                          String.format("%d >= %g >= 0 violated", maxRanCount, sumResult),
+                          sumResult >= 0 && sumResult <= maxRanCount
+                      );
                     }
                   }
                   if (currentlyRunning.get() > 0) {
@@ -356,7 +357,7 @@ public class IncrementalIndexTest
     allFutures.addAll(queryFutures);
     allFutures.addAll(indexFutures);
     Futures.allAsList(allFutures).get();
-    Assert.assertTrue("Did not hit concurrency, please try again", concurrentlyRan.get());
+    Assume.assumeTrue("Did not hit concurrency, please try again", concurrentlyRan.get());
     queryExecutor.shutdown();
     indexExecutor.shutdown();
     QueryRunner<Result<TimeseriesResultValue>> runner = new FinalizeResultsQueryRunner<Result<TimeseriesResultValue>>(
@@ -379,66 +380,83 @@ public class IncrementalIndexTest
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
             String.format("Failed long sum on dimension %d", i),
-            elementsPerThread * taskCount,
+            elementsPerThread * taskCount * i,
             result.getValue().getLongMetric(String.format("sumResult%s", i)).intValue()
         );
         Assert.assertEquals(
             String.format("Failed double sum on dimension %d", i),
-            elementsPerThread * taskCount,
+            elementsPerThread * taskCount * i,
             result.getValue().getDoubleMetric(String.format("doubleSumResult%s", i)).intValue()
         );
       }
+      Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
     }
   }
 
   @Test
-  public void testConcurrentAdd() throws Exception
+  public void testConcurrentAdd() throws ExecutionException, InterruptedException
   {
-    final IncrementalIndex index = indexCreator.createIndex(defaultAggregatorFactories);
+    final IncrementalIndex index = indexCreator.createIndex(
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new LongSumAggregatorFactory("DimLongSum", "DimLong")
+        }
+    );
     final int threadCount = 10;
-    final int elementsPerThread = 200;
+    final int elementsPerThread = 1000;
     final int dimensionCount = 5;
-    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    ListeningExecutorService executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(threadCount));
     final long timestamp = System.currentTimeMillis();
-    final CountDownLatch latch = new CountDownLatch(threadCount);
+    final Collection<ListenableFuture<?>> futures = new LinkedList<>();
     for (int j = 0; j < threadCount; j++) {
-      executor.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                for (int i = 0; i < elementsPerThread; i++) {
-                  index.add(getRow(timestamp + i, i, dimensionCount));
+      futures.add(
+          executor.submit(
+              new Runnable()
+              {
+                @Override
+                public void run()
+                {
+                  for (int i = 0; i < elementsPerThread; i++) {
+                    try {
+                      index.add(getRow(timestamp + i, i, dimensionCount));
+                    }
+                    catch (IndexSizeExceededException e) {
+                      throw Throwables.propagate(e);
+                    }
+                  }
                 }
               }
-              catch (Exception e) {
-                e.printStackTrace();
-              }
-              latch.countDown();
-            }
-          }
+          )
       );
     }
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
-
-    Assert.assertEquals(dimensionCount, index.getDimensions().size());
-    Assert.assertEquals(elementsPerThread, index.size());
+    Futures.allAsList(futures).get();
+    Assert.assertEquals(dimensionCount + 1, index.getDimensions().size());
+    Assert.assertEquals(index.getFacts().size(), index.size());
     Iterator<Row> iterator = index.iterator();
     int curr = 0;
+    long sum = 0l;
     while (iterator.hasNext()) {
       Row row = iterator.next();
       Assert.assertEquals(timestamp + curr, row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(threadCount), (Float) row.getFloatMetric("count"));
+      sum += row.getLongMetric("count");
+      Assert.assertEquals("Long Sum didn't add up", curr * threadCount, row.getLongMetric("DimLongSum"));
+      Assert.assertEquals(
+          String.format("Row count not equal to thread count on row %d", curr + 1),
+          threadCount,
+          row.getLongMetric("count")
+      );
       curr++;
     }
-    Assert.assertEquals(elementsPerThread, curr);
+    Assert.assertEquals(elementsPerThread * threadCount, sum);
   }
 
   @Test
   public void testOffheapIndexIsFull() throws IndexSizeExceededException
   {
+    if (!(indexCreator.createIndex(null) instanceof OffheapIncrementalIndex)) {
+      // Skip for the on-heap tests
+      return;
+    }
     OffheapIncrementalIndex index = new OffheapIncrementalIndex(
         0L,
         QueryGranularity.NONE,

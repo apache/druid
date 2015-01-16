@@ -17,30 +17,36 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  */
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
-  private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, List<Aggregator>> aggregators = new ConcurrentHashMap<>();
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts = new ConcurrentSkipListMap<>();
-  private final AtomicInteger indexIncrement = new AtomicInteger(0);
   protected final int maxRowCount;
 
   private String outOfRowsReason = null;
@@ -111,85 +117,27 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  protected Aggregator[] initAggs(
-      AggregatorFactory[] metrics, ThreadLocal<InputRow> in, boolean deserializeComplexMetrics
+  protected List<Aggregator> initAggs(
+      AggregatorFactory[] metrics,
+      ThreadLocal<InputRow> in,
+      boolean deserializeComplexMetrics
   )
   {
-    return new Aggregator[metrics.length];
+    return new ArrayList<>(metrics.length);
   }
 
   @Override
-  protected Integer addToFacts(
-      AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      InputRow row,
-      AtomicInteger numEntries,
-      TimeAndDims key,
-      ThreadLocal<InputRow> in
-  ) throws IndexSizeExceededException
-  {
-    final Integer priorIndex = facts.get(key);
-
-    Aggregator[] aggs;
-
-    if (null != priorIndex) {
-      aggs = concurrentGet(priorIndex);
-    } else {
-      aggs = new Aggregator[metrics.length];
-      for (int i = 0; i < metrics.length; i++) {
-        final AggregatorFactory agg = metrics[i];
-        aggs[i] = agg.factorize(
-            makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
-        );
-      }
-      final Integer rowIndex = indexIncrement.getAndIncrement();
-
-      concurrentSet(rowIndex, aggs);
-
-      // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
-        throw new IndexSizeExceededException("Maximum number of rows reached");
-      }
-      final Integer prev = facts.putIfAbsent(key, rowIndex);
-      if (null == prev) {
-        numEntries.incrementAndGet();
-      } else {
-        // We lost a race
-        aggs = concurrentGet(prev);
-        // Free up the misfire
-        concurrentRemove(rowIndex);
-        // This is expected to occur ~80% of the time in the worst scenarios
-      }
-    }
-
-    in.set(row);
-
-    for (Aggregator agg : aggs) {
-      synchronized (agg) {
-        agg.aggregate();
-      }
-    }
-
-    in.set(null);
-
-
-    return numEntries.get();
-  }
-
-  protected Aggregator[] concurrentGet(int offset)
+  protected List<Aggregator> concurrentGet(int offset)
   {
     // All get operations should be fine
     return aggregators.get(offset);
   }
 
-  protected void concurrentSet(int offset, Aggregator[] value)
+
+  @Override
+  protected void concurrentSet(int offset, List<Aggregator> value)
   {
     aggregators.put(offset, value);
-  }
-
-  protected void concurrentRemove(int offset)
-  {
-    aggregators.remove(offset);
   }
 
   @Override
@@ -209,47 +157,85 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  protected Aggregator[] getAggsForRow(int rowOffset)
+  protected List<Aggregator> getAggsForRow(int rowIndex)
   {
-    return concurrentGet(rowOffset);
+    return concurrentGet(rowIndex);
   }
 
   @Override
-  protected Object getAggVal(Aggregator agg, int rowOffset, int aggPosition)
+  protected Object getAggVal(Aggregator agg, int rowIndex, int aggPosition)
   {
     return agg.get();
   }
 
   @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  public float getMetricFloatValue(int rowIndex, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    return concurrentGet(rowIndex).get(aggOffset).getFloat();
   }
 
   @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
+  public long getMetricLongValue(int rowIndex, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    return concurrentGet(rowIndex).get(aggOffset).getLong();
   }
 
   @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  public Object getMetricObjectValue(int rowIndex, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    return concurrentGet(rowIndex).get(aggOffset).get();
   }
 
-  private static class OnHeapDimDim implements DimDim
+  @Override
+  protected void initializeAggs(List<Aggregator> aggs, Integer rowIndex)
   {
-    private final Map<String, Integer> falseIds;
-    private final Map<Integer, String> falseIdsReverse;
-    private volatile String[] sortedVals = null;
-    final ConcurrentMap<String, String> poorMansInterning = Maps.newConcurrentMap();
+    // NoOp
+  }
+
+  @Override
+  protected Function<ColumnSelectorFactory, Aggregator> getFactorizeFunction(final AggregatorFactory agg)
+  {
+    return new Function<ColumnSelectorFactory, Aggregator>()
+    {
+      @Nullable
+      @Override
+      public Aggregator apply(ColumnSelectorFactory input)
+      {
+        return agg.factorize(input);
+      }
+    };
+  }
+
+  @Override
+  protected void applyAggregators(Integer rowIndex)
+  {
+    final List<Aggregator> aggs = aggregators.get(rowIndex);
+    for (Aggregator agg : aggs) {
+      synchronized (agg) {
+        agg.aggregate();
+      }
+    }
+  }
+
+  protected static class OnHeapDimDim implements DimDim
+  {
+    private static final int NUM_STRIPE_BUCKETS = 64;
+    private final Object[] stripeLocks = new Object[NUM_STRIPE_BUCKETS];
+    private final ConcurrentMap<String, Integer> falseIds = new ConcurrentHashMap<>();
+    private final Map<Integer, String> falseIdsReverse = Maps.newHashMap();
+    private final AtomicReference<String[]> sortedVals = new AtomicReference<>();
+    final ConcurrentMap<String, String> poorMansInterning = new ConcurrentHashMap<>();
 
     public OnHeapDimDim()
     {
-      BiMap<String, Integer> biMap = Maps.synchronizedBiMap(HashBiMap.<String, Integer>create());
-      falseIds = biMap;
-      falseIdsReverse = biMap.inverse();
+      for (int i = 0; i < stripeLocks.length; ++i) {
+        stripeLocks[i] = new Object();
+      }
+    }
+
+    private int getStripeIndex(int id)
+    {
+      return id % NUM_STRIPE_BUCKETS;
     }
 
     /**
@@ -257,7 +243,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
      *
      * @see io.druid.segment.incremental.IncrementalIndexStorageAdapter.EntryHolderValueMatcherFactory#makeValueMatcher(String, String)
      */
-    public String get(String str)
+    @Override
+    public String intern(String str)
     {
       String prev = poorMansInterning.putIfAbsent(str, str);
       return prev != null ? prev : str;
@@ -274,11 +261,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     public String getValue(int id)
     {
-      return falseIdsReverse.get(id);
+      synchronized (stripeLocks[getStripeIndex(id)]) {
+        return falseIdsReverse.get(id);
+      }
     }
 
     public boolean contains(String value)
     {
+      if(value == null){
+        return false; // ConcurrentHashMaps don't like null keys
+      }
       return falseIds.containsKey(value);
     }
 
@@ -287,35 +279,63 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       return falseIds.size();
     }
 
-    public synchronized int add(String value)
+    public int add(String value)
     {
-      int id = falseIds.size();
-      falseIds.put(value, id);
-      return id;
+      if (isClosed.get()) {
+        throw new ISE("Already closed");
+      }
+      Integer id = falseIds.get(value);
+      if (null != id) {
+        return id;
+      }
+      id = falseIds.size();
+      synchronized (stripeLocks[getStripeIndex(id)]) {
+        final Integer priorId = falseIds.putIfAbsent(value, id);
+        if (priorId == null) {
+          // Won the race
+          falseIdsReverse.put(id, value);
+        } else {
+          // Lost a race
+          id = priorId;
+        }
+        return id;
+      }
     }
+
+    private final Lock sortLock = new ReentrantLock();
 
     public int getSortedId(String value)
     {
       assertSorted();
-      return Arrays.binarySearch(sortedVals, value);
+      return Arrays.binarySearch(sortedVals.get(), value);
     }
 
     public String getSortedValue(int index)
     {
       assertSorted();
-      return sortedVals[index];
+      return sortedVals.get()[index];
     }
 
     public void sort()
     {
-      if (sortedVals == null) {
-        sortedVals = new String[falseIds.size()];
+      if (sortedVals.get() != null) {
+        return;
+      }
+      sortLock.lock();
+      try {
+        if (sortedVals.get() == null) {
+          final String[] newVals = new String[falseIds.size()];
 
-        int index = 0;
-        for (String value : falseIds.keySet()) {
-          sortedVals[index++] = value;
+          int index = 0;
+          for (String value : falseIds.keySet()) {
+            newVals[index++] = value;
+          }
+          Arrays.sort(newVals);
+          sortedVals.set(newVals);
         }
-        Arrays.sort(sortedVals);
+      }
+      finally {
+        sortLock.unlock();
       }
     }
 
@@ -329,6 +349,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     public boolean compareCannonicalValues(String s1, String s2)
     {
       return s1 == s2;
+    }
+
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+    @Override
+    public synchronized void close() throws IOException
+    {
+      if (isClosed.get()) {
+        throw new ISE("Already closed");
+      }
+      falseIds.clear();
+      falseIdsReverse.clear();
+      poorMansInterning.clear();
+      isClosed.set(true);
     }
   }
 }

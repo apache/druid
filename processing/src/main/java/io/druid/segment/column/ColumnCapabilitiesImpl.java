@@ -21,15 +21,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.ISE;
 
 /**
+ * Store capabilities of a column. This implementation stores all values as volatile, and therefore
+ * should be thread-safe for most applications.
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
-  private ValueType type = null;
-  private boolean dictionaryEncoded = false;
-  private boolean runLengthEncoded = false;
-  private boolean hasInvertedIndexes = false;
-  private boolean hasSpatialIndexes = false;
-  private boolean hasMultipleValues = false;
+  private volatile ValueType type = null;
+  private volatile boolean dictionaryEncoded = false;
+  private volatile boolean runLengthEncoded = false;
+  private volatile boolean hasInvertedIndexes = false;
+  private volatile boolean hasSpatialIndexes = false;
+  private volatile boolean hasMultipleValues = false;
 
   @Override
   @JsonProperty
