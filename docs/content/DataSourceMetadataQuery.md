@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 # Data Source Metadata Queries
-Data Source Metadata queries return ingestion related information for a dataSource. It returns the timestamp of latest ingested event for the datasource. The grammar is:
+Data Source Metadata queries return metadata information for a dataSource. It returns the timestamp of latest ingested event for the datasource. The grammar is:
 
 ```json
 {
