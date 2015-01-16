@@ -69,18 +69,18 @@ public class AnnouncerTest extends CuratorTestBase
     final String testPath2 = "/somewhere/test2";
     announcer.announce(testPath1, billy);
 
-    Assert.assertNull(curator.checkExists().forPath(testPath1));
-    Assert.assertNull(curator.checkExists().forPath(testPath2));
+    Assert.assertNull("/test1 does not exists", curator.checkExists().forPath(testPath1));
+    Assert.assertNull("/somewhere/test2 does not exists", curator.checkExists().forPath(testPath2));
 
     announcer.start();
 
-    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
-    Assert.assertNull(curator.checkExists().forPath(testPath2));
+    Assert.assertArrayEquals("/test1 has data", billy, curator.getData().decompressed().forPath(testPath1));
+    Assert.assertNull("/somewhere/test2 still does not exist", curator.checkExists().forPath(testPath2));
 
     announcer.announce(testPath2, billy);
 
-    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
-    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
+    Assert.assertArrayEquals("/test1 still has data", billy, curator.getData().decompressed().forPath(testPath1));
+    Assert.assertArrayEquals("/somewhere/test2 has data", billy, curator.getData().decompressed().forPath(testPath2));
 
     final CountDownLatch latch = new CountDownLatch(1);
     curator.getCuratorListenable().addListener(
@@ -96,19 +96,19 @@ public class AnnouncerTest extends CuratorTestBase
         }
     );
     curator.delete().forPath(testPath1);
-    Assert.assertTrue(timing.awaitLatch(latch));
+    Assert.assertTrue("Wait for /test1 to be created", timing.awaitLatch(latch));
 
-    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
-    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
+    Assert.assertArrayEquals("expect /test1 data is restored", billy, curator.getData().decompressed().forPath(testPath1));
+    Assert.assertArrayEquals("expect /somewhere/test2 is still there", billy, curator.getData().decompressed().forPath(testPath2));
 
     announcer.unannounce(testPath1);
-    Assert.assertNull(curator.checkExists().forPath(testPath1));
-    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
+    Assert.assertNull("expect /test1 unannounced", curator.checkExists().forPath(testPath1));
+    Assert.assertArrayEquals("expect /somewhere/test2 is still still there", billy, curator.getData().decompressed().forPath(testPath2));
 
     announcer.stop();
 
-    Assert.assertNull(curator.checkExists().forPath(testPath1));
-    Assert.assertNull(curator.checkExists().forPath(testPath2));
+    Assert.assertNull("expect /test1 remains unannounced", curator.checkExists().forPath(testPath1));
+    Assert.assertNull("expect /somewhere/test2 unannounced", curator.checkExists().forPath(testPath2));
   }
 
   @Test

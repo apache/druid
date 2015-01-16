@@ -22,6 +22,7 @@ package io.druid.query;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.guava.Sequence;
@@ -33,18 +34,32 @@ import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ChainedExecutionQueryRunnerTest
 {
+  private final Lock neverRelease = new ReentrantLock();
+
+  @Before
+  public void setup()
+  {
+    neverRelease.lock();
+  }
+  
   @Test(timeout = 60000)
   public void testQueryCancellation() throws Exception
   {
@@ -69,9 +84,12 @@ public class ChainedExecutionQueryRunnerTest
     final CountDownLatch queriesInterrupted = new CountDownLatch(2);
     final CountDownLatch queryIsRegistered = new CountDownLatch(1);
 
-    Capture<ListenableFuture> capturedFuture = new Capture<>();
+    Capture<ListenableFuture> capturedFuture = EasyMock.newCapture();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
-    watcher.registerQuery(EasyMock.<Query>anyObject(), EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture)));
+    watcher.registerQuery(
+        EasyMock.<Query>anyObject(),
+        EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture))
+    );
     EasyMock.expectLastCall()
             .andAnswer(
                 new IAnswer<Void>()
@@ -88,20 +106,22 @@ public class ChainedExecutionQueryRunnerTest
 
     EasyMock.replay(watcher);
 
-    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
-    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
-    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
+    ArrayBlockingQueue<DyingQueryRunner> interrupted = new ArrayBlockingQueue<>(3);
+    Set<DyingQueryRunner> runners = Sets.newHashSet(
+        new DyingQueryRunner(queriesStarted, queriesInterrupted, interrupted),
+        new DyingQueryRunner(queriesStarted, queriesInterrupted, interrupted),
+        new DyingQueryRunner(queriesStarted, queriesInterrupted, interrupted)
+    );
+
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         Ordering.<Integer>natural(),
         watcher,
         Lists.<QueryRunner<Integer>>newArrayList(
-            runner1,
-            runner2,
-            runner3
+         runners
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    Map<String, Object> context = ImmutableMap.<String, Object>of();
     final Sequence seq = chainedRunner.run(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
@@ -134,23 +154,35 @@ public class ChainedExecutionQueryRunnerTest
     QueryInterruptedException cause = null;
     try {
       resultFuture.get();
-    } catch(ExecutionException e) {
+    }
+    catch (ExecutionException e) {
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
-      cause = (QueryInterruptedException)e.getCause();
+      cause = (QueryInterruptedException) e.getCause();
     }
     queriesInterrupted.await();
     Assert.assertNotNull(cause);
     Assert.assertTrue(future.isCancelled());
-    Assert.assertTrue(runner1.hasStarted);
-    Assert.assertTrue(runner2.hasStarted);
-    Assert.assertTrue(runner1.interrupted);
-    Assert.assertTrue(runner2.interrupted);
-    synchronized (runner3) {
-      Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
+
+    DyingQueryRunner interrupted1 = interrupted.poll();
+    synchronized (interrupted1) {
+      Assert.assertTrue("runner 1 started", interrupted1.hasStarted);
+      Assert.assertTrue("runner 1 interrupted", interrupted1.interrupted);
     }
-    Assert.assertFalse(runner1.hasCompleted);
-    Assert.assertFalse(runner2.hasCompleted);
-    Assert.assertFalse(runner3.hasCompleted);
+    DyingQueryRunner interrupted2 = interrupted.poll();
+    synchronized (interrupted2) {
+      Assert.assertTrue("runner 2 started", interrupted2.hasStarted);
+      Assert.assertTrue("runner 2 interrupted", interrupted2.interrupted);
+    }
+    runners.remove(interrupted1);
+    runners.remove(interrupted2);
+    DyingQueryRunner remainingRunner = runners.iterator().next();
+    synchronized (remainingRunner) {
+      Assert.assertTrue("runner 3 should be interrupted or not have started",
+                        !remainingRunner.hasStarted || remainingRunner.interrupted);
+    }
+    Assert.assertFalse("runner 1 not completed", interrupted1.hasCompleted);
+    Assert.assertFalse("runner 2 not completed", interrupted2.hasCompleted);
+    Assert.assertFalse("runner 3 not completed", remainingRunner.hasCompleted);
 
     EasyMock.verify(watcher);
   }
@@ -181,7 +213,10 @@ public class ChainedExecutionQueryRunnerTest
 
     Capture<ListenableFuture> capturedFuture = new Capture<>();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
-    watcher.registerQuery(EasyMock.<Query>anyObject(), EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture)));
+    watcher.registerQuery(
+        EasyMock.<Query>anyObject(),
+        EasyMock.and(EasyMock.<ListenableFuture>anyObject(), EasyMock.capture(capturedFuture))
+    );
     EasyMock.expectLastCall()
             .andAnswer(
                 new IAnswer<Void>()
@@ -198,20 +233,23 @@ public class ChainedExecutionQueryRunnerTest
 
     EasyMock.replay(watcher);
 
-    DyingQueryRunner runner1 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
-    DyingQueryRunner runner2 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
-    DyingQueryRunner runner3 = new DyingQueryRunner(queriesStarted, queriesInterrupted);
+
+    ArrayBlockingQueue<DyingQueryRunner> interrupted = new ArrayBlockingQueue<>(3);
+    Set<DyingQueryRunner> runners = Sets.newHashSet(
+        new DyingQueryRunner(queriesStarted, queriesInterrupted, interrupted),
+        new DyingQueryRunner(queriesStarted, queriesInterrupted, interrupted),
+        new DyingQueryRunner(queriesStarted, queriesInterrupted, interrupted)
+    );
+
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
         Ordering.<Integer>natural(),
         watcher,
         Lists.<QueryRunner<Integer>>newArrayList(
-            runner1,
-            runner2,
-            runner3
+            runners
         )
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     final Sequence seq = chainedRunner.run(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
@@ -244,64 +282,73 @@ public class ChainedExecutionQueryRunnerTest
     QueryInterruptedException cause = null;
     try {
       resultFuture.get();
-    } catch(ExecutionException e) {
+    }
+    catch (ExecutionException e) {
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
       Assert.assertEquals("Query timeout", e.getCause().getMessage());
-      cause = (QueryInterruptedException)e.getCause();
+      cause = (QueryInterruptedException) e.getCause();
     }
     queriesInterrupted.await();
     Assert.assertNotNull(cause);
     Assert.assertTrue(future.isCancelled());
-    Assert.assertTrue(runner1.hasStarted);
-    Assert.assertTrue(runner2.hasStarted);
-    Assert.assertTrue(runner1.interrupted);
-    Assert.assertTrue(runner2.interrupted);
-    synchronized (runner3) {
-      Assert.assertTrue(!runner3.hasStarted || runner3.interrupted);
+
+    DyingQueryRunner interrupted1 = interrupted.poll();
+    synchronized (interrupted1) {
+      Assert.assertTrue("runner 1 started", interrupted1.hasStarted);
+      Assert.assertTrue("runner 1 interrupted", interrupted1.interrupted);
     }
-    Assert.assertFalse(runner1.hasCompleted);
-    Assert.assertFalse(runner2.hasCompleted);
-    Assert.assertFalse(runner3.hasCompleted);
+    DyingQueryRunner interrupted2 = interrupted.poll();
+    synchronized (interrupted2) {
+      Assert.assertTrue("runner 2 started", interrupted2.hasStarted);
+      Assert.assertTrue("runner 2 interrupted", interrupted2.interrupted);
+    }
+    runners.remove(interrupted1);
+    runners.remove(interrupted2);
+    DyingQueryRunner remainingRunner = runners.iterator().next();
+    synchronized (remainingRunner) {
+      Assert.assertTrue("runner 3 should be interrupted or not have started",
+                        !remainingRunner.hasStarted || remainingRunner.interrupted);
+    }
+    Assert.assertFalse("runner 1 not completed", interrupted1.hasCompleted);
+    Assert.assertFalse("runner 2 not completed", interrupted2.hasCompleted);
+    Assert.assertFalse("runner 3 not completed", remainingRunner.hasCompleted);
 
     EasyMock.verify(watcher);
   }
 
-  private static class DyingQueryRunner implements QueryRunner<Integer>
+  private class DyingQueryRunner implements QueryRunner<Integer>
   {
     private final CountDownLatch start;
     private final CountDownLatch stop;
+    private final Queue<DyingQueryRunner> interruptedRunners;
 
     private volatile boolean hasStarted = false;
     private volatile boolean hasCompleted = false;
     private volatile boolean interrupted = false;
 
-    public DyingQueryRunner(CountDownLatch start, CountDownLatch stop)
+    public DyingQueryRunner(CountDownLatch start, CountDownLatch stop, Queue<DyingQueryRunner> interruptedRunners)
     {
       this.start = start;
       this.stop = stop;
+      this.interruptedRunners = interruptedRunners;
     }
 
     @Override
     public Sequence<Integer> run(Query<Integer> query, Map<String, Object> responseContext)
     {
-      synchronized (this) { // ensure hasStarted and interrupted are updated simultaneously
-        hasStarted = true;
-        start.countDown();
-        if (Thread.interrupted()) {
+      // do a lot of work
+      synchronized (this) {
+        try {
+          hasStarted = true;
+          start.countDown();
+          neverRelease.lockInterruptibly();
+        }
+        catch (InterruptedException e) {
           interrupted = true;
+          interruptedRunners.offer(this);
           stop.countDown();
           throw new QueryInterruptedException("I got killed");
         }
-      }
-
-      // do a lot of work
-      try {
-        Thread.sleep(5000);
-      }
-      catch (InterruptedException e) {
-        interrupted = true;
-        stop.countDown();
-        throw new QueryInterruptedException("I got killed");
       }
 
       hasCompleted = true;
