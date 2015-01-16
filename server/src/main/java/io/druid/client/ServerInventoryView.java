@@ -28,6 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.MapMaker;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
+import com.metamx.common.StringUtils;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
@@ -114,6 +115,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
               return jsonMapper.readValue(bytes, typeReference);
             }
             catch (IOException e) {
+              CharBuffer.wrap(StringUtils.fromUtf8(bytes).toCharArray());
               CharBuffer charBuffer = Charsets.UTF_8.decode(ByteBuffer.wrap(bytes));
               log.error(e, "Could not parse json: %s", charBuffer.toString());
               throw Throwables.propagate(e);

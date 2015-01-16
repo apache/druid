@@ -187,7 +187,7 @@ public class HadoopDruidIndexerConfigTest
             null
         )
     );
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSchema(spec);
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
     final ImmutableMap<String, Object> values = ImmutableMap.<String, Object>of(
         "Dim1",

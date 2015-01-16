@@ -132,7 +132,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] metricBytes = metric.getBytes(Charsets.UTF_8);
+    byte[] metricBytes = com.metamx.common.StringUtils.toUtf8(metric);
 
     return ByteBuffer.allocate(1 + metricBytes.length)
                      .put(CACHE_TYPE_ID)

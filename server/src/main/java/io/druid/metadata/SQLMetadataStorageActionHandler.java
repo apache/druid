@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 import com.metamx.common.RetryUtils;
+import com.metamx.common.StringUtils;
 import com.metamx.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
@@ -398,7 +399,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
                       catch (IOException e) {
                         log.makeAlert(e, "Failed to deserialize log")
                            .addData("entryId", entryId)
-                           .addData("payload", new String(bytes, Charsets.UTF_8))
+                           .addData("payload", StringUtils.fromUtf8(bytes))
                            .emit();
                         throw new SQLException(e);
                       }
@@ -445,7 +446,7 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
                         log.makeAlert(e, "Failed to deserialize " + lockType.getType())
                            .addData("id", r.getLong("id"))
                            .addData(
-                               "lockPayload", new String(r.getBytes("lock_payload"), Charsets.UTF_8)
+                               "lockPayload", StringUtils.fromUtf8(r.getBytes("lock_payload"))
                            )
                             .emit();
                         throw new SQLException(e);

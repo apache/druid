@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.metamx.common.IAE;
+import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.Aggregators;
@@ -148,7 +149,7 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
       return HyperLogLogCollector.makeCollector((ByteBuffer) object);
     } else if (object instanceof String) {
       return HyperLogLogCollector.makeCollector(
-          ByteBuffer.wrap(Base64.decodeBase64(((String) object).getBytes(Charsets.UTF_8)))
+          ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)))
       );
     }
     return object;
@@ -183,7 +184,7 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = fieldName.getBytes(Charsets.UTF_8);
+    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
     return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
   }

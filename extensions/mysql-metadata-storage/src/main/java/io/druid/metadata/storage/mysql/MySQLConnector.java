@@ -22,6 +22,7 @@ package io.druid.metadata.storage.mysql;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -74,6 +75,21 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   public boolean tableExists(Handle handle, String tableName)
   {
+    // ensure database defaults to utf8, otherwise bail
+    boolean isUtf8 = handle
+                .createQuery("SHOW VARIABLES where variable_name = 'character_set_database' and value = 'utf8'")
+                .list()
+                .size() == 1;
+
+    if(!isUtf8) {
+      throw new ISE(
+          "Database default character set is not UTF-8." + System.lineSeparator()
+          + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
+          + " If you are upgrading from Druid 0.6.x, please make all tables have been converted to utf8 and change the database default."
+          + " For more information on how to convert and set the default, please refer to section on updating from 0.6.x in the Druid 0.7.0 release notes."
+      );
+    }
+
     return !handle.createQuery("SHOW tables LIKE :tableName")
                   .bind("tableName", tableName)
                   .list()
