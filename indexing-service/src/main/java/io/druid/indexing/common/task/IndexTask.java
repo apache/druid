@@ -129,15 +129,16 @@ public class IndexTask extends AbstractFixedIntervalTask
   }
 
   @JsonIgnore
-  private final IndexIngestionSpec ingestionSchema;
+  private final IndexIngestionSpec ingestionSpec;
 
   private final ObjectMapper jsonMapper;
 
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
-      @JsonProperty("schema") IndexIngestionSpec ingestionSchema,
+      @JsonProperty("spec") IndexIngestionSpec ingestionSpec,
       // Backwards Compatible
+      @JsonProperty("schema") IndexIngestionSpec schema,
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("granularitySpec") final GranularitySpec granularitySpec,
       @JsonProperty("aggregators") final AggregatorFactory[] aggregators,
@@ -150,15 +151,19 @@ public class IndexTask extends AbstractFixedIntervalTask
   {
     super(
         // _not_ the version, just something uniqueish
-        makeId(id, ingestionSchema, dataSource),
-        makeDataSource(ingestionSchema, dataSource),
-        makeInterval(ingestionSchema, granularitySpec)
+        makeId(id, ingestionSpec, dataSource),
+        makeDataSource(ingestionSpec, dataSource),
+        makeInterval(ingestionSpec, granularitySpec)
     );
 
-    if (ingestionSchema != null) {
-      this.ingestionSchema = ingestionSchema;
+    if (ingestionSpec != null || schema != null) {
+      if (ingestionSpec != null) {
+        this.ingestionSpec = ingestionSpec;
+      } else {
+        this.ingestionSpec = schema;
+      }
     } else { // Backwards Compatible
-      this.ingestionSchema = new IndexIngestionSpec(
+      this.ingestionSpec = new IndexIngestionSpec(
           new DataSchema(
               dataSource,
               firehoseFactory.getParser(),
@@ -178,17 +183,17 @@ public class IndexTask extends AbstractFixedIntervalTask
     return "index";
   }
 
-  @JsonProperty("schema")
-  public IndexIngestionSpec getIngestionSchema()
+  @JsonProperty("spec")
+  public IndexIngestionSpec getIngestionSpec()
   {
-    return ingestionSchema;
+    return ingestionSpec;
   }
 
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-    final int targetPartitionSize = ingestionSchema.getTuningConfig().getTargetPartitionSize();
+    final GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
+    final int targetPartitionSize = ingestionSpec.getTuningConfig().getTargetPartitionSize();
 
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
     final Set<DataSegment> segments = Sets.newHashSet();
@@ -203,7 +208,7 @@ public class IndexTask extends AbstractFixedIntervalTask
       if (targetPartitionSize > 0) {
         shardSpecs = determinePartitions(bucket, targetPartitionSize, granularitySpec.getQueryGranularity());
       } else {
-        int numShards = ingestionSchema.getTuningConfig().getNumShards();
+        int numShards = ingestionSpec.getTuningConfig().getNumShards();
         if (numShards > 0) {
           shardSpecs = Lists.newArrayList();
           for (int i = 0; i < numShards; i++) {
@@ -216,7 +221,7 @@ public class IndexTask extends AbstractFixedIntervalTask
       for (final ShardSpec shardSpec : shardSpecs) {
         final DataSegment segment = generateSegment(
             toolbox,
-            ingestionSchema.getDataSchema(),
+            ingestionSpec.getDataSchema(),
             shardSpec,
             bucket,
             myLock.getVersion()
@@ -230,11 +235,11 @@ public class IndexTask extends AbstractFixedIntervalTask
 
   private SortedSet<Interval> getDataIntervals() throws IOException
   {
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
+    final FirehoseFactory firehoseFactory = ingestionSpec.getIOConfig().getFirehoseFactory();
+    final GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
 
     SortedSet<Interval> retVal = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
-    try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
+    try (Firehose firehose = firehoseFactory.connect(ingestionSpec.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         Interval interval = granularitySpec.getSegmentGranularity()
@@ -254,14 +259,14 @@ public class IndexTask extends AbstractFixedIntervalTask
   {
     log.info("Determining partitions for interval[%s] with targetPartitionSize[%d]", interval, targetPartitionSize);
 
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
+    final FirehoseFactory firehoseFactory = ingestionSpec.getIOConfig().getFirehoseFactory();
 
     // The implementation of this determine partitions stuff is less than optimal.  Should be done better.
     // Use HLL to estimate number of rows
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
     // Load data
-    try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
+    try (Firehose firehose = firehoseFactory.connect(ingestionSpec.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
         if (interval.contains(inputRow.getTimestampFromEpoch())) {
@@ -327,8 +332,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         )
     );
 
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-    final int rowFlushBoundary = ingestionSchema.getTuningConfig().getRowFlushBoundary();
+    final FirehoseFactory firehoseFactory = ingestionSpec.getIOConfig().getFirehoseFactory();
+    final int rowFlushBoundary = ingestionSpec.getTuningConfig().getRowFlushBoundary();
 
     // We need to track published segments.
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
@@ -351,7 +356,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
     // Create firehose + plumber
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
-    final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser());
+    final Firehose firehose = firehoseFactory.connect(ingestionSpec.getDataSchema().getParser());
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
@@ -363,7 +368,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final int myRowFlushBoundary = rowFlushBoundary > 0
                                    ? rowFlushBoundary
                                    : toolbox.getConfig().getDefaultRowFlushBoundary();
-    final QueryGranularity rollupGran = ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity();
+    final QueryGranularity rollupGran = ingestionSpec.getDataSchema().getGranularitySpec().getQueryGranularity();
     try {
       plumber.startJob();
 

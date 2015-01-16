@@ -262,7 +262,7 @@ public class IndexGeneratorJob implements Jobby
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
-      for (AggregatorFactory factory : config.getSchema().getDataSchema().getAggregators()) {
+      for (AggregatorFactory factory : config.getSpec().getDataSchema().getAggregators()) {
         metricNames.add(factory.getName().toLowerCase());
       }
 
@@ -279,7 +279,7 @@ public class IndexGeneratorJob implements Jobby
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
       //final DataRollupSpec rollupSpec = config.getRollupSpec();
-      final AggregatorFactory[] aggs = config.getSchema().getDataSchema().getAggregators();
+      final AggregatorFactory[] aggs = config.getSpec().getDataSchema().getAggregators();
 
       IncrementalIndex index = makeIncrementalIndex(bucket, aggs);
 
@@ -303,7 +303,7 @@ public class IndexGeneratorJob implements Jobby
         int numRows = index.add(inputRow);
         ++lineCount;
 
-        if (numRows >= config.getSchema().getTuningConfig().getRowFlushBoundary()) {
+        if (numRows >= config.getSpec().getTuningConfig().getRowFlushBoundary()) {
           log.info(
               "%,d lines to %,d rows in %,d millis",
               lineCount - runningTotalLineCount,
@@ -457,7 +457,7 @@ public class IndexGeneratorJob implements Jobby
       DataSegment segment = new DataSegment(
           config.getDataSource(),
           interval,
-          config.getSchema().getTuningConfig().getVersion(),
+          config.getSpec().getTuningConfig().getVersion(),
           loadSpec,
           dimensionNames,
           metricNames,
@@ -619,8 +619,8 @@ public class IndexGeneratorJob implements Jobby
       return new IncrementalIndex(
           new IncrementalIndexSchema.Builder()
               .withMinTimestamp(theBucket.time.getMillis())
-              .withSpatialDimensions(config.getSchema().getDataSchema().getParser())
-              .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
+              .withSpatialDimensions(config.getSpec().getDataSchema().getParser())
+              .withQueryGranularity(config.getSpec().getDataSchema().getGranularitySpec().getQueryGranularity())
               .withMetrics(aggs)
               .build()
       );

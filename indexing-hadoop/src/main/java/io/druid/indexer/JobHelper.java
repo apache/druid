@@ -63,7 +63,7 @@ public class JobHelper
 
     final Configuration conf = groupByJob.getConfiguration();
     final FileSystem fs = FileSystem.get(conf);
-    Path distributedClassPath = new Path(config.getSchema().getTuningConfig().getWorkingPath(), "classpath");
+    Path distributedClassPath = new Path(config.getSpec().getTuningConfig().getWorkingPath(), "classpath");
 
     if (fs instanceof LocalFileSystem) {
       return;
@@ -138,8 +138,8 @@ public class JobHelper
       }
     }
 
-    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (failedMessage == null || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+    if (!config.getSpec().getTuningConfig().isLeaveIntermediate()) {
+      if (failedMessage == null || config.getSpec().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {

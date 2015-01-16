@@ -110,7 +110,7 @@ public class IndexTaskTest
                 null
             )
         ),
-        null, null, null, null, 0, null, 0,
+        null, null, null, null, null, 0, null, 0,
         new DefaultObjectMapper()
     );
 

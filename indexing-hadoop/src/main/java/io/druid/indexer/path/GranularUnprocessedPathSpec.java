@@ -93,7 +93,7 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
 
       String bucketOutput = String.format(
           "%s/%s",
-          config.getSchema().getIOConfig().getSegmentOutputPath(),
+          config.getSpec().getIOConfig().getSegmentOutputPath(),
           segmentGranularity.toPath(timeBucket)
       );
       for (FileStatus fileStatus : FSSpideringIterator.spiderIterable(fs, new Path(bucketOutput))) {
