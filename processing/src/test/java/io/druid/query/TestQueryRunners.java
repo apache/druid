@@ -43,7 +43,9 @@ public class TestQueryRunners
         @Override
         public ByteBuffer get()
         {
-          return ByteBuffer.allocate(1024 * 1024 * 10);
+          ByteBuffer retval = ByteBuffer.allocateDirect(1024 * 1024 * 10);
+          retval.position(1<<10);
+          return retval;
         }
       }
   );

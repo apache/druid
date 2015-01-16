@@ -569,7 +569,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       }
 
       final int dimIndex = dimIndexObject;
-      final String id = dimDim.get(value);
+      final String id = dimDim.intern(value);
 
       return new ValueMatcher()
       {

@@ -35,7 +35,8 @@ public class LongSumAggregator implements Aggregator
     }
   };
 
-  static long combineValues(Object lhs, Object rhs) {
+  static long combineValues(Object lhs, Object rhs)
+  {
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 
