@@ -1,6 +1,6 @@
 /*
  * Druid - a distributed column store.
- * Copyright (C) 2012, 2013  Metamarkets Group Inc.
+ * Copyright (C) 2012, 2013, 2014  Metamarkets Group Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,8 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-package io.druid.segment.data;
+package io.druid.segment.incremental;
 
+import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
+import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
+import com.carrotsearch.junitbenchmarks.Clock;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -28,8 +31,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Sequences;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -38,7 +41,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.TestQueryRunners;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -50,177 +53,36 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
-import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Extending AbstractBenchmark means only runs if explicitly called
  */
 @RunWith(Parameterized.class)
-public class IncrementalIndexTest
+public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 {
-  interface IndexCreator
-  {
-    public IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
-  }
+  private static AggregatorFactory[] factories;
+  static final int dimensionCount = 5;
 
-  private final IndexCreator indexCreator;
+  static {
 
-  public IncrementalIndexTest(
-      IndexCreator indexCreator
-  )
-  {
-    this.indexCreator = indexCreator;
-  }
-
-  @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
-  {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return IncrementalIndexTest.createIndex(true, factories);
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return IncrementalIndexTest.createIndex(false, factories);
-                  }
-                }
-            }
-
-        }
-    );
-  }
-
-  public static IncrementalIndex createIndex(boolean offheap, AggregatorFactory[] aggregatorFactories)
-  {
-    if (null == aggregatorFactories) {
-      aggregatorFactories = defaultAggregatorFactories;
-    }
-    if (offheap) {
-      return new OffheapIncrementalIndex(
-          0L,
-          QueryGranularity.NONE,
-          aggregatorFactories,
-          TestQueryRunners.pool,
-          true,
-          100 * 1024 * 1024
-      );
-    } else {
-      return new OnheapIncrementalIndex(
-          0L, QueryGranularity.NONE, aggregatorFactories, 1000000
-      );
-    }
-  }
-
-  public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException
-  {
-    index.add(
-        new MapBasedInputRow(
-            timestamp,
-            Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
-        )
-    );
-
-    index.add(
-        new MapBasedInputRow(
-            timestamp,
-            Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
-        )
-    );
-  }
-
-  public static MapBasedInputRow getRow(long timestamp, int rowID, int dimensionCount)
-  {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
-      dimensionList.add(dimName);
-      builder.put(dimName, dimName + rowID);
-    }
-    return new MapBasedInputRow(timestamp, dimensionList, builder.build());
-  }
-
-  private static MapBasedInputRow getLongRow(long timestamp, int rowID, int dimensionCount)
-  {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    for (int i = 0; i < dimensionCount; i++) {
-      String dimName = String.format("Dim_%d", i);
-      dimensionList.add(dimName);
-      builder.put(dimName, (Long) 1l);
-    }
-    return new MapBasedInputRow(timestamp, dimensionList, builder.build());
-  }
-
-  private static final AggregatorFactory[] defaultAggregatorFactories = new AggregatorFactory[]{
-      new CountAggregatorFactory(
-          "count"
-      )
-  };
-
-  @Test
-  public void testCaseSensitivity() throws Exception
-  {
-    long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = indexCreator.createIndex(defaultAggregatorFactories);
-    populateIndex(timestamp, index);
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensions());
-    Assert.assertEquals(2, index.size());
-
-    final Iterator<Row> rows = index.iterator();
-    Row row = rows.next();
-    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
-
-    row = rows.next();
-    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
-  }
-
-  @Test(timeout = 60000)
-  public void testConcurrentAddRead() throws InterruptedException, ExecutionException
-  {
-    final int dimensionCount = 5;
     final ArrayList<AggregatorFactory> ingestAggregatorFactories = new ArrayList<>(dimensionCount + 1);
     ingestAggregatorFactories.add(new CountAggregatorFactory("rows"));
     for (int i = 0; i < dimensionCount; ++i) {
@@ -237,7 +99,147 @@ public class IncrementalIndexTest
           )
       );
     }
+    factories = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
+  }
 
+  private static final class MapIncrementalIndex extends OnheapIncrementalIndex
+  {
+    private final AtomicInteger indexIncrement = new AtomicInteger(0);
+    ConcurrentHashMap<Integer, Aggregator[]> indexedMap = new ConcurrentHashMap<Integer, Aggregator[]>();
+
+    public MapIncrementalIndex(
+        long minTimestamp,
+        QueryGranularity gran,
+        AggregatorFactory[] metrics,
+        int maxRowCount
+    )
+    {
+      super(minTimestamp, gran, metrics, maxRowCount);
+    }
+
+    @Override
+    protected Aggregator[] concurrentGet(int offset)
+    {
+      // All get operations should be fine
+      return indexedMap.get(offset);
+    }
+
+    @Override
+    protected void concurrentSet(int offset, Aggregator[] value)
+    {
+      indexedMap.put(offset, value);
+    }
+
+    @Override
+    protected Integer addToFacts(
+        AggregatorFactory[] metrics,
+        boolean deserializeComplexMetrics,
+        InputRow row,
+        AtomicInteger numEntries,
+        TimeAndDims key,
+        ThreadLocal<InputRow> in
+    ) throws IndexSizeExceededException
+    {
+
+      final Integer priorIdex = getFacts().get(key);
+
+      Aggregator[] aggs;
+
+      if (null != priorIdex) {
+        aggs = indexedMap.get(priorIdex);
+      } else {
+        aggs = new Aggregator[metrics.length];
+        for (int i = 0; i < metrics.length; i++) {
+          final AggregatorFactory agg = metrics[i];
+          aggs[i] = agg.factorize(
+              makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
+          );
+        }
+        Integer rowIndex;
+
+        do {
+          rowIndex = indexIncrement.incrementAndGet();
+        } while (null != indexedMap.putIfAbsent(rowIndex, aggs));
+
+
+        // Last ditch sanity checks
+        if (numEntries.get() >= maxRowCount && !getFacts().containsKey(key)) {
+          throw new IndexSizeExceededException("Maximum number of rows reached");
+        }
+        final Integer prev = getFacts().putIfAbsent(key, rowIndex);
+        if (null == prev) {
+          numEntries.incrementAndGet();
+        } else {
+          // We lost a race
+          aggs = indexedMap.get(prev);
+          // Free up the misfire
+          indexedMap.remove(rowIndex);
+          // This is expected to occur ~80% of the time in the worst scenarios
+        }
+      }
+
+      in.set(row);
+
+      for (Aggregator agg : aggs) {
+        synchronized (agg) {
+          agg.aggregate();
+        }
+      }
+
+      in.set(null);
+
+
+      return numEntries.get();
+    }
+  }
+
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> getParameters()
+  {
+    return ImmutableList.<Object[]>of(
+        new Object[]{OnheapIncrementalIndex.class},
+        new Object[]{MapIncrementalIndex.class}
+    );
+  }
+
+  private final Class<? extends OnheapIncrementalIndex> incrementalIndex;
+
+  public OnheapIncrementalIndexBenchmark(Class<? extends OnheapIncrementalIndex> incrementalIndex)
+  {
+    this.incrementalIndex = incrementalIndex;
+  }
+
+
+  private static MapBasedInputRow getLongRow(long timestamp, int rowID, int dimensionCount)
+  {
+    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    for (int i = 0; i < dimensionCount; i++) {
+      String dimName = String.format("Dim_%d", i);
+      dimensionList.add(dimName);
+      builder.put(dimName, new Integer(rowID).longValue());
+    }
+    return new MapBasedInputRow(timestamp, dimensionList, builder.build());
+  }
+
+  @Test
+  @BenchmarkOptions(callgc = true, clock = Clock.REAL_TIME, warmupRounds = 10, benchmarkRounds = 20)
+  public void testConcurrentAddRead()
+      throws InterruptedException, ExecutionException, NoSuchMethodException, IllegalAccessException,
+             InvocationTargetException, InstantiationException
+  {
+
+    final int taskCount = 30;
+    final int concurrentThreads = 3;
+    final int elementsPerThread = 1 << 15;
+
+    final OnheapIncrementalIndex incrementalIndex = this.incrementalIndex.getConstructor(
+        Long.TYPE,
+        QueryGranularity.class,
+        AggregatorFactory[].class,
+        Integer.TYPE
+    ).newInstance(0, QueryGranularity.NONE, factories, elementsPerThread * taskCount);
     final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(dimensionCount + 1);
     queryAggregatorFactories.add(new CountAggregatorFactory("rows"));
     for (int i = 0; i < dimensionCount; ++i) {
@@ -255,11 +257,6 @@ public class IncrementalIndexTest
       );
     }
 
-
-    final IncrementalIndex index = indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]));
-    final int taskCount = 30;
-    final int concurrentThreads = 3;
-    final int elementsPerThread = 100;
     final ListeningExecutorService indexExecutor = MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(
             concurrentThreads,
@@ -283,7 +280,7 @@ public class IncrementalIndexTest
     final Interval queryInterval = new Interval("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
     final List<ListenableFuture<?>> indexFutures = new LinkedList<>();
     final List<ListenableFuture<?>> queryFutures = new LinkedList<>();
-    final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
+    final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(new QueryConfig()),
         new TimeseriesQueryEngine(),
@@ -303,7 +300,7 @@ public class IncrementalIndexTest
                   currentlyRunning.incrementAndGet();
                   try {
                     for (int i = 0; i < elementsPerThread; i++) {
-                      index.add(getLongRow(timestamp + i, i, dimensionCount));
+                      incrementalIndex.add(getLongRow(timestamp + i, 1, dimensionCount));
                     }
                   }
                   catch (IndexSizeExceededException e) {
@@ -315,6 +312,7 @@ public class IncrementalIndexTest
               }
           )
       );
+
       queryFutures.add(
           queryExecutor.submit(
               new Runnable()
@@ -350,12 +348,13 @@ public class IncrementalIndexTest
               }
           )
       );
+
     }
     List<ListenableFuture<?>> allFutures = new ArrayList<>(queryFutures.size() + indexFutures.size());
     allFutures.addAll(queryFutures);
     allFutures.addAll(indexFutures);
     Futures.allAsList(allFutures).get();
-    Assert.assertTrue("Did not hit concurrency, please try again", concurrentlyRan.get());
+    //Assert.assertTrue("Did not hit concurrency, please try again", concurrentlyRan.get());
     queryExecutor.shutdown();
     indexExecutor.shutdown();
     QueryRunner<Result<TimeseriesResultValue>> runner = new FinalizeResultsQueryRunner<Result<TimeseriesResultValue>>(
@@ -373,87 +372,21 @@ public class IncrementalIndexTest
         runner.run(query, context),
         new LinkedList<Result<TimeseriesResultValue>>()
     );
+    final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
             String.format("Failed long sum on dimension %d", i),
-            elementsPerThread * taskCount,
+            expectedVal,
             result.getValue().getLongMetric(String.format("sumResult%s", i)).intValue()
         );
         Assert.assertEquals(
             String.format("Failed double sum on dimension %d", i),
-            elementsPerThread * taskCount,
+            expectedVal,
             result.getValue().getDoubleMetric(String.format("doubleSumResult%s", i)).intValue()
         );
       }
     }
-  }
-
-  @Test
-  public void testConcurrentAdd() throws Exception
-  {
-    final IncrementalIndex index = indexCreator.createIndex(defaultAggregatorFactories);
-    final int threadCount = 10;
-    final int elementsPerThread = 200;
-    final int dimensionCount = 5;
-    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-    final long timestamp = System.currentTimeMillis();
-    final CountDownLatch latch = new CountDownLatch(threadCount);
-    for (int j = 0; j < threadCount; j++) {
-      executor.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                for (int i = 0; i < elementsPerThread; i++) {
-                  index.add(getRow(timestamp + i, i, dimensionCount));
-                }
-              }
-              catch (Exception e) {
-                e.printStackTrace();
-              }
-              latch.countDown();
-            }
-          }
-      );
-    }
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
-
-    Assert.assertEquals(dimensionCount, index.getDimensions().size());
-    Assert.assertEquals(elementsPerThread, index.size());
-    Iterator<Row> iterator = index.iterator();
-    int curr = 0;
-    while (iterator.hasNext()) {
-      Row row = iterator.next();
-      Assert.assertEquals(timestamp + curr, row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(threadCount), (Float) row.getFloatMetric("count"));
-      curr++;
-    }
-    Assert.assertEquals(elementsPerThread, curr);
-  }
-
-  @Test
-  public void testOffheapIndexIsFull() throws IndexSizeExceededException
-  {
-    OffheapIncrementalIndex index = new OffheapIncrementalIndex(
-        0L,
-        QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        TestQueryRunners.pool,
-        true,
-        (10 + 2) * 1024 * 1024
-    );
-    int rowCount = 0;
-    for (int i = 0; i < 500; i++) {
-      rowCount = index.add(getRow(System.currentTimeMillis(), i, 100));
-      if (!index.canAppendRow()) {
-        break;
-      }
-    }
-
-    Assert.assertTrue("rowCount : " + rowCount, rowCount > 200 && rowCount < 600);
   }
 }
