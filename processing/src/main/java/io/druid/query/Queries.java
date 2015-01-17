@@ -17,9 +17,7 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -39,30 +37,23 @@ public class Queries
     Preconditions.checkNotNull(aggFactories, "aggregations cannot be null");
     Preconditions.checkArgument(aggFactories.size() > 0, "Must have at least one AggregatorFactory");
 
+    final Set<String> aggNames = Sets.newHashSet();
+    for (AggregatorFactory aggFactory : aggFactories) {
+      Preconditions.checkArgument(aggNames.add(aggFactory.getName()), "[%s] already defined", aggFactory.getName());
+    }
+
     if (postAggs != null && !postAggs.isEmpty()) {
-      Set<String> combinedAggNames = Sets.newHashSet(
-          Lists.transform(
-              aggFactories,
-              new Function<AggregatorFactory, String>()
-              {
-                @Override
-                public String apply(AggregatorFactory input)
-                {
-                  return input.getName();
-                }
-              }
-          )
-      );
+      final Set<String> combinedAggNames = Sets.newHashSet(aggNames);
 
       for (PostAggregator postAgg : postAggs) {
-        Set<String> dependencies = postAgg.getDependentFields();
-        Set<String> missing = Sets.difference(dependencies, combinedAggNames);
+        final Set<String> dependencies = postAgg.getDependentFields();
+        final Set<String> missing = Sets.difference(dependencies, combinedAggNames);
 
         Preconditions.checkArgument(
             missing.isEmpty(),
             "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
-        combinedAggNames.add(postAgg.getName());
+        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined");
       }
     }
   }
