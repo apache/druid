@@ -148,7 +148,7 @@ public class AnnouncerTest extends CuratorTestBase
       );
       KillSession.kill(curator.getZookeeperClient().getZooKeeper(), server.getConnectString());
 
-      Assert.assertTrue(timing.awaitLatch(latch));
+      Assert.assertTrue(timing.forWaiting().awaitLatch(latch));
 
       Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
       Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
