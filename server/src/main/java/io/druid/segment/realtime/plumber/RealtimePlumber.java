@@ -288,7 +288,9 @@ public class RealtimePlumber implements Plumber
                                             }
                                             finally {
                                               try {
-                                                closeable.close();
+                                                if (closeable != null) {
+                                                  closeable.close();
+                                                }
                                               }
                                               catch (IOException e) {
                                                 throw Throwables.propagate(e);
