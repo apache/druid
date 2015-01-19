@@ -42,7 +42,7 @@ mysql -u root
 
 ```sql
 GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
-CREATE database druid;
+CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
 ```
 
 #### Set up Zookeeper
