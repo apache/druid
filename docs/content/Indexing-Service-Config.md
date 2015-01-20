@@ -139,7 +139,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middlemanagers. Choices are `fillCapacity` and `fillCapacityWithAffinity`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middlemanagers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, and `equalDistribution`.|fillCapacity|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 #### Worker Select Strategy
@@ -162,6 +162,15 @@ An affinity config can be provided.
 |`affinity`|A map to String to list of String host names.|{}|
 
 Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
+
+##### Equal Distribution
+
+The workers with the least amount of tasks is assigned the task.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`equalDistribution`.|fillCapacity|
+
 
 #### Autoscaler
 
