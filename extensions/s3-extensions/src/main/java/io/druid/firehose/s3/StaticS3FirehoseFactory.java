@@ -56,29 +56,20 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
 
   private final RestS3Service s3Client;
-  private final StringInputRowParser parser;
   private final List<URI> uris;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
       @JacksonInject("s3Client") RestS3Service s3Client,
-      @JsonProperty("parser") StringInputRowParser parser,
       @JsonProperty("uris") List<URI> uris
   )
   {
     this.s3Client = s3Client;
-    this.parser = Preconditions.checkNotNull(parser, "parser");
     this.uris = ImmutableList.copyOf(uris);
 
     for (final URI inputURI : uris) {
       Preconditions.checkArgument(inputURI.getScheme().equals("s3"), "input uri scheme == s3 (%s)", inputURI);
     }
-  }
-
-  @JsonProperty
-  public StringInputRowParser getParser()
-  {
-    return parser;
   }
 
   @JsonProperty
@@ -151,7 +142,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
             throw new UnsupportedOperationException();
           }
         },
-        (StringInputRowParser) firehoseParser
+        firehoseParser
     );
   }
 }
