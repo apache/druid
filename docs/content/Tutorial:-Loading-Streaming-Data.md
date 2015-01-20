@@ -181,7 +181,7 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
   ]
   ```
 
-Note: This config uses a "test" [rejection policy](Plumber.html) which will accept all events and timely hand off, however, we strongly recommend you do not use this in production. Using this rejection policy, segments for events for the same time range will be overridden.
+Note: This config uses a "messageTime" [rejection policy](Plumber.html) which will accept all events and hand off as long as there is a continuous stream of events. In this particular example, hand-off will not actually occur because we only have a few events.
 
 3. Let's copy and paste some data into the Kafka console producer
 
