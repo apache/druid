@@ -224,7 +224,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
               containers.put(containerKey, new ContainerHolder(container, inventoryCache));
 
-              log.info("Starting inventory cache for %s, inventoryPath %s", containerKey, inventoryPath);
+              log.debug("Starting inventory cache for %s, inventoryPath %s", containerKey, inventoryPath);
               inventoryCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
               strategy.newContainer(container);
             }
@@ -244,7 +244,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             // This close() call actually calls shutdownNow() on the executor registered with the Cache object, it
             // better have its own executor or ignore shutdownNow() calls...
-            log.info("Closing inventory cache for %s. Also removing listeners.", containerKey);
+            log.debug("Closing inventory cache for %s. Also removing listeners.", containerKey);
             removed.getCache().getListenable().clear();
             removed.getCache().close();
             strategy.deadContainer(removed.getContainer());
@@ -263,7 +263,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
             final ContainerClass container = strategy.deserializeContainer(child.getData());
 
-            log.info("Container[%s] updated.", child.getPath());
+            log.debug("Container[%s] updated.", child.getPath());
             ContainerHolder holder = containers.get(containerKey);
             if (holder == null) {
               log.warn("Container update[%s], but the old container didn't exist!?  Ignoring.", child.getPath());
@@ -338,7 +338,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_ADDED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
-            log.info("CHILD_ADDED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
+            log.debug("CHILD_ADDED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
 
             final InventoryClass addedInventory = strategy.deserializeInventory(child.getData());
 
@@ -351,7 +351,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_UPDATED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
-            log.info("CHILD_UPDATED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
+            log.debug("CHILD_UPDATED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
 
             final InventoryClass updatedInventory = strategy.deserializeInventory(child.getData());
 
@@ -365,7 +365,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
           case CHILD_REMOVED: {
             final ChildData child = event.getData();
             final String inventoryKey = ZKPaths.getNodeFromPath(child.getPath());
-            log.info("CHILD_REMOVED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
+            log.debug("CHILD_REMOVED[%s] with version[%s]", child.getPath(), event.getData().getStat().getVersion());
 
             synchronized (holder) {
               holder.setContainer(strategy.removeInventory(holder.getContainer(), inventoryKey));

@@ -16,3 +16,34 @@ The intermediate computation buffer specifies a buffer size for the storage of i
 
 ## What is server maxSize?
 Server maxSize sets the maximum cumulative segment size (in bytes) that a node can hold. Changing this parameter will affect performance by controlling the memory/disk ratio on a node. Setting this parameter to a value greater than the total memory capacity on a node and may cause disk paging to occur. This paging time introduces a query latency delay.
+
+## My logs are really chatty, can I set them to asynchronously write?
+Yes, using a `log4j2.xml` similar to the following causes some of the more chatty classes to write asynchronously:
+```
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <AsyncLogger name="io.druid.curator.inventory.CuratorInventoryManager" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <AsyncLogger name="io.druid.client.BatchServerInventoryView" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <!-- Make extra sure nobody adds logs in a bad way that can hurt performance -->
+    <AsyncLogger name="io.druid.client.ServerInventoryView" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <AsyncLogger name ="com.metamx.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </AsyncLogger>
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>
+```
