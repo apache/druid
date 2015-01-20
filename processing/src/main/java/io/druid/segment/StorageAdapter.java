@@ -35,4 +35,5 @@ public interface StorageAdapter extends CursorFactory
   public DateTime getMinTime();
   public DateTime getMaxTime();
   public Capabilities getCapabilities();
+  public DateTime getMaxIngestedEventTime();
 }

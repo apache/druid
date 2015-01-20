@@ -29,6 +29,7 @@ import io.druid.query.filter.NoopDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
@@ -1098,5 +1099,91 @@ public class Druids
   public static SelectQueryBuilder newSelectQueryBuilder()
   {
     return new SelectQueryBuilder();
+  }
+
+  /**
+   * A Builder for DataSourceMetadataQuery.
+   *
+   * Required: dataSource() must be called before build()
+   *
+   * Usage example:
+   * <pre><code>
+   *   DataSourceMetadataQueryBuilder query = new DataSourceMetadataQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see io.druid.query.datasourcemetadata.DataSourceMetadataQuery
+   */
+  public static class DataSourceMetadataQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private Map<String, Object> context;
+
+    public DataSourceMetadataQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      context = null;
+    }
+
+    public DataSourceMetadataQuery build()
+    {
+      return new DataSourceMetadataQuery(
+          dataSource,
+          querySegmentSpec,
+          context
+      );
+    }
+
+    public DataSourceMetadataQueryBuilder copy(DataSourceMetadataQueryBuilder builder)
+    {
+      return new DataSourceMetadataQueryBuilder()
+          .dataSource(builder.dataSource)
+          .intervals(builder.querySegmentSpec)
+          .context(builder.context);
+    }
+
+    public DataSourceMetadataQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public DataSourceMetadataQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public DataSourceMetadataQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public DataSourceMetadataQueryBuilder intervals(String s)
+    {
+      querySegmentSpec = new LegacySegmentSpec(s);
+      return this;
+    }
+
+    public DataSourceMetadataQueryBuilder intervals(List<Interval> l)
+    {
+      querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+  }
+
+  public static DataSourceMetadataQueryBuilder newDataSourceMetadataQueryBuilder()
+  {
+    return new DataSourceMetadataQueryBuilder();
   }
 }

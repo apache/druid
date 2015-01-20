@@ -134,6 +134,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public DateTime getMaxIngestedEventTime()
+  {
+    // For immutable indexes, maxIngestedEventTime is maxTime.
+    return getMaxTime();
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran)
   {
     Interval actualInterval = interval;
