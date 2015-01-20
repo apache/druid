@@ -62,12 +62,12 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
   @JsonCreator
   public StaticS3FirehoseFactory(
       @JacksonInject("s3Client") RestS3Service s3Client,
-      @JsonProperty("parser") StringInputRowParser parser,
+      @JsonProperty("parser") StringInputRowParser parser, // left for backwards compatibility
       @JsonProperty("uris") List<URI> uris
   )
   {
     this.s3Client = s3Client;
-    this.parser = Preconditions.checkNotNull(parser, "parser");
+    this.parser = parser;
     this.uris = ImmutableList.copyOf(uris);
 
     for (final URI inputURI : uris) {
