@@ -49,7 +49,7 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.170-bin.tar.gz). Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-services-0.6.171-bin.tar.gz). Download this file to a directory of your choosing.
 
 You can extract the awesomeness within by issuing:
 
@@ -60,7 +60,7 @@ tar -zxvf druid-services-*-bin.tar.gz
 Not too lost so far right? That's great! If you cd into the directory:
 
 ```
-cd druid-services-0.6.170
+cd druid-services-0.6.171
 ```
 
 You should see a bunch of files:

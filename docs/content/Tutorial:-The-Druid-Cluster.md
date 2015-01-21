@@ -13,7 +13,7 @@ In this tutorial, we will set up other types of Druid nodes and external depende
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.170-bin.tar.gz)
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-services-0.6.171-bin.tar.gz)
 
 and untar the contents within by issuing:
 
@@ -153,7 +153,7 @@ druid.port=8081
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.170"]
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.171"]
 
 # Dummy read only AWS account (used to download example data)
 druid.s3.secretKey=QyyfVZ7llSiRg6Qcrql1eEUG7buFpAK6T6engr1b
@@ -244,7 +244,7 @@ druid.port=8083
 
 druid.zk.service.host=localhost
 
-druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.170","io.druid.extensions:druid-kafka-seven:0.6.170"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples:0.6.171","io.druid.extensions:druid-kafka-seven:0.6.171"]
 
 # Change this config to db to hand off to the rest of the Druid cluster
 druid.publish.type=noop

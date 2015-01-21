@@ -8,9 +8,9 @@ The previous examples are for Kafka 7. To support Kafka 8, a couple changes need
 
 - Update realtime node's configs for Kafka 8 extensions
   - e.g.
-    - `druid.extensions.coordinates=[...,"io.druid.extensions:druid-kafka-seven:0.6.170",...]`
+    - `druid.extensions.coordinates=[...,"io.druid.extensions:druid-kafka-seven:0.6.171",...]`
     - becomes
-    - `druid.extensions.coordinates=[...,"io.druid.extensions:druid-kafka-eight:0.6.170",...]`
+    - `druid.extensions.coordinates=[...,"io.druid.extensions:druid-kafka-eight:0.6.171",...]`
 - Update realtime task config for changed keys
   - `firehose.type`, `plumber.rejectionPolicyFactory`, and all of `firehose.consumerProps` changes.
 

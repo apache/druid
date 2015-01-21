@@ -19,13 +19,13 @@ Clone Druid and build it:
 git clone https://github.com/metamx/druid.git druid
 cd druid
 git fetch --tags
-git checkout druid-0.6.170
+git checkout druid-0.6.171
 ./build.sh
 ```
 
 ### Downloading the DSK (Druid Standalone Kit)
 
-[Download](http://static.druid.io/artifacts/releases/druid-services-0.6.170-bin.tar.gz) a stand-alone tarball and run it:
+[Download](http://static.druid.io/artifacts/releases/druid-services-0.6.171-bin.tar.gz) a stand-alone tarball and run it:
 
 ``` bash
 tar -xzf druid-services-0.X.X-bin.tar.gz
