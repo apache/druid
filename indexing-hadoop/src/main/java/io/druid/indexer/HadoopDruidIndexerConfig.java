@@ -115,7 +115,7 @@ public class HadoopDruidIndexerConfig
   public static HadoopDruidIndexerConfig fromMap(Map<String, Object> argSpec)
   {
     //backwards compatibility
-    if (argSpec.containsKey("schema")) {
+    if (argSpec.containsKey("schema") || argSpec.containsKey("spec")) {
       return HadoopDruidIndexerConfig.jsonMapper.convertValue(argSpec, HadoopDruidIndexerConfig.class);
     } else {
       return new HadoopDruidIndexerConfig(
