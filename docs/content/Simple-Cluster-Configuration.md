@@ -6,6 +6,17 @@ Simple Cluster Configuration
 
 This simple Druid cluster configuration can be used for initially experimenting with Druid on your local machine. For a more realistic production Druid cluster, see [Production Cluster Configuration](Production-Cluster-Configuration.html).
 
+### Common Configuration (common.runtime.properties)
+
+```
+# Extensions
+-Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven"]
+
+# Zookeeper (defaults to localhost)
+
+# Metadata Storage (defaults to derby with no username and password)
+```
+
 ### Overlord Node (Indexing Service)
 
 Run:
@@ -22,22 +33,8 @@ Configuration:
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
 
--Ddruid.host=localhost
--Ddruid.port=8080
--Ddruid.service=overlord
-
--Ddruid.zk.service.host=localhost
-
--Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven:0.6.160"]
-
--Ddruid.metadata.storage.connector.connectURI=jdbc:mysql://localhost:3306/druid
--Ddruid.metadata.storage.connector.user=druid
--Ddruid.metadata.storage.connector.password=diurd
-
--Ddruid.selectors.indexing.serviceName=overlord
 -Ddruid.indexer.queue.startDelay=PT0M
 -Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
--Ddruid.indexer.runner.startPort=8088
 -Ddruid.indexer.fork.property.druid.processing.numThreads=1
 -Ddruid.indexer.fork.property.druid.computation.buffer.size=100000000
 ```
@@ -60,16 +57,6 @@ Configuration:
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
 
-druid.host=localhost
-druid.service=coordinator
-druid.port=8082
-
-druid.zk.service.host=localhost
-
-druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.metadata.storage.connector.user=druid
-druid.metadata.storage.connector.password=diurd
-
 druid.coordinator.startDelay=PT70s
 ```
 
@@ -90,12 +77,6 @@ Configuration:
 -Xmx256m
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
-
-druid.host=localhost
-druid.service=historical
-druid.port=8083
-
-druid.zk.service.host=localhost
 
 druid.server.maxSize=10000000000
 
@@ -122,12 +103,6 @@ Configuration:
 -Xmx256m
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
-
-druid.host=localhost
-druid.service=broker
-druid.port=8084
-
-druid.zk.service.host=localhost
 
 druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1
