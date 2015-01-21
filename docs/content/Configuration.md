@@ -20,7 +20,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.extensions.remoteRepositories`|If this is not set to '[]', Druid will try to download extensions at the specified remote repository.|["http://repo1.maven.org/maven2/","https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"]|
+|`druid.extensions.remoteRepositories`|If this is not set to '[]', Druid will try to download extensions at the specified remote repository.|["http://repo1.maven.org/maven2/", "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"]|
 |`druid.extensions.localRepository`|The local maven directory where extensions are installed. If this is set, remoteRepositories is not required.|[]|
 |`druid.extensions.coordinates`|The list of extensions to include.|[]|
 

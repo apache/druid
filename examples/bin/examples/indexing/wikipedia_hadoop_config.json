@@ -61,7 +61,7 @@
     "type": "hadoop",
     "inputSpec": {
       "type": "static",
-      "paths": "/myPath/druid-services-0.6.160/examples/indexing/wikipedia_data.json"
+      "paths": "/myPath/druid-services-0.7.0-rc1/examples/indexing/wikipedia_data.json"
     },
     "metadataUpdateSpec": {
       "type": "db",

@@ -20,6 +20,51 @@ For general purposes of high availability, there should be at least 2 of every n
 
 To setup a local Druid cluster, see [Simple Cluster Configuration](Simple-Cluster-Configuration.html).
 
+### Common Configuration (common.runtime.properties)
+
+```
+# Extensions
+druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions", "io.druid.extensions:druid-histogram", "io.druid.extensions:mysql-metadata-storage"]
+
+# Zookeeper
+druid.zk.service.host=#{ZK_IPs}
+druid.zk.paths.base=/druid/prod
+
+druid.discovery.curator.path=/prod/discovery
+
+# Request logging, monitoring, and metrics
+druid.request.logging.type=emitter
+druid.request.logging.feed=druid_requests
+
+druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
+
+druid.emitter=http
+druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
+
+# Metadata storage
+druid.metadata.storage.type=mysql
+druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid?characterEncoding=UTF-8
+druid.metadata.storage.connector.user=#{MYSQL_USER}
+druid.metadata.storage.connector.password=#{MYSQL_PW}
+
+# Deep storage
+druid.storage.type=s3
+druid.s3.accessKey=#{S3_ACCESS_KEY}
+druid.s3.secretKey=#{S3_SECRET_KEY}
+
+# Caching
+druid.cache.type=memcached
+druid.cache.hosts=#{MEMCACHED_IPS}
+druid.cache.expiration=2147483647
+druid.cache.memcachedPrefix=d1
+druid.cache.maxOperationQueueSize=1073741824
+druid.cache.readBufferSize=10485760
+
+# Indexing Service Service Discovery
+druid.selectors.indexing.serviceName=druid:prod:overlord
+
+```
+
 ### Overlord Node
 
 Run:
@@ -57,22 +102,6 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/overlord
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.160"]
-
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.discovery.curator.path=/prod/discovery
-
-druid.s3.accessKey=#{ACCESS_KEY}
-druid.s3.secretKey=#{SECRET_KEY}
-
-druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.metadata.storage.connector.user=#{MYSQL_USER}
-druid.metadata.storage.connector.password=#{MYSQL_PW}
-druid.metadata.storage.connector.useValidationQuery=true
-druid.metadata.storage.tables.base=prod
-
 # Only required if you are autoscaling middle managers
 druid.indexer.autoscale.doAutoscale=true
 druid.indexer.autoscale.strategy=ec2
@@ -82,26 +111,15 @@ druid.indexer.autoscale.workerVersion=#{WORKER_VERSION}
 
 # Upload all task logs to deep storage
 druid.indexer.logs.type=s3
-druid.indexer.logs.s3Bucket=#{LOGS_BUCKET}
+druid.indexer.logs.s3Bucket=druid
 druid.indexer.logs.s3Prefix=prod/logs/v1
 
 # Run in remote mode
 druid.indexer.runner.type=remote
-druid.indexer.runner.compressZnodes=true
 druid.indexer.runner.minWorkerVersion=#{WORKER_VERSION}
 
-# Store all task state in MySQL
+# Store all task state in the metadata storage
 druid.indexer.storage.type=metadata
-
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
 ```
 
 ### MiddleManager Node
@@ -139,52 +157,30 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/middlemanager
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.160","io.druid.extensions:druid-kafka-seven:0.6.160"]
-
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.discovery.curator.path=/prod/discovery
-
-druid.s3.accessKey=#{ACCESS_KEY}
-druid.s3.secretKey=#{SECRET_KEY}
-
 # Store task logs in deep storage
 druid.indexer.logs.type=s3
 druid.indexer.logs.s3Bucket=#{LOGS_BUCKET}
 druid.indexer.logs.s3Prefix=prod/logs/v1
 
-# Dedicate more resources to peons
+# Resources for peons
 druid.indexer.runner.javaOpts=-server -Xmx3g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 druid.indexer.task.baseTaskDir=/mnt/persistent/task/
-druid.indexer.task.chathandler.type=announce
 
-druid.indexer.fork.property.druid.indexer.hadoopWorkingPath=/tmp/druid-indexing
-druid.indexer.fork.property.druid.computation.buffer.size=536870912
-druid.indexer.fork.property.druid.processing.numThreads=3
-druid.indexer.fork.property.druid.request.logging.type=file
-druid.indexer.fork.property.druid.request.logging.dir=request_logs/
+# Peon properties
+druid.indexer.fork.property.druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor"]
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes=536870912
+druid.indexer.fork.property.druid.processing.numThreads=2
 druid.indexer.fork.property.druid.segmentCache.locations=[{"path": "/mnt/persistent/zk_druid", "maxSize": 0}]
 druid.indexer.fork.property.druid.server.http.numThreads=50
-druid.indexer.fork.property.druid.storage.type=s3
+druid.indexer.fork.property.druid.storage.archiveBaseKey=prod
+druid.indexer.fork.property.druid.storage.archiveBucket=aws-prod-druid-archive
 druid.indexer.fork.property.druid.storage.baseKey=prod/v1
-druid.indexer.fork.property.druid.storage.bucket=#{LOGS_BUCKET}
+druid.indexer.fork.property.druid.storage.bucket=druid
+druid.indexer.fork.property.druid.storage.type=s3
 
-druid.worker.capacity=10
+druid.worker.capacity=9
 druid.worker.ip=#{IP_ADDR}
 druid.worker.version=#{WORKER_VERSION}
-
-druid.selectors.indexing.serviceName=druid:prod:overlord
-
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
 ```
 
 ### Coordinator Node
@@ -223,29 +219,6 @@ Runtime.properties:
 druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/coordinator
-
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.discovery.curator.path=/prod/discovery
-
-druid.metadata.storage.connector.connectURI=jdbc:mysql://#{MYSQL_URL}:3306/druid
-druid.metadata.storage.connector.user=#{MYSQL_USER}
-druid.metadata.storage.connector.password=#{MYSQL_PW}
-druid.metadata.storage.connector.useValidationQuery=true
-druid.metadata.storage.tables.base=prod
-
-druid.selectors.indexing.serviceName=druid:prod:overlord
-
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor", "com.metamx.metrics.JvmMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
 ```
 
 ### Historical Node
@@ -286,34 +259,18 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/historical
 
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions:0.6.160"]
-
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.s3.accessKey=#{ACCESS_KEY}
-druid.s3.secretKey=#{SECRET_KEY}
-
-druid.server.maxSize=300000000000
-druid.server.http.numThreads=50
+druid.historical.cache.useCache=true
+druid.historical.cache.populateCache=true
 
 druid.processing.buffer.sizeBytes=1073741824
 druid.processing.numThreads=31
 
+druid.server.http.numThreads=50
+druid.server.maxSize=300000000000
+
 druid.segmentCache.locations=[{"path": "/mnt/persistent/zk_druid", "maxSize": 300000000000}]
 
-druid.request.logging.type=file
-druid.request.logging.dir=request_logs/
-
 druid.monitoring.monitors=["io.druid.server.metrics.ServerMonitor", "com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
 ```
 
 ### Broker Node
@@ -327,15 +284,15 @@ io.druid.cli.Main server broker
 Hardware:
 
 ```
-r3.8xlarge (Cores: 32, Memory: 244 GB, SSD)
+r3.8xlarge (Cores: 32, Memory: 244 GB, SSD - this hardware is a bit overkill for the broker but we choose it for simplicity)
 ```
 
 JVM Configuration:
 
 ```
 -server
--Xmx50g
--Xms50g
+-Xmx25g
+-Xms25g
 -XX:NewSize=6g
 -XX:MaxNewSize=6g
 -XX:MaxDirectMemorySize=64g
@@ -358,15 +315,6 @@ druid.host=#{IP_ADDR}:8080
 druid.port=8080
 druid.service=druid/prod/broker
 
-druid.zk.service.host=#{ZK_IPs}
-druid.zk.paths.base=/druid/prod
-
-druid.discovery.curator.path=/prod/discovery
-
-druid.broker.cache.type=memcached
-druid.broker.cache.hosts=#{MC_HOST1}:11211,#{MC_HOST2}:11211,#{MC_HOST3}:11211
-druid.broker.cache.expiration=2147483647
-druid.broker.cache.memcachedPrefix=d1
 druid.broker.http.numConnections=20
 druid.broker.http.readTimeout=PT5M
 
@@ -374,17 +322,4 @@ druid.processing.buffer.sizeBytes=2147483648
 druid.processing.numThreads=31
 
 druid.server.http.numThreads=50
-
-druid.request.logging.type=emitter
-druid.request.logging.feed=druid_requests
-
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
-
-# Emit metrics over http
-druid.emitter=http
-druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
-
-# If you choose to compress ZK announcements, you must do so for every node type
-druid.announcer.type=batch
-druid.curator.compress=true
 ```
