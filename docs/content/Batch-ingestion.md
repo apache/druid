@@ -269,7 +269,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
 ```json
 {
   "type" : "index_hadoop",
-  "schema" : {
+  "spec" : {
     "dataSchema" : {
       "dataSource" : "wikipedia",
       "parser" : {
