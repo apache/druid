@@ -16,48 +16,98 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 ```json
 {
   "type" : "index",
-  "dataSource" : "example",
-  "granularitySpec" : {
-    "type" : "uniform",
-    "gran" : "DAY",
-    "intervals" : [ "2010/2020" ]
-  },
-  "aggregators" : [ {
-     "type" : "count",
-     "name" : "count"
-   }, {
-     "type" : "doubleSum",
-     "name" : "value",
-     "fieldName" : "value"
-  } ],
-  "firehose" : {
-    "type" : "local",
-    "baseDir" : "/tmp/data/json",
-    "filter" : "sample_data.json",
-    "parser" : {
-      "timestampSpec" : {
-        "column" : "timestamp"
+  "spec" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia",
+      "parser" : {
+        "type" : "string",
+        "parseSpec" : {
+          "format" : "json",
+          "timestampSpec" : {
+            "column" : "timestamp",
+            "format" : "auto"
+          },
+          "dimensionsSpec" : {
+            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+            "dimensionExclusions" : [],
+            "spatialDimensions" : []
+          }
+        }
       },
-      "data" : {
-        "format" : "json",
-        "dimensions" : [ "dim1", "dim2", "dim3" ]
+      "metricsSpec" : [
+        {
+          "type" : "count",
+          "name" : "count"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "added",
+          "fieldName" : "added"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "deleted",
+          "fieldName" : "deleted"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "delta",
+          "fieldName" : "delta"
+        }
+      ],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "DAY",
+        "queryGranularity" : "NONE",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
       }
+    },
+    "ioConfig" : {
+      "type" : "index",
+      "firehose" : {
+        "type" : "local",
+        "baseDir" : "examples/indexing/",
+        "filter" : "wikipedia_data.json"
+       }
+    },
+    "tuningConfig" : {
+      "type" : "index",
+      "targetPartitionSize" : -1,
+      "rowFlushBoundary" : 0,
+      "numShards": 2
     }
   }
 }
 ```
 
+#### Task Properties
+
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using the name of the task file and date-time stamp. |no|
-|granularitySpec|Specifies the segment chunks that the task will process. `type` is always "uniform"; `gran` sets the granularity of the chunks ("DAY" means all segments containing timestamps in the same day), while `intervals` sets the interval that the chunks will cover.|yes|
-|spatialDimensions|Dimensions to build spatial indexes over. See [Geographic Queries](GeographicQueries.html).|no|
-|aggregators|The metrics to aggregate in the data set. For more info, see [Aggregations](Aggregations.html).|yes|
-|indexGranularity|The rollup granularity for timestamps. See [Realtime Ingestion](Realtime-ingestion.html) for more information. |no|
-|targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|no|
-|firehose|The input source of data. For more info, see [Firehose](Firehose.html).|yes|
-|rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|no|
+|spec|The ingestion spec. See below for more details. |yes|
+
+#### DataSchema
+
+This field is required.
+
+See [Ingestion](Ingestion.html)
+
+#### IOConfig
+
+This field is required. You can specify a type of [Firehose](Firehose.html) here.
+
+#### TuningConfig
+
+The tuningConfig is optional and default parameters will be used if no tuningConfig is specified. See below for more details.
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|The task type, this should always be "index".|None.||yes|
+|targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|500000|no|
+|numShards|You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
 
 ### Index Hadoop Task
 
@@ -93,66 +143,109 @@ If you are having trouble with any extensions in HadoopIndexTask, it may be the 
 
 ### Realtime Index Task
 
-The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. The grammar for the real-time task is as follows:
+The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. We recommend you use the library [tranquility](https://github.com/metamx/tranquility) to programmatically manage generating real-time index tasks. The grammar for the real-time task is as follows:
 
 ```json
 {
-  "type" : "index_realtime",
+  "type": "index_realtime",
   "id": "example",
   "resource": {
-    "availabilityGroup" : "someGroup",
-    "requiredCapacity" : 1
+    "availabilityGroup": "someGroup",
+    "requiredCapacity": 1
   },
-  "schema": {
-    "dataSource": "dataSourceName",
-    "aggregators": [
-      {
-        "type": "count",
-        "name": "events"
-      },
-      {
-        "type": "doubleSum",
-        "name": "outColumn",
-        "fieldName": "inColumn"
+  "spec": {
+    "dataSchema": {
+      "dataSource": "wikipedia",
+      "parser": {
+        "type": "string",
+        "parseSpec": {
+          "format": "json",
+          "timestampSpec": {
+            "column": "timestamp",
+            "format": "iso"
+          },
+          "dimensionsSpec": {
+            "dimensions": [
+              "page",
+              "language",
+              "user",
+              "unpatrolled",
+              "newPage",
+              "robot",
+              "anonymous",
+              "namespace",
+              "continent",
+              "country",
+              "region",
+              "city"
+            ],
+            "dimensionExclusions": [
+
+            ],
+            "spatialDimensions": [
+
+            ]
+          }
+        },
+        "metricsSpec": [
+          {
+            "type": "count",
+            "name": "count"
+          },
+          {
+            "type": "doubleSum",
+            "name": "added",
+            "fieldName": "added"
+          },
+          {
+            "type": "doubleSum",
+            "name": "deleted",
+            "fieldName": "deleted"
+          },
+          {
+            "type": "doubleSum",
+            "name": "delta",
+            "fieldName": "delta"
+          }
+        ],
+        "granularitySpec": {
+          "type": "uniform",
+          "segmentGranularity": "DAY",
+          "queryGranularity": "NONE"
+        }
       }
-    ],
-    "indexGranularity": "minute",
-    "shardSpec": {
-      "type": "none"
-    }
-  },
-  "firehose": {
-    "type": "kafka-0.7.2",
-    "consumerProps": {
-      "zk.connect": "zk_connect_string",
-      "zk.connectiontimeout.ms": "15000",
-      "zk.sessiontimeout.ms": "15000",
-      "zk.synctime.ms": "5000",
-      "groupid": "consumer-group",
-      "fetch.size": "1048586",
-      "autooffset.reset": "largest",
-      "autocommit.enable": "false"
     },
-    "feed": "your_kafka_topic",
-    "parser": {
-      "timestampSpec": {
-        "column": "timestamp",
-        "format": "iso"
+    "ioConfig": {
+      "type": "realtime",
+      "firehose": {
+        "type": "kafka-0.7.2",
+        "consumerProps": {
+          "zk.connect": "zk_connect_string",
+          "zk.connectiontimeout.ms": "15000",
+          "zk.sessiontimeout.ms": "15000",
+          "zk.synctime.ms": "5000",
+          "groupid": "consumer-group",
+          "fetch.size": "1048586",
+          "autooffset.reset": "largest",
+          "autocommit.enable": "false"
+        },
+        "feed": "your_kafka_topic"
       },
-      "data": {
-        "format": "json"
-      },
-      "dimensionExclusions": [
-        "value"
-      ]
+      "plumber": {
+        "type": "realtime"
+      }
+    },
+    "tuningConfig": {
+      "type": "realtime",
+      "maxRowsInMemory": 500000,
+      "intermediatePersistPeriod": "PT10m",
+      "windowPeriod": "PT10m",
+      "basePersistDirectory": "\/tmp\/realtime\/basePersist",
+      "rejectionPolicy": {
+        "type": "serverTime"
+      }
     }
-  },
-  "fireDepartmentConfig": {
-    "maxRowsInMemory": 500000,
-    "intermediatePersistPeriod": "PT10m"
-  },
-  "windowPeriod": "PT10m",
-  "segmentGranularity": "hour"
+  }
 }
 ```
 

@@ -101,7 +101,7 @@ Open up the file to see the following:
 ```json
 {
   "type" : "index",
-  "schema" : {
+  "spec" : {
     "dataSchema" : {
       "dataSource" : "wikipedia",
       "parser" : {
@@ -260,7 +260,7 @@ Examining the contents of the file, you should find:
   ```json
   {
     "type" : "index_hadoop",
-    "schema" : {
+    "spec" : {
       "dataSchema" : {
         "dataSource" : "wikipedia",
         "parser" : {
