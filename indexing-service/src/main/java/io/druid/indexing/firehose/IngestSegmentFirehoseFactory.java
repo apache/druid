@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -164,12 +165,20 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       List<String> dims;
       if (dimensions != null) {
         dims = dimensions;
+      } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
+        dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensions();
       } else {
         Set<String> dimSet = new HashSet<>();
         for (TimelineObjectHolder<String, DataSegment> timelineObjectHolder : timeLineSegments) {
           dimSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getDimensions());
         }
-        dims = Lists.newArrayList(dimSet);
+        dims = Lists.newArrayList(
+            Sets.difference(
+                dimSet,
+                inputRowParser.getParseSpec().getDimensionsSpec()
+                              .getDimensionExclusions()
+            )
+        );
       }
 
       List<String> metricsList;
