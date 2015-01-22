@@ -49,7 +49,7 @@ It is recommended that you use the Coordinator Console to configure these parame
 http://<COORDINATOR_IP>:<PORT>/coordinator/config
 ```
 
-A sample worker setup spec is shown below:
+A sample coordinator dynamic config JSON object is shown below:
 
 ```json
 {

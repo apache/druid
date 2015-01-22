@@ -52,7 +52,7 @@ h2. Querying
 ** "Granularities":./Granularities.html
 ** "DimensionSpecs":./DimensionSpecs.html
 * Query Types
-** "DataSourceMetadataQuery":./DataSourceMetadataQuery.html
+** "DataSource Metadata":./DataSourceMetadataQuery.html
 ** "GroupBy":./GroupByQuery.html
 *** "LimitSpec":./LimitSpec.html
 *** "Having":./Having.html
