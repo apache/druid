@@ -148,7 +148,9 @@ public class GroupByQueryEngine
     private final BufferAggregator[] aggregators;
     private final PositionMaintainer positionMaintainer;
 
-    private final TreeMap<ByteBuffer, Integer> positions;
+    private final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
+    // GroupBy queries tend to do a lot of reads from this. We co-store a hash map to make those reads go faster.
+    private final Map<ByteBuffer, Integer> positionsHash = Maps.newHashMap();
 
     public RowUpdater(
         ByteBuffer metricValues,
@@ -159,8 +161,6 @@ public class GroupByQueryEngine
       this.metricValues = metricValues;
       this.aggregators = aggregators;
       this.positionMaintainer = positionMaintainer;
-
-      this.positions = Maps.newTreeMap();
     }
 
     public int getNumRows()
@@ -168,7 +168,7 @@ public class GroupByQueryEngine
       return positions.size();
     }
 
-    public TreeMap<ByteBuffer, Integer> getPositions()
+    public Map<ByteBuffer, Integer> getPositions()
     {
       return positions;
     }
@@ -204,7 +204,7 @@ public class GroupByQueryEngine
         return retVal;
       } else {
         key.clear();
-        Integer position = positions.get(key);
+        Integer position = positionsHash.get(key);
         int[] increments = positionMaintainer.getIncrements();
         int thePosition;
 
@@ -219,6 +219,7 @@ public class GroupByQueryEngine
           }
 
           positions.put(keyCopy, position);
+          positionsHash.put(keyCopy, position);
           thePosition = position;
           for (int i = 0; i < aggregators.length; ++i) {
             aggregators[i].init(metricValues, thePosition);
