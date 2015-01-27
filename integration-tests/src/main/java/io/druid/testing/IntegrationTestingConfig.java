@@ -29,5 +29,7 @@ public interface IntegrationTestingConfig
 
   public String getRouterHost();
 
+  public String getBrokerHost();
+
   public String getMiddleManagerHost();
 }

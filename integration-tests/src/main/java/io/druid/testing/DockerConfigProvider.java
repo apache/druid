@@ -58,6 +58,12 @@ public class DockerConfigProvider  implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getBrokerHost()
+      {
+        return dockerIp + ":8082";
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return dockerIp;

@@ -2,12 +2,8 @@
     "type": "index",
     "spec": {
         "dataSchema": {
-            "dataSource": "wikipedia_index_test",
+            "dataSource": "wikipedia_reindex_test",
             "metricsSpec": [
-                {
-                    "type": "count",
-                    "name": "count"
-                },
                 {
                     "type": "doubleSum",
                     "name": "added",
@@ -37,10 +33,7 @@
                         "format": "iso"
                     },
                     "dimensionsSpec": {
-                        "dimensions": [
-                            "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
-                            "namespace", "continent", "country", "region", "city"
-                        ]
+                        "dimensionExclusions" : ["robot", "continent"]
                     }
                 }
             }
@@ -50,8 +43,6 @@
             "firehose": {
                 "type": "ingestSegment",
                 "dataSource": "wikipedia_index_test",
-                "dimensions": ["user", "nonexist"],
-                "metrics": ["added", "added2"],
                 "interval": "2013-08-31/2013-09-01"
             }
         },
