@@ -77,7 +77,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     synchronized (lock) {
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
-      if (workerConfig == null) {
+      if (workerConfig == null || workerConfig.getAutoScaler() == null) {
         log.warn("No workerConfig available, cannot provision new workers.");
         return false;
       }
