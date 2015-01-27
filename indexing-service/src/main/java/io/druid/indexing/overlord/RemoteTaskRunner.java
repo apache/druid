@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -48,6 +49,7 @@ import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
@@ -107,7 +109,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private final PathChildrenCacheFactory pathChildrenCacheFactory;
   private final PathChildrenCache workerPathCache;
   private final HttpClient httpClient;
-  private final WorkerSelectStrategy strategy;
+  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
   // all workers that exist in ZK
   private final ConcurrentMap<String, ZkWorker> zkWorkers = new ConcurrentHashMap<>();
@@ -133,7 +135,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       CuratorFramework cf,
       PathChildrenCacheFactory pathChildrenCacheFactory,
       HttpClient httpClient,
-      WorkerSelectStrategy strategy
+      Supplier<WorkerBehaviorConfig> workerConfigRef
   )
   {
     this.jsonMapper = jsonMapper;
@@ -143,7 +145,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     this.pathChildrenCacheFactory = pathChildrenCacheFactory;
     this.workerPathCache = pathChildrenCacheFactory.make(cf, zkPaths.getIndexerAnnouncementPath());
     this.httpClient = httpClient;
-    this.strategy = strategy;
+    this.workerConfigRef = workerConfigRef;
   }
 
   @LifecycleStart
@@ -529,6 +531,14 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       return true;
     } else {
       // Nothing running this task, announce it in ZK for a worker to run it
+      WorkerBehaviorConfig workerConfig = workerConfigRef.get();
+      WorkerSelectStrategy strategy;
+      if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
+        log.warn("No worker selections strategy set. Using default.");
+        strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
+      } else {
+        strategy = workerConfig.getSelectStrategy();
+      }
       final Optional<ImmutableZkWorker> immutableZkWorker = strategy.findWorkerForTask(
           config,
           ImmutableMap.copyOf(

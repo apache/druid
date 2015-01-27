@@ -40,8 +40,7 @@ import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
-import io.druid.indexing.overlord.setup.WorkerSetupData;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
@@ -59,6 +58,7 @@ import org.junit.Test;
 
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class RemoteTaskRunnerTest
@@ -69,6 +69,7 @@ public class RemoteTaskRunnerTest
   private static final String announcementsPath = String.format("%s/indexer/announcements/worker", basePath);
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
+  private static final int TIMEOUT_SECONDS = 5;
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -285,7 +286,7 @@ public class RemoteTaskRunnerTest
 
     cf.delete().forPath(joiner.join(statusPath, task.getId()));
 
-    TaskStatus status = future.get();
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(status.getStatusCode(), TaskStatus.Status.FAILED);
   }
@@ -338,7 +339,7 @@ public class RemoteTaskRunnerTest
 
     ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
 
-    TaskStatus status = future.get();
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
   }
@@ -356,7 +357,7 @@ public class RemoteTaskRunnerTest
 
     cf.delete().forPath(announcementsPath);
 
-    TaskStatus status = future.get();
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
   }
@@ -407,7 +408,7 @@ public class RemoteTaskRunnerTest
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
-        new FillCapacityWorkerSelectStrategy()
+        DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig()))
     );
 
     remoteTaskRunner.start();
