@@ -142,7 +142,7 @@ public class RealtimeTuningConfig implements TuningConfig
     return versioningPolicy;
   }
 
-  @JsonProperty
+  @JsonProperty("rejectionPolicy")
   public RejectionPolicyFactory getRejectionPolicyFactory()
   {
     return rejectionPolicyFactory;
