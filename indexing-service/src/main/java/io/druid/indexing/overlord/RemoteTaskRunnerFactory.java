@@ -42,7 +42,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
   private final IndexerZkConfig zkPaths;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final WorkerSelectStrategy strategy;
+  private final Supplier<WorkerBehaviorConfig> workerConfigRef;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -51,7 +51,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
       final IndexerZkConfig zkPaths,
       final ObjectMapper jsonMapper,
       @Global final HttpClient httpClient,
-      final Supplier<WorkerBehaviorConfig> workerBehaviourConfigSupplier
+      final Supplier<WorkerBehaviorConfig> workerConfigRef
   )
   {
     this.curator = curator;
@@ -59,17 +59,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
     this.zkPaths = zkPaths;
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
-    if (workerBehaviourConfigSupplier != null) {
-      // Backwards compatibility
-      final WorkerBehaviorConfig workerBehaviorConfig = workerBehaviourConfigSupplier.get();
-      if (workerBehaviorConfig != null) {
-        this.strategy = workerBehaviorConfig.getSelectStrategy();
-      } else {
-        this.strategy = new FillCapacityWorkerSelectStrategy();
-      }
-    } else {
-      this.strategy = new FillCapacityWorkerSelectStrategy();
-    }
+    this.workerConfigRef = workerConfigRef;
   }
 
   @Override
@@ -85,7 +75,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
             .withCompressed(true)
             .build(),
         httpClient,
-        strategy
+        workerConfigRef
     );
   }
 }

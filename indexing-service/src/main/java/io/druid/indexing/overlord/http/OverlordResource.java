@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
-import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -44,7 +43,6 @@ import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import io.druid.indexing.overlord.setup.WorkerSetupData;
 import io.druid.metadata.EntryExistsException;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
@@ -61,7 +59,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -81,9 +78,6 @@ public class OverlordResource
   private final JacksonConfigManager configManager;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
-
-  @Deprecated
-  private AtomicReference<WorkerSetupData> workerSetupDataRef = null;
 
   @Inject
   public OverlordResource(
@@ -194,37 +188,6 @@ public class OverlordResource
     }
 
     log.info("Updating Worker configs: %s", workerBehaviorConfig);
-
-    return Response.ok().build();
-  }
-
-
-  @Deprecated
-  @GET
-  @Path("/worker/setup")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getWorkerSetupData()
-  {
-    if (workerSetupDataRef == null) {
-      workerSetupDataRef = configManager.watch(WorkerSetupData.CONFIG_KEY, WorkerSetupData.class);
-    }
-
-    return Response.ok(workerSetupDataRef.get()).build();
-  }
-
-  @Deprecated
-  @POST
-  @Path("/worker/setup")
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response setWorkerSetupData(
-      final WorkerSetupData workerSetupData
-  )
-  {
-    if (!configManager.set(WorkerSetupData.CONFIG_KEY, workerSetupData)) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
-    }
-
-    log.info("Updating Worker Setup configs: %s", workerSetupData);
 
     return Response.ok().build();
   }

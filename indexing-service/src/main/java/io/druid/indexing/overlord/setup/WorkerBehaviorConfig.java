@@ -22,12 +22,20 @@ package io.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexing.overlord.autoscaling.AutoScaler;
+import io.druid.indexing.overlord.autoscaling.NoopAutoScaler;
 
 /**
  */
 public class WorkerBehaviorConfig
 {
   public static final String CONFIG_KEY = "worker.config";
+  public static WorkerSelectStrategy DEFAULT_STRATEGY = new FillCapacityWorkerSelectStrategy();
+  public static AutoScaler DEFAULT_AUTOSCALER = new NoopAutoScaler();
+
+  public static WorkerBehaviorConfig defaultConfig()
+  {
+    return new WorkerBehaviorConfig(DEFAULT_STRATEGY, DEFAULT_AUTOSCALER);
+  }
 
   private final WorkerSelectStrategy selectStrategy;
   private final AutoScaler autoScaler;
