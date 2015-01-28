@@ -37,6 +37,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.AndDimFilter;
@@ -294,6 +295,46 @@ public class TopNQueryRunnerTest
                                 .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
                                 .put("maxIndex", 1870.06103515625D)
                                 .put("minIndex", 545.9906005859375D)
+                                .build()
+                )
+            )
+        )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+  }
+
+  @Test
+  public void testTopNOverMissingUniques()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(marketDimension)
+        .metric(QueryRunnerTestHelper.uniqueMetric)
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory("uniques", "missingUniques"))
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "total_market")
+                                .put("uniques", 0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("uniques", 0)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "upfront")
+                                .put("uniques", 0)
                                 .build()
                 )
             )
