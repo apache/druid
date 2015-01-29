@@ -20,6 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.auth.AWSSessionCredentials;
+import io.druid.common.aws.FileSessionCredentialsProvider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;

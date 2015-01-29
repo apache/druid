@@ -19,7 +19,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
@@ -27,10 +26,13 @@ import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import io.druid.common.aws.AWSCredentialsConfig;
+import io.druid.common.aws.AWSCredentialsUtils;
+import io.druid.common.aws.ConfigDrivenAwsCredentialsConfigProvider;
+import io.druid.common.aws.LazyFileSessionCredentialsProvider;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -68,80 +70,11 @@ public class S3StorageDruidModule implements DruidModule
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
-  private static class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsProvider 
-  {
-    private AWSCredentialsConfig config;
-
-    public ConfigDrivenAwsCredentialsConfigProvider(AWSCredentialsConfig config) {
-      this.config = config;
-    }
-    
-    @Override
-    public com.amazonaws.auth.AWSCredentials getCredentials() 
-    {
-        if (!Strings.isNullOrEmpty(config.getAccessKey()) && !Strings.isNullOrEmpty(config.getSecretKey())) {
-          return new com.amazonaws.auth.AWSCredentials() {
-            @Override
-            public String getAWSAccessKeyId() {
-              return config.getAccessKey();
-            }
-
-            @Override
-            public String getAWSSecretKey() {
-              return config.getSecretKey();
-            }
-          };
-        }
-        throw new AmazonClientException("Unable to load AWS credentials from druid AWSCredentialsConfig");
-    }
-    
-    @Override
-    public void refresh() {}
-  }
-  
-  private static class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider 
-  {
-    private AWSCredentialsConfig config;
-    private FileSessionCredentialsProvider provider;
-    
-    public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config) {
-      this.config = config;
-    }
-    
-    private FileSessionCredentialsProvider getUnderlyingProvider() {
-      if (provider == null) {
-        synchronized (config) {
-          if (provider == null) {
-            provider = new FileSessionCredentialsProvider(config.getFileSessionCredentials());
-          }
-        }
-      }
-      return provider;
-    }
-    
-    @Override
-    public com.amazonaws.auth.AWSCredentials getCredentials() 
-    {
-      return getUnderlyingProvider().getCredentials();
-    }
-
-    @Override
-    public void refresh() {
-      getUnderlyingProvider().refresh();
-    }
-  }
-  
   @Provides
   @LazySingleton
   public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
-    return new AWSCredentialsProviderChain(
-           new ConfigDrivenAwsCredentialsConfigProvider(config),
-           new LazyFileSessionCredentialsProvider(config),
-           new EnvironmentVariableCredentialsProvider(),
-           new SystemPropertiesCredentialsProvider(),
-           new ProfileCredentialsProvider(),
-           new InstanceProfileCredentialsProvider());
+    return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(config);
   }
 
   @Provides
