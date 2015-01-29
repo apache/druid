@@ -111,6 +111,12 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
       @Override
       public int compare(HyperLogLogCollector lhs, HyperLogLogCollector rhs)
       {
+        if(lhs == null) {
+          return -1;
+        }
+        if(rhs == null) {
+          return 1;
+        }
         return lhs.compareTo(rhs);
       }
     };
