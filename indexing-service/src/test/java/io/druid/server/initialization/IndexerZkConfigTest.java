@@ -20,29 +20,26 @@
 package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import io.druid.curator.CuratorConfig;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
 import io.druid.initialization.Initialization;
-import org.junit.AfterClass;
+import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
@@ -138,7 +135,8 @@ public class IndexerZkConfigTest
   }
 
   @Test
-  public void testNullConfig(){
+  public void testNullConfig()
+  {
     propertyValues.clear();
 
     final Injector injector = Initialization.makeInjectorWithModules(
@@ -187,7 +185,8 @@ public class IndexerZkConfigTest
   }
 
   @Test
-  public void testExactConfig(){
+  public void testExactConfig()
+  {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.<Module>of(simpleZkConfigModule)
@@ -206,9 +205,41 @@ public class IndexerZkConfigTest
 
     ZkPathsConfig zkPathsConfig1 = zkPathsConfig.get().get();
 
-    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1,null,null,null,null,null);
+    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1, null, null, null, null, null);
 
     Assert.assertEquals("indexer", indexerZkConfig.getBase());
     Assert.assertEquals("/druid/metrics/indexer/announcements", indexerZkConfig.getAnnouncementsPath());
+  }
+
+  @Test
+  public void testFullOverride() throws Exception
+  {
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    final ZkPathsConfig zkPathsConfig = new ZkPathsConfig();
+
+    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(
+        zkPathsConfig,
+        "/druid/prod",
+        "/druid/prod/a",
+        "/druid/prod/t",
+        "/druid/prod/s",
+        "/druid/prod/l"
+    );
+
+    Map<String, String> value = mapper.readValue(
+        mapper.writeValueAsString(indexerZkConfig), new TypeReference<Map<String, String>>()
+        {
+        }
+    );
+    IndexerZkConfig newConfig = new IndexerZkConfig(
+        zkPathsConfig,
+        value.get("base"),
+        value.get("announcementsPath"),
+        value.get("tasksPath"),
+        value.get("statusPath"),
+        value.get("leaderLatchPath")
+    );
+
+    Assert.assertEquals(indexerZkConfig, newConfig);
   }
 }

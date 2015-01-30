@@ -52,7 +52,6 @@ import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.tasklogs.TaskLogStreamer;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.curator.framework.CuratorFramework;
@@ -497,7 +496,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     } else {
       final String workerId = worker.getHost();
       log.info("Cleaning up task[%s] on worker[%s]", taskId, workerId);
-      final String statusPath = JOINER.join(indexerZkConfig.getStatus(), workerId, taskId);
+      final String statusPath = JOINER.join(indexerZkConfig.getStatusPath(), workerId, taskId);
       try {
         cf.delete().guaranteed().forPath(statusPath);
       }
@@ -643,7 +642,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     log.info("Worker[%s] reportin' for duty!", worker.getHost());
 
     try {
-      final String workerStatusPath = JOINER.join(indexerZkConfig.getStatus(), worker.getHost());
+      final String workerStatusPath = JOINER.join(indexerZkConfig.getStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = pathChildrenCacheFactory.make(cf, workerStatusPath);
       final SettableFuture<ZkWorker> retVal = SettableFuture.create();
       final ZkWorker zkWorker = new ZkWorker(

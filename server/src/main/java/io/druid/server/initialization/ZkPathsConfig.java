@@ -120,4 +120,18 @@ public class ZkPathsConfig
     }
     return false;
   }
+
+  @Override
+  public int hashCode()
+  {
+    int result = base != null ? base.hashCode() : 0;
+    result = 31 * result + (propertiesPath != null ? propertiesPath.hashCode() : 0);
+    result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
+    result = 31 * result + (servedSegmentsPath != null ? servedSegmentsPath.hashCode() : 0);
+    result = 31 * result + (liveSegmentsPath != null ? liveSegmentsPath.hashCode() : 0);
+    result = 31 * result + (coordinatorPath != null ? coordinatorPath.hashCode() : 0);
+    result = 31 * result + (loadQueuePath != null ? loadQueuePath.hashCode() : 0);
+    result = 31 * result + (connectorPath != null ? connectorPath.hashCode() : 0);
+    return result;
+  }
 }

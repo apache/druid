@@ -78,7 +78,7 @@ public class WorkerCuratorCoordinator
 
     this.baseAnnouncementsPath = getPath(Arrays.asList(indexerZkConfig.getAnnouncementsPath(), worker.getHost()));
     this.baseTaskPath = getPath(Arrays.asList(indexerZkConfig.getTasksPath(), worker.getHost()));
-    this.baseStatusPath = getPath(Arrays.asList(indexerZkConfig.getStatus(), worker.getHost()));
+    this.baseStatusPath = getPath(Arrays.asList(indexerZkConfig.getStatusPath(), worker.getHost()));
   }
 
   @LifecycleStart
