@@ -35,7 +35,7 @@ public class IndexerZkConfig
       @JsonProperty("base") String base,
       @JsonProperty("announcementsPath") String announcementsPath,
       @JsonProperty("tasksPath") String tasksPath,
-      @JsonProperty("status") String status,
+      @JsonProperty("statusPath") String statusPath,
       @JsonProperty("leaderLatchPath") String leaderLatchPath
   )
   {
@@ -43,7 +43,7 @@ public class IndexerZkConfig
     this.base = base;
     this.announcementsPath = announcementsPath;
     this.tasksPath = tasksPath;
-    this.status = status;
+    this.statusPath = statusPath;
     this.leaderLatchPath = leaderLatchPath;
   }
 
@@ -60,7 +60,7 @@ public class IndexerZkConfig
   private final String tasksPath;
 
   @JsonProperty
-  private final String status;
+  private final String statusPath;
 
   @JsonProperty
   private final String leaderLatchPath;
@@ -85,9 +85,9 @@ public class IndexerZkConfig
     return tasksPath == null ? defaultIndexerPath("tasks") : tasksPath;
   }
 
-  public String getStatus()
+  public String getStatusPath()
   {
-    return status == null ? defaultIndexerPath("status") : status;
+    return statusPath == null ? defaultIndexerPath("status") : statusPath;
   }
 
   public String getLeaderLatchPath()
@@ -98,5 +98,53 @@ public class IndexerZkConfig
   public ZkPathsConfig getZkPathsConfig()
   {
     return zkPathsConfig;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    IndexerZkConfig that = (IndexerZkConfig) o;
+
+    if (announcementsPath != null
+        ? !announcementsPath.equals(that.announcementsPath)
+        : that.announcementsPath != null) {
+      return false;
+    }
+    if (base != null ? !base.equals(that.base) : that.base != null) {
+      return false;
+    }
+    if (leaderLatchPath != null ? !leaderLatchPath.equals(that.leaderLatchPath) : that.leaderLatchPath != null) {
+      return false;
+    }
+    if (statusPath != null ? !statusPath.equals(that.statusPath) : that.statusPath != null) {
+      return false;
+    }
+    if (tasksPath != null ? !tasksPath.equals(that.tasksPath) : that.tasksPath != null) {
+      return false;
+    }
+    if (zkPathsConfig != null ? !zkPathsConfig.equals(that.zkPathsConfig) : that.zkPathsConfig != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = zkPathsConfig != null ? zkPathsConfig.hashCode() : 0;
+    result = 31 * result + (base != null ? base.hashCode() : 0);
+    result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
+    result = 31 * result + (tasksPath != null ? tasksPath.hashCode() : 0);
+    result = 31 * result + (statusPath != null ? statusPath.hashCode() : 0);
+    result = 31 * result + (leaderLatchPath != null ? leaderLatchPath.hashCode() : 0);
+    return result;
   }
 }
