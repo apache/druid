@@ -55,6 +55,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DruidClusterBridgeTest
 {
+
+  public static final int WAIT_MAX_RETRY = 100;
+  public static final int WAIT_SLEEP_MILLIS = 200;
+
   @Test
   public void testRun() throws Exception
   {
@@ -193,33 +197,33 @@ public class DruidClusterBridgeTest
 
     int retry = 0;
     while (!bridge.isLeader()) {
-      if (retry > 5) {
+      if (retry > WAIT_MAX_RETRY) {
         throw new ISE("Unable to become leader");
       }
 
-      Thread.sleep(100);
+      Thread.sleep(WAIT_SLEEP_MILLIS);
       retry++;
     }
 
     String path = "/druid/announcements/localhost:8080";
     retry = 0;
     while (remoteCf.checkExists().forPath(path) == null) {
-      if (retry > 5) {
+      if (retry > WAIT_MAX_RETRY) {
         throw new ISE("Unable to announce");
       }
 
-      Thread.sleep(100);
+      Thread.sleep(WAIT_SLEEP_MILLIS);
       retry++;
     }
 
     boolean verified = verifyUpdate(jsonMapper, path, remoteCf);
     retry = 0;
     while (!verified) {
-      if (retry > 5) {
+      if (retry > WAIT_MAX_RETRY) {
         throw new ISE("No updates to bridge node occurred");
       }
 
-      Thread.sleep(100);
+      Thread.sleep(WAIT_SLEEP_MILLIS);
       retry++;
 
       verified = verifyUpdate(jsonMapper, path, remoteCf);
