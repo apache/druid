@@ -121,6 +121,14 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/leader")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLeader()
+  {
+    return Response.ok(taskMaster.getLeader()).build();
+  }
+
+  @GET
   @Path("/task/{taskid}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getTaskPayload(@PathParam("taskid") String taskid)
