@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
-import com.google.common.io.InputSupplier;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
@@ -61,7 +60,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +122,14 @@ public class OverlordResource
           }
         }
     );
+  }
+
+  @GET
+  @Path("/leader")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLeader()
+  {
+    return Response.ok(taskMaster.getLeader()).build();
   }
 
   @GET
