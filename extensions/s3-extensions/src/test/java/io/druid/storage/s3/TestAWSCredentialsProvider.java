@@ -22,6 +22,7 @@ package io.druid.storage.s3;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
+import io.druid.common.aws.AWSCredentialsConfig;
 import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;

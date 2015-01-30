@@ -20,13 +20,14 @@
 package io.druid.guice;
 
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.druid.common.aws.AWSCredentialsConfig;
+import io.druid.common.aws.AWSCredentialsUtils;
 
 /**
  */
@@ -40,35 +41,15 @@ public class AWSModule implements Module
 
   @Provides
   @LazySingleton
-  public AWSCredentials getAWSCredentials(AWSCredentialsConfig config)
+  public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
-    return new BasicAWSCredentials(config.getAccessKey(), config.getSecretKey());
+    return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(config);
   }
 
   @Provides
   @LazySingleton
-  public AmazonEC2 getEc2Client(AWSCredentials credentials)
+  public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
   {
     return new AmazonEC2Client(credentials);
   }
-
-  public static class AWSCredentialsConfig
-  {
-    @JsonProperty
-    private String accessKey = "";
-
-    @JsonProperty
-    private String secretKey = "";
-
-    public String getAccessKey()
-    {
-      return accessKey;
-    }
-
-    public String getSecretKey()
-    {
-      return secretKey;
-    }
-  }
-
 }
