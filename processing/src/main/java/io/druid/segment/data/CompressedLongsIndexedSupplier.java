@@ -216,6 +216,8 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 
   private class CompressedIndexedLongs implements IndexedLongs
   {
+    final Indexed<ResourceHolder<LongBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
+
     int currIndex = -1;
     ResourceHolder<LongBuffer> holder;
     LongBuffer buffer;
@@ -273,7 +275,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     protected void loadBuffer(int bufferNum)
     {
       CloseQuietly.close(holder);
-      holder = baseLongBuffers.get(bufferNum);
+      holder = singleThreadedLongBuffers.get(bufferNum);
       buffer = holder.get();
       currIndex = bufferNum;
     }
@@ -296,7 +298,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       return "CompressedLongsIndexedSupplier_Anonymous{" +
              "currIndex=" + currIndex +
              ", sizePer=" + sizePer +
-             ", numChunks=" + baseLongBuffers.size() +
+             ", numChunks=" + singleThreadedLongBuffers.size() +
              ", totalSize=" + totalSize +
              '}';
     }

@@ -17,7 +17,7 @@
 
 package io.druid.segment.column;
 
-import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -30,17 +30,17 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
 {
   private final VSizeIndexedInts column;
   private final VSizeIndexed multiValueColumn;
-  private final GenericIndexed<String> lookups;
+  private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
       VSizeIndexedInts singleValueColumn,
       VSizeIndexed multiValueColumn,
-      GenericIndexed<String> lookups
+      CachingIndexed<String> cachedLookups
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
-    this.lookups = lookups;
+    this.cachedLookups = cachedLookups;
   }
 
   @Override
@@ -70,24 +70,24 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
   @Override
   public String lookupName(int id)
   {
-    return lookups.get(id);
+    return cachedLookups.get(id);
   }
 
   @Override
   public int lookupId(String name)
   {
-    return lookups.indexOf(name);
+    return cachedLookups.indexOf(name);
   }
 
   @Override
   public int getCardinality()
   {
-    return lookups.size();
+    return cachedLookups.size();
   }
 
   @Override
   public void close() throws IOException
   {
-    lookups.close();
+    cachedLookups.close();
   }
 }

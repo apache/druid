@@ -20,6 +20,7 @@ package io.druid.segment.serde;
 import com.google.common.base.Supplier;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
+import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -52,7 +53,7 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
     return new SimpleDictionaryEncodedColumn(
         singleValuedColumn,
         multiValuedColumn,
-        lookupCacheSize > 0 ? dictionary.withCache(lookupCacheSize) : dictionary
+        new CachingIndexed<>(dictionary, lookupCacheSize)
     );
   }
 }
