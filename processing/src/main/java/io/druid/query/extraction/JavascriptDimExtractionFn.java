@@ -20,6 +20,9 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
+import com.metamx.common.StringUtils;
+import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -89,7 +92,8 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   @Override
   public String apply(String dimValue)
   {
-    return fn.apply(dimValue);
+    String retVal = fn.apply(dimValue);
+    return Strings.isNullOrEmpty(retVal) ? null : retVal;
   }
 
   @Override

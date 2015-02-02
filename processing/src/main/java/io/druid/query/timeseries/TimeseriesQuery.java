@@ -101,6 +101,11 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return postAggregatorSpecs;
   }
 
+  public boolean isSkipEmptyBuckets()
+  {
+    return Boolean.parseBoolean(getContextValue("skipEmptyBuckets", "false"));
+  }
+
   public TimeseriesQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return new TimeseriesQuery(

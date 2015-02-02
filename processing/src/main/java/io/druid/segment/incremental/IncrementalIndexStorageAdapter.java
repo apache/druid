@@ -20,6 +20,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.Bound;
@@ -35,6 +36,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
@@ -59,6 +61,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
   private static final Splitter SPLITTER = Splitter.on(",");
+  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
+
   private final IncrementalIndex index;
 
   public IncrementalIndexStorageAdapter(
@@ -272,7 +276,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               {
                 final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimension);
                 if (dimValLookup == null) {
-                  return null;
+                  return NULL_DIMENSION_SELECTOR;
                 }
 
                 final int maxId = dimValLookup.size();
@@ -447,18 +451,24 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     @Override
                     public Object get()
                     {
-                      final String[][] dims = currEntry.getKey().getDims();
+                      IncrementalIndex.TimeAndDims key = currEntry.getKey();
+                      if (key == null) {
+                        return null;
+                      }
+
+                      String[][] dims = key.getDims();
                       if (dimensionIndex >= dims.length) {
                         return null;
                       }
+
                       final String[] dimVals = dims[dimensionIndex];
+                      if (dimVals == null || dimVals.length == 0) {
+                        return null;
+                      }
                       if (dimVals.length == 1) {
                         return dimVals[0];
-                      } else if (dimVals.length == 0) {
-                        return null;
-                      } else {
-                        return dimVals;
                       }
+                      return dimVals;
                     }
                   };
                 }
@@ -490,7 +500,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     public void set(Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry)
     {
       this.currEntry = currEntry;
-      this.currEntry = currEntry;
     }
 
     public IncrementalIndex.TimeAndDims getKey()
@@ -520,7 +529,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       Integer dimIndexObject = index.getDimensionIndex(dimension);
       if (dimIndexObject == null) {
-        return new BooleanValueMatcher(false);
+        return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
       }
       final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
       if (!dimDim.contains(value)) {
