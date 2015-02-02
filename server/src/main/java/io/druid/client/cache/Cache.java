@@ -19,7 +19,6 @@
 
 package io.druid.client.cache;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.metamx.common.StringUtils;

@@ -29,7 +29,6 @@ import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;

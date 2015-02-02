@@ -22,8 +22,6 @@ package io.druid.timeline;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
-import java.util.List;
-
 
 public interface TimelineLookup<VersionType, ObjectType>
 {

@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;

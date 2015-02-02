@@ -30,7 +30,6 @@ import com.metamx.common.guava.Yielders;
 import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingAccumulators;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.PriorityQueue;
 

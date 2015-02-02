@@ -20,8 +20,6 @@
 package io.druid.query.aggregation;
 
 import io.druid.query.filter.ValueMatcher;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 

@@ -40,7 +40,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.segment.IncrementalIndexSegment;
-import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.LogicalSegment;

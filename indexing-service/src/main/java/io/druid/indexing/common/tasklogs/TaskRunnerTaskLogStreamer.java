@@ -21,14 +21,12 @@ package io.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.tasklogs.TaskLogStreamer;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
 */

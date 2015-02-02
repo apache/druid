@@ -32,7 +32,6 @@ import io.druid.query.Result;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 

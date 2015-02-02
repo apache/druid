@@ -24,7 +24,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import io.druid.guice.ConfigProvider;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import org.apache.curator.framework.CuratorFramework;

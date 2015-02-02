@@ -21,7 +21,6 @@ package io.druid.guice;;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.guava.CloseQuietly;

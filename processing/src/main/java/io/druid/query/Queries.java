@@ -26,7 +26,6 @@ import com.google.common.collect.Sets;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 

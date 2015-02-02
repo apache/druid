@@ -22,7 +22,6 @@ package io.druid.indexing.common.tasklogs;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.config.FileTaskLogsConfig;

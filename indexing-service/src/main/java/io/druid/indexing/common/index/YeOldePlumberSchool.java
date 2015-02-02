@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.Granularity;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;

@@ -29,16 +29,11 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.metamx.common.logger.Logger;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.data.input.impl.TimestampSpec;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
 
 import static com.google.protobuf.DescriptorProtos.FileDescriptorSet;

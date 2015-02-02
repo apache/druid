@@ -39,7 +39,6 @@ import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
 import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;

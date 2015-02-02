@@ -33,7 +33,6 @@ import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**

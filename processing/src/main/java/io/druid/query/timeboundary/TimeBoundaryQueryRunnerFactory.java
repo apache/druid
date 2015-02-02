@@ -35,7 +35,6 @@ import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 

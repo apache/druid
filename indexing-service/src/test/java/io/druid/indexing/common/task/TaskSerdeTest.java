@@ -42,7 +42,6 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
-import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;

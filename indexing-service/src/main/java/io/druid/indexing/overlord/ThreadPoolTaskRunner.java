@@ -48,10 +48,8 @@ import io.druid.query.UnionQueryRunner;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;

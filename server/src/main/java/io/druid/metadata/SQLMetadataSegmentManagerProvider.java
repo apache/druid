@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
-import org.skife.jdbi.v2.IDBI;
 
 
 public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManagerProvider

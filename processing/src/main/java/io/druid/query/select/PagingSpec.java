@@ -21,7 +21,6 @@ package io.druid.query.select;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.primitives.Ints;
 import com.metamx.common.StringUtils;
 

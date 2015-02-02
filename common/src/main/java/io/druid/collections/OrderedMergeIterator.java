@@ -25,7 +25,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.metamx.common.guava.FunctionalIterator;
 
-import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;

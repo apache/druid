@@ -22,7 +22,6 @@ package io.druid.storage.s3;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;

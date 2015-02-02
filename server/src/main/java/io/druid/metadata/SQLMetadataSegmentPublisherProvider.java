@@ -21,8 +21,6 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.segment.realtime.SegmentPublisher;
-import org.skife.jdbi.v2.IDBI;
 
 import javax.validation.constraints.NotNull;
 

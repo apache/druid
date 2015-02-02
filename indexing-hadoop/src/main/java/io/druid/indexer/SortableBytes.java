@@ -19,7 +19,6 @@
 
 package io.druid.indexer;
 
-import com.google.common.base.Charsets;
 import com.metamx.common.StringUtils;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;

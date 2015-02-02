@@ -23,7 +23,6 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.timeline.TimelineLookup;
-import io.druid.timeline.VersionedIntervalTimeline;
 
 /**
  */

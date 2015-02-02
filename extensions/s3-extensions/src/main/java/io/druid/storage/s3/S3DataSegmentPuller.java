@@ -33,7 +33,6 @@ import io.druid.utils.CompressionUtils;
 import org.apache.commons.io.FileUtils;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 
 import java.io.File;

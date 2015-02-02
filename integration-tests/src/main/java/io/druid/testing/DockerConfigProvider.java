@@ -21,11 +21,8 @@ package io.druid.testing;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import org.apache.commons.io.IOUtils;
 
 import javax.validation.constraints.NotNull;
-import java.util.List;
 
 public class DockerConfigProvider  implements IntegrationTestingConfigProvider
 {

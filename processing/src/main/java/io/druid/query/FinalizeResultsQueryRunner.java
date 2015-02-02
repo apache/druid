@@ -28,8 +28,6 @@ import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
 
 /**

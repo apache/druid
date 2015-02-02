@@ -27,7 +27,6 @@ import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.RetryQueryRunner;
 import io.druid.query.TableDataSource;
 import org.joda.time.DateTime;
 import org.junit.Assert;

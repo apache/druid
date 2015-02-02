@@ -21,21 +21,13 @@ package io.druid.examples.rabbitmq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.rabbitmq.client.ConnectionFactory;
-import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.data.input.impl.TimestampSpec;
 import io.druid.firehose.rabbitmq.JacksonifiedConnectionFactory;
 import io.druid.firehose.rabbitmq.RabbitMQFirehoseConfig;
 import io.druid.firehose.rabbitmq.RabbitMQFirehoseFactory;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 /**
  */

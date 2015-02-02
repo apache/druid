@@ -34,7 +34,6 @@ import io.druid.query.Result;
 import io.druid.segment.Segment;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 

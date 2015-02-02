@@ -22,10 +22,8 @@ package io.druid.segment.data;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
-import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.io.OutputStream;

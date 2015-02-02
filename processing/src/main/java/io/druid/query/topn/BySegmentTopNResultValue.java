@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import io.druid.query.BySegmentResultValue;
-import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Result;
 import org.joda.time.Interval;
 

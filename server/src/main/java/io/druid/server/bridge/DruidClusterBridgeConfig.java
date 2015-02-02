@@ -20,9 +20,6 @@
 package io.druid.server.bridge;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Inject;
-import io.druid.client.DruidServer;
-import io.druid.client.DruidServerConfig;
 import org.joda.time.Duration;
 
 /**

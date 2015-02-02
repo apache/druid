@@ -27,7 +27,6 @@ import com.google.inject.Provides;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.core.LoggingEmitterConfig;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.guice.ConfigProvider;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;

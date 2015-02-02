@@ -20,7 +20,6 @@
 package io.druid.segment.filter;
 
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import io.druid.query.aggregation.Aggregators;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;

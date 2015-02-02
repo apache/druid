@@ -22,7 +22,6 @@ package io.druid.query.metadata;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.LegacyDataSource;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;

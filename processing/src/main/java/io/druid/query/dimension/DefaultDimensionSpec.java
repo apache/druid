@@ -21,7 +21,6 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.DimExtractionFn;
 

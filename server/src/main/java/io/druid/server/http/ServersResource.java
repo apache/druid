@@ -29,7 +29,6 @@ import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;

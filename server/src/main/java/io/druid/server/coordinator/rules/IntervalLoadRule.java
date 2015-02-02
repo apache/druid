@@ -21,7 +21,6 @@ package io.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;

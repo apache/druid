@@ -20,7 +20,6 @@
 package io.druid.server.coordinator.rules;
 
 import com.google.common.collect.ImmutableMap;
-import io.druid.client.DruidServer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;

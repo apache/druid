@@ -24,7 +24,6 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.common.guava.CombiningSequence;
 
-import java.util.List;
 import java.util.Map;
 
 /**

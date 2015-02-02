@@ -20,14 +20,12 @@
 package io.druid.segment;
 
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.VSizeIndexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.joda.time.Interval;
 
 import java.io.IOException;

@@ -23,7 +23,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
 import com.ning.compress.BufferRecycler;
-import com.ning.compress.lzf.ChunkEncoder;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import io.druid.collections.ResourceHolder;

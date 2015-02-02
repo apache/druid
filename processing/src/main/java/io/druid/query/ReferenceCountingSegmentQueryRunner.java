@@ -25,7 +25,6 @@ import com.metamx.common.guava.Sequence;
 import io.druid.segment.ReferenceCountingSegment;
 
 import java.io.Closeable;
-import java.util.List;
 import java.util.Map;
 
 /**

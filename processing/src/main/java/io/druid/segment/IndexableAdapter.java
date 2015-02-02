@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
