@@ -19,7 +19,6 @@ package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.metamx.common.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;

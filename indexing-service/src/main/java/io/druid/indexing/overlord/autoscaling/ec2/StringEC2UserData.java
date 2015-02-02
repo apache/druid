@@ -19,7 +19,6 @@ package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.metamx.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 

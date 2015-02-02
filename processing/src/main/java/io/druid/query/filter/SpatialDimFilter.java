@@ -18,7 +18,6 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.StringUtils;

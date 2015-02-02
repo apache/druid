@@ -19,7 +19,6 @@ package io.druid.query;
 
 import com.metamx.common.guava.Sequence;
 
-import java.util.List;
 import java.util.Map;
 
 /**

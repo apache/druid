@@ -18,8 +18,6 @@
 package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.common.Granularity;
-import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
@@ -34,9 +32,7 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
-import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
-import org.joda.time.Period;
 import org.junit.Test;
 
 import java.io.File;

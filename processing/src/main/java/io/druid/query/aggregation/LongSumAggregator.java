@@ -18,7 +18,6 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.util.Comparator;

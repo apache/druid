@@ -18,7 +18,6 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.query.Query;
 
 import javax.validation.constraints.Min;

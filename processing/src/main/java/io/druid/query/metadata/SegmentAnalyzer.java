@@ -17,7 +17,6 @@
 
 package io.druid.query.metadata;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;

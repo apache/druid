@@ -27,10 +27,6 @@ import io.druid.indexing.worker.Worker;
 import junit.framework.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-
-import static org.junit.Assert.*;
-
 public class EqualDistributionWorkerSelectStrategyTest
 {
 

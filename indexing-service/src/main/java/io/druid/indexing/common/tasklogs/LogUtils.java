@@ -17,8 +17,6 @@
 
 package io.druid.indexing.common.tasklogs;
 
-import com.google.common.io.ByteSource;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

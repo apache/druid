@@ -18,7 +18,6 @@
 package io.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.primitives.Bytes;
 import com.metamx.common.StringUtils;
 import io.druid.data.input.Row;
