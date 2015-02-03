@@ -101,9 +101,14 @@ public class CostBalancerStrategyTest
    */
   private DataSegment getSegment(int index)
   {
+    return getSegment(index, "DUMMY", day);
+  }
+
+  private DataSegment getSegment(int index, String dataSource, Interval interval)
+  {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        "DUMMY", day, String.valueOf(index), Maps.<String, Object>newConcurrentMap(),
+        dataSource, interval, String.valueOf(index), Maps.<String, Object>newConcurrentMap(),
         Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, index * 100L
     );
     return segment;
@@ -135,7 +140,8 @@ public class CostBalancerStrategyTest
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
   }
 
-  @Test @Ignore
+  @Test
+  @Ignore
   public void testBenchmark() throws InterruptedException
   {
     setupDummyCluster(100, 500);
@@ -156,4 +162,32 @@ public class CostBalancerStrategyTest
     System.err.println("Latency - Single Threaded (ms): " + latencySingleThread);
     System.err.println("Latency - Multi Threaded (ms): " + latencyMultiThread);
   }
+
+  @Test
+  public void testComputeJointSegmentCost()
+  {
+    DateTime referenceTime = new DateTime("2014-01-01T00:00:00");
+    CostBalancerStrategy strategy = new CostBalancerStrategy(referenceTime, 4);
+    double segmentCost = strategy.computeJointSegmentCosts(
+        getSegment(
+            100,
+            "DUMMY",
+            new Interval(
+                referenceTime,
+                referenceTime.plusHours(1)
+            )
+        ),
+        getSegment(
+            101,
+            "DUMMY",
+            new Interval(
+                referenceTime.minusDays(2),
+                referenceTime.minusDays(2).plusHours(1)
+            )
+        )
+    );
+    Assert.assertEquals(138028.62811791385d, segmentCost, 0);
+
+  }
+
 }
