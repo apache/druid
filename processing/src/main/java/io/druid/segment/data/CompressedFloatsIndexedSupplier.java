@@ -231,6 +231,8 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
 
   private class CompressedIndexedFloats implements IndexedFloats
   {
+    final Indexed<ResourceHolder<FloatBuffer>> singleThreadedFloatBuffers = baseFloatBuffers.singleThreaded();
+
     int currIndex = -1;
     ResourceHolder<FloatBuffer> holder;
     FloatBuffer buffer;
@@ -288,7 +290,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     protected void loadBuffer(int bufferNum)
     {
       CloseQuietly.close(holder);
-      holder = baseFloatBuffers.get(bufferNum);
+      holder = singleThreadedFloatBuffers.get(bufferNum);
       buffer = holder.get();
       currIndex = bufferNum;
     }
@@ -299,7 +301,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
       return "CompressedFloatsIndexedSupplier_Anonymous{" +
              "currIndex=" + currIndex +
              ", sizePer=" + sizePer +
-             ", numChunks=" + baseFloatBuffers.size() +
+             ", numChunks=" + singleThreadedFloatBuffers.size() +
              ", totalSize=" + totalSize +
              '}';
     }
