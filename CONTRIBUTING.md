@@ -1,92 +1,113 @@
 # How to Contribute
 
+When submitting a pull request (PR), please use the following guidelines:
+
+- Try to keep pull requests short and submit separate ones for unrelated
+  features, but feel free to combine simple bugfixes/tests into one pull request.
+- Keep the number of commits small and combine commits for related changes.
+  Each commit should compile on its own and ideally pass tests.
+- If you are introducing a new feature you may want to first submit your idea
+  of feedback in the [mailing list](mailto:druid-development@googlegroups.com).
+- Bugfixes should include a unit-test or integration test reproducing the issue.
+- Non-trivial features should include unit-test covering the new functionality.
+- Make sure your code respects existing formatting conventions. We don't have a
+  formal style guide yet, but use your own judgement. If you are using
+  IntelliJ, you can use import our code style settings jar
+  [intellij_formatting.jar](https://github.com/druid-io/druid/raw/master/intellij_formatting.jar).
+- Keep formatting changes in separate commits to make code reviews easier and
+  distinguish them from actual code changes.
+
 ## GitHub Workflow
 
 1. Fork the druid-io/druid repository into your GitHub account
 
-https://github.com/druid-io/druid
+  https://github.com/druid-io/druid/fork
 
-2. Clone your fork of the GitHub repository
+1. Clone your fork of the GitHub repository
 
-```sh
-git clone git@github.com:<ghuser>/druid.git
-```
+  ```sh
+  git clone git@github.com:<username>/druid.git
+  ```
 
-Add a remote to keep up with upstream changes
+  replace `<username>` with your GitHub username.
 
-```
-git remote add upstream https://github.com/druid-io/druid.git
-```
+1. Add a remote to keep up with upstream changes
 
-If you already have a copy, fetch upstream changes
+  ```
+  git remote add upstream https://github.com/druid-io/druid.git
+  ```
 
-```
-git fetch upstream
-```
+  If you already have a copy, fetch upstream changes
 
-3. Create a feature branch to work in
+  ```
+  git fetch upstream
+  ```
 
-```
-git checkout -b feature-xxx remotes/upstream/master
-```
+1. Create a feature branch to work in
 
-4. Work in your feature branch
+  ```
+  git checkout -b feature-xxx remotes/upstream/master
+  ```
 
-```
-git commit -a
-```
+1. Work in your feature branch
 
-5. Periodically rebase your changes
+  ```
+  git commit -a
+  ```
 
-```
-git pull --rebase
-```
+1. Periodically rebase your changes
 
-6. When done, "squash" your commits
+  ```
+  git pull --rebase
+  ```
 
-```
-git rebase -i upstream/master
-```
+1. When done, combine ("squash") related commits into a single one
 
-Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
+  ```
+  git rebase -i upstream/master
+  ```
 
-7. Submit a pull-request
+  This will open your editor and allow you to re-order commits and merge them:
+  - Re-order the lines to change commit order (to the extent possible without creating conflicts)
+  - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
 
-```
-git push origin feature-xxx
-```
+1. Submit a pull-request
 
-Go to your Druid fork main page
+  ```
+  git push origin feature-xxx
+  ```
 
-https://github.com/<ghuser>/druid
+  Go to your Druid fork main page
 
-If you recently pushed your changes GitHub will automatically pop up a
-`Compare & pull request` button for any branches you recently pushed to. If you
-click that button it will automatically offer you to submit your pull-request
-to the druid-io/druid repository.
+  https://github.com/<username>/druid
 
-- Give your pull-request a meaningful title.
-- In the description, explain your changes and the problem they are solving.
+  If you recently pushed your changes GitHub will automatically pop up a
+  `Compare & pull request` button for any branches you recently pushed to. If you
+  click that button it will automatically offer you to submit your pull-request
+  to the druid-io/druid repository.
 
-8. Addressing code review comments
+  - Give your pull-request a meaningful title.
+  - In the description, explain your changes and the problem they are solving.
 
-Repeat steps 4. through 6. to address any code review comments and
-rebase your changes if necessary.
+1. Addressing code review comments
 
-Push your updated changes to update the pull request
+  Repeat steps 4. through 6. to address any code review comments and
+  rebase your changes if necessary.
 
-```
-git push origin [--force] feature-xxx
-```
+  Push your updated changes to update the pull request
 
-`--force` may be necessary to overwrite your existing pull request in case your
-commit history was changed when performing the rebase.
+  ```
+  git push origin [--force] feature-xxx
+  ```
 
-Note: Be careful when using `--force` since you may lose data if you are not careful.
+  `--force` may be necessary to overwrite your existing pull request in case your
+  commit history was changed when performing the rebase.
 
-```
-git push origin --force feature-xxx
-```
+  Note: Be careful when using `--force` since you may lose data if you are not careful.
+
+  ```
+  git push origin --force feature-xxx
+  ```
 
 
 # FAQ
@@ -95,27 +116,27 @@ git push origin --force feature-xxx
 
 Never fear, if you occasionally merged upgstream/master, here is another way to squash your changes into a single commit
 
-Rename your existing branch first
+1. First, rename your existing branch to something else, e.g. `feature-xxx-unclean`
 
-```
-git branch -m feature-xxx-unclean
-```
+  ```
+  git branch -m feature-xxx-unclean
+  ```
 
-Checkout a new branch with the original name `feature-xxx` from upstream. This branch will supercede our old one.
+1. Checkout a new branch with the original name `feature-xxx` from upstream. This branch will supercede our old one.
 
-```
-git checkout -b feature-xxx upstream/master
-```
+  ```
+  git checkout -b feature-xxx upstream/master
+  ```
 
-Then merge your changes in your original feature branch `feature-xxx-unclean` and create a single commit.
+1. Then merge your changes in your original feature branch `feature-xxx-unclean` and create a single commit.
 
-```
-git merge --squash feature-xxx-unclean
-git commit
-```
+  ```
+  git merge --squash feature-xxx-unclean
+  git commit
+  ```
 
-You can now submit this new branch and create or replace your existing pull request
+1. You can now submit this new branch and create or replace your existing pull request
 
-```
-git push origin [--force] feature-xxx:feature-xxx
-```
+  ```
+  git push origin [--force] feature-xxx:feature-xxx
+  ```
