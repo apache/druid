@@ -35,9 +35,9 @@ import java.util.concurrent.Executors;
 public class CostBalancerStrategy implements BalancerStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(CostBalancerStrategy.class);
-  private static final int DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
-  private static final int SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
-  private static final int THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
+  private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
+  private static final long SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
+  private static final long THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final long referenceTimestamp;
   private final int threadCount;
 
