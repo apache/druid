@@ -25,41 +25,14 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |`druid.extensions.coordinates`|The list of extensions to include.|[]|
 
 ### Zookeeper
-
-Druid uses [Curator](http://curator.incubator.apache.org/) for all [Zookeeper](http://zookeeper.apache.org/) interactions.
+We recommend just setting the base ZK path and the ZK service host, but all ZK paths that Druid uses can be overwritten to absolute paths.
 
 |Property|Description|Default|
 |--------|-----------|-------|
+|`druid.zk.paths.base`|Base Zookeeper path.|`/druid`|
 |`druid.zk.service.host`|The ZooKeeper hosts to connect to. This is a REQUIRED property and therefore a host address must be supplied.|none|
-|`druid.zk.service.sessionTimeoutMs`|ZooKeeper session timeout, in milliseconds.|30000|
-|`druid.curator.compress`|Boolean flag for whether or not created Znodes should be compressed.|false|
 
-We recommend just setting the base ZK path, but all ZK paths that Druid uses can be overwritten.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.zk.paths.base`|Base Zookeeper path.|druid|
-|`druid.zk.paths.propertiesPath`|Zookeeper properties path.|druid/properties|
-|`druid.zk.paths.announcementsPath`|Druid node announcement path.|druid/announcements|
-|`druid.zk.paths.liveSegmentsPath`|Current path for where Druid nodes announce their segments.|druid/segments|
-|`druid.zk.paths.loadQueuePath`|Entries here cause historical nodes to load and drop segments.|druid/loadQueue|
-|`druid.zk.paths.coordinatorPath`|Used by the coordinator for leader election.|druid/coordinator|
-|`druid.zk.paths.servedSegmentsPath`|@Deprecated. Legacy path for where Druid nodes announce their segments.|druid/servedSegments|
-
-The indexing service also uses its own set of paths. These configs can be included in the common configuration.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.zk.paths.indexer.announcementsPath`|Middle managers announce themselves here.|druid/indexer/announcements|
-|`druid.zk.paths.indexer.tasksPath`|Used to assign tasks to middle managers.|druid/indexer/tasks|
-|`druid.zk.paths.indexer.statusPath`|Parent path for announcement of task statuses.|druid/indexer/status|
-|`druid.zk.paths.indexer.leaderLatchPath`|Used for Overlord leader election.|druid/indexer/leaderLatchPath|
-
-The following path is used service discovery.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|/druid/discovery|
+See the [Zookeeper](ZooKeeper.html) page for more information on configuration options for ZK integration.
 
 ### Request Logging
 
