@@ -33,7 +33,7 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
 
   protected static Comparator<String> comparator = new Comparator<String>()
   {
-    // This code is based on the Apache 2.0 licensed java-alphanum library (https://github.com/amjjd/java-alphanum)
+    // This code is based on https://github.com/amjjd/java-alphanum, see NOTICE file for more information
     public int compare(String str1, String str2)
     {
       int[] pos = {0, 0};
