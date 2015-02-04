@@ -182,6 +182,44 @@ public class IndexerZkConfigTest
     Assert.assertEquals(clobberableProperties.size(), assertions);
   }
 
+
+
+  @Test
+  public void testIndexerBaseOverride()
+  {
+    final String overrideValue = "/foo/bar/baz";
+    final String indexerPropertyKey = indexerPropertyString + ".base";
+    final String priorValue = System.getProperty(indexerPropertyKey);
+    System.setProperty(indexerPropertyKey, overrideValue); // Set it here so that the binding picks it up
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.<Module>of(simpleZkConfigModule)
+    );
+    propertyValues.clear();
+    propertyValues.setProperty(indexerPropertyKey, overrideValue); // Have to set it here as well annoyingly enough
+
+
+    JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
+
+    JsonConfigProvider<IndexerZkConfig> indexerPathsConfig = JsonConfigProvider.of(
+        indexerPropertyString,
+        IndexerZkConfig.class
+    );
+    indexerPathsConfig.inject(propertyValues, configurator);
+    IndexerZkConfig indexerZkConfig = indexerPathsConfig.get().get();
+
+
+    // Rewind value before we potentially fail
+    if(priorValue == null){
+      System.clearProperty(indexerPropertyKey);
+    }else {
+      System.setProperty(indexerPropertyKey, priorValue);
+    }
+
+    Assert.assertEquals(overrideValue, indexerZkConfig.getBase());
+    Assert.assertEquals(overrideValue + "/announcements", indexerZkConfig.getAnnouncementsPath());
+  }
+
   @Test
   public void testExactConfig()
   {
@@ -205,7 +243,7 @@ public class IndexerZkConfigTest
 
     IndexerZkConfig indexerZkConfig = new IndexerZkConfig(zkPathsConfig1, null, null, null, null, null);
 
-    Assert.assertEquals("indexer", indexerZkConfig.getBase());
+    Assert.assertEquals("/druid/metrics/indexer", indexerZkConfig.getBase());
     Assert.assertEquals("/druid/metrics/indexer/announcements", indexerZkConfig.getAnnouncementsPath());
   }
 

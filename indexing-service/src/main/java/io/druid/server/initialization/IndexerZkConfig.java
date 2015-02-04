@@ -65,12 +65,12 @@ public class IndexerZkConfig
 
   private String defaultIndexerPath(final String subPath)
   {
-    return getZkPathsConfig().defaultPath(ZKPaths.makePath(getBase(), subPath));
+    return ZKPaths.makePath(getBase(), subPath);
   }
 
   public String getBase()
   {
-    return base == null ? "indexer" : base;
+    return base == null ? getZkPathsConfig().defaultPath("indexer") : base;
   }
 
   public String getAnnouncementsPath()
