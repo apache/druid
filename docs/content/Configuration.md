@@ -69,8 +69,14 @@ Druid nodes periodically emit metrics and different metrics monitors can be incl
 
 The following monitors are available:
 
-* CacheMonitor &ndash; Emits metrics (to logs) about the segment results cache for Historical and Broker nodes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.
-* SysMonitor &ndash; This uses the [SIGAR library](http://www.hyperic.com/products/sigar) to report on various system activities and statuses.
+* CacheMonitor &ndash; Emits metrics (to logs) about the segment results cache
+  for Historical and Broker nodes. Reports typical cache statistics include
+  hits, misses, rates, and size (bytes and number of entries), as well as
+  timeouts and and errors.
+* SysMonitor &ndash; This uses the [SIGAR library](http://www.hyperic.com/products/sigar)
+  to report on various system activities and statuses. Make sure to add the
+  [sigar library jar](https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar)
+  to your classpath if using this monitor.
 * ServerMonitor &ndash; Reports statistics on Historical nodes.
 * JvmMonitor &ndash; Reports JVM-related statistics.
 * RealtimeMetricsMonitor &ndash; Reports statistics on Realtime nodes.

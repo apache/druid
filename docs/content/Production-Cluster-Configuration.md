@@ -36,7 +36,7 @@ druid.discovery.curator.path=/prod/discovery
 druid.request.logging.type=emitter
 druid.request.logging.feed=druid_requests
 
-druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
+druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor"]
 
 druid.emitter=http
 druid.emitter.http.recipientBaseUrl=#{EMITTER_URL}
@@ -270,7 +270,7 @@ druid.server.maxSize=300000000000
 
 druid.segmentCache.locations=[{"path": "/mnt/persistent/zk_druid", "maxSize": 300000000000}]
 
-druid.monitoring.monitors=["io.druid.server.metrics.ServerMonitor", "com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
+druid.monitoring.monitors=["io.druid.server.metrics.ServerMonitor", "com.metamx.metrics.JvmMonitor"]
 ```
 
 ### Broker Node

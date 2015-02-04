@@ -135,7 +135,7 @@ druid.cache.sizeInBytes=10000000
 druid.selectors.indexing.serviceName=overlord
 
 # Monitoring (disabled for examples)
-# druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor"]
+# druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor"]
 
 # Metrics logging (disabled for examples)
 druid.emitter=noop
@@ -296,7 +296,7 @@ druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=2
 
 # Enable Real monitoring
-# druid.monitoring.monitors=["com.metamx.metrics.SysMonitor","com.metamx.metrics.JvmMonitor","io.druid.segment.realtime.RealtimeMetricsMonitor"]
+# druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor","io.druid.segment.realtime.RealtimeMetricsMonitor"]
 ```
 
 Once the real-time node starts up, it should begin ingesting data and handing that data off to the rest of the Druid cluster. You can use a web UI located at coordinator_ip:port to view the status of data being loaded. Once data is handed off from the real-time nodes to historical nodes, the historical nodes should begin serving segments.
