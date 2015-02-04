@@ -64,7 +64,9 @@ fi
 if [ "$version" != "latest" ] && [ -n "$opt_api" ] ; then
   (cd $src && mvn javadoc:aggregate)
   mkdir -p $target/api/$version
-  rsync -a --delete "$src/target/site/apidocs/" $target/api/$version
+  if [ -z "$opt_dryrun" ]; then
+    s3cmd sync --delete-removed "$src/target/site/apidocs/" "s3://static.druid.io/api/$version/"
+  fi
 fi
 
 updatebranch=update-docs-$version
@@ -79,7 +81,7 @@ if [ -z "$opt_dryrun" ]; then
   curl -u "$GIT_TOKEN:x-oauth-basic" -XPOST -d@- \
      https://api.github.com/repos/druid-io/druid-io.github.io/pulls <<EOF
 {
-  "title" : "Update $version docs",
+  "title" : "Update Documentation for $version",
   "head"  : "$updatebranch",
   "base"  : "master"
 }
