@@ -17,6 +17,7 @@
 
 package io.druid.query.datasourcemetadata;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -70,20 +71,20 @@ public class DataSourceMetadataQueryTest
   public void testContextSerde() throws Exception
   {
     final DataSourceMetadataQuery query = Druids.newDataSourceMetadataQueryBuilder()
-                                            .dataSource("foo")
-                                            .intervals("2013/2014")
-                                            .context(
-                                                ImmutableMap.<String, Object>of(
-                                                    "priority",
-                                                    1,
-                                                    "useCache",
-                                                    true,
-                                                    "populateCache",
-                                                    true,
-                                                    "finalize",
-                                                    true
-                                                )
-                                            ).build();
+                                                .dataSource("foo")
+                                                .intervals("2013/2014")
+                                                .context(
+                                                    ImmutableMap.<String, Object>of(
+                                                        "priority",
+                                                        1,
+                                                        "useCache",
+                                                        true,
+                                                        "populateCache",
+                                                        true,
+                                                        "finalize",
+                                                        true
+                                                    )
+                                                ).build();
 
     final ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -108,7 +109,8 @@ public class DataSourceMetadataQueryTest
   {
     final IncrementalIndex rtIndex = new OnheapIncrementalIndex(
         0L, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("count")}, 1000
-    );;
+    );
+    ;
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -123,8 +125,8 @@ public class DataSourceMetadataQueryTest
         )
     );
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
-                                                    .dataSource("testing")
-                                                    .build();
+                                                            .dataSource("testing")
+                                                            .build();
     Map<String, Object> context = new MapMaker().makeMap();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     Iterable<Result<DataSourceMetadataResultValue>> results = Sequences.toList(
@@ -202,6 +204,36 @@ public class DataSourceMetadataQueryTest
     for (int i = 0; i < segments.size(); i++) {
       Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
     }
+  }
+
+  @Test
+  public void testResultSerialization()
+  {
+    final DataSourceMetadataResultValue resultValue = new DataSourceMetadataResultValue(new DateTime("2000-01-01T00Z"));
+    final Map<String, Object> resultValueMap = new DefaultObjectMapper().convertValue(
+        resultValue,
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    );
+    Assert.assertEquals(
+        ImmutableMap.<String, Object>of("maxIngestedEventTime", "2000-01-01T00:00:00.000Z"),
+        resultValueMap
+    );
+  }
+
+  @Test
+  public void testResultDeserialization()
+  {
+    final Map<String, Object> resultValueMap = ImmutableMap.<String, Object>of(
+        "maxIngestedEventTime",
+        "2000-01-01T00:00:00.000Z"
+    );
+    final DataSourceMetadataResultValue resultValue = new DefaultObjectMapper().convertValue(
+        resultValueMap,
+        DataSourceMetadataResultValue.class
+    );
+    Assert.assertEquals(new DateTime("2000"), resultValue.getMaxIngestedEventTime());
   }
 
 }

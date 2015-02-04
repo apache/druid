@@ -42,9 +42,6 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
       JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
   );
 
-  public static String MAX_INGESTED_EVENT_TIME = "maxIngestedEventTime";
-
-
   @JsonCreator
   public DataSourceMetadataQuery(
       @JsonProperty("dataSource") DataSource dataSource,

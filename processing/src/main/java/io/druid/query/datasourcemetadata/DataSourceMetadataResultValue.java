@@ -18,7 +18,7 @@
 package io.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
 /**
@@ -29,13 +29,13 @@ public class DataSourceMetadataResultValue
 
   @JsonCreator
   public DataSourceMetadataResultValue(
-      DateTime maxIngestedEventTime
+      @JsonProperty("maxIngestedEventTime") DateTime maxIngestedEventTime
   )
   {
     this.maxIngestedEventTime = maxIngestedEventTime;
   }
 
-  @JsonValue
+  @JsonProperty
   public DateTime getMaxIngestedEventTime()
   {
     return maxIngestedEventTime;
