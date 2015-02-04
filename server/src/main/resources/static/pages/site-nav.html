@@ -22,14 +22,26 @@
 
 <div class="og-console-links" ng-if="coordinator">
   <div>
-    old skool
-    <a href="http://{{ coordinator }}/rules.html">rules</a>
-    <a href="http://{{ coordinator }}/view.html">info</a>
-    <a href="http://{{ coordinator }}/cluster.html">cluster</a>
-    <a href="http://{{ coordinator }}/config.html">config</a>
-    <a href="http://{{ coordinator }}/enable.html">enable</a>
+    <a href="http://{{ coordinator }}/old-console/">old console</a>
+    <a href="http://{{ coordinator }}/old-console/rules.html">rules</a>
+    <a href="http://{{ coordinator }}/old-console/view.html">info</a>
+    <a href="http://{{ coordinator }}/old-console/cluster.html">cluster</a>
+    <a href="http://{{ coordinator }}/old-console/config.html">config</a>
+    <a href="http://{{ coordinator }}/old-console/enable.html">enable</a>
   </div>
   <div>
     <a href="http://{{ coordinator }}/">coordinator @ {{ coordinator }}</a>
   </div>
 </div>
+
+<div class="og-console-links" ng-if="!coordinator">
+  <div>
+    <a href="/old-console/">old console</a>
+    <a href="/old-console/rules.html">rules</a>
+    <a href="/old-console/view.html">info</a>
+    <a href="/old-console/cluster.html">cluster</a>
+    <a href="/old-console/config.html">config</a>
+    <a href="/old-console/enable.html">enable</a>
+  </div>
+</div>
+
