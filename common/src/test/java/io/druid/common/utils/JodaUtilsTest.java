@@ -119,4 +119,11 @@ public class JodaUtilsTest
       );
     }
   }
+
+  @Test
+  public void testMinMaxInterval()
+  {
+    final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
+    Assert.assertEquals(Long.MAX_VALUE, interval.toDuration().getMillis());
+  }
 }
