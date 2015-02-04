@@ -22,7 +22,6 @@ package io.druid.query.datasourcemetadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -44,9 +43,6 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   public static final Interval MY_Y2K_INTERVAL = new Interval(
       JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
   );
-
-  public static String MAX_INGESTED_EVENT_TIME = "maxIngestedEventTime";
-
 
   @JsonCreator
   public DataSourceMetadataQuery(
