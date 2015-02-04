@@ -96,6 +96,7 @@
         <module>extensions/histogram</module>
         <module>extensions/mysql-metadata-storage</module>
         <module>extensions/postgresql-metadata-storage</module>
+        <module>extensions/dim-rename-kafka8</module>
     </modules>
 
     <dependencyManagement>

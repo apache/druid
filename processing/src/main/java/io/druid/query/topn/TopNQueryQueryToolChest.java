@@ -48,6 +48,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
 
@@ -240,6 +241,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public Result<TopNResultValue> apply(Result<TopNResultValue> result)
       {
+        final ExtractionFn extractionFn = TopNQueryEngine.useOptimized(query.getContext()) ? query.getDimensionSpec().getExtractionFn() : null;
         List<Map<String, Object>> serializedValues = Lists.newArrayList(
             Iterables.transform(
                 result.getValue(),
@@ -273,7 +275,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                       values.put(name, fn.manipulate(aggregatorFactories[i], input.getMetric(name)));
                     }
 
-                    values.put(dimension, input.getDimensionValue(dimension));
+                    final Object dimValue = input.getDimensionValue(dimension);
+                    values.put(dimension, extractionFn == null ? dimValue : extractionFn.apply(dimValue));
 
                     return values;
                   }

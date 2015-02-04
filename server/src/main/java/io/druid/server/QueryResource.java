@@ -17,6 +17,7 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -282,13 +283,16 @@ public class QueryResource
          .addData("peer", req.getRemoteAddr())
          .emit();
 
-      return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
-      ).build();
+      return Response.serverError().type(contentType).entity(cleanError(e)).build();
     }
+  }
+
+  private byte[] cleanError(Exception e) throws JsonProcessingException
+  {
+    return jsonMapper.writeValueAsBytes(
+        ImmutableMap.of(
+            "error", e.getMessage() == null ? "null exception" : e.getMessage()
+        )
+    );
   }
 }

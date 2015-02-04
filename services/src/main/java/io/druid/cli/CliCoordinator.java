@@ -51,6 +51,7 @@ import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
 import io.druid.server.http.DatasourcesResource;
 import io.druid.server.http.MetadataResource;
+import io.druid.server.http.NamespacesResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RulesResource;
@@ -132,6 +133,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, ServersResource.class);
             Jerseys.addResource(binder, DatasourcesResource.class);
             Jerseys.addResource(binder, MetadataResource.class);
+            Jerseys.addResource(binder, NamespacesResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

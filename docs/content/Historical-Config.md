@@ -100,3 +100,13 @@ You can optionally only configure caching to be enabled on the historical by set
 |`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+
+
+### Namespaces
+Namespaces, or query time lookups, refers to the ability to modify a datasource with a simple mapping from one set of dimension values to another. The namespaces are a property of dimension extraction functions and can be used in any place dimension extraction functions can be used.
+The following are settings used by the historical nodes when setting namespaces
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.extraction.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`, `cache`]. `offHeap` uses a temporary file for off-heap storage of the namespace. `onHeap` stores all cache on the heap. `cache` attempts to piggyback the setup for `druid.cache`|`onHeap`|
+|`druid.query.extraction.namespace.enabled`|Specifies that processing of namespaces is to be enabled. This should only be set to `true` on historical nodes and should be absent or false everywhere else.|`false`|
+|`druid.zk.paths.namespacePath`|The path to pull namespace updates from|`${druid.zk.paths.base}/namespaces`|

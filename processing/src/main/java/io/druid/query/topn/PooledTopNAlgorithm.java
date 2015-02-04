@@ -142,6 +142,7 @@ public class PooledTopNAlgorithm
   {
     return makeBufferAggregators(params.getCursor(), query.getAggregatorSpecs());
   }
+
   /**
    * Use aggressive loop unrolling to aggregate the data
    *
@@ -188,7 +189,7 @@ public class PooledTopNAlgorithm
 
       final int dimSize = dimValues.size();
       final int dimExtra = dimSize % AGG_UNROLL_COUNT;
-      switch(dimExtra){
+      switch (dimExtra) {
         case 7:
           aggregateDimValue(positions, theAggregators, numProcessed, resultsBuf, numBytesPerRecord, aggregatorOffsets, aggSize, aggExtra, dimValues.get(6));
         case 6:
@@ -242,7 +243,7 @@ public class PooledTopNAlgorithm
     }
     final int position = positions[dimIndex];
 
-    switch(aggExtra) {
+    switch (aggExtra) {
       case 7:
         theAggregators[6].aggregate(resultsBuf, position + aggregatorOffsets[6]);
       case 6:
@@ -260,13 +261,13 @@ public class PooledTopNAlgorithm
     }
     for (int j = aggExtra; j < aggSize; j += AGG_UNROLL_COUNT) {
       theAggregators[j].aggregate(resultsBuf, position + aggregatorOffsets[j]);
-      theAggregators[j+1].aggregate(resultsBuf, position + aggregatorOffsets[j+1]);
-      theAggregators[j+2].aggregate(resultsBuf, position + aggregatorOffsets[j+2]);
-      theAggregators[j+3].aggregate(resultsBuf, position + aggregatorOffsets[j+3]);
-      theAggregators[j+4].aggregate(resultsBuf, position + aggregatorOffsets[j+4]);
-      theAggregators[j+5].aggregate(resultsBuf, position + aggregatorOffsets[j+5]);
-      theAggregators[j+6].aggregate(resultsBuf, position + aggregatorOffsets[j+6]);
-      theAggregators[j+7].aggregate(resultsBuf, position + aggregatorOffsets[j+7]);
+      theAggregators[j + 1].aggregate(resultsBuf, position + aggregatorOffsets[j + 1]);
+      theAggregators[j + 2].aggregate(resultsBuf, position + aggregatorOffsets[j + 2]);
+      theAggregators[j + 3].aggregate(resultsBuf, position + aggregatorOffsets[j + 3]);
+      theAggregators[j + 4].aggregate(resultsBuf, position + aggregatorOffsets[j + 4]);
+      theAggregators[j + 5].aggregate(resultsBuf, position + aggregatorOffsets[j + 5]);
+      theAggregators[j + 6].aggregate(resultsBuf, position + aggregatorOffsets[j + 6]);
+      theAggregators[j + 7].aggregate(resultsBuf, position + aggregatorOffsets[j + 7]);
     }
   }
 

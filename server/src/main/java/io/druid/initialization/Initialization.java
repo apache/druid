@@ -54,6 +54,7 @@ import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
+import io.druid.server.namespace.NamespacedExtractionModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
@@ -352,7 +353,8 @@ public class Initialization
         new IndexingServiceDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new FirehoseModule(),
-        new ParsersModule()
+        new ParsersModule(),
+        new NamespacedExtractionModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);

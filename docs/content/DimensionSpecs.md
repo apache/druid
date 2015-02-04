@@ -154,3 +154,195 @@ Example for the `__time` dimension:
   "function" : "function(t) { return 'Second ' + Math.floor((t % 60000) / 1000); }"
 }
 ```
+
+### Namespaced extraction function (EXPERIMENTAL)
+A namespaced extraction function is a simple key-value mapping where the key-value mappings are unique to a particular namespace.
+This can be used for re-naming values in a datasource for certain queries. To use a particular namespace, simply set the appropriate namespace for the dimExtractionFn
+```json
+    "dimExtractionFn" : {
+      "type":"namespace",
+      "namespace":"some_namespace"
+    }
+```
+Namespace updates can be set through adding a child in json form to the zookeeper path at`druid.zk.paths.namespacePath`. The json is of the following format:
+
+#### URI namespace update
+The remapping values for each namespace can be specified by a namespace update json object as per
+```json
+{
+  "namespace":{
+    "type":"uri",
+    "namespace":"some_namespace",
+    "uri": "file:///some/file/or/other/uri",
+    "parseSpec":{
+      "type":"csv",
+      "columns":["key","value]
+    }
+  },
+  "updateMs":0
+}
+```
+The `updateMs` value specifies the period in milliseconds between checks for updates. If the source of the namespace is capable of providing a timestamp, the namespace will only be updated if it has changed since the prior tick of `updateMs`. A value of 0 means populate once and do not attempt to update.
+
+The parseSpec can be one of a number of values. Each of the examples below would rename foo to bar, baz to bat, and buck to truck. All parseSpec types assumes each input is delimited by a new line.
+
+##### csv ParseSpec
+
+|Parameter|Description|Required|Default|
+|---------|-----------|--------|-------|
+|`columns`|The list of columns in the csv file|yes|`null`|
+|`keyColumn`|The name of the column containing the key|no|The first column|
+|`valueColumn`|The name of the column containing the value|no|The second column|
+
+*example input*
+```
+bar,something,foo
+bat,something2,baz
+truck,something3,buck
+```
+
+*example parseSpec*
+```json
+"parseSpec": {
+  "type": "csv",
+  "columns": ["value","somethingElse","key"],
+  "keyColumn": "key",
+  "valueColumn": "value"
+}
+```
+
+##### tsv ParseSpec
+
+|Parameter|Description|Required|Default|
+|---------|-----------|--------|-------|
+|`columns`|The list of columns in the csv file|yes|`null`|
+|`keyColumn`|The name of the column containing the key|no|The first column|
+|`valueColumn`|The name of the column containing the value|no|The second column|
+|`delimiter`|The delimiter in the file|no|tab (`\t`)|
+
+
+*example input*
+```
+bar|something,1|foo
+bat|something,2|baz
+truck|something,3|buck
+```
+
+*example parseSpec*
+```json
+"parseSpec": {
+  "type": "tsv",
+  "columns": ["value","somethingElse","key"],
+  "keyColumn": "key",
+  "valueColumn": "value",
+  "delimiter": "|"
+}
+```
+
+##### customJson ParseSpec
+
+|Parameter|Description|Required|Default|
+|---------|-----------|--------|-------|
+|`keyFieldName`|The field name of the key|yes|null|
+|`valueFieldName`|The field name of the value|yes|null|
+
+*example input*
+```json
+{"key": "foo", "value": "bar", "somethingElse" : "something"}
+{"key": "baz", "value": "bat", "somethingElse" : "something"}
+{"key": "buck", "somethingElse": "something", "value": "truck"}
+```
+
+*example parseSpec*
+```json
+"parseSpec": {
+  "type": "customJson",
+  "keyFieldName": "key",
+  "valueFieldName": "value"
+}
+```
+
+
+##### simpleJson ParseSpec
+The `simpleJson` parseSpec does not take any parameters. It is simply a line delimited json file where the field is the key, and the field's value is the value.
+
+*example input*
+ 
+```json
+{"foo": "bar"}
+{"baz": "bat"}
+{"buck": "truck"}
+```
+
+*example parseSpec*
+```json
+"parseSpec":{
+  "type": "simpleJson"
+}
+```
+
+
+#### JDBC namespace update
+The JDBC namespaces will pull from a database cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_namespace_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. If `tsColumn` is set, the caching service will attempt to only pull values that were written *after* the last sync. If `tsColumn` is not set, the entire table is pulled every time.
+
+```json
+{
+  "namespace":{
+    "namespace":"some_namespace",
+    "connectorConfig":{
+      "createTables":true,
+      "connectURI":"jdbc:mysql://localhost:3306/druid",
+      "user":"druid",
+      "password":"diurd"
+    },
+    "table":"some_namespace_table",
+    "keyColumn":"the_old_dim_value",
+    "valueColumn":"the_new_dim_value",
+    "tsColumn":"timestamp_column"
+  },
+  "updateMs":600000
+}
+```
+
+### Kafka namespace update (Experimental)
+It is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8). This requires the following extension: "io.druid.extensions:druid-dim-rename-kafka8"
+```json
+{
+  "namespace":{
+    "type":"kafka",
+    "namespace":"testTopic",
+    "kafkaTopic":"testTopic"
+  }
+}
+```
+#### Kafka renames
+The extension `druid-dim-rename-kafka8` enables reading from a kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
+
+Currently the historical node caches the key/value pairs from the kafka feed in an ephemeral memory mapped DB via MapDB.
+
+Current limitations:
+* All rename feeds must be known at server startup and are not dynamically configurable
+* The query issuer must know the name of the kafka topic
+
+#### Configuration
+The following options are used to define the behavior:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.rename.kafka.properties`|A json map of kafka consumer properties. See below for special properties.|See below|
+
+The following are the handling for kafka consumer properties in `druid.query.rename.kafka.properties`
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`zookeeper.connect`|Zookeeper connection string|`localhost:2181/kafka`|
+|`group.id`|Group ID, auto-assigned for publish-subscribe model and cannot be overridden|`UUID.randomUUID().toString()`|
+|`auto.offset.reset`|Setting to get the entire kafka rename stream. Cannot be overridden|`smallest`|
+
+#### Hooking up namespaces
+To hook up a kafka topic to a namespace, a `KafkaExtractionNamespace` used in the namespace update posted to zookeeper.
+
+#### Testing the kafka rename functionality
+To test this setup, you can send key/value pairs to a kafka stream via the following producer console
+`./bin/kafka-console-producer.sh --property parse.key=true --property key.separator="->" --broker-list localhost:9092 --topic testTopic`
+Renames can then be published as `OLD_VAL->NEW_VAL` followed by newline (enter)

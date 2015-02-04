@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.metamx.common.UOE;
 import com.metamx.common.logger.Logger;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -38,6 +39,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -279,5 +281,11 @@ public class MemcachedCache implements Cache
 
   public boolean isLocal() {
     return false;
+  }
+
+  @Override
+  public Collection<String> getNamespaces()
+  {
+    throw new UOE("Cannot get namespaces on memcache");
   }
 }
