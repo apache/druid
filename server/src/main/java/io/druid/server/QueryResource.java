@@ -18,6 +18,7 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -57,6 +58,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.UUID;
 
@@ -77,6 +79,20 @@ public class QueryResource
   private final RequestLogger requestLogger;
   private final QueryManager queryManager;
 
+  private static ObjectMapper copyObjectMapper(ObjectMapper other){
+    final ObjectMapper retval = other.copy();
+    try {
+      // Workaround for https://github.com/FasterXML/jackson-databind/issues/696
+      Field injectableValues = ObjectMapper.class.getDeclaredField("_injectableValues");
+      injectableValues.setAccessible(true);
+      retval.setInjectableValues((InjectableValues) injectableValues.get(other));
+    }
+    catch (NoSuchFieldException | IllegalAccessException e) {
+      log.wtf(e, "Somehow I cannot access _injectableValues in ObjectMapper");
+    }
+    return retval;
+  }
+
   @Inject
   public QueryResource(
       ServerConfig config,
@@ -89,10 +105,10 @@ public class QueryResource
   )
   {
     this.config = config;
-    this.jsonMapper = jsonMapper.copy();
+    this.jsonMapper = copyObjectMapper(jsonMapper);
     this.jsonMapper.getFactory().configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
-    this.smileMapper = smileMapper.copy();
+    this.smileMapper = copyObjectMapper(smileMapper);
     this.smileMapper.getFactory().configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
 
     this.texasRanger = texasRanger;
