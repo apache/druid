@@ -2017,4 +2017,44 @@ public class TimeseriesQueryRunnerTest
 
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
+
+  @Test
+  public void testTimeseriesWithTimeColumn()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
+                QueryRunnerTestHelper.__timeLongSum
+            )
+        )
+        .granularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows",
+                    26L,
+                    "ntimestamps",
+                    13.0,
+                    "sumtime",
+                    33843139200000L
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
 }
