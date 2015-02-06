@@ -2034,4 +2034,37 @@ public class GroupByQueryRunnerTest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
+
+  @Test
+  public void testGroupByWithTimeColumn()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
+                QueryRunnerTestHelper.__timeLongSum
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01",
+            "rows",
+            26L,
+            "ntimestamps",
+            13.0,
+            "sumtime",
+            33843139200000L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
 }

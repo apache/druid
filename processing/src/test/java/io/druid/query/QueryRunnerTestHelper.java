@@ -91,20 +91,32 @@ public class QueryRunnerTestHelper
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
+  public static final LongSumAggregatorFactory __timeLongSum = new LongSumAggregatorFactory("sumtime", "__time");
   public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
+  public static final String JS_RESET_0 = "function reset() { return 0; }";
   public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
       "nindex",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
-      "function reset() { return 0; }",
-      "function combine(a, b) { return a + b; }"
+      JS_RESET_0,
+      JS_COMBINE_A_PLUS_B
+  );
+  public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
+      "ntimestamps",
+      Arrays.asList("__time"),
+      "function aggregate(current, t) { if (t > " +
+      new DateTime("2011-04-01T12:00:00Z").getMillis() +
+      ") { return current + 1; } else { return current; } }",
+      JS_RESET_0,
+      JS_COMBINE_A_PLUS_B
   );
   public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
       "pishcount",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
-      "function reset() { return 0; }",
-      "function combine(a, b) { return a + b; }"
+      JS_RESET_0,
+      JS_COMBINE_A_PLUS_B
   );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",

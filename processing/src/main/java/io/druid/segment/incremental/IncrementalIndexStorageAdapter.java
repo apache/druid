@@ -411,8 +411,24 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public ObjectColumnSelector makeObjectColumnSelector(String column)
               {
-                final Integer metricIndexInt = index.getMetricIndex(column);
+                if (column.equals(Column.TIME_COLUMN_NAME)) {
+                  return new ObjectColumnSelector<Long>()
+                  {
+                    @Override
+                    public Class classOfObject()
+                    {
+                      return Long.TYPE;
+                    }
 
+                    @Override
+                    public Long get()
+                    {
+                      return currEntry.getKey().getTimestamp();
+                    }
+                  };
+                }
+
+                final Integer metricIndexInt = index.getMetricIndex(column);
                 if (metricIndexInt != null) {
                   final int metricIndex = metricIndexInt;
 
