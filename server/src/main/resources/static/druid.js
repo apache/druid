@@ -11277,21 +11277,22 @@ app.filter('simplifyInterval', function($sce) {
       var date, nonZero;
       date = m[j * 5 + 1];
       nonZero = _.find(idx, function(i) {
-        return parseInt(m[i] !== 0);
+        return parseInt(m[i]) !== 0;
       });
       switch (nonZero) {
-        case void 0:
+        case undefined:
           return date;
         case idx[3]:
           return "" + date + timeSep + m[idx[3]];
-        case idx[0]:
+        case idx[2]:
           return "" + date + timeSep + m[idx[3]] + ":" + m[idx[2]];
-        case idx[0]:
+        case idx[1]:
           return "" + date + timeSep + m[idx[3]] + ":" + m[idx[2]] + ":" + m[idx[1]];
         case idx[0]:
           return "" + date + timeSep + m[idx[3]] + ":" + m[idx[2]] + ":" + m[idx[1]] + "." + m[idx[0]] + "Z";
       }
     }).join(intervalSep);
+
     return $sce.trustAsHtml(simplified);
   };
 });
@@ -11873,7 +11874,6 @@ app.directive('isoInterval', function() {
           }
           return void 0;
         } else {
-          console.log('true');
           $ctrl.$setValidity('isoInterval', true);
           val = viewValues.map(function(v) {
             return v.toISOString();
@@ -12425,7 +12425,6 @@ app.controller('DruidDataSourceCtrl', function($scope, $druid, $stateParams, $q)
   };
   $scope.getDaily = function() {
     var d;
-    console.log('getDaily');
     return (function() {
       var _i, _len, _ref, _results;
       _ref = $scope.days;
@@ -12445,7 +12444,6 @@ app.controller('DruidDataSourceCtrl', function($scope, $druid, $stateParams, $q)
   };
   $scope.getMonthly = function() {
     var i, m, months;
-    console.log('getMonthly');
     months = (function() {
       var _ref, _results;
       _ref = $scope.days.reduce((function(months, d) {
@@ -12536,11 +12534,8 @@ app.controller('RuleEditorCtrl', function($scope, $modal, $druid, $utils) {
       }
     });
     modalInstance.result.then((function(newRules) {
-      console.log("getting new rules for", $scope.dataSource.id);
       return $scope.dataSource.rules = $utils.processRules(newRules);
-    }), function() {
-      console.log("modal dismissed");
-    });
+    }), function() {});
   };
 });
 
@@ -12656,7 +12651,6 @@ app.controller('DataSourceDisableCtrl', function($scope, $modal, $druid, $utils,
     modalInstance.result.then((function() {
       return $location.path("/" + $scope.env + "/datasources");
     }), function() {
-      console.log("modal dismissed");
     });
   };
 });
@@ -12696,7 +12690,6 @@ app.controller('DataSourceEnableCtrl', function($scope, $modal, $druid, $utils, 
     modalInstance.result.then((function() {
       return $location.path("/" + $scope.env + "/datasources/" + $scope.dataSourceId);
     }), function() {
-      console.log("modal dismissed");
     });
   };
 });

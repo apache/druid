@@ -64,7 +64,7 @@
       </div>
 
       <div class="interval" ng-if="rule.interval">
-        <span class="value">{{ rule.interval }}</span>
+        <span class="value" ng-bind-html="rule.interval | simplifyInterval"></span>
         <span class="human">({{ rule.momentInterval.period().humanize() }})</span>
       </div>
 
@@ -90,7 +90,7 @@
       </div>
 
       <div class="interval" ng-if="rule.interval">
-        <span class="value">{{ rule.interval }}</span>
+        <span class="value" ng-bind-html="rule.interval | simplifyInterval"></span>
         <span class="human">({{ rule.momentInterval.period().humanize() }})</span>
       </div>
 
@@ -107,9 +107,9 @@
     <h2>
       Timeline (unreplicated)
       <div>
-        <div ng-if="unreplicatedSegmentSize" class="summary">
+        <div ng-if="dataSource.segments.size" class="summary">
           <div>
-            {{ unreplicatedSegmentSize | bytes }}
+            {{ dataSource.segments.size | bytes }}
             over {{ dataSource.segments.interval.period().humanize() }}
           </div>
           <div>
