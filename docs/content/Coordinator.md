@@ -183,6 +183,12 @@ Returns all rules for a specified datasource.
 
 Returns all rules for a specified datasource and includes default datasource.
 
+
+* `/druid/coordinator/v1/rules/{dataSourceName}/history?interval=<interval>`
+
+ Returns audit history of rules. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
+
+
 ### POST
 
 #### Datasources
@@ -200,6 +206,13 @@ Enables a segment.
 * `/druid/coordinator/v1/rules/{dataSourceName}`
 
 POST with a list of rules in JSON form to update rules.
+
+Optional Header Parameters for auditing the config change can also be specified.
+
+|Header Param Name| Description | Default |
+|----------|-------------|---------|
+|`X-Druid-Author`| author making the config change|""|
+|`X-Druid-Comment`| comment describing the change being done|""|
 
 ### DELETE
 

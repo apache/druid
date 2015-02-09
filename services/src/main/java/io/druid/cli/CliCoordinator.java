@@ -41,6 +41,8 @@ import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageProvider;
+import io.druid.audit.AuditManager;
+import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
@@ -107,6 +109,10 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataRuleManager.class)
                   .toProvider(MetadataRuleManagerProvider.class)
+                  .in(ManageLifecycle.class);
+
+            binder.bind(AuditManager.class)
+                  .toProvider(AuditManagerProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);

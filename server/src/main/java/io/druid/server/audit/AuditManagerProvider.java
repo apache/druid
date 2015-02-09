@@ -15,29 +15,12 @@
  * limitations under the License.
  */
 
-package io.druid.metadata;
+package io.druid.server.audit;
 
-import io.druid.audit.AuditInfo;
-import io.druid.server.coordinator.rules.Rule;
+import com.google.inject.Provider;
+import io.druid.audit.AuditManager;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- */
-public interface MetadataRuleManager
+public interface AuditManagerProvider extends Provider<AuditManager>
 {
-  public void start();
-
-  public void stop();
-
-  public void poll();
-
-  public Map<String, List<Rule>> getAllRules();
-
-  public List<Rule> getRules(final String dataSource);
-
-  public List<Rule> getRulesWithDefault(final String dataSource);
-
-  public boolean overrideRule(final String dataSource, final List<Rule> rulesConfig, final AuditInfo auditInfo);
+  public AuditManager get();
 }

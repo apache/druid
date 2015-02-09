@@ -97,6 +97,13 @@ The JSON object can be submitted to the overlord via a POST request at:
 http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker
 ```
 
+Optional Header Parameters for auditing the config change can also be specified.
+
+|Header Param Name| Description | Default |
+|----------|-------------|---------|
+|`X-Druid-Author`| author making the config change|""|
+|`X-Druid-Comment`| comment describing the change being done|""|
+
 A sample worker config spec is shown below:
 
 ```json
@@ -141,6 +148,14 @@ Issuing a GET request at the same URL will return the current worker config spec
 |--------|-----------|-------|
 |`selectStrategy`|How to assign tasks to middlemanagers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, and `equalDistribution`.|fillCapacity|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
+
+To view the audit history of worker config issue a GET request to the URL -
+
+```
+http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
+```
+
+default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in overlord runtime.properties.
 
 #### Worker Select Strategy
 

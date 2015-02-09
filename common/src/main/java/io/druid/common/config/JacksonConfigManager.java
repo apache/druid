@@ -22,6 +22,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.audit.AuditEntry;
+import io.druid.audit.AuditInfo;
+import io.druid.audit.AuditManager;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,15 +35,18 @@ public class JacksonConfigManager
 {
   private final ConfigManager configManager;
   private final ObjectMapper jsonMapper;
+  private final AuditManager auditManager;
 
   @Inject
   public JacksonConfigManager(
       ConfigManager configManager,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      AuditManager auditManager
   )
   {
     this.configManager = configManager;
     this.jsonMapper = jsonMapper;
+    this.auditManager = auditManager;
   }
 
   public <T> AtomicReference<T> watch(String key, Class<? extends T> clazz)
@@ -63,9 +69,20 @@ public class JacksonConfigManager
     return configManager.watchConfig(key, create(clazz, defaultVal));
   }
 
-  public <T> boolean set(String key, T val)
+  public <T> boolean set(String key, T val, AuditInfo auditInfo)
   {
-    return configManager.set(key, create(val.getClass(), null), val);
+    ConfigSerde configSerde = create(val.getClass(), null);
+    // Audit and actual config change are done in separate transactions
+    // there can be phantom audits and reOrdering in audit changes as well.
+    auditManager.doAudit(
+        AuditEntry.builder()
+                  .key(key)
+                  .type(key)
+                  .auditInfo(auditInfo)
+                  .payload(configSerde.serializeToString(val))
+                  .build()
+    );
+    return configManager.set(key, configSerde, val);
   }
 
   private <T> ConfigSerde<T> create(final Class<? extends T> clazz, final T defaultVal)
@@ -77,6 +94,17 @@ public class JacksonConfigManager
       {
         try {
           return jsonMapper.writeValueAsBytes(obj);
+        }
+        catch (JsonProcessingException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+
+      @Override
+      public String serializeToString(T obj)
+      {
+        try {
+          return jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw Throwables.propagate(e);
@@ -109,6 +137,17 @@ public class JacksonConfigManager
       {
         try {
           return jsonMapper.writeValueAsBytes(obj);
+        }
+        catch (JsonProcessingException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+
+      @Override
+      public String serializeToString(T obj)
+      {
+        try {
+          return jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
           throw Throwables.propagate(e);

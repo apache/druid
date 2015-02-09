@@ -50,11 +50,13 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getLockTable(entryType));
     tables.add(tablesConfig.getLogTable(entryType));
     tables.add(tablesConfig.getEntryTable(entryType));
+    tables.add(tablesConfig.getAuditTable());
 
     connector.createSegmentTable();
     connector.createConfigTable();
     connector.createRulesTable();
     connector.createTaskTables();
+    connector.createAuditTable();
 
     connector.getDBI().withHandle(
         new HandleCallback<Void>()

@@ -46,8 +46,15 @@ The coordinator has dynamic configuration to change certain behaviour on the fly
 It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the overlord via a POST request at:
 
 ```
-http://<COORDINATOR_IP>:<PORT>/coordinator/config
+http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config
 ```
+
+Optional Header Parameters for auditing the config change can also be specified.
+
+|Header Param Name| Description | Default |
+|----------|-------------|---------|
+|`X-Druid-Author`| author making the config change|""|
+|`X-Druid-Comment`| comment describing the change being done|""|
 
 A sample coordinator dynamic config JSON object is shown below:
 
@@ -74,3 +81,11 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
 |`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
+
+To view the audit history of coordinator dynamic config issue a GET request to the URL -
+
+```
+http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?interval=<interval>
+```
+
+default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
