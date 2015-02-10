@@ -18,6 +18,7 @@
 package io.druid.timeline;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
@@ -29,7 +30,8 @@ public class UnionTimeLineLookup<VersionType, ObjectType> implements TimelineLoo
 
   public UnionTimeLineLookup(Iterable<TimelineLookup<VersionType, ObjectType>> delegates)
   {
-    this.delegates = delegates;
+    // delegate can be null in case there is no segment loaded for the dataSource on this node
+    this.delegates = Iterables.filter(delegates, Predicates.notNull());
   }
 
   @Override
