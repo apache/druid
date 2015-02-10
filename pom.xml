@@ -43,6 +43,7 @@
         <druid.api.version>0.3.2</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
         <log4j.version>2.1</log4j.version>
+        <hadoop.version>2.6.0</hadoop.version>
     </properties>
 
     <modules>
@@ -439,8 +440,14 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-aws</artifactId> <!-- Required by NativeS3FileSystem -->
+                <version>${hadoop.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
-                <version>2.3.0</version>
+                <version>${hadoop.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
