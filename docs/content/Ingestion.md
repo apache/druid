@@ -103,11 +103,22 @@ If `type` is not included, the parseSpec defaults to `tsv`.
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
+#### JSON Lowercase ParseSpec
+
+This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | This should say `jsonLowercase`. | yes |
+| timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
+| dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
+
+
 #### CSV ParseSpec
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `csv`. | no |
+| type | String | This should say `csv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
@@ -117,7 +128,7 @@ If `type` is not included, the parseSpec defaults to `tsv`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `tsv`. | no |
+| type | String | This should say `tsv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default == \t) |
