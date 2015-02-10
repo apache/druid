@@ -117,7 +117,7 @@ public class QueryResource
   public Response doPost(
       InputStream in,
       @QueryParam("pretty") String pretty,
-      @Context HttpServletRequest req // used only to get request content-type and remote address
+      @Context final HttpServletRequest req // used only to get request content-type and remote address
   ) throws IOException
   {
     final long start = System.currentTimeMillis();
@@ -176,27 +176,7 @@ public class QueryResource
       );
 
       try {
-        long requestTime = System.currentTimeMillis() - start;
-
-        emitter.emit(
-            QueryMetricUtil.makeRequestTimeMetric(jsonMapper, query, req.getRemoteAddr())
-                           .build("request/time", requestTime)
-        );
-
-        requestLogger.log(
-            new RequestLogLine(
-                new DateTime(),
-                req.getRemoteAddr(),
-                query,
-                new QueryStats(
-                    ImmutableMap.<String, Object>of(
-                        "request/time", requestTime,
-                        "success", true
-                    )
-                )
-            )
-        );
-
+        final Query theQuery = query;
         return Response
             .ok(
                 new StreamingOutput()
@@ -207,6 +187,26 @@ public class QueryResource
                     // json serializer will always close the yielder
                     jsonWriter.writeValue(outputStream, yielder);
                     outputStream.close();
+
+                    final long requestTime = System.currentTimeMillis() - start;
+                    emitter.emit(
+                        QueryMetricUtil.makeRequestTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
+                                       .build("request/time", requestTime)
+                    );
+
+                    requestLogger.log(
+                        new RequestLogLine(
+                            new DateTime(),
+                            req.getRemoteAddr(),
+                            theQuery,
+                            new QueryStats(
+                                ImmutableMap.<String, Object>of(
+                                    "request/time", requestTime,
+                                    "success", true
+                                )
+                            )
+                        )
+                    );
                   }
                 },
                 contentType
