@@ -53,6 +53,7 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -191,7 +192,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
   }
 
-
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
@@ -221,7 +221,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  @Test
+  @Ignore @Test
   @BenchmarkOptions(callgc = true, clock = Clock.REAL_TIME, warmupRounds = 10, benchmarkRounds = 20)
   public void testConcurrentAddRead()
       throws InterruptedException, ExecutionException, NoSuchMethodException, IllegalAccessException,

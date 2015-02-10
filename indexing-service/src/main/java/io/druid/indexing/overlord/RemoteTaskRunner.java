@@ -40,6 +40,7 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
@@ -61,6 +62,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 
@@ -352,9 +354,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 
       try {
         final URL url = makeWorkerURL(zkWorker.getWorker(), String.format("/task/%s/shutdown", taskId));
-        final StatusResponseHolder response = httpClient.post(url)
-                                                        .go(RESPONSE_HANDLER)
-                                                        .get();
+        final StatusResponseHolder response = httpClient.go(
+            new Request(HttpMethod.POST, url),
+            RESPONSE_HANDLER
+        ).get();
 
         log.info(
             "Sent shutdown message to worker: %s, status %s, response: %s",
@@ -391,9 +394,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
             public InputStream openStream() throws IOException
             {
               try {
-                return httpClient.get(url)
-                                 .go(new InputStreamResponseHandler())
-                                 .get();
+                return httpClient.go(
+                    new Request(HttpMethod.GET, url),
+                    new InputStreamResponseHandler()
+                ).get();
               }
               catch (InterruptedException e) {
                 throw Throwables.propagate(e);

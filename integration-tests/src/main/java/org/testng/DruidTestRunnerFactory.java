@@ -24,12 +24,14 @@ import com.google.inject.Key;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.annotations.Global;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import io.druid.testing.utils.RetryUtil;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.internal.IConfiguration;
 import org.testng.internal.annotations.IAnnotationFinder;
@@ -119,16 +121,19 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
             public Boolean call() throws Exception
             {
               try {
-                StatusResponseHolder response = client.get(
-                    new URL(
-                        String.format(
-                            "http://%s/status",
-                            host
+                StatusResponseHolder response = client.go(
+                    new Request(
+                        HttpMethod.GET,
+                        new URL(
+                            String.format(
+                                "http://%s/status",
+                                host
+                            )
                         )
-                    )
-                )
-                                                      .go(handler)
-                                                      .get();
+                    ),
+                    handler
+                ).get();
+
                 System.out.println(response.getStatus() + response.getContent());
                 if (response.getStatus().equals(HttpResponseStatus.OK)) {
                   return true;
