@@ -24,10 +24,12 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.annotations.Global;
 import io.druid.testing.IntegrationTestingConfig;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
@@ -61,11 +63,17 @@ public class ClientInfoResourceTestClient
     );
   }
 
-  public List<String> getDimensions(String dataSource, String interval){
+  public List<String> getDimensions(String dataSource, String interval)
+  {
     try {
-      StatusResponseHolder response = httpClient.get(new URL(String.format("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval)))
-                                                .go(responseHandler)
-                                                .get();
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(String.format("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval))
+          ),
+          responseHandler
+      ).get();
+
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while querying[%s] status[%s] content[%s]",

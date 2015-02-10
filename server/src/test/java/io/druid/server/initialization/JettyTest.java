@@ -29,6 +29,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
@@ -47,6 +48,7 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
@@ -147,8 +149,10 @@ public class JettyTest
                       long startTime2 = 0;
                       try {
                         ListenableFuture<StatusResponseHolder> go =
-                            client.get(new URL("http://localhost:" + port + "/slow/hello"))
-                                  .go(new StatusResponseHandler(Charset.defaultCharset()));
+                            client.go(
+                                new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/slow/hello")),
+                                new StatusResponseHandler(Charset.defaultCharset())
+                            );
                         startTime2 = System.currentTimeMillis();
                         go.get();
                       }
@@ -201,8 +205,10 @@ public class JettyTest
   public void testChunkNotFinalized() throws Exception
   {
     ListenableFuture<InputStream> go =
-        client.get(new URL("http://localhost:" + port + "/exception/exception"))
-              .go(new InputStreamResponseHandler());
+        client.go(
+            new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/exception/exception")),
+            new InputStreamResponseHandler()
+        );
     try {
       StringWriter writer = new StringWriter();
       IOUtils.copy(go.get(), writer, "utf-8");
@@ -225,13 +231,10 @@ public class JettyTest
           public void run()
           {
             try {
-              ListenableFuture<InputStream> go = client.get(
-                  new URL(
-                      "http://localhost:" + port + "/exception/exception"
-                  )
-
-              )
-                                                       .go(new InputStreamResponseHandler());
+              ListenableFuture<InputStream> go = client.go(
+                  new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/exception/exception")),
+                  new InputStreamResponseHandler()
+              );
               StringWriter writer = new StringWriter();
               IOUtils.copy(go.get(), writer, "utf-8");
             }

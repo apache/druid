@@ -23,11 +23,13 @@ import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
 import io.druid.timeline.DataSegment;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.ws.rs.core.MediaType;
@@ -92,10 +94,13 @@ public class IndexingServiceClient
   private InputStream runQuery(Object queryObject)
   {
     try {
-      return client.post(new URL(String.format("%s/task", baseUrl())))
-                   .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject))
-                   .go(RESPONSE_HANDLER)
-                   .get();
+      return client.go(
+          new Request(
+              HttpMethod.POST,
+              new URL(String.format("%s/task", baseUrl()))
+          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject)),
+          RESPONSE_HANDLER
+      ).get();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

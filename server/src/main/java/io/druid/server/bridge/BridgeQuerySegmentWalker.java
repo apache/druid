@@ -25,6 +25,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.client.selector.Server;
@@ -34,6 +35,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.ws.rs.core.MediaType;
@@ -99,18 +101,21 @@ public class BridgeQuerySegmentWalker implements QuerySegmentWalker
               brokerSelector.pick().getHost()
           );
 
-          StatusResponseHolder response = httpClient.post(new URL(url))
-                                                    .setContent(
-                                                        MediaType.APPLICATION_JSON,
-                                                        jsonMapper.writeValueAsBytes(query)
-                                                    )
-                                                    .go(responseHandler)
-                                                    .get();
+          StatusResponseHolder response = httpClient.go(
+              new Request(
+                  HttpMethod.POST,
+                  new URL(url)
+              ).setContent(
+                  MediaType.APPLICATION_JSON,
+                  jsonMapper.writeValueAsBytes(query)
+              ),
+              responseHandler
+          ).get();
 
           List<T> results = jsonMapper.readValue(
               response.getContent(), new TypeReference<List<T>>()
-          {
-          }
+              {
+              }
           );
 
           return Sequences.simple(results);

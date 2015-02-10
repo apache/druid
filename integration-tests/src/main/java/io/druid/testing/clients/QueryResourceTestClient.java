@@ -25,11 +25,13 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.annotations.Global;
 import io.druid.query.Query;
 import io.druid.testing.IntegrationTestingConfig;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
@@ -67,13 +69,14 @@ public class QueryResourceTestClient
   public List<Map<String, Object>> query(Query query)
   {
     try {
-      StatusResponseHolder response = httpClient.post(new URL(getBrokerURL()))
-                                                .setContent(
-                                                    "application/json",
-                                                    jsonMapper.writeValueAsBytes(query)
-                                                )
-                                                .go(responseHandler)
-                                                .get();
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getBrokerURL())).setContent(
+              "application/json",
+              jsonMapper.writeValueAsBytes(query)
+          ), responseHandler
+
+      ).get();
+
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while querying[%s] status[%s] content[%s]",

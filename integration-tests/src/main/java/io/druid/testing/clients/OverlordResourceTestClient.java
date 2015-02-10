@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.annotations.Global;
@@ -32,6 +33,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.utils.RetryUtil;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
@@ -81,13 +83,14 @@ public class OverlordResourceTestClient
   public String submitTask(String task)
   {
     try {
-      StatusResponseHolder response = httpClient.post(new URL(getIndexerURL() + "task"))
-                                                .setContent(
-                                                    "application/json",
-                                                    task.getBytes()
-                                                )
-                                                .go(responseHandler)
-                                                .get();
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "task"))
+              .setContent(
+                  "application/json",
+                  task.getBytes()
+              ),
+          responseHandler
+      ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while submitting task to indexer response [%s %s]",
@@ -194,9 +197,7 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = this.httpClient
-          .get(new URL(url))
-          .go(responseHandler)
-          .get();
+          .go(new Request(HttpMethod.GET, new URL(url)), responseHandler).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
       }
