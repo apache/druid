@@ -19,6 +19,7 @@ package io.druid.segment.filter;
 
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.WrappedConciseBitmap;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
@@ -52,11 +53,12 @@ public class ExtractionFilter implements Filter
   {
     final Indexed<String> allDimVals = selector.getDimensionValues(dimension);
     final List<Filter> filters = Lists.newArrayList();
-
-    for (int i = 0; i < allDimVals.size(); i++) {
-      String dimVal = allDimVals.get(i);
-      if (value.equals(fn.apply(dimVal))) {
-        filters.add(new SelectorFilter(dimension, dimVal));
+    if (allDimVals != null) {
+      for (int i = 0; i < allDimVals.size(); i++) {
+        String dimVal = allDimVals.get(i);
+        if (value.equals(fn.apply(dimVal))) {
+          filters.add(new SelectorFilter(dimension, dimVal));
+        }
       }
     }
 
@@ -66,6 +68,10 @@ public class ExtractionFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
+    final List<Filter> filters = makeFilters(selector);
+    if (filters.isEmpty()) {
+      return new WrappedConciseBitmap();
+    }
     return new OrFilter(makeFilters(selector)).getBitmapIndex(selector);
   }
 
