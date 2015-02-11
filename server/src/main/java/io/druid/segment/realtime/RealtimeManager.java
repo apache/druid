@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -158,7 +159,7 @@ public class RealtimeManager implements QuerySegmentWalker
                 Iterable<FireChief> chiefsOfDataSource = chiefs.get(input);
                 return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
                     factory.mergeRunners(
-                        executorService,
+                        MoreExecutors.sameThreadExecutor(), // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
                         Iterables.transform(
                             chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
                             {
