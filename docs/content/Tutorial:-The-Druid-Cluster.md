@@ -13,16 +13,14 @@ In this tutorial, we will set up other types of Druid nodes and external depende
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.0-bin.tar.gz)
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.0-bin.tar.gz). You can also [Build From Source](Build-from-source.html) and grab the tarball from services/target/druid-0.7.0-bin.tar.gz.
 
-and untar the contents within by issuing:
+Either way, once you have the tarball, untar the contents within by issuing:
 
 ```bash
 tar -zxvf druid-0.7.0-bin.tar.gz
 cd druid-0.7.0
 ```
-
-You can also [Build From Source](Build-from-source.html).
 
 ## External Dependencies
 
