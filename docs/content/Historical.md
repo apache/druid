@@ -36,3 +36,18 @@ Querying Segments
 Please see [Querying](Querying.html) for more information on querying historical nodes.
 
 For every query that a historical node services, it will log the query and report metrics on the time taken to run the query.
+
+HTTP Endpoints
+--------------
+
+The historical node exposes several HTTP endpoints for interactions.
+
+### GET
+
+* `/status`
+
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+
+* `/druid/historical/v1/loadstatus`
+
+Returns a flag indicating if all segments in the local cache have been loaded. This can be used to know when a historical node is ready to be queried after a restart.
