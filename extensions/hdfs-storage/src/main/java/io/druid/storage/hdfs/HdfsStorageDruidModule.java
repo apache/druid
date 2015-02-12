@@ -28,6 +28,7 @@ import io.druid.initialization.DruidModule;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
+import sun.net.www.protocol.hdfs.Handler;
 
 import java.util.List;
 import java.util.Properties;
@@ -65,6 +66,9 @@ public class HdfsStorageDruidModule implements DruidModule
         }
       }
     }
+
+    // Silly non-injected legacy java
+    Handler.setConfiguration(conf);
 
     binder.bind(Configuration.class).toInstance(conf);
     JsonConfigProvider.bind(binder, "druid.storage", HdfsDataSegmentPusherConfig.class);
