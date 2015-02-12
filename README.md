@@ -1,3 +1,4 @@
+![Travis CI build status](https://travis-ci.org/druid-io/druid.svg?branch=master)
 ## Druid
 
 Druid is a distributed, column-oriented, real-time analytics data store that is
