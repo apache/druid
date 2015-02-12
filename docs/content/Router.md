@@ -112,3 +112,30 @@ Allows defining arbitrary routing rules using a JavaScript function. The functio
   "function" : "function (config, query) { if (query.getAggregatorSpecs && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }"
 }
 ```
+
+HTTP Endpoints
+--------------
+
+The router node exposes several HTTP endpoints for interactions.
+
+### GET
+
+* `/status`
+
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+
+* `/druid/v2/datasources`
+
+Returns a list of queryable datasources.
+
+* `/druid/v2/datasources/{dataSourceName}`
+
+Returns the dimensions and metrics of the datasource.
+
+* `/druid/v2/datasources/{dataSourceName}/dimensions`
+
+Returns the dimensions of the datasource.
+
+* `/druid/v2/datasources/{dataSourceName}/metrics`
+
+Returns the metrics of the datasource.
