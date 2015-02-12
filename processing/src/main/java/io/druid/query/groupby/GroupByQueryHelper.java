@@ -23,6 +23,8 @@ import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
 import io.druid.collections.StupidPool;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
@@ -104,10 +106,18 @@ public class GroupByQueryHelper
       public IncrementalIndex accumulate(IncrementalIndex accumulated, T in)
       {
 
-        if (in instanceof Row) {
+        if (in instanceof MapBasedRow) {
           try {
-            accumulated.add(Rows.toCaseInsensitiveInputRow((Row) in, dimensions));
-          } catch(IndexSizeExceededException e) {
+            MapBasedRow row = (MapBasedRow) in;
+            accumulated.add(
+                new MapBasedInputRow(
+                    row.getTimestamp(),
+                    dimensions,
+                    row.getEvent()
+                )
+            );
+          }
+          catch (IndexSizeExceededException e) {
             throw new ISE(e.getMessage());
           }
         } else {
