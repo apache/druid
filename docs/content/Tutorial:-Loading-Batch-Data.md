@@ -69,19 +69,19 @@ Note: If Zookeeper and MySQL aren't running, you'll have to start them again as 
 To start the Indexing Service:
 
 ```bash
-java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path>:config/overlord io.druid.cli.Main server overlord
+java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path>:config/_common:config/overlord io.druid.cli.Main server overlord
 ```
 
 To start the Coordinator Node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/coordinator io.druid.cli.Main server coordinator
 ```
 
 To start the Historical Node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/historical io.druid.cli.Main server historical
 ```
 
 #### Index the Data

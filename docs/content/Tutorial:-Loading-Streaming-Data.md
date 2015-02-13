@@ -93,7 +93,7 @@ You should be comfortable starting Druid nodes at this point. If not, it may be 
 1. Real-time nodes can be started with:
 
   ```bash
-  java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
+  java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/indexing/wikipedia.spec -classpath lib/*:config/_common:config/realtime io.druid.cli.Main server realtime
   ```
 
 2. A realtime.spec should already exist for the data source in the Druid tarball. You should be able to find it at:
