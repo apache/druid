@@ -38,9 +38,11 @@
             <artifactId>druid-api</artifactId>
         </dependency>
         <dependency>
+            <!-- Kafka 0.7 is not on Maven Central, so you will have to
+                 replace this with your own Kafka 0.7 artifact -->
             <groupId>kafka</groupId>
             <artifactId>core-kafka</artifactId>
-            <version>0.7.2-mmx4</version>
+            <version>0.7.2</version>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
