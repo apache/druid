@@ -63,7 +63,7 @@
       "type": "index",
       "firehose": {
         "type": "local",
-        "baseDir": "/MyPath/druid-services-0.7.0-rc2/examples/indexing/",
+        "baseDir": "/MyPath/druid-services-0.7.0-rc3/examples/indexing/",
         "filter": "wikipedia_data.json"
       }
     },
