@@ -432,11 +432,12 @@ public class IndexGeneratorJob implements Jobby
 
       int attemptNumber = context.getTaskAttemptID().getId();
 
-      FileSystem fileSystem = FileSystem.get(context.getConfiguration());
-      Path indexBasePath = config.makeSegmentOutputPath(fileSystem, bucket);
-      Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
-      final FileSystem infoFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
-      final FileSystem outputFS = indexBasePath.getFileSystem(context.getConfiguration());
+      final FileSystem intermediateFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
+      final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath()).getFileSystem(
+          context.getConfiguration()
+      );
+      final Path indexBasePath = config.makeSegmentOutputPath(outputFS, bucket);
+      final Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
 
       outputFS.mkdirs(indexBasePath);
 
@@ -502,7 +503,7 @@ public class IndexGeneratorJob implements Jobby
       // retry 1 minute
       boolean success = false;
       for (int i = 0; i < 6; i++) {
-        if (renameIndexFiles(infoFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
+        if (renameIndexFiles(intermediateFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
           log.info("Successfully renamed [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
           success = true;
           break;
@@ -532,7 +533,7 @@ public class IndexGeneratorJob implements Jobby
           outputFS.delete(indexZipFilePath, true);
         } else {
           outputFS.delete(finalIndexZipFilePath, true);
-          if (!renameIndexFiles(infoFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
+          if (!renameIndexFiles(intermediateFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
             throw new ISE(
                 "Files [%s] and [%s] are different, but still cannot rename after retry loop",
                 indexZipFilePath.toUri().getPath(),
