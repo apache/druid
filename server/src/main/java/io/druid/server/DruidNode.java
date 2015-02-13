@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
 import com.metamx.common.IAE;
@@ -35,6 +36,7 @@ import javax.validation.constraints.NotNull;
 public class DruidNode
 {
   public static final String DEFAULT_HOST = "localhost";
+  public static final String DEFAULT_ENV_KEY_PORT = "PORT"; // pulls from Env variable
 
   @JsonProperty("service")
   @NotNull
@@ -79,6 +81,17 @@ public class DruidNode
   {
     Preconditions.checkNotNull(serviceName);
     this.serviceName = serviceName;
+
+    if(port == null){
+      String sPort = System.getenv(DEFAULT_ENV_KEY_PORT);
+      if(!Strings.isNullOrEmpty(sPort)){
+        try{
+          port = Integer.parseInt(sPort);
+        } catch(NumberFormatException e){
+          throw new IAE("Unparsable port found in PORT environment variable, cannot parse [%s]", sPort);
+        }
+      }
+    }
 
     if(host == null && port == null) {
       host = DEFAULT_HOST;
