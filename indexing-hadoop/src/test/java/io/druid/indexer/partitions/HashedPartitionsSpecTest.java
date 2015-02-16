@@ -17,8 +17,10 @@
 
 package io.druid.indexer.partitions;
 
+import io.druid.jackson.DefaultObjectMapper;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import io.druid.indexer.HadoopDruidIndexerConfigTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,6 +28,8 @@ import org.junit.Test;
  */
 public class HashedPartitionsSpecTest
 {
+  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
   @Test
   public void testHashedPartitionsSpec() throws Exception
   {
@@ -33,7 +37,7 @@ public class HashedPartitionsSpecTest
       final PartitionsSpec partitionsSpec;
 
       try {
-        partitionsSpec = HadoopDruidIndexerConfigTest.jsonReadWriteRead(
+        partitionsSpec = jsonReadWriteRead(
             "{"
             + "   \"targetPartitionSize\":100,"
             + "   \"type\":\"hashed\""
@@ -73,7 +77,7 @@ public class HashedPartitionsSpecTest
     final PartitionsSpec partitionsSpec;
 
     try {
-      partitionsSpec = HadoopDruidIndexerConfigTest.jsonReadWriteRead(
+      partitionsSpec = jsonReadWriteRead(
           "{"
           + "   \"type\":\"hashed\","
           + "   \"numShards\":2"
@@ -110,5 +114,15 @@ public class HashedPartitionsSpecTest
     );
 
     Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
+  }
+  
+  private <T> T jsonReadWriteRead(String s, Class<T> klass)
+  {
+    try {
+      return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }
