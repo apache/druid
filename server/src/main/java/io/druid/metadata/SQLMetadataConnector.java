@@ -26,11 +26,12 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.TransactionCallback;
+import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
-import java.sql.Connection;
 import java.util.List;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
@@ -248,15 +249,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final byte[] value
   ) throws Exception
   {
-    return getDBI().withHandle(
-        new HandleCallback<Void>()
+    return getDBI().inTransaction(
+        new TransactionCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
           {
-            Connection conn = getDBI().open().getConnection();
-            handle.begin();
-            conn.setAutoCommit(false);
             int count = handle
                 .createQuery(
                     String.format("SELECT COUNT(*) FROM %1$s WHERE %2$s = :key", tableName, keyColumn)
@@ -277,8 +275,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                     .bind("value", value)
                     .execute();
             }
-            conn.setAutoCommit(true);
-            handle.commit();
             return null;
           }
         }
