@@ -169,7 +169,7 @@ druid.coordinator.startDelay=PT70s
 To start the coordinator node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/coordinator io.druid.cli.Main server coordinator
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/coordinator io.druid.cli.Main server coordinator
 ```
 
 #### Start a Historical Node
@@ -202,7 +202,7 @@ druid.server.maxSize=10000000000
 To start the historical node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/historical io.druid.cli.Main server historical
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/historical io.druid.cli.Main server historical
 ```
 
 #### Start a Broker Node
@@ -234,7 +234,7 @@ druid.processing.numThreads=1
 To start the broker node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/broker io.druid.cli.Main server broker
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/broker io.druid.cli.Main server broker
 ```
 
 #### Start a Realtime Node
@@ -280,7 +280,7 @@ Now we should be handing off segments every 6 minutes or so.
 To start the realtime node that was used in our first tutorial, you simply have to issue:
 
 ```
-java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/wikipedia/wikipedia_realtime.spec -classpath lib/*:config/realtime io.druid.cli.Main server realtime
+java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/wikipedia/wikipedia_realtime.spec -classpath lib/*:config/_common:config/realtime io.druid.cli.Main server realtime
 ```
 
 The configurations are located in `config/realtime/runtime.properties` and should contain the following:
@@ -301,7 +301,31 @@ druid.processing.numThreads=2
 
 Once the real-time node starts up, it should begin ingesting data and handing that data off to the rest of the Druid cluster. You can use a web UI located at coordinator_ip:port to view the status of data being loaded. Once data is handed off from the real-time nodes to historical nodes, the historical nodes should begin serving segments.
 
-At any point during ingestion, we can query for data. The queries should span across both real-time and historical nodes. For more information on querying, see this [link](Querying.html).
+#### Query
+
+At any point during ingestion, we can query for data. For example:
+
+```
+curl -X POST 'http://localhost:8080/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
+```
+
+This query will span across both realtime and historical nodes. If you're curious, you can query the historical node directly by sending the same query to the historical node's port:
+
+```
+curl -X POST 'http://localhost:8081/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
+```
+
+This query may produce no results if the realtime node hasn't run long enough to hand off the segment (we configured it above to be 5 minutes). Query the realtime node directly by sending the same query to the realtime node's port:
+
+```
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
+```
+
+The realtime query results will reflect the data that was recently indexed from wikipedia, and not handed off to the historical node yet. Once the historical node acknowledges it has loaded the segment, the realtime node will stop querying the segment. 
+
+Querying the historical and realtime node directly is useful for understanding how the segment handling is working, but if you just want to run a query for all the data (realtime and historical), then send the query to the broker at port 8080 (which is what we did in the first example). The broker will send the query to the historical and realtime nodes and merge the results.
+
+For more information on querying, see this [link](Querying.html).
 
 Next Steps
 ----------
