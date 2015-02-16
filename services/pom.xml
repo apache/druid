@@ -56,6 +56,13 @@
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
         </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
