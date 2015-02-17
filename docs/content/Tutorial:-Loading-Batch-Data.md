@@ -4,7 +4,7 @@ layout: doc_page
 
 # Tutorial: Loading Batch Data
 
-In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments.
+In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments. The indexing service can be used as a single service for both real-time/streaming and batch ingestion.
 
 The Data
 --------
@@ -38,11 +38,8 @@ Metrics (things to aggregate over):
 
 Batch Ingestion
 ---------------
-Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
 
-For this tutorial, we used [Hadoop 2.3.0](https://archive.apache.org/dist/hadoop/core/hadoop-2.3.0/). There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example.
-
-For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html), but we are going to use Hadoop here for demonstration purposes.
+For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html).
 
 Our data is located at:
 
@@ -164,7 +161,7 @@ Open up the file to see the following:
 }
 ```
 
-Okay, so what is happening here? The "type" field indicates the type of task we plan to run. In this case, it is a simple "index" task. The "granularitySpec" indicates that we are building a daily segment for 2013-08-31 to 2013-09-01. Next, the "aggregators" indicate which fields in our data set we plan to build metric columns for. The "fieldName" corresponds to the metric name in the raw data. The "name" corresponds to what our metric column is actually going to be called in the segment. Finally, we have a local "firehose" that is going to read data from disk. We tell the firehose where our data is located and the types of files we are looking to ingest. In our case, we only have a single data file.
+Okay, so what is happening here? The "type" field indicates the type of task we plan to run. In this case, it is a simple "index" task. The "parseSpec" indicates how we plan to figure out what the timestamp and dimension columns are. The "granularitySpec" indicates that we are building a daily segment for 2013-08-31 to 2013-09-01 and the minimum queryGranularity will be millisecond (NONE). Next, the "metricsSpec" indicate which fields in our data set we plan to build metric columns for. The "fieldName" corresponds to the metric name in the raw data. The "name" corresponds to what our metric column is actually going to be called in the segment. Finally, we have a local "firehose" that is going to read data from disk. We tell the firehose where our data is located and the types of files we are looking to ingest. In our case, we only have a single data file.
 
 Let's send our task to the indexing service now:
 
@@ -175,9 +172,8 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedi
 Issuing the request should return a task ID like so:
 
 ```bash
-$ curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedia_index_task.json localhost:8087/druid/indexer/v1/task
+curl -X 'POST' -H 'Content-Type:application/json' -d @examples/indexing/wikipedia_index_task.json localhost:8087/druid/indexer/v1/task
 {"task":"index_wikipedia_2013-10-09T21:30:32.802Z"}
-$
 ```
 
 In your indexing service logs, you should see the following:
@@ -197,7 +193,7 @@ After a few seconds, the task should complete and you should see in the indexing
 2013-10-09 21:41:45,765 INFO [pool-6-thread-1] io.druid.indexing.overlord.exec.TaskConsumer - Received SUCCESS status for task: IndexGeneratorTask{id=index_wikipedia_2013-10-09T21:41:41.147Z_generator_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_0, type=index_generator, dataSource=wikipedia, interval=Optional.of(2013-08-31T00:00:00.000Z/2013-09-01T00:00:00.000Z)}
 ```
 
-Congratulations! The segment has completed building. Once a segment is built, a segment metadata entry is created in your MySQL table. The coordinator compares what is in the segment metadata table with what is in the cluster. A new entry in the metadata table will cause the coordinator to load the new segment in a minute or so.
+Congratulations! The segment has completed building. Once a segment is built, a segment metadata entry is created in your metadata storage table. The coordinator compares what is in the segment metadata table with what is in the cluster. A new entry in the metadata table will cause the coordinator to load the new segment in a minute or so.
 
 You should see the following logs on the coordinator:
 
@@ -248,6 +244,10 @@ Task logs can be stored locally or uploaded to [Deep Storage](Deep-Storage.html)
 Most common data ingestion problems are around timestamp formats and other malformed data issues.
 
 #### Hadoop Index Task
+
+Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
+
+For this tutorial, we used [Hadoop 2.3.0](https://archive.apache.org/dist/hadoop/core/hadoop-2.3.0/). There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example.
 
 Before indexing the data, make sure you have a valid Hadoop cluster running. To build our Druid segment, we are going to submit a [Hadoop index task](Tasks.html) to the indexing service. The grammar for the Hadoop index task is very similar to the index task of the last tutorial. The tutorial Hadoop index task should be located at:
 
