@@ -21,7 +21,10 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.common.aws.AWSCredentialsUtils;
 import io.druid.guice.Binders;
@@ -59,6 +62,22 @@ public class S3StorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding("s3").to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
+    binder.bind(AWSCredentialsGuiceBridge.class).toProvider(AWSCredentialsGuiceBridgeProvider.class).asEagerSingleton(); // Fix lack of DI in ServiceLoader
+  }
+
+  private static class AWSCredentialsGuiceBridgeProvider implements Provider<AWSCredentialsGuiceBridge>
+  {
+    private final AWSCredentialsConfig config;
+    @Inject
+    public AWSCredentialsGuiceBridgeProvider(final AWSCredentialsConfig config){
+      this.config = config;
+    }
+    public AWSCredentialsGuiceBridge get()
+    {
+      AWSCredentialsGuiceBridge bridge = new AWSCredentialsGuiceBridge();
+      bridge.setCredentials(AWSCredentialsUtils.defaultAWSCredentialsProviderChain(config));
+      return bridge;
+    }
   }
 
   @Provides
