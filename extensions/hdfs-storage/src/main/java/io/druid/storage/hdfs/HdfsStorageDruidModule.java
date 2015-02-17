@@ -21,10 +21,14 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
+import io.druid.segment.loading.DataSegmentPuller;
+import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -53,7 +57,10 @@ public class HdfsStorageDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    Binders.dataSegmentPullerBinder(binder).addBinding("hdfs").to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
+    binder.bind(Key.get(DataSegmentPuller.class, Names.named("hdfs")))
+          .to(HdfsDataSegmentPuller.class)
+          .in(LazySingleton.class);
+
     Binders.dataSegmentPusherBinder(binder).addBinding("hdfs").to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding("hdfs").to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
 

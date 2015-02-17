@@ -23,12 +23,13 @@ import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
 import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.SegmentLoaderFactory;
@@ -83,6 +84,9 @@ public class WorkerTaskMonitorTest
                 }
               }
           );
+          binder.bind(Key.get(DataSegmentPuller.class, Names.named("local")))
+              .to(LocalDataSegmentPuller.class)
+              .asEagerSingleton();
         }
       }
   );
@@ -165,10 +169,7 @@ public class WorkerTaskMonitorTest
                 new TaskConfig(tmp.toString(), null, null, 0, null),
                 null, null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
                 new OmniSegmentLoader(
-                    ImmutableMap.<String, DataSegmentPuller>of(
-                        "local",
-                        new LocalDataSegmentPuller()
-                    ),
+                    injector,
                     null,
                     new SegmentLoaderConfig()
                     {

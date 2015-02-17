@@ -21,13 +21,16 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Provides;
+import com.google.inject.name.Names;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.common.aws.AWSCredentialsUtils;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
+import io.druid.segment.loading.DataSegmentPuller;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.security.AWSCredentials;
 
@@ -48,7 +51,9 @@ public class S3StorageDruidModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
 
-    Binders.dataSegmentPullerBinder(binder).addBinding("s3_zip").to(S3DataSegmentPuller.class).in(LazySingleton.class);
+    binder.bind(Key.get(DataSegmentPuller.class, Names.named("s3_zip")))
+          .to(S3DataSegmentPuller.class)
+          .in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding("s3_zip").to(S3DataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder).addBinding("s3_zip").to(S3DataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder).addBinding("s3_zip").to(S3DataSegmentArchiver.class).in(LazySingleton.class);

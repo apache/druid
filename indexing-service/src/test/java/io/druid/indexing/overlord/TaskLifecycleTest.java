@@ -28,6 +28,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
@@ -63,6 +68,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentArchiver;
@@ -102,6 +108,18 @@ public class TaskLifecycleTest
       return Comparators.intervalsByStartThenEnd().compare(dataSegment.getInterval(), dataSegment2.getInterval());
     }
   };
+  private static final Injector injector = Guice.createInjector(
+      new com.google.inject.Module()
+      {
+        @Override
+        public void configure(Binder binder)
+        {
+          binder.bind(Key.get(DataSegmentPuller.class, Names.named("local")))
+                .to(LocalDataSegmentPuller.class)
+                .asEagerSingleton();
+        }
+      }
+  );
   TaskStorageQueryAdapter tsqa = null;
   private File tmp = null;
   private TaskStorage ts = null;
@@ -315,10 +333,7 @@ public class TaskLifecycleTest
         null, // monitor scheduler
         new SegmentLoaderFactory(
             new OmniSegmentLoader(
-                ImmutableMap.<String, DataSegmentPuller>of(
-                    "local",
-                    new LocalDataSegmentPuller()
-                ),
+                injector,
                 null,
                 new SegmentLoaderConfig()
                 {
