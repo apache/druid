@@ -45,6 +45,8 @@ Druid vs…
 * [Druid-vs-Vertica](Druid-vs-Vertica.html)
 * [Druid-vs-Cassandra](Druid-vs-Cassandra.html)
 * [Druid-vs-Hadoop](Druid-vs-Hadoop.html)
+* [Druid-vs-Spark](Druid-vs-Spark.html)
+* [Druid-vs-Elasticsearch](Druid-vs-Elasticsearch.html)
 
 
 About This Page
