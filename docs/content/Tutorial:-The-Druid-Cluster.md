@@ -158,7 +158,7 @@ In the directory, there should be a `runtime.properties` file with the following
 
 ```
 druid.host=localhost
-druid.port=8082
+druid.port=8081
 druid.service=coordinator
 
 # The coordinator begins assignment operations after the start delay.
@@ -189,7 +189,7 @@ In the directory we just created, we should have the file `runtime.properties` w
 
 ```
 druid.host=localhost
-druid.port=8081
+druid.port=8083
 druid.service=historical
 
 # We can only 1 scan segment in parallel with these configs.
@@ -222,7 +222,7 @@ In the directory, there should be a `runtime.properties` file with the following
 
 ```
 druid.host=localhost
-druid.port=8080
+druid.port=8082
 druid.service=broker
 
 druid.broker.cache.useCache=true
@@ -289,7 +289,7 @@ The configurations are located in `config/realtime/runtime.properties` and shoul
 
 ```
 druid.host=localhost
-druid.port=8083
+druid.port=8084
 druid.service=realtime
 
 # We can only 1 scan segment in parallel with these configs.
@@ -308,24 +308,24 @@ Once the real-time node starts up, it should begin ingesting data and handing th
 At any point during ingestion, we can query for data. For example:
 
 ```
-curl -X POST 'http://localhost:8080/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
+curl -X POST 'http://localhost:8082/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
 ```
 
 This query will span across both realtime and historical nodes. If you're curious, you can query the historical node directly by sending the same query to the historical node's port:
 
 ```
-curl -X POST 'http://localhost:8081/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
+curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
 ```
 
 This query may produce no results if the realtime node hasn't run long enough to hand off the segment (we configured it above to be 5 minutes). Query the realtime node directly by sending the same query to the realtime node's port:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
+curl -X POST 'http://localhost:8084/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
 ```
 
 The realtime query results will reflect the data that was recently indexed from wikipedia, and not handed off to the historical node yet. Once the historical node acknowledges it has loaded the segment, the realtime node will drop the segment.
 
-Querying the historical and realtime node directly is useful for understanding how the segment handling is working, but if you just want to run a query for all the data (realtime and historical), then send the query to the broker at port 8080 (which is what we did in the first example). The broker will send the query to the historical and realtime nodes and merge the results.
+Querying the historical and realtime node directly is useful for understanding how the segment handling is working, but if you just want to run a query for all the data (realtime and historical), then send the query to the broker at port 8082 (which is what we did in the first example). The broker will send the query to the historical and realtime nodes and merge the results.
 
 For more information on querying, see this [link](Querying.html).
 

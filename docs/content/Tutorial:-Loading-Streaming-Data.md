@@ -115,7 +115,7 @@ download](http://static.druid.io/artifacts/releases/druid-services-0.7.0-rc3-bin
 
     ```
     ...
-    2015-02-17T23:01:50,220 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_2013-08-31T00:00:00.000Z] at path[/druid/segments/localhost:8083/2015-02-17T23:01:50.219Z0]
+    2015-02-17T23:01:50,220 INFO [chief-wikipedia] io.druid.server.coordination.BatchDataSegmentAnnouncer - Announcing segment[wikipedia_2013-08-31T00:00:00.000Z_2013-09-01T00:00:00.000Z_2013-08-31T00:00:00.000Z] at path[/druid/segments/localhost:8084/2015-02-17T23:01:50.219Z0]
     ...
     ```
 
@@ -126,7 +126,7 @@ download](http://static.druid.io/artifacts/releases/druid-services-0.7.0-rc3-bin
 
     ```bash
     curl -XPOST -H'Content-type: application/json' \
-      "http://localhost:8083/druid/v2/?pretty" \
+      "http://localhost:8084/druid/v2/?pretty" \
       -d'{"queryType":"timeBoundary","dataSource":"wikipedia"}'
     ```
 

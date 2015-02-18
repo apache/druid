@@ -359,7 +359,7 @@ The Hadoop Index Config submitted as part of an Hadoop Index Task is identical t
 To run the task:
 
 ```
-curl -X 'POST' -H 'Content-Type:application/json' -d @example_index_hadoop_task.json localhost:8087/druid/indexer/v1/task
+curl -X 'POST' -H 'Content-Type:application/json' -d @example_index_hadoop_task.json localhost:8090/druid/indexer/v1/task
 ```
 
 If the task succeeds, you should see in the logs of the indexing service:

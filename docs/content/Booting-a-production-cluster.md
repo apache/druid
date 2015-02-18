@@ -84,7 +84,7 @@ Now you can run an indexing task and a simple query to see if all the nodes have
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @#{PATH_TO}/wikipedia_realtime_task.json #{OVERLORD_PUBLIC_IP_ADDR}:#{PORT}/druid/indexer/v1/task
 ```
-where OVERLORD_PUBLIC_IP_ADDR should be available from the EC2 information logged to STDOUT, the Overlord port is 8080 by default, and `wikipedia_realtime_task.json` is discussed above. 
+where OVERLORD_PUBLIC_IP_ADDR should be available from the EC2 information logged to STDOUT, the Overlord port is 8090 by default, and `wikipedia_realtime_task.json` is discussed above. 
 
 Issuing this request should return a task ID.
 

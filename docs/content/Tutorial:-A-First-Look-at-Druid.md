@@ -81,7 +81,7 @@ Select "wikipedia".
 Note that the first time you start the example, it may take some extra time due to its fetching various dependencies. Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
 ```
-2015-02-17T21:46:36,804 INFO [main] org.eclipse.jetty.server.ServerConnector - Started ServerConnector@79b6cf95{HTTP/1.1}{0.0.0.0:8083}
+2015-02-17T21:46:36,804 INFO [main] org.eclipse.jetty.server.ServerConnector - Started ServerConnector@79b6cf95{HTTP/1.1}{0.0.0.0:8084}
 2015-02-17T21:46:36,804 INFO [main] org.eclipse.jetty.server.Server - Started @9580ms
 2015-02-17T21:46:36,862 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - irc connection to server [irc.wikimedia.org] established
 2015-02-17T21:46:36,862 INFO [ApiDaemon] io.druid.segment.realtime.firehose.IrcFirehoseFactory - Joining channel #en.wikipedia
@@ -152,7 +152,7 @@ Our query has now expanded to include a time interval, [Granularities](Granulari
 To issue the query and get some results, run the following in your command line:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries.json
+curl -X POST 'http://localhost:8084/druid/v2/?pretty' -H 'content-type: application/json'  -d  @timeseries.json
 ```
 
 Once again, you should get a JSON blob of text back with your results, that looks something like this:
@@ -237,7 +237,7 @@ Note that our query now includes [Filters](Filters.html). Filters are like `WHER
 If you issue the query:
 
 ```
-curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json'  -d @topn.json
+curl -X POST 'http://localhost:8084/druid/v2/?pretty' -H 'content-type: application/json'  -d @topn.json
 ```
 
 You should see an answer to our question. As an example, some results are shown below:

@@ -66,7 +66,7 @@ This guide walks you through the steps to create the cluster and then how to cre
 
 1. Use the following URL to bring up the Druid Demo Cluster query interface (replace **IPAddressDruidCoordinator** with the actual druid coordinator IP Address):
 
-**`http://IPAddressDruidCoordinator:8082/druid/v3/demoServlet`**
+**`http://IPAddressDruidCoordinator:8081/druid/v3/demoServlet`**
 
 As you can see from the image below, there are default values in the Dimensions and Granularity fields. Clicking **Execute** will produce a basic query result. 
 ![Demo Query Interface](images/demo/query-1.png)
