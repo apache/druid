@@ -17,7 +17,9 @@
 
 package io.druid.server;
 
+import com.google.common.base.Strings;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class DruidNodeTest
@@ -108,5 +110,23 @@ public class DruidNodeTest
   public void testConflictingPortsNonsense() throws Exception
   {
     new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", 456);
+  }
+
+  @Test
+  public void testEnvPort(){
+    final Integer port;
+    String prior = System.getenv(DruidNode.DEFAULT_ENV_KEY_PORT);
+    if(Strings.isNullOrEmpty(prior)){
+      Assume.assumeTrue(false); // force skip
+      return;
+    }
+
+    try{
+      port = Integer.parseInt(prior);
+    } catch (NumberFormatException e){
+      Assume.assumeTrue(false); // Force skip
+      return;
+    }
+    Assert.assertEquals(port.intValue(), new DruidNode("fooServer", "fooHost", null).getPort());
   }
 }
