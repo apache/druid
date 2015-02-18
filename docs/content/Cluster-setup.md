@@ -87,9 +87,9 @@ druid.port=8080
 
 `druid.server.type` should be set to "historical" for your historical nodes and realtime for the realtime nodes. The Coordinator will only assign segments to a "historical" node and the broker has some intelligence around its ability to cache results when talking to a realtime node. This does not need to be set for the coordinator or the broker.
 
-`druid.host` should be set to the hostname and port that can be used to talk to the given server process. Basically, someone should be able to send a request to http://${druid.host}/ and actually talk to the process.
+`druid.host` should be set to the hostname that can be used to talk to the given server process. Basically, someone should be able to send a request to http://${druid.host}:${druid.port}/ and actually talk to the process.
 
-`druid.port` should be set to the port that the server should listen on. In the vast majority of cases, this port should be the same as what is on `druid.host`.
+`druid.port` should be set to the port that the server should listen on.
 
 Build/Run
 ---------

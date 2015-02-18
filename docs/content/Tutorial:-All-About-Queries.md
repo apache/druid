@@ -59,7 +59,7 @@ Make sure you've completed [Loading Your Data](Loading-Your-Data-Part-1.html) so
 Run the query against your broker:
 
 ```bash
-curl -X POST "http://localhost:8080/druid/v2/?pretty" -H 'Content-type: application/json' -d @query.body
+curl -X POST "http://localhost:8082/druid/v2/?pretty" -H 'Content-type: application/json' -d @query.body
 ```
 
 And get:
