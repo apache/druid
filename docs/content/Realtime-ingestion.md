@@ -66,16 +66,16 @@ The property `druid.realtime.specFile` has the path of a file (absolute or relat
     "ioConfig" : {
       "type" : "realtime",
       "firehose": {
-        "type": "kafka-0.7.2",
+        "type": "kafka-0.8",
         "consumerProps": {
-          "zk.connect": "localhost:2181",
-          "zk.connectiontimeout.ms": "15000",
-          "zk.sessiontimeout.ms": "15000",
-          "zk.synctime.ms": "5000",
-          "groupid": "druid-example",
-          "fetch.size": "1048586",
-          "autooffset.reset": "largest",
-          "autocommit.enable": "false"
+          "zookeeper.connect": "localhost:2181",
+          "zookeeper.connection.timeout.ms" : "15000",
+          "zookeeper.session.timeout.ms" : "15000",
+          "zookeeper.sync.time.ms" : "5000",
+          "group.id": "druid-example",
+          "fetch.message.max.bytes" : "1048586",
+          "auto.offset.reset": "largest",
+          "auto.commit.enable": "false"
         },
         "feed": "wikipedia"
       },

@@ -218,16 +218,16 @@ The indexing service can also run real-time tasks. These tasks effectively trans
     "ioConfig": {
       "type": "realtime",
       "firehose": {
-        "type": "kafka-0.7.2",
+        "type": "kafka-0.8",
         "consumerProps": {
-          "zk.connect": "zk_connect_string",
-          "zk.connectiontimeout.ms": "15000",
-          "zk.sessiontimeout.ms": "15000",
-          "zk.synctime.ms": "5000",
-          "groupid": "consumer-group",
-          "fetch.size": "1048586",
-          "autooffset.reset": "largest",
-          "autocommit.enable": "false"
+          "zookeeper.connect": "zk_connect_string",
+          "zookeeper.connection.timeout.ms" : "15000",
+          "zookeeper.session.timeout.ms" : "15000",
+          "zookeeper.sync.time.ms" : "5000",
+          "group.id": "consumer-group",
+          "fetch.message.max.bytes" : "1048586",
+          "auto.offset.reset": "largest",
+          "auto.commit.enable": "false"
         },
         "feed": "your_kafka_topic"
       },
