@@ -49,7 +49,7 @@ if [ -e ${EXAMPLE_LOC}/before.sh ]; then
 fi
 
 #  start process
-JAVA_ARGS="-Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
+JAVA_ARGS="-Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
 JAVA_ARGS="${JAVA_ARGS} -Ddruid.realtime.specFile=${SPEC_FILE}"
 
 

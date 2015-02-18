@@ -253,6 +253,10 @@ The configuration options are:
 |partitionDimension|the dimension to partition on. Leave blank to select a dimension automatically.|no|
 |assumeGrouped|assume input data has already been grouped on time and dimensions. Ingestion will run faster, but can choose suboptimal partitions if the assumption is violated.|no|
 
+### Remote Hadoop Cluster
+
+If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in the classpath of the indexer.
+
 Batch Ingestion Using the Indexing Service
 ------------------------------------------
 
@@ -363,6 +367,10 @@ If the task succeeds, you should see in the logs of the indexing service:
 ```
 2013-10-16 16:38:31,945 INFO [pool-6-thread-1] io.druid.indexing.overlord.exec.TaskConsumer - Task SUCCESS: HadoopIndexTask...
 ```
+
+### Remote Hadoop Cluster
+
+If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in the classpath of the middle manager.
 
 Having Problems?
 ----------------

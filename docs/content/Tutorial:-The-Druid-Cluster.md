@@ -26,9 +26,9 @@ You can also [Build From Source](Build-from-source.html).
 
 ## External Dependencies
 
-Druid requires 3 external dependencies. A "deep" storage that acts as a backup data repository, a relational database such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
+Druid requires 3 external dependencies. A "deep storage" that acts as a backup data repository, a "metadata storage" such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
 
-For deep storage, we will use local disk in this tutorial.
+For deep storage, we will use local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, we'll be using MySQL, but other options such as PostgreSQL are also supported.
 
 #### Set up Metadata storage
 
@@ -112,22 +112,22 @@ In the directory, there should be a `common.runtime.properties` file with the fo
 
 ```
 # Extensions
-druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-seven","io.druid.extensions:mysql-metadata-storage"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-eight","io.druid.extensions:mysql-metadata-storage"]
 
 # Zookeeper
 druid.zk.service.host=localhost
 
-# Metadata Storage
+# Metadata Storage (mysql)
 druid.metadata.storage.type=mysql
 druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
 druid.metadata.storage.connector.user=druid
 druid.metadata.storage.connector.password=diurd
 
-# Deep storage
+# Deep storage (local filesystem for examples - don't use this in production)
 druid.storage.type=local
 druid.storage.storage.storageDirectory=/tmp/druid/localStorage
 
-# Cache (we use a simple 10mb heap-based local cache on the broker)
+# Query Cache (we use a simple 10mb heap-based local cache on the broker)
 druid.cache.type=local
 druid.cache.sizeInBytes=10000000
 
@@ -171,6 +171,8 @@ To start the coordinator node:
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/coordinator io.druid.cli.Main server coordinator
 ```
+
+Note: we will be running a single historical node in these examples, so you may see some warnings about not being able to replicate segments. These can be safely ignored, but in production, you should always replicate segments across multiple historical nodes.
 
 #### Start a Historical Node
 
@@ -321,7 +323,7 @@ This query may produce no results if the realtime node hasn't run long enough to
 curl -X POST 'http://localhost:8083/druid/v2/?pretty' -H 'content-type: application/json' -d@examples/wikipedia/query.body
 ```
 
-The realtime query results will reflect the data that was recently indexed from wikipedia, and not handed off to the historical node yet. Once the historical node acknowledges it has loaded the segment, the realtime node will stop querying the segment. 
+The realtime query results will reflect the data that was recently indexed from wikipedia, and not handed off to the historical node yet. Once the historical node acknowledges it has loaded the segment, the realtime node will drop the segment.
 
 Querying the historical and realtime node directly is useful for understanding how the segment handling is working, but if you just want to run a query for all the data (realtime and historical), then send the query to the broker at port 8080 (which is what we did in the first example). The broker will send the query to the historical and realtime nodes and merge the results.
 
@@ -330,4 +332,4 @@ For more information on querying, see this [link](Querying.html).
 Next Steps
 ----------
 If you are interested in how data flows through the different Druid components, check out the [Druid data flow architecture](Design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
-Check out the next [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html) section for more info!
+Check out the next [tutorial](Tutorial%3A-Loading-Streaming-Data.html) section for more info!

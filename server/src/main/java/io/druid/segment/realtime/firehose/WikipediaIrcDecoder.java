@@ -97,16 +97,25 @@ class WikipediaIrcDecoder implements IrcDecoder
     } else {
       try {
         String tmpDir = System.getProperty("java.io.tmpdir");
+
         geoDb = new File(tmpDir, this.getClass().getCanonicalName() + ".GeoLite2-City.mmdb");
+
         if (!geoDb.exists()) {
-          log.info("Downloading geo ip database to [%s]", geoDb);
+          log.info("Downloading geo ip database to [%s]. This may take a few minutes.", geoDb);
+
+          File tmpFile = File.createTempFile("druid", "geo");
 
           FileUtils.copyInputStreamToFile(
               new GZIPInputStream(
                   new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
               ),
-              geoDb
+              tmpFile
           );
+          if (!tmpFile.renameTo(geoDb)) {
+            throw new RuntimeException("Unable to move geo file!");
+          }
+        } else {
+          log.info("Using geo ip database at [%s].", geoDb);
         }
       }
       catch (IOException e) {
