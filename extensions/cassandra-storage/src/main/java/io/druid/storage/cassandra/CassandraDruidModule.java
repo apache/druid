@@ -17,7 +17,7 @@
 
 package io.druid.storage.cassandra;
 
-import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.core.Version;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
@@ -34,24 +34,47 @@ import java.util.List;
  */
 public class CassandraDruidModule implements DruidModule
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
-  }
+  public static final String SCHEME = "c*";
 
   @Override
   public void configure(Binder binder)
   {
     Binders.dataSegmentPullerBinder(binder)
-                .addBinding("c*")
-                .to(CassandraDataSegmentPuller.class)
-                .in(LazySingleton.class);
+           .addBinding(SCHEME)
+           .to(CassandraDataSegmentPuller.class)
+           .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
-            .addBinding("c*")
+            .addBinding(SCHEME)
             .to(CassandraDataSegmentPusher.class)
             .in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", CassandraDataSegmentConfig.class);
+  }
+
+  @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return ImmutableList.of(
+        new com.fasterxml.jackson.databind.Module()
+        {
+          @Override
+          public String getModuleName()
+          {
+            return "DruidCassandraStorage-" + System.identityHashCode(this);
+          }
+
+          @Override
+          public Version version()
+          {
+            return Version.unknownVersion();
+          }
+
+          @Override
+          public void setupModule(SetupContext context)
+          {
+            context.registerSubtypes(CassandraLoadSpec.class);
+          }
+        }
+    );
   }
 }
