@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package io.druid.guice;;
+package io.druid.guice;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
