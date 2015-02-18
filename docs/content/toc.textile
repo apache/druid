@@ -32,7 +32,6 @@ h2. Configuration
 h2. Data Ingestion
 * "Ingestion FAQ":./Ingestion-FAQ.html
 * "Realtime":./Realtime-ingestion.html
-** "Kafka-0.8.x Ingestion":./Kafka-Eight.html
 * "Batch":./Batch-ingestion.html
 ** "Different Hadoop Versions":./Other-Hadoop.html
 * "Indexing Service":./Indexing-Service.html
