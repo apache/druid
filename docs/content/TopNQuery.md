@@ -118,3 +118,97 @@ The format of the results would look like so:
   }
 ]
 ```
+### Aliasing
+The current TopN algorithm is an approximate algorithm. The top 1000 local results from each segment are returned for merging to determine the global topN. As such, the topN algorithm is approximate in both rank and results. Approximate results *ONLY APPLY WHEN THERE ARE MORE THAN 1000 DIM VALUES*. A topN over a dimension with fewer than 1000 unique dimension values can be considered accurate in rank and accurate in aggregates.
+
+The threshold can be modified from it's default 1000 via the server parameter `druid.query.topN.minTopNThreshold`
+
+If you are wanting the top 100 of a high cardinality, uniformly distributed dimension ordered by some low-cardinality, uniformly distributed dimension, you are potentially going to get aggregates back that are missing data.
+
+To put it another way, the best use cases for topN are when you can have confidence that the overall results are uniformly in the top. For example, if a particular site ID is in the top 10 for some metric for every hour of every day, then it will probably be accurate in the topN over multiple days. But if a site barely in the top 1000 for any given hour, but over the whole query granularity is in the top 500 (example: a site which gets highly uniform traffic co-mingling in the dataset with sites with highly periodic data), then a top500 query may not have that particular site a the exact rank, and may not be accurate for that particular site's aggregates.
+
+Before continuing in this section, please consider if you really need exact results. Getting exact results is a very resource intensive process. For the vast majority of "useful" data results, an approximate topN algorithm supplies plenty of accuracy.
+
+Users wishing to get an *exact rank and exact aggregates* topN over a dimension with greater than 1000 unique values should issue a groupBy query and sort the results themselves. This is very computationally expensive for high-cardinality dimensions.
+
+Users who can tolerate *approximate rank* topN over a dimension with greater than 1000 unique values, but require *exact aggregates* can issue two queries. One to get the approximate topN dimension values, and another topN with dimension selection filters which only use the topN results of the first.
+
+#### Example First query:
+
+```json
+{
+    "aggregations": [
+             {
+                 "fieldName": "L_QUANTITY_longSum",
+                 "name": "L_QUANTITY_",
+                 "type": "longSum"
+             }
+    ],
+    "dataSource": "tpch_year",
+    "dimension":"l_orderkey",
+    "granularity": "all",
+    "intervals": [
+        "1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z"
+    ],
+    "metric": "L_QUANTITY_",
+    "queryType": "topN",
+    "threshold": 2
+}
+```
+
+#### Example second query:
+
+```json
+{
+    "aggregations": [
+             {
+                 "fieldName": "L_TAX_doubleSum",
+                 "name": "L_TAX_",
+                 "type": "doubleSum"
+             },
+             {
+                 "fieldName": "L_DISCOUNT_doubleSum",
+                 "name": "L_DISCOUNT_",
+                 "type": "doubleSum"
+             },
+             {
+                 "fieldName": "L_EXTENDEDPRICE_doubleSum",
+                 "name": "L_EXTENDEDPRICE_",
+                 "type": "doubleSum"
+             },
+             {
+                 "fieldName": "L_QUANTITY_longSum",
+                 "name": "L_QUANTITY_",
+                 "type": "longSum"
+             },
+             {
+                 "name": "count",
+                 "type": "count"
+             }
+    ],
+    "dataSource": "tpch_year",
+    "dimension":"l_orderkey",
+    "filter": {
+        "fields": [
+            {
+                "dimension": "l_orderkey",
+                "type": "selector",
+                "value": "103136"
+            },
+            {
+                "dimension": "l_orderkey",
+                "type": "selector",
+                "value": "1648672"
+            }
+        ],
+        "type": "or"
+    },
+    "granularity": "all",
+    "intervals": [
+        "1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z"
+    ],
+    "metric": "L_QUANTITY_",
+    "queryType": "topN",
+    "threshold": 2
+}
+```
