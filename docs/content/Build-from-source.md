@@ -19,7 +19,7 @@ cd druid
 mvn clean package
 ```
 
-This will compile the project and create the Druid binary ditribution tar under
+This will compile the project and create the Druid binary distribution tar under
 `services/target/druid-VERSION-bin.tar.gz`.
 
 You can find the example executables in the examples/bin directory:
