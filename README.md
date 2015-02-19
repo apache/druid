@@ -8,6 +8,10 @@ petabyte sized data sets. Druid supports a variety of flexible filters, exact
 calculations, approximate algorithms, and other useful calculations. Druid can
 load both streaming and batch data and integrates with Storm and Hadoop.
 
+### License
+
+[Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
 ### More Information
 Much more information about Druid can be found on our [website](http://www.druid.io).
 
