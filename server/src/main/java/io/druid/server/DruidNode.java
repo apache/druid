@@ -24,18 +24,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
 import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import io.druid.common.utils.SocketUtil;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  */
 public class DruidNode
 {
-  public static final String DEFAULT_HOST = "localhost";
-
   @JsonProperty("service")
   @NotNull
   private String serviceName;
@@ -81,7 +82,7 @@ public class DruidNode
     this.serviceName = serviceName;
 
     if(host == null && port == null) {
-      host = DEFAULT_HOST;
+      host = getDefaultHost();
       port = -1;
     }
     else {
@@ -92,7 +93,7 @@ public class DruidNode
           throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, port);
         }
       } else {
-        hostAndPort = HostAndPort.fromParts(DEFAULT_HOST, port);
+        hostAndPort = HostAndPort.fromParts(getDefaultHost(), port);
       }
 
       host = hostAndPort.getHostText();
@@ -133,6 +134,14 @@ public class DruidNode
       return HostAndPort.fromString(host).toString();
     } else {
       return HostAndPort.fromParts(host, port).toString();
+    }
+  }
+
+  public static String getDefaultHost() {
+    try {
+      return InetAddress.getLocalHost().getCanonicalHostName();
+    } catch(UnknownHostException e) {
+      throw new ISE(e, "Unable to determine host name");
     }
   }
 
