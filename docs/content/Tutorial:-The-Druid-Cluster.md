@@ -169,7 +169,7 @@ druid.coordinator.startDelay=PT70s
 To start the coordinator node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/coordinator io.druid.cli.Main server coordinator
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/coordinator:lib/* io.druid.cli.Main server coordinator
 ```
 
 Note: we will be running a single historical node in these examples, so you may see some warnings about not being able to replicate segments. These can be safely ignored, but in production, you should always replicate segments across multiple historical nodes.
@@ -204,7 +204,7 @@ druid.server.maxSize=10000000000
 To start the historical node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/historical io.druid.cli.Main server historical
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical
 ```
 
 #### Start a Broker Node
@@ -236,7 +236,7 @@ druid.processing.numThreads=1
 To start the broker node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/broker io.druid.cli.Main server broker
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/broker:lib/* io.druid.cli.Main server broker
 ```
 
 #### Start a Realtime Node
@@ -282,7 +282,7 @@ Now we should be handing off segments every 6 minutes or so.
 To start the realtime node that was used in our first tutorial, you simply have to issue:
 
 ```
-java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/wikipedia/wikipedia_realtime.spec -classpath lib/*:config/_common:config/realtime io.druid.cli.Main server realtime
+java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Ddruid.realtime.specFile=examples/wikipedia/wikipedia_realtime.spec -classpath config/_common:config/realtime:lib/* io.druid.cli.Main server realtime
 ```
 
 The configurations are located in `config/realtime/runtime.properties` and should contain the following:

@@ -19,19 +19,19 @@ Note: If Zookeeper and metadata storage aren't running, you'll have to start the
 To start a Coordinator node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/coordinator io.druid.cli.Main server coordinator
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/coordinator:lib/* io.druid.cli.Main server coordinator
 ```
 
 To start a Historical node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/historical io.druid.cli.Main server historical
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical
 ```
 
 To start a Broker node:
 
 ```bash
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/_common:config/broker io.druid.cli.Main server broker
+java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/broker:lib/* io.druid.cli.Main server broker
 ```
 
 Querying Your Data
