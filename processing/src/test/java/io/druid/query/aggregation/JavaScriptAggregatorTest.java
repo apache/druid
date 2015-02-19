@@ -20,6 +20,7 @@ package io.druid.query.aggregation;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.segment.ObjectColumnSelector;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,6 +33,7 @@ public class JavaScriptAggregatorTest
 {
   protected static final Map<String, String> sumLogATimesBPlusTen = Maps.newHashMap();
   protected static final Map<String, String> scriptDoubleSum = Maps.newHashMap();
+  protected static final Map<String, String> dateAggregator = Maps.newHashMap();
 
   static {
     sumLogATimesBPlusTen.put("fnAggregate", "function aggregate(current, a, b) { return current + (Math.log(a) * b) }");
@@ -41,6 +43,17 @@ public class JavaScriptAggregatorTest
     scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     scriptDoubleSum.put("fnReset", "function reset()               { return 0 }");
     scriptDoubleSum.put("fnCombine", "function combine(a,b)          { return a + b }");
+
+    dateAggregator.put("fnAggregate", "function aggregate(current, startDateString, endDateString) {\n" +
+                                      "    if (startDateString == null || endDateString == null) {\n" +
+                                      "        throw new Error(\"Date is null.\");\n" +
+                                      "    }\n" +
+                                      "    var millisecondsDelta = Date.parse(endDateString) - Date.parse(startDateString);\n" +
+                                      "    var res = millisecondsDelta / (1000 * 60) + current;\n" +
+                                      "    return res;\n" +
+                                      "}");
+    dateAggregator.put("fnReset", "function reset() {return 0;}");
+    dateAggregator.put("fnCombine", "function combine(a, b) {return a + b;}");
   }
 
   private static void aggregate(TestFloatColumnSelector selector1, TestFloatColumnSelector selector2, Aggregator agg)
@@ -70,6 +83,12 @@ public class JavaScriptAggregatorTest
   {
     agg.aggregate();
     selector.increment();
+  }
+
+  private static void aggregate(TestObjectColumnSelector selector1, TestObjectColumnSelector selector2, Aggregator agg){
+    agg.aggregate();
+    selector1.increment();
+    selector2.increment();
   }
 
   @Test
@@ -107,6 +126,82 @@ public class JavaScriptAggregatorTest
     val += Math.log(9f) * 3f;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
+    Assert.assertEquals(val, agg.get());
+  }
+
+  @Test
+  public void testJodaDateAggregate(){
+    DateTime jodaStartDateTime = DateTime.now();
+    final TestObjectColumnSelector startDate = new TestObjectColumnSelector(new String[]{
+                                                                            jodaStartDateTime
+                                                                                    .toString(),
+                                                                            jodaStartDateTime
+                                                                                    .plusMinutes(3)
+                                                                                    .toString()});
+    final TestObjectColumnSelector endDate = new TestObjectColumnSelector(new String[]{
+                                                                          jodaStartDateTime
+                                                                                  .plusMinutes(6)
+                                                                                  .toString(),
+                                                                          jodaStartDateTime
+                                                                                  .plusMinutes(4)
+                                                                                  .plusMinutes(3)
+                                                                                  .toString()});
+
+    Map<String, String> script = dateAggregator;
+
+    JavaScriptAggregator agg = new JavaScriptAggregator(
+            "dateAggregator",
+            Arrays.<ObjectColumnSelector>asList(startDate, endDate),
+            JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
+                                                      script.get("fnReset"),
+                                                      script.get("fnCombine"))
+    );
+
+    agg.reset();
+
+    double val = 0.;
+    Assert.assertEquals(val, agg.get());
+    aggregate(startDate, endDate, agg);
+
+    val += 6.;
+    Assert.assertEquals(val, agg.get());
+    aggregate(startDate, endDate, agg);
+
+    val += 4.;
+    Assert.assertEquals(val, agg.get());
+  }
+
+
+  @Test
+  public void testDateAggregate(){
+    final TestObjectColumnSelector startDate = new TestObjectColumnSelector(new String[]{
+                                                                            "2015-02-18T14:00:55.958-05:00",
+                                                                            "2015-02-18T14:00:56.420-05:00"});
+    final TestObjectColumnSelector endDate = new TestObjectColumnSelector(new String[]{
+                                                                          "2015-02-18T14:09:55.958-05:00",
+                                                                          "2015-02-18T14:08:56.420-05:00"});
+
+    Map<String, String> script = dateAggregator;
+
+    JavaScriptAggregator agg = new JavaScriptAggregator(
+            "dateAggregator",
+            Arrays.<ObjectColumnSelector>asList(startDate, endDate),
+            JavaScriptAggregatorFactory.compileScript(script.get("fnAggregate"),
+                                                      script.get("fnReset"),
+                                                      script.get("fnCombine"))
+    );
+
+    agg.reset();
+
+    double val = 0.;
+    Assert.assertEquals(val, agg.get());
+    aggregate(startDate, endDate, agg);
+
+    val += 9.;
+    Assert.assertEquals(val, agg.get());
+    aggregate(startDate, endDate, agg);
+
+    val += 8.;
     Assert.assertEquals(val, agg.get());
   }
 
