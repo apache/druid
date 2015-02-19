@@ -30,9 +30,9 @@ public class DruidNodeTest
     DruidNode node;
 
     node = new DruidNode(service, null, null);
-    Assert.assertEquals(DruidNode.DEFAULT_HOST, node.getHost());
+    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
     Assert.assertEquals(-1, node.getPort());
-    Assert.assertEquals("localhost", node.getHostAndPort());
+    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHostAndPort());
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", -1);
     Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
@@ -82,7 +82,7 @@ public class DruidNodeTest
     Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, null, 123);
-    Assert.assertEquals(DruidNode.DEFAULT_HOST, node.getHost());
+    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
     Assert.assertEquals(123, node.getPort());
   }
 
