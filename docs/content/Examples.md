@@ -25,11 +25,11 @@ git checkout druid-0.7.0-rc3
 
 ### Downloading the DSK (Druid Standalone Kit)
 
-[Download](http://static.druid.io/artifacts/releases/druid-services-0.7.0-rc3-bin.tar.gz) a stand-alone tarball and run it:
+[Download](http://static.druid.io/artifacts/releases/druid-0.7.0-rc3-bin.tar.gz) a stand-alone tarball and run it:
 
 ``` bash
-tar -xzf druid-services-0.X.X-bin.tar.gz
-cd druid-services-0.X.X
+tar -xzf druid-0.7.0-rc3-bin.tar.gz
+cd druid-0.7.0-rc3
 ```
 
 Twitter Example

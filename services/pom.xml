@@ -98,9 +98,10 @@
                         <id>distro-assembly</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>assembly</goal>
+                            <goal>single</goal>
                         </goals>
                         <configuration>
+                            <finalName>${project.parent.artifactId}-${project.parent.version}</finalName>
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>
                             </descriptors>
