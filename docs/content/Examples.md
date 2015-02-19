@@ -20,7 +20,7 @@ git clone https://github.com/druid-io/druid.git druid
 cd druid
 git fetch --tags
 git checkout druid-0.7.0-rc3
-./build.sh
+mvn clean package
 ```
 
 ### Downloading the DSK (Druid Standalone Kit)
