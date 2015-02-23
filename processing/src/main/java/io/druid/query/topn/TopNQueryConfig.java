@@ -18,13 +18,12 @@
 package io.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.QueryConfig;
 
 import javax.validation.constraints.Min;
 
 /**
  */
-public class TopNQueryConfig extends QueryConfig
+public class TopNQueryConfig
 {
   @JsonProperty
   @Min(1)

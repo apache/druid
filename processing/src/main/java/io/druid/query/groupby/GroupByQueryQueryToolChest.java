@@ -42,7 +42,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
-import io.druid.query.IntervalChunkingQueryRunner;
+import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
@@ -77,10 +77,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
   };
   private static final String GROUP_BY_MERGE_KEY = "groupByMerge";
-  private static final Map<String, Object> NO_MERGE_CONTEXT = ImmutableMap.<String, Object>of(
-      GROUP_BY_MERGE_KEY,
-      "false"
-  );
 
   private final Supplier<GroupByQueryConfig> configSupplier;
 
@@ -88,19 +84,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private final ObjectMapper jsonMapper;
   private GroupByQueryEngine engine; // For running the outer query around a subquery
 
+  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
 
   @Inject
   public GroupByQueryQueryToolChest(
       Supplier<GroupByQueryConfig> configSupplier,
       ObjectMapper jsonMapper,
       GroupByQueryEngine engine,
-      @Global StupidPool<ByteBuffer> bufferPool
+      @Global StupidPool<ByteBuffer> bufferPool,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
     this.configSupplier = configSupplier;
     this.jsonMapper = jsonMapper;
     this.engine = engine;
     this.bufferPool = bufferPool;
+    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
   @Override
@@ -116,8 +115,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
 
         if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input).withOverriddenContext(NO_MERGE_CONTEXT), runner,
-                                     responseContext
+          return mergeGroupByResults(((GroupByQuery) input), runner, responseContext
           );
         }
         return runner.run(input, responseContext);
@@ -266,7 +264,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   public QueryRunner<Row> preMergeQueryDecoration(QueryRunner<Row> runner)
   {
     return new SubqueryQueryRunner<>(
-        new IntervalChunkingQueryRunner<>(runner, configSupplier.get().getChunkPeriod())
+        intervalChunkingQueryRunnerDecorator.decorate(runner, this)
     );
   }
 

@@ -17,23 +17,12 @@
 
 package io.druid.query.timeseries;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
-import com.google.inject.Inject;
-import com.metamx.common.guava.MergeSequence;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.nary.BinaryFn;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
-import io.druid.query.IntervalChunkingQueryRunner;
+import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryMetricUtil;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -44,13 +33,26 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
-import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.Nullable;
+
+import org.joda.time.DateTime;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
+import com.metamx.common.guava.MergeSequence;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.nary.BinaryFn;
+import com.metamx.emitter.service.ServiceMetricEvent;
 
 /**
  */
@@ -66,12 +68,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
       };
 
-  private final QueryConfig config;
+  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
 
   @Inject
-  public TimeseriesQueryQueryToolChest(QueryConfig config)
+  public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
   {
-    this.config = config;
+    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
   @Override
@@ -221,11 +223,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<Result<TimeseriesResultValue>>(
-        runner,
-        config.getChunkPeriod()
-
-    );
+    return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
   }
 
   public Ordering<Result<TimeseriesResultValue>> getOrdering()

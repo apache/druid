@@ -24,7 +24,6 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.Query;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
@@ -64,7 +63,7 @@ public class TimeSeriesUnionQueryRunnerTest
   {
     return QueryRunnerTestHelper.makeUnionQueryRunners(
         new TimeseriesQueryRunnerFactory(
-            new TimeseriesQueryQueryToolChest(new QueryConfig()),
+            new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
             new TimeseriesQueryEngine(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
@@ -138,7 +137,8 @@ public class TimeSeriesUnionQueryRunnerTest
                                       )
                                   )
                                   .build();
-    QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(new QueryConfig());
+    QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator());
     QueryRunner mergingrunner = toolChest.mergeResults(
         new UnionQueryRunner<Result<TimeseriesResultValue>>(
             (Iterable) Arrays.asList(
