@@ -38,8 +38,8 @@ public class MetadataStorageConnectorConfig
   @JsonProperty
   private String user = null;
 
-  @JsonProperty
-  private String password = null;
+  @JsonProperty("password")
+  private PasswordProvider passwordProvider;
 
   public boolean isCreateTables()
   {
@@ -71,7 +71,7 @@ public class MetadataStorageConnectorConfig
 
   public String getPassword()
   {
-    return password;
+    return passwordProvider == null ? null : passwordProvider.getPassword();
   }
 
   @Override
@@ -81,7 +81,7 @@ public class MetadataStorageConnectorConfig
            "createTables=" + createTables +
            ", connectURI='" + getConnectURI() + '\'' +
            ", user='" + user + '\'' +
-           ", password=****" +
+           ", passwordProvider=" + passwordProvider +
            '}';
   }
 }
