@@ -20,7 +20,9 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.name.Names;
 import io.druid.segment.loading.DataSegmentKiller;
+import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
@@ -47,10 +49,9 @@ public class LocalDataStorageDruidModule implements Module
 
   private static void bindDeepStorageLocal(Binder binder)
   {
-    Binders.dataSegmentPullerBinder(binder)
-                .addBinding("local")
-                .to(LocalDataSegmentPuller.class)
-                .in(LazySingleton.class);
+    binder.bind(Key.get(DataSegmentPuller.class, Names.named("local")))
+          .to(LocalDataSegmentPuller.class)
+          .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
         .addBinding("local")

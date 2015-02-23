@@ -19,6 +19,9 @@ package io.druid.segment.loading;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
@@ -40,7 +43,7 @@ public class OmniSegmentLoader implements SegmentLoader
 {
   private static final Logger log = new Logger(OmniSegmentLoader.class);
 
-  private final Map<String, DataSegmentPuller> pullers;
+  private final Injector injector;
   private final QueryableIndexFactory factory;
   private final SegmentLoaderConfig config;
 
@@ -50,12 +53,12 @@ public class OmniSegmentLoader implements SegmentLoader
 
   @Inject
   public OmniSegmentLoader(
-      Map<String, DataSegmentPuller> pullers,
+      Injector injector,
       QueryableIndexFactory factory,
       SegmentLoaderConfig config
   )
   {
-    this.pullers = pullers;
+    this.injector = injector;
     this.factory = factory;
     this.config = config;
 
@@ -67,7 +70,7 @@ public class OmniSegmentLoader implements SegmentLoader
 
   public OmniSegmentLoader withConfig(SegmentLoaderConfig config)
   {
-    return new OmniSegmentLoader(pullers, factory, config);
+    return new OmniSegmentLoader(injector, factory, config);
   }
 
   @Override
@@ -182,10 +185,10 @@ public class OmniSegmentLoader implements SegmentLoader
   private DataSegmentPuller getPuller(Map<String, Object> loadSpec) throws SegmentLoadingException
   {
     String type = MapUtils.getString(loadSpec, "type");
-    DataSegmentPuller loader = pullers.get(type);
+    DataSegmentPuller loader = injector.getInstance(Key.get(DataSegmentPuller.class, Names.named(type)));
 
     if (loader == null) {
-      throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, pullers.keySet());
+      throw new SegmentLoadingException("Unknown loader type[%s].", type);
     }
 
     return loader;
