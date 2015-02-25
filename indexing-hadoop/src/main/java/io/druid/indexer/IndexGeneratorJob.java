@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -34,7 +36,9 @@ import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.granularity.QueryGranularity;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -211,6 +215,8 @@ public class IndexGeneratorJob implements Jobby
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
   {
+    private static final HashFunction hashFunction = Hashing.murmur3_128();
+
     @Override
     protected void innerMap(
         InputRow inputRow,
@@ -225,10 +231,24 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
+      final long truncatedTimestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
+      final byte[] hashedDimensions = hashFunction.hashBytes(
+          HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(
+              Rows.toGroupKey(
+                  truncatedTimestamp,
+                  inputRow
+              )
+          )
+      ).asBytes();
+
       context.write(
           new SortableBytes(
               bucket.get().toGroupKey(),
-              Longs.toByteArray(inputRow.getTimestampFromEpoch())
+              // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
+              ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
+                        .putLong(truncatedTimestamp)
+                        .put(hashedDimensions)
+                        .array()
           ).toBytesWritable(),
           text
       );
