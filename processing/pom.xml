@@ -66,7 +66,6 @@
         <dependency>
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>
-            <version>1.7R4</version>
         </dependency>
         <dependency>
             <groupId>net.jpountz.lz4</groupId>
