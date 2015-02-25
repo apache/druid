@@ -47,18 +47,18 @@ There are two ways to setup Druid: download a tarball, or [Build From Source](Bu
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-0.7.0-rc3-bin.tar.gz). Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-0.7.0-bin.tar.gz). Download this file to a directory of your choosing.
 
 You can extract the content within by issuing:
 
 ```
-tar -zxvf druid-0.7.0-rc3-bin.tar.gz
+tar -zxvf druid-0.7.0-bin.tar.gz
 ```
 
 If you cd into the directory:
 
 ```
-cd druid-0.7.0-rc3
+cd druid-0.7.0
 ```
 
 You should see a bunch of files:

@@ -81,7 +81,7 @@ cluster were adapted from the [Apache Kafka quickstart guide](http://kafka.apach
 
 The realtime spec for the data source in this tutorial is available under
 `examples/indexing/wikipedia.spec` from the [Druid
-download](http://static.druid.io/artifacts/releases/druid-services-0.7.0-rc3-bin.tar.gz)
+download](http://static.druid.io/artifacts/releases/druid-services-0.7.0-bin.tar.gz)
 
 1. Launch the realtime node
 
