@@ -94,7 +94,7 @@ public class AnnouncerTest extends CuratorTestBase
         }
     );
     curator.delete().forPath(testPath1);
-    Assert.assertTrue("Wait for /test1 to be created", timing.awaitLatch(latch));
+    Assert.assertTrue("Wait for /test1 to be created", timing.forWaiting().awaitLatch(latch));
 
     Assert.assertArrayEquals("expect /test1 data is restored", billy, curator.getData().decompressed().forPath(testPath1));
     Assert.assertArrayEquals("expect /somewhere/test2 is still there", billy, curator.getData().decompressed().forPath(testPath2));
