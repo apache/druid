@@ -20,10 +20,12 @@ package io.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Provider;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.BaseJettyServerInitializer;
 import io.druid.server.log.RequestLogger;
@@ -44,7 +46,8 @@ public class RouterJettyServerInitializer extends BaseJettyServerInitializer
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
-  private final HttpClient httpClient;
+  private final Provider<HttpClient> httpClientProvider;
+  private final DruidHttpClientConfig httpClientConfig;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
@@ -53,7 +56,8 @@ public class RouterJettyServerInitializer extends BaseJettyServerInitializer
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
-      @Router HttpClient httpClient,
+      @Router Provider<HttpClient> httpClientProvider,
+      DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger
   )
@@ -61,7 +65,8 @@ public class RouterJettyServerInitializer extends BaseJettyServerInitializer
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
-    this.httpClient = httpClient;
+    this.httpClientProvider = httpClientProvider;
+    this.httpClientConfig = httpClientConfig;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
   }
@@ -72,18 +77,19 @@ public class RouterJettyServerInitializer extends BaseJettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addServlet(
-        new ServletHolder(
-            new AsyncQueryForwardingServlet(
-                jsonMapper,
-                smileMapper,
-                hostFinder,
-                httpClient,
-                emitter,
-                requestLogger
-            )
-        ), "/druid/v2/*"
+
+    final AsyncQueryForwardingServlet asyncQueryForwardingServlet = new AsyncQueryForwardingServlet(
+        jsonMapper,
+        smileMapper,
+        hostFinder,
+        httpClientProvider,
+        httpClientConfig,
+        emitter,
+        requestLogger
     );
+    asyncQueryForwardingServlet.setTimeout(httpClientConfig.getReadTimeout().getMillis());
+
+    root.addServlet(new ServletHolder(asyncQueryForwardingServlet), "/druid/v2/*");
     root.addFilter(defaultAsyncGzipFilterHolder(), "/*", null);
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
