@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 
 /**
  */
-public class MatchingDimExtractionFn implements DimExtractionFn
+public class MatchingDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x2;
 

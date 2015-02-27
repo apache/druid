@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
+public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x3;
 

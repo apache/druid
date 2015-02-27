@@ -24,7 +24,7 @@ public class TopNAlgorithmSelector
   private final int cardinality;
   private final int numBytesPerRecord;
 
-  private volatile boolean hasDimExtractionFn;
+  private volatile boolean hasExtractionFn;
   private volatile boolean aggregateAllMetrics;
   private volatile boolean aggregateTopNMetricFirst;
 
@@ -34,9 +34,9 @@ public class TopNAlgorithmSelector
     this.numBytesPerRecord = numBytesPerRecord;
   }
 
-  public void setHasDimExtractionFn(boolean hasDimExtractionFn)
+  public void setHasExtractionFn(boolean hasExtractionFn)
   {
-    this.hasDimExtractionFn = hasDimExtractionFn;
+    this.hasExtractionFn = hasExtractionFn;
   }
 
   public void setAggregateAllMetrics(boolean aggregateAllMetrics)
@@ -53,9 +53,9 @@ public class TopNAlgorithmSelector
     }
   }
 
-  public boolean isHasDimExtractionFn()
+  public boolean isHasExtractionFn()
   {
-    return hasDimExtractionFn;
+    return hasExtractionFn;
   }
 
   public boolean isAggregateAllMetrics()

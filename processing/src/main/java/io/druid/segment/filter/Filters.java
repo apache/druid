@@ -75,7 +75,7 @@ public class Filters
       filter = new ExtractionFilter(
           extractionDimFilter.getDimension(),
           extractionDimFilter.getValue(),
-          extractionDimFilter.getDimExtractionFn()
+          extractionDimFilter.getExtractionFn()
       );
     } else if (dimFilter instanceof RegexDimFilter) {
       final RegexDimFilter regexDimFilter = (RegexDimFilter) dimFilter;

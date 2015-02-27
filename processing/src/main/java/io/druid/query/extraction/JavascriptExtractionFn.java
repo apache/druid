@@ -22,17 +22,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
-import com.google.common.base.Strings;
-import com.metamx.common.StringUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
 
-public class JavascriptDimExtractionFn implements DimExtractionFn
+public class JavascriptExtractionFn implements ExtractionFn
 {
-  private static Function<String, String> compile(String function) {
+  private static Function<Object, String> compile(String function) {
     final ContextFactory contextFactory = ContextFactory.getGlobal();
     final Context context = contextFactory.enterContext();
     context.setOptimizationLevel(9);
@@ -43,9 +41,9 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
     Context.exit();
 
 
-    return new Function<String, String>()
+    return new Function<Object, String>()
     {
-      public String apply(String input)
+      public String apply(Object input)
       {
         // ideally we need a close() function to discard the context once it is not used anymore
         Context cx = Context.getCurrentContext();
@@ -53,7 +51,7 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
           cx = contextFactory.enterContext();
         }
 
-        final Object res = fn.call(cx, scope, scope, new String[]{input});
+        final Object res = fn.call(cx, scope, scope, new Object[]{input});
         return res != null ? Context.toString(res) : null;
       }
     };
@@ -62,10 +60,10 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   private static final byte CACHE_TYPE_ID = 0x4;
 
   private final String function;
-  private final Function<String, String> fn;
+  private final Function<Object, String> fn;
 
   @JsonCreator
-  public JavascriptDimExtractionFn(
+  public JavascriptExtractionFn(
       @JsonProperty("function") String function
   )
   {
@@ -90,10 +88,21 @@ public class JavascriptDimExtractionFn implements DimExtractionFn
   }
 
   @Override
-  public String apply(String dimValue)
+  public String apply(Object value)
   {
-    String retVal = fn.apply(dimValue);
-    return Strings.isNullOrEmpty(retVal) ? null : retVal;
+    return Strings.emptyToNull(fn.apply(value));
+  }
+
+  @Override
+  public String apply(String value)
+  {
+    return this.apply((Object)value);
+  }
+
+  @Override
+  public String apply(long value)
+  {
+    return this.apply((Long)value);
   }
 
   @Override

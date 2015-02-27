@@ -18,7 +18,7 @@
 package io.druid.query.extraction.extraction;
 
 import com.google.common.collect.Sets;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.SearchQuerySpecDimExtractionFn;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.SearchQuerySpec;
@@ -50,12 +50,12 @@ public class SearchQuerySpecDimExtractionFnTest
     SearchQuerySpec spec = new FragmentSearchQuerySpec(
         Arrays.asList("to", "yo")
     );
-    DimExtractionFn dimExtractionFn = new SearchQuerySpecDimExtractionFn(spec);
+    ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
     List<String> expected = Arrays.asList("Kyoto", "Tokyo", "Toyokawa", "Yorktown");
     Set<String> extracted = Sets.newHashSet();
 
     for (String str : testStrings) {
-      String res = dimExtractionFn.apply(str);
+      String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);
       }

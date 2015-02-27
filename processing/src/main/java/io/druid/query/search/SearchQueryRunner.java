@@ -161,7 +161,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
             Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
             for (String dim : dimsToSearch) {
-              dimSelectors.put(dim, cursor.makeDimensionSelector(dim));
+              // switching to using DimensionSpec for search would allow the use of extractionFn here.
+              dimSelectors.put(dim, cursor.makeDimensionSelector(dim, null));
             }
 
             while (!cursor.isDone()) {

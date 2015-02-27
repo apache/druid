@@ -41,7 +41,10 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   @SuppressWarnings("unchecked")
   public Result<TopNResultValue> apply(Cursor cursor)
   {
-    final DimensionSelector dimSelector = cursor.makeDimensionSelector(query.getDimensionSpec().getDimension());
+    final DimensionSelector dimSelector = cursor.makeDimensionSelector(
+        query.getDimensionSpec().getDimension(),
+        query.getDimensionSpec().getExtractionFn()
+    );
     if (dimSelector == null) {
       return null;
     }

@@ -58,7 +58,7 @@ public class SelectorFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory)
   {
-    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension);
+    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension, null);
 
     // Missing columns match a null or empty string value and don't match anything else
     if (dimensionSelector == null) {

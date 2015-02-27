@@ -19,6 +19,7 @@ package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -44,7 +45,8 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
 
   @Override
   public TopNParams makeInitParams(
-      final DimensionSelector dimSelector, final Cursor cursor
+      final DimensionSelector dimSelector,
+      final Cursor cursor
   )
   {
     return new TopNParams(
@@ -64,11 +66,10 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
         params.getCardinality()
     );
 
-    if (!query.getDimensionSpec().preservesOrdering()) {
-      return provider.build();
-    }
-
-    return query.getTopNMetricSpec().configureOptimizer(provider).build();
+    // Unlike regular topN we cannot rely on ordering to optimize.
+    // Optimization possibly requires a reverse lookup from value to ID, which is
+    // not possible when applying an extraction function
+    return provider.build();
   }
 
   @Override
@@ -98,11 +99,11 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       final IndexedInts dimValues = dimSelector.getRow();
 
       for (int i = 0; i < dimValues.size(); ++i) {
-        final int dimIndex = dimValues.get(i);
 
+        final int dimIndex = dimValues.get(i);
         Aggregator[] theAggregators = rowSelector[dimIndex];
         if (theAggregators == null) {
-          String key = query.getDimensionSpec().getDimExtractionFn().apply(dimSelector.lookupName(dimIndex));
+          final String key = dimSelector.lookupName(dimIndex);
           theAggregators = aggregatesStore.get(key);
           if (theAggregators == null) {
             theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());

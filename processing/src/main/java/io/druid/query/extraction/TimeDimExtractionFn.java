@@ -28,7 +28,7 @@ import java.util.Date;
 
 /**
  */
-public class TimeDimExtractionFn implements DimExtractionFn
+public class TimeDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x0;
 

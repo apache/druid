@@ -86,7 +86,8 @@ public class SelectQueryEngine
 
             final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
             for (String dim : dims) {
-              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
+              // switching to using DimensionSpec for select would allow the use of extractionFn here.
+              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim, null);
               dimSelectors.put(dim, dimSelector);
             }
 

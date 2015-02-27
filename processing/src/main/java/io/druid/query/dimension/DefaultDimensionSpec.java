@@ -20,7 +20,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.StringUtils;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 
 import java.nio.ByteBuffer;
 
@@ -59,7 +59,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public DimExtractionFn getDimExtractionFn()
+  public ExtractionFn getExtractionFn()
   {
     return null;
   }

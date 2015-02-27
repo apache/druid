@@ -18,7 +18,7 @@
 package io.druid.query.extraction.extraction;
 
 import com.google.common.collect.Sets;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MatchingDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,12 +47,12 @@ public class MatchingDimExtractionFnTest
   public void testExtraction()
   {
     String regex = ".*[Tt][Oo].*";
-    DimExtractionFn dimExtractionFn = new MatchingDimExtractionFn(regex);
+    ExtractionFn extractionFn = new MatchingDimExtractionFn(regex);
     List<String> expected = Arrays.asList("Quito", "Tokyo", "Stockholm", "Pretoria", "Wellington");
     Set<String> extracted = Sets.newHashSet();
 
     for (String str : testStrings) {
-      String res = dimExtractionFn.apply(str);
+      String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);
       }

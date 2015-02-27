@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+
 # Aggregation Granularity
 The granularity field determines how data gets bucketed across the time dimension, or how it gets aggregated by hour, day, minute, etc.
 

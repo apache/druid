@@ -18,7 +18,7 @@
 package io.druid.query.extraction.extraction;
 
 import com.google.common.collect.Sets;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,11 +53,11 @@ public class RegexDimExtractionFnTest
   public void testPathExtraction()
   {
     String regex = "/([^/]+)/";
-    DimExtractionFn dimExtractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
     Set<String> extracted = Sets.newHashSet();
 
     for (String path : paths) {
-      extracted.add(dimExtractionFn.apply(path));
+      extracted.add(extractionFn.apply(path));
     }
 
     Assert.assertEquals(2, extracted.size());
@@ -69,11 +69,11 @@ public class RegexDimExtractionFnTest
   public void testDeeperPathExtraction()
   {
     String regex = "^/([^/]+/[^/]+)(/|$)";
-    DimExtractionFn dimExtractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
     Set<String> extracted = Sets.newHashSet();
 
     for (String path : paths) {
-      extracted.add(dimExtractionFn.apply(path));
+      extracted.add(extractionFn.apply(path));
     }
 
     Assert.assertEquals(4, extracted.size());
@@ -87,11 +87,11 @@ public class RegexDimExtractionFnTest
   public void testStringExtraction()
   {
     String regex = "(.)";
-    DimExtractionFn dimExtractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
     Set<String> extracted = Sets.newHashSet();
 
     for (String testString : testStrings) {
-      extracted.add(dimExtractionFn.apply(testString));
+      extracted.add(extractionFn.apply(testString));
     }
 
     Assert.assertEquals(3, extracted.size());

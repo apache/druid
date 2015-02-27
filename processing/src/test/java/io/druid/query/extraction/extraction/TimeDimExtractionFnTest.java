@@ -18,7 +18,7 @@
 package io.druid.query.extraction.extraction;
 
 import com.google.common.collect.Sets;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.TimeDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,10 +42,10 @@ public class TimeDimExtractionFnTest
   public void testMonthExtraction()
   {
     Set<String> months = Sets.newHashSet();
-    DimExtractionFn dimExtractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy");
+    ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "MM/yyyy");
 
     for (String dim : dims) {
-      months.add(dimExtractionFn.apply(dim));
+      months.add(extractionFn.apply(dim));
     }
 
     Assert.assertEquals(months.size(), 4);
@@ -59,10 +59,10 @@ public class TimeDimExtractionFnTest
   public void testQuarterExtraction()
   {
     Set<String> quarters = Sets.newHashSet();
-    DimExtractionFn dimExtractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "QQQ/yyyy");
+    ExtractionFn extractionFn = new TimeDimExtractionFn("MM/dd/yyyy", "QQQ/yyyy");
 
     for (String dim : dims) {
-      quarters.add(dimExtractionFn.apply(dim));
+      quarters.add(extractionFn.apply(dim));
     }
 
     Assert.assertEquals(quarters.size(), 3);
