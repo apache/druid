@@ -145,6 +145,8 @@ Properties shared by all query types
 |populateCache | `true`              | Flag indicating whether to save the results of the query to the query cache. Primarily used for debugging. This may be overriden in the broker or historical node configuration |
 |bySegment     | `false`             | Return "by segment" results. Pimarily used for debugging, setting it to `true` returns results associated with the data segment they came from |
 |finalize      | `true`              | Flag indicating whether to "finalize" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator will return the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false` |
+|chunkPeriod   | `0` (off)           | At broker, Long-interval queries (of any type) may be broken into shorter interval queries, reducing the impact on resources. Use ISO 8601 periods. For example, if this property is set to `P1M` (one month), then a query covering a year would be broken into 12 smaller queries. All the query chunks will be processed asynchronously inside query processing executor service. Make sure "druid.processing.numThreads" is configured appropriately. |
+
 
 Query Cancellation
 ------------------

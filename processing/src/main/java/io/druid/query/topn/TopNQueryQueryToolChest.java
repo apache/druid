@@ -35,7 +35,7 @@ import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.CacheStrategy;
-import io.druid.query.IntervalChunkingQueryRunner;
+import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryMetricUtil;
@@ -70,12 +70,16 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   };
   private final TopNQueryConfig config;
 
+  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
+
   @Inject
   public TopNQueryQueryToolChest(
-      TopNQueryConfig config
+      TopNQueryConfig config,
+      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
     this.config = config;
+    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
   protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories){
@@ -416,7 +420,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public QueryRunner<Result<TopNResultValue>> preMergeQueryDecoration(QueryRunner<Result<TopNResultValue>> runner)
   {
-    return new IntervalChunkingQueryRunner<>(runner, config.getChunkPeriod());
+    return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
   }
 
   @Override

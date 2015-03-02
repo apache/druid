@@ -23,7 +23,6 @@ import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -57,7 +56,8 @@ public class SelectQueryRunnerTest
   {
     return QueryRunnerTestHelper.makeQueryRunners(
         new SelectQueryRunnerFactory(
-            new SelectQueryQueryToolChest(new QueryConfig(), new DefaultObjectMapper()),
+            new SelectQueryQueryToolChest(new DefaultObjectMapper(),
+                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
             new SelectQueryEngine(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )

@@ -82,7 +82,7 @@ public class RetryQueryRunnerTest
           }
         },
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            new QueryConfig()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
         new RetryQueryRunnerConfig()
         {
@@ -155,7 +155,7 @@ public class RetryQueryRunnerTest
           }
         },
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            new QueryConfig()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
         new RetryQueryRunnerConfig()
         {
@@ -222,7 +222,7 @@ public class RetryQueryRunnerTest
           }
         },
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            new QueryConfig()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
         new RetryQueryRunnerConfig()
         {
@@ -274,7 +274,7 @@ public class RetryQueryRunnerTest
           }
         },
         (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            new QueryConfig()
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
         new RetryQueryRunnerConfig()
         {

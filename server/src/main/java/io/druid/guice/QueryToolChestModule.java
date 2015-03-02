@@ -22,7 +22,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.query.Query;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryToolChest;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -72,7 +71,6 @@ public class QueryToolChestModule implements Module
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
 
-    JsonConfigProvider.bind(binder, "druid.query", QueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);

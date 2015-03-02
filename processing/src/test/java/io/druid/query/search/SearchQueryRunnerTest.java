@@ -56,7 +56,8 @@ public class SearchQueryRunnerTest
   {
     return QueryRunnerTestHelper.makeQueryRunners(
         new SearchQueryRunnerFactory(
-            new SearchQueryQueryToolChest(new SearchQueryConfig()),
+            new SearchQueryQueryToolChest(new SearchQueryConfig(),
+                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );

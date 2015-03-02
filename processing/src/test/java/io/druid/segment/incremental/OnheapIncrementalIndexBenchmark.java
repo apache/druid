@@ -34,7 +34,6 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -280,7 +279,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     final List<ListenableFuture<?>> queryFutures = new LinkedList<>();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(new QueryConfig()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );

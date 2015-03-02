@@ -21,6 +21,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.common.guava.Sequence;
+
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -49,6 +51,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -305,5 +308,22 @@ public class QueryRunnerTestHelper
         ),
         factory.getToolchest()
     );
+  }
+
+  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  {
+    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
+      @Override
+      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate,
+          QueryToolChest<T, ? extends Query<T>> toolChest) {
+        return new QueryRunner<T>() {
+          @Override
+          public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+          {
+            return delegate.run(query, responseContext);
+          }
+        };
+      }
+    };
   }
 }
