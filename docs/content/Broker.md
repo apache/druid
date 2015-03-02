@@ -45,7 +45,7 @@ Returns a list of queryable datasources.
 
 * `/druid/v2/datasources/{dataSourceName}`
 
-Returns the dimensions and metrics of the datasource.
+Returns the dimensions and metrics of the datasource. Optionally, you can provide request parameter "full" to get list of served intervals with dimensions and metrics being served for those intervals. You can also provide request param "interval" explicitly to refer to a particular interval.
 
 * `/druid/v2/datasources/{dataSourceName}/dimensions`
 
