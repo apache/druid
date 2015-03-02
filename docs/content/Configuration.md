@@ -87,7 +87,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter`|Setting this value to "noop", "logging", or "http" will instantialize one of the emitter modules.|logging|
+|`druid.emitter`|Setting this value to "noop", "logging", or "http" will instantialize one of the emitter modules.|noop|
 
 #### Logging Emitter Module
 
