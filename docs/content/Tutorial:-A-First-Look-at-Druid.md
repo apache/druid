@@ -43,11 +43,17 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-There are two ways to setup Druid: download a tarball, or [Build From Source](Build-from-source.html). You only need to do one of these.
+To start, we need to get our hands on a Druid build. There are two ways to get Druid: download a tarball, or [Build From Source](Build-from-source.html). You only need to do one of these.
 
 ### Download a Tarball
 
 We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-0.7.0-bin.tar.gz). Download this file to a directory of your choosing.
+
+### Build From Source
+
+Follow the [Build From Source](Build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-0.7.0-bin.tar.gz.
+
+### Unpack the Tarball
 
 You can extract the content within by issuing:
 
@@ -70,13 +76,13 @@ You should see a bunch of files:
 Running Example Scripts
 -----------------------
 
-Let's start doing stuff. You can start a Druid [Realtime](Realtime.html) node by issuing:
+Let's start doing stuff. You can start an example Druid [Realtime](Realtime.html) node by issuing:
 
 ```
 ./run_example_server.sh
 ```
 
-Select "wikipedia".
+Select "2" for the "wikipedia" example.
 
 Note that the first time you start the example, it may take some extra time due to its fetching various dependencies. Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 
@@ -168,7 +174,7 @@ If you issue the query again, you should notice your results updating.
 
 Right now all the results you are getting back are being aggregated into a single timestamp bucket. What if we wanted to see our aggregations on a per minute basis?
 
-We can change granularity our the results to minute. To specify different granularities to bucket our results, we change our query like so:
+We can change granularity for the results to "minute". To specify different granularities to bucket our results, we change our query like so:
 
 ```json
 {
@@ -256,7 +262,7 @@ You should see an answer to our question. As an example, some results are shown 
 ]
 ```
 
-Feel free to tweak other query parameters to answer other questions you may have about the data. Druid also includes more complex query types such as [groupBy queries](GroupByQuery.html).
+Feel free to tweak other query parameters to answer other questions you may have about the data. Druid also includes more complex query types such as [groupBy queries](GroupByQuery.html). For more information on querying, see this [link](Querying.html).
 
 Next Steps
 ----------
