@@ -17,8 +17,16 @@
 
 package io.druid.server.initialization;
 
+import java.util.Set;
+
 import com.google.common.base.Joiner;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import com.metamx.common.ISE;
+
 import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlets.AsyncGzipFilter;
 import org.eclipse.jetty.servlets.GzipFilter;
 
@@ -50,5 +58,28 @@ public abstract class BaseJettyServerInitializer implements JettyServerInitializ
 
     // We don't actually have any precomputed .gz resources, and checking for them inside jars is expensive.
     filterHolder.setInitParameter("checkGzExists", String.valueOf(false));
+  }
+
+  public void addExtensionFilters(ServletContextHandler handler, Injector injector) {
+    Set<ServletFilterHolder> extensionFilters = injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>(){}));
+
+    for (ServletFilterHolder servletFilterHolder : extensionFilters) {
+      // Check the Filter first to guard against people who don't read the docs and return the Class even
+      // when they have an instance.
+      FilterHolder holder = null;
+      if (servletFilterHolder.getFilter() != null) {
+        holder = new FilterHolder(servletFilterHolder.getFilter());
+      } else if (servletFilterHolder.getFilterClass() != null) {
+        holder = new FilterHolder(servletFilterHolder.getFilterClass());
+      } else {
+        throw new ISE("Filter[%s] for path[%s] didn't have a Filter!?", servletFilterHolder, servletFilterHolder.getPath());
+      }
+
+      if(servletFilterHolder.getInitParameters() != null) {
+        holder.setInitParameters(servletFilterHolder.getInitParameters());
+      }
+
+      handler.addFilter(holder, servletFilterHolder.getPath(), servletFilterHolder.getDispatcherType());
+    }
   }
 }

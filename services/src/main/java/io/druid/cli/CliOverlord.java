@@ -235,6 +235,7 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
+      addExtensionFilters(root, injector);
       root.addFilter(defaultGzipFilterHolder(), "/*", null);
 
       // /status should not redirect, so add first

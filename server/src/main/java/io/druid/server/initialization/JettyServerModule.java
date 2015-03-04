@@ -29,6 +29,7 @@ import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.sun.jersey.api.core.DefaultResourceConfig;
@@ -72,6 +73,10 @@ public class JettyServerModule extends JerseyServletModule
 
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
+
+    //Adding empty binding for ServletFilterHolders so that injector returns
+    //an empty set when no external modules provide ServletFilterHolder impls
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class);
   }
 
   public static class DruidGuiceContainer extends GuiceContainer

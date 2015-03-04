@@ -36,6 +36,7 @@ public class QueryJettyServerInitializer extends BaseJettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+    addExtensionFilters(root, injector);
     root.addFilter(defaultGzipFilterHolder(), "/*", null);
 
     root.addFilter(GuiceFilter.class, "/*", null);

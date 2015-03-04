@@ -88,8 +88,8 @@ public class RouterJettyServerInitializer extends BaseJettyServerInitializer
         requestLogger
     );
     asyncQueryForwardingServlet.setTimeout(httpClientConfig.getReadTimeout().getMillis());
-
     root.addServlet(new ServletHolder(asyncQueryForwardingServlet), "/druid/v2/*");
+    addExtensionFilters(root, injector);
     root.addFilter(defaultAsyncGzipFilterHolder(), "/*", null);
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);

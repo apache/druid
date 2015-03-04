@@ -57,6 +57,7 @@ class CoordinatorJettyServerInitializer extends BaseJettyServerInitializer
     } else {
       root.setResourceBase(config.getConsoleStatic());
     }
+    addExtensionFilters(root, injector);
     root.addFilter(defaultGzipFilterHolder(), "/*", null);
 
     // /status should not redirect, so add first

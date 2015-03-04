@@ -25,6 +25,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
@@ -49,7 +50,15 @@ import org.junit.After;
 import org.junit.Before;
 
 import javax.net.ssl.SSLContext;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -59,6 +68,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -101,6 +112,44 @@ public class BaseJettyTest
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
+                
+                Multibinder<ServletFilterHolder> multibinder = Multibinder.newSetBinder(binder, ServletFilterHolder.class);
+                multibinder.addBinding().toInstance(
+                    new ServletFilterHolder()
+                    {
+                      
+                      @Override
+                      public String getPath()
+                      {
+                        return "/*";
+                      }
+                      
+                      @Override
+                      public Map<String, String> getInitParameters()
+                      {
+                        return null;
+                      }
+                      
+                      @Override
+                      public Class<? extends Filter> getFilterClass()
+                      {
+                        return DummyAuthFilter.class;
+                      }
+                      
+                      @Override
+                      public Filter getFilter()
+                      {
+                        return null;
+                      }
+                      
+                      @Override
+                      public EnumSet<DispatcherType> getDispatcherType()
+                      {
+                        // TODO Auto-generated method stub
+                        return null;
+                      }
+                    });
+
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
@@ -148,6 +197,7 @@ public class BaseJettyTest
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      addExtensionFilters(root, injector);
       root.addFilter(defaultGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/*", null);
 
@@ -217,6 +267,35 @@ public class BaseJettyTest
         //
       }
       throw new IOException();
+    }
+  }
+
+  public static class DummyAuthFilter implements Filter {
+
+    public static final String AUTH_HDR = "secretUser";
+    public static final String SECRET_USER = "bob";
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException
+    {
+    }
+
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException,
+        ServletException
+    {
+      HttpServletRequest request = (HttpServletRequest) req;
+      if(request.getHeader(AUTH_HDR) == null || request.getHeader(AUTH_HDR).equals(SECRET_USER)) {
+        chain.doFilter(req, resp);
+      } else {
+        HttpServletResponse response = (HttpServletResponse) resp;
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Failed even fake authentication.");
+      }
+    }
+
+    @Override
+    public void destroy()
+    {
     }
   }
 }
