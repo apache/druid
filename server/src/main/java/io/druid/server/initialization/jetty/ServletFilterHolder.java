@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.server.initialization;
+package io.druid.server.initialization.jetty;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;

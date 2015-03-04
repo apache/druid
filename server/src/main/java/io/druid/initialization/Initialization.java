@@ -55,7 +55,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
 import io.druid.server.initialization.EmitterModule;
-import io.druid.server.initialization.JettyServerModule;
+import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;

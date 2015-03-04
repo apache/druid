@@ -38,7 +38,7 @@ import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.http.HistoricalResource;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import org.eclipse.jetty.server.Server;
 

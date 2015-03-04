@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.initialization.jetty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
@@ -45,6 +45,8 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
+import io.druid.server.initialization.ServerConfig;
+
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;

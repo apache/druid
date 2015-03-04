@@ -39,6 +39,10 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
+import io.druid.server.initialization.jetty.JettyServerInitUtils;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.initialization.jetty.ServletFilterHolder;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -189,7 +193,7 @@ public class BaseJettyTest
     }
   }
 
-  public static class JettyServerInit extends BaseJettyServerInitializer
+  public static class JettyServerInit implements JettyServerInitializer
   {
 
     @Override
@@ -197,8 +201,8 @@ public class BaseJettyTest
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-      addExtensionFilters(root, injector);
-      root.addFilter(defaultGzipFilterHolder(), "/*", null);
+      JettyServerInitUtils.addExtensionFilters(root, injector);
+      root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
