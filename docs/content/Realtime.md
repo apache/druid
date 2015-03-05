@@ -42,3 +42,14 @@ Realtime integration is intended to be extended in two ways:
 The expectations are that the former will be very common and something that users of Druid will do on a fairly regular basis. Most users will probably never have to deal with the latter form of customization. Indeed, we hope that all potential use cases can be packaged up as part of Druid proper without requiring proprietary customization.
 
 Given those expectations, adding a firehose is straightforward and completely encapsulated inside of the interface. Adding a plumber is more involved and requires understanding of how the system works to get right, it’s not impossible, but it’s not intended that individuals new to Druid will be able to do it immediately.
+
+HTTP Endpoints
+--------------
+
+The real-time node exposes several HTTP endpoints for interactions.
+
+### GET
+
+* `/status`
+
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.

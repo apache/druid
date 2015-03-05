@@ -18,13 +18,12 @@
 package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.QueryConfig;
 
 import javax.validation.constraints.Min;
 
 /**
  */
-public class SearchQueryConfig extends QueryConfig
+public class SearchQueryConfig
 {
   @JsonProperty
   @Min(1)

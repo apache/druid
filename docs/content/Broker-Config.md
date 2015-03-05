@@ -41,7 +41,8 @@ Druid uses Jetty to serve HTTP requests.
 
 #### Processing
 
-The broker only uses processing configs for nested groupBy queries.
+The broker uses processing configs for nested groupBy queries. And, optionally, Long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Querying](Querying.html) doc.
+
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -51,10 +52,6 @@ The broker only uses processing configs for nested groupBy queries.
 |`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
 
 #### General Query Configuration
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.chunkPeriod`|Long-interval queries (of any type) may be broken into shorter interval queries, reducing the impact on resources. Use ISO 8601 periods. For example, if this property is set to `P1M` (one month), then a query covering a year would be broken into 12 smaller queries. |0 (off)|
 
 ##### GroupBy Query Config
 
@@ -76,8 +73,8 @@ You can optionally only configure caching to be enabled on the broker by setting
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.broker.cache.useCache`|Enable the cache on the broker.|false|
-|`druid.broker.cache.populateCache`|Populate the cache on the broker.|false|
+|`druid.broker.cache.useCache`|true, false|Enable the cache on the broker.|false|
+|`druid.broker.cache.populateCache`|true, false|Populate the cache on the broker.|false|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
 |`druid.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
 

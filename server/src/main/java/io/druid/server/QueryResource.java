@@ -17,7 +17,6 @@
 
 package io.druid.server;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -89,12 +88,8 @@ public class QueryResource
   )
   {
     this.config = config;
-    this.jsonMapper = jsonMapper.copy();
-    this.jsonMapper.getFactory().configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
-
-    this.smileMapper = smileMapper.copy();
-    this.smileMapper.getFactory().configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
-
+    this.jsonMapper = jsonMapper;
+    this.smileMapper = smileMapper;
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
@@ -125,7 +120,8 @@ public class QueryResource
     String queryId = null;
 
     final String reqContentType = req.getContentType();
-    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType) || APPLICATION_SMILE.equals(reqContentType);
+    final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(reqContentType)
+                            || APPLICATION_SMILE.equals(reqContentType);
     final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
 
     ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
@@ -210,7 +206,7 @@ public class QueryResource
                   }
                 },
                 contentType
-        )
+            )
             .header("X-Druid-Query-Id", queryId)
             .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(responseContext))
             .build();

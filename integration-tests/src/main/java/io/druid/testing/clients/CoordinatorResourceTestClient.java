@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.RequestBuilder;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.guice.annotations.Global;
@@ -120,12 +120,10 @@ public class CoordinatorResourceTestClient
   private StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
-      StatusResponseHolder response = new RequestBuilder(
-          this.httpClient,
-          method, new URL(url)
-      )
-          .go(responseHandler)
-          .get();
+      StatusResponseHolder response = httpClient.go(
+          new Request(method, new URL(url)),
+          responseHandler
+      ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while making request to url[%s] status[%s] content[%s]",

@@ -44,67 +44,178 @@ The coordinator node exposes several HTTP endpoints for interactions.
 
 ### GET
 
-* `/info/coordinator`
+* `/status`
 
-    Returns the current true coordinator of the cluster as a JSON object.
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
 
-* `/info/cluster`
+#### Coordinator information
 
-    Returns JSON data about every node and segment in the cluster.  Information about each node and each segment on each node will be returned.
+* `/druid/coordinator/v1/leader`
 
-* `/info/servers`
+Returns the current leader coordinator of the cluster as a JSON object.
 
-    Returns information about servers in the cluster.  Set the `?full` query parameter to get full metadata about all servers and their segments in the cluster.
+* `/druid/coordinator/v1/loadstatus`
 
-* `/info/servers/{serverName}`
+Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster.
 
-    Returns full metadata about a specific server.
+ * `/druid/coordinator/v1/loadstatus?simple`
 
-* `/info/servers/{serverName}/segments`
+Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include replication.
 
-    Returns a list of all segments for a server.  Set the `?full` query parameter to get all segment metadata included
+* `/druid/coordinator/v1/loadstatus?full`
 
-* `/info/servers/{serverName}/segments/{segmentId}`
+Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes replication.
 
-    Returns full metadata for a specific segment.
+* `/druid/coordinator/v1/loadqueue`
 
-* `/info/segments`
+Returns the ids of segments to load and drop for each historical node.
 
-    Returns all segments in the cluster as a list.  Set the `?full` flag to get all metadata about segments in the cluster
+* `/druid/coordinator/v1/loadqueue?simple`
 
-* `/info/segments/{segmentId}`
+Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each historical node.
 
-    Returns full metadata for a specific segment
+* `/druid/coordinator/v1/loadqueue?full`
 
-* `/info/datasources`
+#### Metadata store information
 
-    Returns a list of datasources in the cluster.  Set the `?full` flag to get all metadata for every datasource in the cluster
+* `/druid/coordinator/v1/metadata/datasources`
 
-* `/info/datasources/{dataSourceName}`
+Returns a list of the names of enabled datasources in the cluster.
 
-    Returns full metadata for a datasource
+* `/druid/coordinator/v1/metadata/datasources?includeDisabled`
 
-* `/info/datasources/{dataSourceName}/segments`
+Returns a list of the names of enabled and enabled datasources in the cluster.
 
-    Returns a list of all segments for a datasource.  Set the `?full` flag to get full segment metadata for a datasource
+* `/druid/coordinator/v1/metadata/datasources?full`
 
-* `/info/datasources/{dataSourceName}/segments/{segmentId}`
+Returns a list of all enabled datasources with all metadata about those datasources as stored in the metadata store.
 
-    Returns full segment metadata for a specific segment
+* `/druid/coordinator/v1/metadata/datasources/{dataSourceName}`
 
-* `/info/rules`
+Returns full metadata for a datasource as stored in the metadata store.
 
-    Returns all rules for all data sources in the cluster including the default datasource.
+* `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
-* `/info/rules/{dataSourceName}` 
+Returns a list of all segments for a datasource as stored in the metadata store.
 
-    Returns all rules for a specified datasource
+* `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
+
+Returns a list of all segments for a datasource with the full segment metadata as stored in the metadata store.
+
+* `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}`
+
+Returns full segment metadata for a specific segment as stored in the metadata store.
+
+#### Datasources information
+
+* `/druid/coordinator/v1/datasources`
+
+Returns a list of datasource names found in the cluster.
+
+* `/druid/coordinator/v1/datasources?simple`
+
+Returns a list of JSON objects containing the name and properties of datasources found in the cluster.  Properties include segment count, total segment byte size, minTime, and maxTime.
+
+* `/druid/coordinator/v1/datasources?full`
+
+Returns a list of datasource names found in the cluster with all metadata about those datasources.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}`
+
+Returns a JSON object containing the name and properties of a datasource. Properties include segment count, total segment byte size, minTime, and maxTime.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}?full`
+
+Returns full metadata for a datasource .
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals`
+
+Returns a set of segment intervals.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals?simple`
+
+Returns a map of an interval to a JSON object containing the total byte size of segments and number of segments for that interval.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals?full`
+
+Returns a map of an interval to a map of segment metadata to a set of server names that contain the segment for that interval.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
+
+Returns a set of segment ids for an ISO8601 interval.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?simple`
+
+Returns a map of segment intervals contained within the specified interval to a JSON object containing the total byte size of segments and number of segments for an interval.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?full`
+
+Returns a map of segment intervals contained within the specified interval to a map of segment metadata to a set of server names that contain the segment for an interval.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments`
+
+Returns a list of all segments for a datasource in the cluster.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments?full`
+
+Returns a list of all segments for a datasource in the cluster with the full segment metadata.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+Returns full segment metadata for a specific segment in the cluster.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/tiers`
+
+Return the tiers that a datasource exists in.
+
+#### Rules
+
+* `/druid/coordinator/v1/rules`
+
+Returns all rules as JSON objects for all datasources in the cluster including the default datasource.
+
+* `/druid/coordinator/v1/rules/{dataSourceName}`
+
+Returns all rules for a specified datasource.
+
+
+* `/druid/coordinator/v1/rules/{dataSourceName}?full`
+
+Returns all rules for a specified datasource and includes default datasource.
 
 ### POST
 
-* `/info/rules/{dataSourceName}`
+#### Datasources
 
-    POST with a list of rules in JSON form to update rules.
+* `/druid/coordinator/v1/datasources/{dataSourceName}`
+
+Enables a datasource.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+Enables a segment.
+
+#### Rules
+
+* `/druid/coordinator/v1/rules/{dataSourceName}`
+
+POST with a list of rules in JSON form to update rules.
+
+### DELETE
+
+#### Datasources
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}`
+
+Disables a datasource.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myISO8601Interval}>`
+
+Runs a [Kill task](Tasks.html) for a given interval and datasource.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+Disables a segment.
 
 The Coordinator Console
 ------------------

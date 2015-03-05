@@ -10,7 +10,7 @@ This simple Druid cluster configuration can be used for initially experimenting 
 
 ```
 # Extensions
--Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-seven"]
+-Ddruid.extensions.coordinates=["io.druid.extensions:druid-kafka-eight"]
 
 # Zookeeper (defaults to localhost)
 

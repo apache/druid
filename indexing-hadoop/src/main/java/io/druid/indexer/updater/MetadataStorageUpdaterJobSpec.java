@@ -20,6 +20,7 @@ package io.druid.indexer.updater;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.PasswordProvider;
 
 import javax.validation.constraints.NotNull;
 
@@ -38,7 +39,7 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
   public String user;
 
   @JsonProperty("password")
-  public String password;
+  private PasswordProvider passwordProvider;
 
   @JsonProperty("segmentTable")
   public String segmentTable;
@@ -73,7 +74,7 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
       @Override
       public String getPassword()
       {
-        return password;
+        return passwordProvider == null ? null : passwordProvider.getPassword();
       }
     };
   }

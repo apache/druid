@@ -96,7 +96,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
                     .bind("created_date", new DateTime().toString())
                     .bind("start", segment.getInterval().getStart().toString())
                     .bind("end", segment.getInterval().getEnd().toString())
-                    .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? 0 : 1)
+                    .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
                     .bind("version", segment.getVersion())
                     .bind("used", true)
                     .bind("payload", jsonMapper.writeValueAsBytes(segment))

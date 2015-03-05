@@ -1,5 +1,8 @@
-name: Your New Jekyll Site
-pygments: true
+name: Druid Documentation
+
 markdown: redcarpet
+
 redcarpet:
-  extensions: ["no_intra_emphasis", "fenced_code_blocks", "disable_indented_code_blocks", "tables", "with_toc_data"]
+  extensions: ["tables", "no_intra_emphasis", "fenced_code_blocks", "with_toc_data"]
+
+highlighter: pygments

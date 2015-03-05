@@ -19,8 +19,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 import com.metamx.common.ISE;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,8 +32,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -44,30 +40,19 @@ public class Utils
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
-  public static <K, V> Map<K, V> zipMap(Iterable<K> keys, Iterable<V> values)
-  {
-    Map<K, V> retVal = new HashMap<K, V>();
-
-    Iterator<K> keyIter = keys.iterator();
-    Iterator<V> valsIter = values.iterator();
-    while (keyIter.hasNext()) {
-      final K key = keyIter.next();
-
-      Preconditions.checkArgument(valsIter.hasNext(), "keys longer than vals, bad, bad vals.  Broke on key[%s]", key);
-      retVal.put(key, valsIter.next());
-    }
-    if (valsIter.hasNext()) {
-      throw new ISE("More values[%d] than keys[%d]", retVal.size() + Iterators.size(valsIter), retVal.size());
-    }
-
-    return retVal;
-  }
-
   public static OutputStream makePathAndOutputStream(JobContext job, Path outputPath, boolean deleteExisting)
       throws IOException
   {
     OutputStream retVal;
     FileSystem fs = outputPath.getFileSystem(job.getConfiguration());
+    Class<? extends CompressionCodec> codecClass;
+    CompressionCodec codec = null;
+
+    if (FileOutputFormat.getCompressOutput(job)) {
+      codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
+      codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
+      outputPath = new Path(outputPath.toString() + codec.getDefaultExtension());
+    }
 
     if (fs.exists(outputPath)) {
       if (deleteExisting) {
@@ -77,16 +62,11 @@ public class Utils
       }
     }
 
-    if (!FileOutputFormat.getCompressOutput(job)) {
-      retVal = fs.create(outputPath, false);
-    } else {
-      Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
-      CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      outputPath = new Path(outputPath.toString() + codec.getDefaultExtension());
-
+    if (FileOutputFormat.getCompressOutput(job)) {
       retVal = codec.createOutputStream(fs.create(outputPath, false));
+    } else {
+      retVal = fs.create(outputPath, false);
     }
-
     return retVal;
   }
 

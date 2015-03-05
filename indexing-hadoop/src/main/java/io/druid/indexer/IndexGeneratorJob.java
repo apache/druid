@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -34,7 +36,9 @@ import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.granularity.QueryGranularity;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -54,10 +58,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InvalidJobConfException;
@@ -214,6 +215,8 @@ public class IndexGeneratorJob implements Jobby
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
   {
+    private static final HashFunction hashFunction = Hashing.murmur3_128();
+
     @Override
     protected void innerMap(
         InputRow inputRow,
@@ -228,10 +231,24 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
+      final long truncatedTimestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
+      final byte[] hashedDimensions = hashFunction.hashBytes(
+          HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(
+              Rows.toGroupKey(
+                  truncatedTimestamp,
+                  inputRow
+              )
+          )
+      ).asBytes();
+
       context.write(
           new SortableBytes(
               bucket.get().toGroupKey(),
-              Longs.toByteArray(inputRow.getTimestampFromEpoch())
+              // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
+              ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
+                        .putLong(truncatedTimestamp)
+                        .put(hashedDimensions)
+                        .array()
           ).toBytesWritable(),
           text
       );
@@ -432,11 +449,12 @@ public class IndexGeneratorJob implements Jobby
 
       int attemptNumber = context.getTaskAttemptID().getId();
 
-      FileSystem fileSystem = FileSystem.get(context.getConfiguration());
-      Path indexBasePath = config.makeSegmentOutputPath(fileSystem, bucket);
-      Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
-      final FileSystem infoFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
-      final FileSystem outputFS = indexBasePath.getFileSystem(context.getConfiguration());
+      final FileSystem intermediateFS = config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration());
+      final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath()).getFileSystem(
+          context.getConfiguration()
+      );
+      final Path indexBasePath = config.makeSegmentOutputPath(outputFS, bucket);
+      final Path indexZipFilePath = new Path(indexBasePath, String.format("index.zip.%s", attemptNumber));
 
       outputFS.mkdirs(indexBasePath);
 
@@ -467,24 +485,32 @@ public class IndexGeneratorJob implements Jobby
       Path finalIndexZipFilePath = new Path(indexBasePath, "index.zip");
       final URI indexOutURI = finalIndexZipFilePath.toUri();
       ImmutableMap<String, Object> loadSpec;
-      if (outputFS instanceof NativeS3FileSystem) {
+
+      // We do String comparison instead of instanceof checks here because in Hadoop 2.6.0
+      // NativeS3FileSystem got moved to a separate jar (hadoop-aws) that is not guaranteed
+      // to be part of the core code anymore.  The instanceof check requires that the class exist
+      // but we do not have any guarantee that it will exist, so instead we must pull out
+      // the String name of it and verify that.  We do a full package-qualified test in order
+      // to be as explicit as possible.
+      String fsClazz = outputFS.getClass().getName();
+      if ("org.apache.hadoop.fs.s3native.NativeS3FileSystem".equals(fsClazz)) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "s3_zip",
             "bucket", indexOutURI.getHost(),
             "key", indexOutURI.getPath().substring(1) // remove the leading "/"
         );
-      } else if (outputFS instanceof LocalFileSystem) {
+      } else if ("org.apache.hadoop.fs.LocalFileSystem".equals(fsClazz)) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "local",
             "path", indexOutURI.getPath()
         );
-      } else if (outputFS instanceof DistributedFileSystem) {
+      } else if ("org.apache.hadoop.hdfs.DistributedFileSystem".equals(fsClazz)) {
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
         );
       } else {
-        throw new ISE("Unknown file system[%s]", outputFS.getClass());
+        throw new ISE("Unknown file system[%s]", fsClazz);
       }
 
       DataSegment segment = new DataSegment(
@@ -502,7 +528,7 @@ public class IndexGeneratorJob implements Jobby
       // retry 1 minute
       boolean success = false;
       for (int i = 0; i < 6; i++) {
-        if (renameIndexFiles(infoFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
+        if (renameIndexFiles(intermediateFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
           log.info("Successfully renamed [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
           success = true;
           break;
@@ -532,7 +558,7 @@ public class IndexGeneratorJob implements Jobby
           outputFS.delete(indexZipFilePath, true);
         } else {
           outputFS.delete(finalIndexZipFilePath, true);
-          if (!renameIndexFiles(infoFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
+          if (!renameIndexFiles(intermediateFS, outputFS, indexBasePath, indexZipFilePath, finalIndexZipFilePath, segment)) {
             throw new ISE(
                 "Files [%s] and [%s] are different, but still cannot rename after retry loop",
                 indexZipFilePath.toUri().getPath(),

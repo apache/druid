@@ -21,6 +21,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.metamx.common.Pair;
@@ -1593,5 +1594,50 @@ public class VersionedIntervalTimelineTest
   private VersionedIntervalTimeline<String, Integer> makeStringIntegerTimeline()
   {
     return new VersionedIntervalTimeline<String, Integer>(Ordering.<String>natural());
+  }
+
+  @Test
+  public void testUnionTimeLineLookup()
+  {
+    TimelineLookup<String, Integer> lookup = new UnionTimeLineLookup<String, Integer>(
+        Arrays.<TimelineLookup<String, Integer>>asList(
+            timeline,
+            timeline
+        )
+    );
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-04-01/2011-04-02", "3", 5),
+            createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-06/2011-04-09", "3", 4),
+            createExpected("2011-04-01/2011-04-02", "3", 5),
+            createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-06/2011-04-09", "3", 4)
+        ),
+        (List)Lists.newArrayList(lookup.lookup(new Interval("2011-04-01/2011-04-09")))
+    );
+  }
+
+  @Test
+  public void testUnionTimeLineLookupNonExistentDelegates()
+  {
+    TimelineLookup<String, Integer> lookup = new UnionTimeLineLookup<String, Integer>(
+        Arrays.<TimelineLookup<String, Integer>>asList(
+            timeline,
+            null,
+            timeline,
+            null
+        )
+    );
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-04-01/2011-04-02", "3", 5),
+            createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-06/2011-04-09", "3", 4),
+            createExpected("2011-04-01/2011-04-02", "3", 5),
+            createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-06/2011-04-09", "3", 4)
+        ),
+        (List)Lists.newArrayList(lookup.lookup(new Interval("2011-04-01/2011-04-09")))    );
   }
 }

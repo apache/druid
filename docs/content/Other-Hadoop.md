@@ -11,6 +11,8 @@ To override the default Hadoop version, both the Hadoop Index Task and the stand
 
 The Hadoop Index Task takes this parameter has part of the task JSON and the standalone Hadoop indexer takes this parameter as a command line argument.
 
+If you are still having problems, include all relevant hadoop jars at the beginning of the classpath of your indexing or historical nodes.
+
 
 Working with Hadoop 1.x and older
 ---------------------------------

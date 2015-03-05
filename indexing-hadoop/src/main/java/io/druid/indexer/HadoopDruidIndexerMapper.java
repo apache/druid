@@ -32,6 +32,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
 {
   private HadoopDruidIndexerConfig config;
   private StringInputRowParser parser;
+  protected GranularitySpec granularitySpec;
 
   @Override
   protected void setup(Context context)
@@ -39,6 +40,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   {
     config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
+    granularitySpec = config.getGranularitySpec();
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -69,9 +71,10 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
           throw e;
         }
       }
-      GranularitySpec spec = config.getGranularitySpec();
-      if (!spec.bucketIntervals().isPresent() || spec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
-                                                     .isPresent()) {
+
+      if (!granularitySpec.bucketIntervals().isPresent()
+          || granularitySpec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
+                            .isPresent()) {
         innerMap(inputRow, value, context);
       }
     }

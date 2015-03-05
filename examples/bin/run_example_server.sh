@@ -6,42 +6,27 @@ shopt -s expand_aliases
 trap "exit 1" 1 2 3 15
 
 SCRIPT_DIR=`dirname $0`
+
+if [[ ! -d "${SCRIPT_DIR}/lib" || ! -d "${SCRIPT_DIR}/config" ]]; then
+  echo "This script appears to be running from the source location. It must be run from its deployed location."
+  echo "After building, unpack services/target/druid-services-*-SNAPSHOT-bin.tar.gz, and run the script unpacked there."
+  exit 2
+fi
+
 CURR_DIR=`pwd`
 cd ${SCRIPT_DIR}
 SCRIPT_DIR=`pwd`
 cd ${CURR_DIR}
 
-EXAMPLES_DIR=${SCRIPT_DIR}/examples
-
 [ -d /tmp/example ]  &&  echo "Cleaning up from previous run.."  &&  /bin/rm -fr /tmp/example
 
-EXAMPLE=$1
-if [ -z ${EXAMPLE} ] ; then
-    echo "Please specify an example type."
-    echo "Examples availables:"
-    echo `ls ${EXAMPLES_DIR} | grep -v indexing`
-    read -p "> " EXAMPLE
-    echo " "
-fi
+source $SCRIPT_DIR/select_example.sh
 
-EXAMPLE_LOC=${EXAMPLES_DIR}/${EXAMPLE}
+select_example SPEC_FILE "${SCRIPT_DIR}/examples" "*_realtime.spec" "${1}" "${1}_realtime.spec"
 
-while [[ ! -e ${EXAMPLE_LOC} ]] ; do
-    echo "Unknown example ${EXAMPLE}, please specify a known example."
-    echo "Known examples:"
-    echo `ls ${EXAMPLES_DIR}`
-    read -p "> " EXAMPLE
-    EXAMPLE_LOC=${EXAMPLES_DIR}/${EXAMPLE}
-    echo " "
-done
-
-SPEC_FILE=${EXAMPLE_LOC}/${EXAMPLE}_realtime.spec
-
-# check spec file exists
-[ ! -e ${SPEC_FILE} ]  &&  echo "Expecting file ${SPEC_FILE} to exist, it didn't"  &&  exit 3
-
+EXAMPLE_LOC=$(dirname $SPEC_FILE)
 # run before script if it exists
-if [ -e ${EXAMPLE_LOC}/before.sh ]; then
+if [ -x ${EXAMPLE_LOC}/before.sh ]; then
     trap "set +x; cd ${EXAMPLE_LOC} && ./after.sh && cd ${CURR_DIR}; exit 1" EXIT
     cd ${EXAMPLE_LOC}
     ./before.sh
@@ -49,17 +34,16 @@ if [ -e ${EXAMPLE_LOC}/before.sh ]; then
 fi
 
 #  start process
-JAVA_ARGS="-Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
+JAVA_ARGS="-Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
 JAVA_ARGS="${JAVA_ARGS} -Ddruid.realtime.specFile=${SPEC_FILE}"
-
 
 DRUID_CP=${EXAMPLE_LOC}
 #For a pull
-DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/../config/realtime
+DRUID_CP=${SCRIPT_DIR}/../config/realtime:${DRUID_CP}
 #For the kit
-DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/lib/*
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/_common
 DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/config/realtime
+DRUID_CP=${DRUID_CP}:${SCRIPT_DIR}/lib/*
 
 echo "Running command:"
 

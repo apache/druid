@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.client.selector.Server;
@@ -32,6 +33,7 @@ import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.task.Task;
 import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
@@ -92,10 +94,11 @@ public class RemoteTaskActionClient implements TaskActionClient
         log.info("Submitting action for task[%s] to overlord[%s]: %s", task.getId(), serviceUri, taskAction);
 
         try {
-          response = httpClient.post(serviceUri.toURL())
-                               .setContent(MediaType.APPLICATION_JSON, dataToSend)
-                               .go(new StatusResponseHandler(Charsets.UTF_8))
-                               .get();
+          response = httpClient.go(
+              new Request(HttpMethod.POST, serviceUri.toURL())
+                  .setContent(MediaType.APPLICATION_JSON, dataToSend),
+              new StatusResponseHandler(Charsets.UTF_8)
+          ).get();
         }
         catch (Exception e) {
           Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);

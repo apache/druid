@@ -48,7 +48,7 @@ public class JobHelper
 
   public static void setupClasspath(
       HadoopDruidIndexerConfig config,
-      Job groupByJob
+      Job job
   )
       throws IOException
   {
@@ -59,9 +59,9 @@ public class JobHelper
 
     String[] jarFiles = classpathProperty.split(File.pathSeparator);
 
-    final Configuration conf = groupByJob.getConfiguration();
-    final FileSystem fs = FileSystem.get(conf);
-    Path distributedClassPath = new Path(config.getWorkingPath(), "classpath");
+    final Configuration conf = job.getConfiguration();
+    final Path distributedClassPath = new Path(config.getWorkingPath(), "classpath");
+    final FileSystem fs = distributedClassPath.getFileSystem(conf);
 
     if (fs instanceof LocalFileSystem) {
       return;

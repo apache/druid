@@ -17,37 +17,38 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Provider;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.query.Query;
 import io.druid.query.QueryMetricUtil;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentProvider;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.api.Result;
 import org.eclipse.jetty.client.util.BytesContentProvider;
-import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 import org.joda.time.DateTime;
 
-import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Enumeration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -59,6 +60,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   private static final String APPLICATION_SMILE = "application/smile";
+
+  private static final String HOST_ATTRIBUTE = "io.druid.proxy.to.host";
+  private static final String QUERY_ATTRIBUTE = "io.druid.proxy.query";
+  private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
   private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
@@ -79,7 +84,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
-  private final HttpClient httpClient;
+  private final Provider<HttpClient> httpClientProvider;
+  private final DruidHttpClientConfig httpClientConfig;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
@@ -87,7 +93,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
-      @Router HttpClient httpClient,
+      @Router Provider<HttpClient> httpClientProvider,
+      DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger
   )
@@ -95,7 +102,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
-    this.httpClient = httpClient;
+    this.httpClientProvider = httpClientProvider;
+    this.httpClientConfig = httpClientConfig;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
   }
@@ -105,23 +113,25 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   {
     final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(request.getContentType()) || APPLICATION_SMILE.equals(request.getContentType());
     final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
+    request.setAttribute(OBJECTMAPPER_ATTRIBUTE, objectMapper);
 
     String host = hostFinder.getDefaultHost();
-    Query inputQuery = null;
-    boolean hasContent = request.getContentLength() > 0 || request.getContentType() != null;
-    boolean isQuery = request.getMethod().equals(HttpMethod.POST.asString());
-    long startTime = System.currentTimeMillis();
+    request.setAttribute(HOST_ATTRIBUTE, host);
+
+    boolean isQuery = request.getMethod().equals(HttpMethod.POST.asString()) &&
+                      request.getRequestURI().startsWith("/druid/v2");
 
     // queries only exist for POST
     if (isQuery) {
       try {
-        inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
+        Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
-          host = hostFinder.getHost(inputQuery);
+          request.setAttribute(HOST_ATTRIBUTE, hostFinder.getHost(inputQuery));
           if (inputQuery.getId() == null) {
             inputQuery = inputQuery.withId(UUID.randomUUID().toString());
           }
         }
+        request.setAttribute(QUERY_ATTRIBUTE, inputQuery);
       }
       catch (IOException e) {
         log.warn(e, "Exception parsing query");
@@ -149,78 +159,67 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       }
     }
 
-    URI rewrittenURI = rewriteURI(host, request);
-    if (rewrittenURI == null) {
-      onRewriteFailed(request, response);
-      return;
-    }
+    super.service(request, response);
+  }
 
-    final Request proxyRequest = getHttpClient().newRequest(rewrittenURI)
-                                                .method(request.getMethod())
-                                                .version(HttpVersion.fromString(request.getProtocol()));
+  @Override
+  protected void customizeProxyRequest(Request proxyRequest, HttpServletRequest request)
+  {
+    proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
+    proxyRequest.idleTimeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
 
-    // Copy headers
-    for (Enumeration<String> headerNames = request.getHeaderNames(); headerNames.hasMoreElements(); ) {
-      String headerName = headerNames.nextElement();
-
-      if (HttpHeader.TRANSFER_ENCODING.is(headerName)) {
-        hasContent = true;
-      }
-
-      for (Enumeration<String> headerValues = request.getHeaders(headerName); headerValues.hasMoreElements(); ) {
-        String headerValue = headerValues.nextElement();
-        if (headerValue != null) {
-          proxyRequest.header(headerName, headerValue);
-        }
+    final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
+    if (query != null) {
+      final ObjectMapper objectMapper = (ObjectMapper) request.getAttribute(OBJECTMAPPER_ATTRIBUTE);
+      try {
+        proxyRequest.content(new BytesContentProvider(objectMapper.writeValueAsBytes(query)));
+      } catch(JsonProcessingException e) {
+        Throwables.propagate(e);
       }
     }
+  }
 
-    // Add proxy headers
-    addViaHeader(proxyRequest);
-
-    addXForwardedHeaders(proxyRequest, request);
-
-    final AsyncContext asyncContext = request.startAsync();
-    // We do not timeout the continuation, but the proxy request
-    asyncContext.setTimeout(0);
-    proxyRequest.timeout(
-        getTimeout(), TimeUnit.MILLISECONDS
-    );
-
-    if (hasContent) {
-      if (inputQuery != null) {
-        proxyRequest.content(new BytesContentProvider(jsonMapper.writeValueAsBytes(inputQuery)));
-      } else {
-        proxyRequest.content(proxyRequestContent(proxyRequest, request));
-      }
-    }
-
-    customizeProxyRequest(proxyRequest, request);
-
-    if (isQuery) {
-      proxyRequest.send(newMetricsEmittingProxyResponseListener(request, response, inputQuery, startTime));
+  @Override
+  protected Response.Listener newProxyResponseListener(
+      HttpServletRequest request, HttpServletResponse response
+  )
+  {
+    final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
+    if (query != null) {
+      return newMetricsEmittingProxyResponseListener(request, response, query, System.currentTimeMillis());
     } else {
-      proxyRequest.send(newProxyResponseListener(request, response));
+      return super.newProxyResponseListener(request, response);
     }
+  }
+
+  @Override
+  protected URI rewriteURI(HttpServletRequest request)
+  {
+    final String host = (String) request.getAttribute(HOST_ATTRIBUTE);
+    final StringBuilder uri = new StringBuilder("http://");
+
+    uri.append(host);
+    uri.append(request.getRequestURI());
+    final String queryString = request.getQueryString();
+    if (queryString != null) {
+      uri.append("?").append(queryString);
+    }
+    return URI.create(uri.toString());
+  }
+
+  @Override
+  protected HttpClient newHttpClient()
+  {
+    return httpClientProvider.get();
   }
 
   @Override
   protected HttpClient createHttpClient() throws ServletException
   {
-    return httpClient;
-  }
-
-  private URI rewriteURI(final String host, final HttpServletRequest req)
-  {
-    final StringBuilder uri = new StringBuilder("http://");
-
-    uri.append(host);
-    uri.append(req.getRequestURI());
-    final String queryString = req.getQueryString();
-    if (queryString != null) {
-      uri.append("?").append(queryString);
-    }
-    return URI.create(uri.toString());
+    HttpClient client = super.createHttpClient();
+    // override timeout set in ProxyServlet.createHttpClient
+    setTimeout(httpClientConfig.getReadTimeout().getMillis());
+    return client;
   }
 
   private Response.Listener newMetricsEmittingProxyResponseListener(

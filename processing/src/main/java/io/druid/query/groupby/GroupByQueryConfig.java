@@ -18,11 +18,10 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.QueryConfig;
 
 /**
  */
-public class GroupByQueryConfig extends QueryConfig
+public class GroupByQueryConfig
 {
   @JsonProperty
   private boolean singleThreaded = false;

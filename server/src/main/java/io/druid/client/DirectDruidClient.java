@@ -42,6 +42,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
@@ -59,6 +60,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import javax.ws.rs.core.MediaType;
@@ -300,14 +302,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
       };
-      future = httpClient
-          .post(new URL(url))
-          .setContent(objectMapper.writeValueAsBytes(query))
-          .setHeader(
-              HttpHeaders.Names.CONTENT_TYPE,
-              isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-          )
-          .go(responseHandler);
+      future = httpClient.go(
+          new Request(
+              HttpMethod.POST,
+              new URL(url)
+          ).setContent(objectMapper.writeValueAsBytes(query))
+           .setHeader(
+               HttpHeaders.Names.CONTENT_TYPE,
+               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+           ),
+          responseHandler
+      );
 
       queryWatcher.registerQuery(query, future);
 
@@ -328,15 +333,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               if (future.isCancelled()) {
                 // forward the cancellation to underlying queriable node
                 try {
-                  StatusResponseHolder res = httpClient
-                      .delete(new URL(cancelUrl))
-                      .setContent(objectMapper.writeValueAsBytes(query))
-                      .setHeader(
-                          HttpHeaders.Names.CONTENT_TYPE,
-                          isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-                      )
-                      .go(new StatusResponseHandler(Charsets.UTF_8))
-                      .get();
+                  StatusResponseHolder res = httpClient.go(
+                      new Request(
+                          HttpMethod.DELETE,
+                          new URL(cancelUrl)
+                      ).setContent(objectMapper.writeValueAsBytes(query))
+                       .setHeader(
+                           HttpHeaders.Names.CONTENT_TYPE,
+                           isSmile
+                           ? SmileMediaTypes.APPLICATION_JACKSON_SMILE
+                           : MediaType.APPLICATION_JSON
+                       ),
+                      new StatusResponseHandler(Charsets.UTF_8)
+                  ).get();
                   if (res.getStatus().getCode() >= 500) {
                     throw new RE(
                         "Error cancelling query[%s]: queriable node returned status[%d] [%s].",

@@ -23,8 +23,10 @@ import com.google.api.client.util.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.ws.rs.core.MediaType;
@@ -71,13 +73,16 @@ public class EventReceiverFirehoseTestClient
   public int postEvents(Collection<Map<String, Object>> events)
   {
     try {
-      StatusResponseHolder response = httpClient.post(new URL(getURL()))
-                                                .setContent(
-                                                    MediaType.APPLICATION_JSON,
-                                                    this.jsonMapper.writeValueAsBytes(events)
-                                                )
-                                                .go(responseHandler)
-                                                .get();
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.POST, new URL(getURL())
+          ).setContent(
+              MediaType.APPLICATION_JSON,
+              this.jsonMapper.writeValueAsBytes(events)
+          ),
+          responseHandler
+      ).get();
+
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while posting events to url[%s] status[%s] content[%s]",

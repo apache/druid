@@ -18,6 +18,7 @@
 package io.druid.indexing.worker.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.server.DruidNode;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -28,7 +29,7 @@ public class WorkerConfig
 {
   @JsonProperty
   @NotNull
-  private String ip = "localhost";
+  private String ip = DruidNode.getDefaultHost();
 
   @JsonProperty
   @NotNull

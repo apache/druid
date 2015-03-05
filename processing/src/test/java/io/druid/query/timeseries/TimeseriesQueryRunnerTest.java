@@ -25,7 +25,6 @@ import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
-import io.druid.query.QueryConfig;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -72,7 +71,8 @@ public class TimeseriesQueryRunnerTest
   {
     return QueryRunnerTestHelper.makeQueryRunners(
         new TimeseriesQueryRunnerFactory(
-            new TimeseriesQueryQueryToolChest(new QueryConfig()),
+            new TimeseriesQueryQueryToolChest(
+                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
             new TimeseriesQueryEngine(),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )

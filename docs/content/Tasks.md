@@ -74,7 +74,7 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
       "type" : "index",
       "targetPartitionSize" : -1,
       "rowFlushBoundary" : 0,
-      "numShards": 2
+      "numShards": 1
     }
   }
 }
@@ -105,9 +105,9 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|None.||yes|
-|targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|targetPartitionSize|Used in sharding. Determines how many rows are in each segment. Set this to -1 to use numShards instead for sharding.|5000000|no|
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|500000|no|
-|numShards|You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
+|numShards|Directly specify the number of shards to create. You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
 
 ### Index Hadoop Task
 
@@ -116,14 +116,15 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 ```
 {
   "type" : "index_hadoop",
-  "config": <Hadoop index config>
+  "spec": <Hadoop index spec>
 }
 ```
+
 
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index_hadoop".|yes|
-|config|A Hadoop Index Config. See [Batch Ingestion](Batch-ingestion.html)|yes|
+|spec|A Hadoop Index Spec. See [Batch Ingestion](Batch-ingestion.html)|yes|
 |hadoopCoordinates|The Maven \<groupId\>:\<artifactId\>:\<version\> of Hadoop to use. The default is "org.apache.hadoop:hadoop-client:2.6.0".|no|
 
 
@@ -131,7 +132,8 @@ The Hadoop Index Config submitted as part of an Hadoop Index Task is identical t
 
 #### Using your own Hadoop distribution
 
-Druid is compiled against Apache hadoop-client 2.6.0. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-client 2.6.0, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution.
+<<<<<<< HEAD
+Druid is compiled against Apache hadoop-client 2.6.0. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-client 2.3.0, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution. For non-API compatible versions, please see [here](Other-Hadoop.html).
 
 #### Resolving dependency conflicts running HadoopIndexTask
 
@@ -218,16 +220,16 @@ The indexing service can also run real-time tasks. These tasks effectively trans
     "ioConfig": {
       "type": "realtime",
       "firehose": {
-        "type": "kafka-0.7.2",
+        "type": "kafka-0.8",
         "consumerProps": {
-          "zk.connect": "zk_connect_string",
-          "zk.connectiontimeout.ms": "15000",
-          "zk.sessiontimeout.ms": "15000",
-          "zk.synctime.ms": "5000",
-          "groupid": "consumer-group",
-          "fetch.size": "1048586",
-          "autooffset.reset": "largest",
-          "autocommit.enable": "false"
+          "zookeeper.connect": "zk_connect_string",
+          "zookeeper.connection.timeout.ms" : "15000",
+          "zookeeper.session.timeout.ms" : "15000",
+          "zookeeper.sync.time.ms" : "5000",
+          "group.id": "consumer-group",
+          "fetch.message.max.bytes" : "1048586",
+          "auto.offset.reset": "largest",
+          "auto.commit.enable": "false"
         },
         "feed": "your_kafka_topic"
       },
