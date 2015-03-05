@@ -216,7 +216,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     };
   }
 
-  private Ordering<SegmentAnalysis> getOrdering()
+  public Ordering<SegmentAnalysis> getOrdering()
   {
     return new Ordering<SegmentAnalysis>()
     {
