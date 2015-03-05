@@ -89,19 +89,11 @@ public class ArchiveTask extends AbstractFixedIntervalTask
       log.info("OK to archive segment: %s", unusedSegment.getIdentifier());
     }
 
-    List<DataSegment> archivedSegments = Lists.newLinkedList();
-
     // Move segments
     for (DataSegment segment : unusedSegments) {
-      archivedSegments.add(toolbox.getDataSegmentArchiver().archive(segment));
+      final DataSegment archivedSegment = toolbox.getDataSegmentArchiver().archive(segment);
+      toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
     }
-
-    // Update metadata for moved segments
-    toolbox.getTaskActionClient().submit(
-        new SegmentMetadataUpdateAction(
-            ImmutableSet.copyOf(archivedSegments)
-        )
-    );
 
     return TaskStatus.success(getId());
   }
