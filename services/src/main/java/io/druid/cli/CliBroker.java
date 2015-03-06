@@ -47,7 +47,7 @@ import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;

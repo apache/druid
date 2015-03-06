@@ -54,7 +54,7 @@ import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.router.TieredBrokerConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.initialization.jetty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
@@ -29,6 +29,7 @@ import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.sun.jersey.api.core.DefaultResourceConfig;
@@ -44,6 +45,8 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
+import io.druid.server.initialization.ServerConfig;
+
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -72,6 +75,10 @@ public class JettyServerModule extends JerseyServletModule
 
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
+
+    //Adding empty binding for ServletFilterHolders so that injector returns
+    //an empty set when no external modules provide ServletFilterHolder impls
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class);
   }
 
   public static class DruidGuiceContainer extends GuiceContainer

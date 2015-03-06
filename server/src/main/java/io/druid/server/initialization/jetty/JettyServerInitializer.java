@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.initialization.jetty;
 
 import com.google.inject.Injector;
 import org.eclipse.jetty.server.Server;

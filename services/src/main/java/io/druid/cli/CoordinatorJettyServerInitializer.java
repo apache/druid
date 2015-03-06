@@ -22,7 +22,9 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.RedirectFilter;
-import io.druid.server.initialization.BaseJettyServerInitializer;
+import io.druid.server.initialization.jetty.JettyServerInitUtils;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -34,7 +36,7 @@ import org.eclipse.jetty.util.resource.Resource;
 
 /**
  */
-class CoordinatorJettyServerInitializer extends BaseJettyServerInitializer
+class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
   private final DruidCoordinatorConfig config;
 
@@ -57,7 +59,8 @@ class CoordinatorJettyServerInitializer extends BaseJettyServerInitializer
     } else {
       root.setResourceBase(config.getConsoleStatic());
     }
-    root.addFilter(defaultGzipFilterHolder(), "/*", null);
+    JettyServerInitUtils.addExtensionFilters(root, injector);
+    root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
 
     // /status should not redirect, so add first
     root.addFilter(GuiceFilter.class, "/status/*", null);
