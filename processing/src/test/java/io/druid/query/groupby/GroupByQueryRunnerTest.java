@@ -1230,18 +1230,18 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testHavingSpecWithNonExistingAggregator()
+  public void testHavingSpecWithUnderscore()
   {
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "idx", 269L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "idx", 217L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "idx", 319L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "idx", 216L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "idx", 4420L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "idx", 221L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "idx", 4416L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "idx", 177L, "in_dex", 0L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "idx", 243L, "in_dex", 0L)
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "idx", 269L, "in_dex", 269L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "idx", 217L, "in_dex", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "idx", 319L, "in_dex", 319L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "idx", 216L, "in_dex", 216L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "idx", 4420L, "in_dex", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "idx", 221L, "in_dex", 221L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "idx", 4416L, "in_dex", 4416L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "idx", 177L, "in_dex", 177L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "idx", 243L, "in_dex", 243L)
     );
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -1252,7 +1252,7 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 new LongSumAggregatorFactory("idx", "index"),
-                new LongSumAggregatorFactory("in_dex", "in_dex")
+                new LongSumAggregatorFactory("in_dex", "index")
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
