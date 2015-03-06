@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.File;
 import java.io.IOException;
@@ -154,5 +156,16 @@ public class JobHelper
     }
 
     return true;
+  }
+
+  public static void setInputFormat(Job job, HadoopDruidIndexerConfig indexerConfig)
+  {
+    if(indexerConfig.getInputFormatClass() != null) {
+      job.setInputFormatClass(indexerConfig.getInputFormatClass());
+    } else if (indexerConfig.isCombineText()) {
+      job.setInputFormatClass(CombineTextInputFormat.class);
+    } else {
+      job.setInputFormatClass(TextInputFormat.class);
+    }
   }
 }

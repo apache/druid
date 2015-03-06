@@ -19,7 +19,12 @@
 
 package io.druid.indexer.path;
 
+import io.druid.jackson.DefaultObjectMapper;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.Granularity;
+
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,6 +37,8 @@ public class GranularityPathSpecTest
   private final String TEST_STRING_PATH = "TEST";
   private final String TEST_STRING_PATTERN = "*.TEST";
   private final String TEST_STRING_FORMAT = "F_TEST";
+
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Before public void setUp()
   {
@@ -66,5 +73,52 @@ public class GranularityPathSpecTest
     Granularity granularity = Granularity.DAY;
     granularityPathSpec.setDataGranularity(granularity);
     Assert.assertEquals(granularity,granularityPathSpec.getDataGranularity());
+  }
+
+  @Test
+  public void testDeserialization() throws Exception
+  {
+    testDeserialization("/test/path", "*.test", "pat_pat", Granularity.SECOND, TextInputFormat.class);
+  }
+
+  @Test
+  public void testDeserializationNoInputFormat() throws Exception
+  {
+    testDeserialization("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
+  }
+
+  private void testDeserialization(
+      String inputPath,
+      String filePattern,
+      String pathFormat,
+      Granularity granularity,
+      Class inputFormat) throws Exception
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{\"inputPath\" : \"");
+    sb.append(inputPath);
+    sb.append("\",");
+    sb.append("\"filePattern\" : \"");
+    sb.append(filePattern);
+    sb.append("\",");
+    sb.append("\"pathFormat\" : \"");
+    sb.append(pathFormat);
+    sb.append("\",");
+    sb.append("\"dataGranularity\" : \"");
+    sb.append(granularity.toString());
+    sb.append("\",");
+    if(inputFormat != null) {
+      sb.append("\"inputFormat\" : \"");
+      sb.append(inputFormat.getName());
+      sb.append("\",");
+    }
+    sb.append("\"type\" : \"granularity\"}");
+
+    GranularityPathSpec pathSpec = (GranularityPathSpec)jsonMapper.readValue(sb.toString(), PathSpec.class);
+    Assert.assertEquals(inputFormat, pathSpec.getInputFormat());
+    Assert.assertEquals(inputPath, pathSpec.getInputPath());
+    Assert.assertEquals(filePattern, pathSpec.getFilePattern());
+    Assert.assertEquals(pathFormat, pathSpec.getPathFormat());
+    Assert.assertEquals(granularity, pathSpec.getDataGranularity());
   }
 }
