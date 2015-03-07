@@ -169,7 +169,11 @@ public class IndexGeneratorJob implements Jobby
 
       SortableBytes.useSortableBytesAsMapOutputKey(job);
 
-      job.setNumReduceTasks(Iterables.size(config.getAllBuckets().get()));
+      int numReducers = Iterables.size(config.getAllBuckets().get());
+      if(numReducers == 0) {
+        throw new RuntimeException("No buckets?? seems there is no data to index.");
+      }
+      job.setNumReduceTasks(numReducers);
       job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
       setReducerClass(job);
