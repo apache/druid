@@ -45,6 +45,7 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import junit.framework.Assert;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -77,6 +78,7 @@ public class RealtimePlumberSchoolTest
   private ServiceEmitter emitter;
   private RealtimeTuningConfig tuningConfig;
   private DataSchema schema;
+  private FireDepartmentMetrics metrics;
 
   public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
   {
@@ -101,11 +103,10 @@ public class RealtimePlumberSchoolTest
   @Before
   public void setUp() throws Exception
   {
-
     final File tmpDir = Files.createTempDir();
     tmpDir.deleteOnExit();
 
-     schema = new DataSchema(
+    schema = new DataSchema(
         "test",
         new InputRowParser()
         {
@@ -176,7 +177,8 @@ public class RealtimePlumberSchoolTest
         MoreExecutors.sameThreadExecutor()
     );
 
-    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, new FireDepartmentMetrics());
+    metrics = new FireDepartmentMetrics();
+    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics);
   }
 
   @After
@@ -189,7 +191,16 @@ public class RealtimePlumberSchoolTest
   public void testPersist() throws Exception
   {
     final MutableBoolean committed = new MutableBoolean(false);
-    plumber.getSinks().put(0L, new Sink(new Interval(0, TimeUnit.HOURS.toMillis(1)),schema, tuningConfig, new DateTime("2014-12-01T12:34:56.789").toString()));
+    plumber.getSinks()
+           .put(
+               0L,
+               new Sink(
+                   new Interval(0, TimeUnit.HOURS.toMillis(1)),
+                   schema,
+                   tuningConfig,
+                   new DateTime("2014-12-01T12:34:56.789").toString()
+               )
+           );
     plumber.startJob();
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
@@ -212,5 +223,44 @@ public class RealtimePlumberSchoolTest
     }
     plumber.getSinks().clear();
     plumber.finishJob();
+  }
+
+  @Test(timeout = 60000)
+  public void testPersistFails() throws Exception
+  {
+    final MutableBoolean committed = new MutableBoolean(false);
+    plumber.getSinks()
+           .put(
+               0L,
+               new Sink(
+                   new Interval(0, TimeUnit.HOURS.toMillis(1)),
+                   schema,
+                   tuningConfig,
+                   new DateTime("2014-12-01T12:34:56.789").toString()
+               )
+           );
+    plumber.startJob();
+    final InputRow row = EasyMock.createNiceMock(InputRow.class);
+    EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
+    EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
+    EasyMock.replay(row);
+    plumber.add(row);
+    plumber.persist(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            committed.setValue(true);
+            throw new RuntimeException();
+          }
+        }
+    );
+
+    while (!committed.booleanValue()) {
+      Thread.sleep(100);
+    }
+
+    Assert.assertEquals(1, metrics.failedPersists());
   }
 }

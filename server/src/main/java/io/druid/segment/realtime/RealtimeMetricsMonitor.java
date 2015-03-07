@@ -77,6 +77,8 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
               metrics.persistBackPressureMillis() - previous.persistBackPressureMillis()
           )
       );
+      emitter.emit(builder.build("failed/persists", metrics.failedPersists() - previous.failedPersists()));
+      emitter.emit(builder.build("failed/handoff", metrics.failedHandoffs() - previous.failedHandoffs()));
 
       previousValues.put(fireDepartment, metrics);
     }
