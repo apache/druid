@@ -28,7 +28,7 @@ More definitions are available on the [design page](Design.html).
 
 * **Metrics**&nbsp;&nbsp;Countable data that can be aggregated. Metrics, for example, can be the number of visitors to a website, number of tweets per day, or average revenue.
 
-* **Rollup**&nbsp;&nbsp;The aggregation of data that occurs at one or more stages, based on settings in a [configuration file](#specFile). 
+* **Rollup**&nbsp;&nbsp;The aggregation of data that occurs at one or more stages, based on settings in a [configuration file](#specfile). 
 
   <a name="segment"></a>
 * **Segment**&nbsp;&nbsp;A collection of (internal) records that are stored and processed together. Druid chunks data into segments representing a time interval, and these are stored and manipulated in the cluster.
