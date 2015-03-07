@@ -89,6 +89,7 @@ public class SearchQueryRunnerTest
     );
     expectedResults.put(QueryRunnerTestHelper.marketDimension, Sets.newHashSet("total_market"));
     expectedResults.put(QueryRunnerTestHelper.placementishDimension, Sets.newHashSet("a"));
+    expectedResults.put(QueryRunnerTestHelper.idDimension, Sets.newHashSet("default"));
 
     checkSearchQuery(searchQuery, expectedResults);
   }
