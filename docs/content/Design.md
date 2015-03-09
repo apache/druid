@@ -7,7 +7,7 @@ For a comprehensive look at the architecture of Druid, read the [White Paper](ht
 What is Druid?
 ==============
 
-Druid is a system built to allow fast ("real-time") access to large sets of seldom-changing data. It was designed with the intent of being a service and maintaining 100% uptime in the face of code deployments, machine failures and other eventualities of a production system. It can be useful for back-office use cases as well, but design decisions were made explicitly targetting an always-up service.
+Druid is a system built to allow fast ("real-time") access to large sets of seldom-changing data. It was designed with the intent of being a service and maintaining 100% uptime in the face of code deployments, machine failures and other eventualities of a production system. It can be useful for back-office use cases as well, but design decisions were made explicitly targeting an always-up service.
 
 Druid currently allows for single-table queries in a similar manner to [Dremel](http://research.google.com/pubs/pub36632.html) and [PowerDrill](http://www.vldb.org/pvldb/vol5/p1436_alexanderhall_vldb2012.pdf). It adds to the mix
 
@@ -19,7 +19,7 @@ Druid currently allows for single-table queries in a similar manner to [Dremel](
 
 As far as a comparison of systems is concerned, Druid sits in between PowerDrill and Dremel on the spectrum of functionality. It implements almost everything Dremel offers (Dremel handles arbitrary nested data structures while Druid only allows for a single level of array-based nesting) and gets into some of the interesting data layout and compression methods from PowerDrill.
 
-Druid is a good fit for products that require real-time data ingestion of a single, large data stream. Especially if you are targetting no-downtime operation and are building your product on top of a time-oriented summarization of the incoming data stream. Druid is probably not the right solution if you care more about query flexibility and raw data access than query speed and no-downtime operation. When talking about query speed it is important to clarify what "fast" means: with Druid it is entirely within the realm of possibility (we have done it) to achieve queries that run in single-digit seconds across a 6TB data set.
+Druid is a good fit for products that require real-time data ingestion of a single, large data stream. Especially if you are targeting no-downtime operation and are building your product on top of a time-oriented summarization of the incoming data stream. Druid is probably not the right solution if you care more about query flexibility and raw data access than query speed and no-downtime operation. When talking about query speed it is important to clarify what "fast" means: with Druid it is entirely within the realm of possibility (we have done it) to achieve queries that run in single-digit seconds across a 6TB data set.
 
 ### Architecture
 
@@ -54,7 +54,7 @@ The following diagram illustrates the cluster's management layer, showing how ce
 <img src="../img/druid-manage-1.png" width="800"/>
 
 
-### Data Storage
+### Segments and Data Storage
 
 Getting data into the Druid system requires an indexing process, as shown in the diagrams above. This gives the system a chance to analyze the data, add indexing structures, compress and adjust the layout in an attempt to optimize query speed. A quick list of what happens to the data follows.
 
@@ -66,7 +66,9 @@ Getting data into the Druid system requires an indexing process, as shown in the
     -   Bitmap compression
     -   RLE (on the roadmap, but not yet implemented)
 
-The output of the indexing process is stored in a "deep storage" LOB store/file system (see [Deep Storage](Deep-Storage.html) for information about potential options). Data is then loaded by Historical nodes by first downloading the data to their local disk and then memory-mapping it before serving queries.
+The output of the indexing process is called a "segment". Segments are the fundamental structure to store data in Druid. Segments contain the various dimensions and metrics in a data set, stored in a column orientation, as well as the indexes for those columns.
+
+Segments are stored in a "deep storage" LOB store/file system (see [Deep Storage](Deep-Storage.html) for information about potential options). Data is then loaded by Historical nodes by first downloading the data to their local disk and then memory-mapping it before serving queries.
 
 If a Historical node dies, it will no longer serve its segments, but given that the segments are still available on the "deep storage", any other node can simply download the segment and start serving it. This means that it is possible to actually remove all historical nodes from the cluster and then re-provision them without any data loss. It also means that if the "deep storage" is not available, the nodes can continue to serve the segments they have already pulled down (i.e. the cluster goes stale, not down).
 
