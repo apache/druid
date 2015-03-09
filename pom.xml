@@ -573,6 +573,17 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>cobertura-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.eluder.coveralls</groupId>
+                <artifactId>coveralls-maven-plugin</artifactId>
+                <version>3.0.1</version>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -654,6 +665,24 @@
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
                     <version>1.2.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>cobertura-maven-plugin</artifactId>
+                    <version>2.7</version>
+                    <configuration>
+                        <instrumentation>
+                            <ignores>
+                                <ignore>io.druid.sql.antlr4.*</ignore>
+                            </ignores>
+                            <excludes>
+                                <exclude>io/druid/sql/antlr4/**/*.class</exclude>
+                            </excludes>
+                        </instrumentation>
+                        <format>xml</format>
+                        <!-- aggregated reports for multi-module projects -->
+                        <aggregate>true</aggregate>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
