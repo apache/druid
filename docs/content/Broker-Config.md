@@ -76,7 +76,7 @@ You can optionally only configure caching to be enabled on the broker by setting
 |`druid.broker.cache.useCache`|true, false|Enable the cache on the broker.|false|
 |`druid.broker.cache.populateCache`|true, false|Populate the cache on the broker.|false|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
 
 #### Local Cache
 
