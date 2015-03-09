@@ -138,6 +138,9 @@ public class GroupByQueryHelper
       @Override
       public List accumulate(List accumulated, T in)
       {
+        if(in == null){
+          throw new ISE("Cannot have null result");
+        }
         accumulated.add(in);
         return accumulated;
       }
