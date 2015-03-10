@@ -13,7 +13,6 @@ We describe the configuration of the [Kafka firehose example](Realtime-ingestion
 
 -   `consumerProps` is a map of properties for the Kafka consumer. The JSON object is converted into a Properties object and passed along to the Kafka consumer.
 -   `feed` is the feed that the Kafka consumer should read from.
--   `parser` represents a parser that knows how to convert from String representations into the required `InputRow` representation that Druid uses. This is a potentially reusable piece that can be found in many of the firehoses that are based on text streams. The spec in the example describes a JSON feed (new-line delimited objects), with a timestamp column called "timestamp" in ISO8601 format and that it should not include the dimension "value" when processing. More information about the options available for the parser are available below.
 
 Available Firehoses
 -------------------
@@ -50,17 +49,7 @@ A sample local firehose spec is shown below:
 {
     "type"    : "local",
     "filter"   : "*.csv",
-    "parser" : {
-      "timestampSpec": {
-        "column": "mytimestamp",
-        "format": "yyyy-MM-dd HH:mm:ss"
-      },
-      "data": {
-        "format": "csv",
-        "columns": [...],
-        "dimensions": [...]
-      }
-    }
+    "baseDir"  : "/data/directory"
 }
 ```
 
@@ -68,7 +57,7 @@ A sample local firehose spec is shown below:
 |--------|-----------|---------|
 |type|This should be "local".|yes|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
-|data|A data spec similar to what is used for batch ingestion.|yes|
+|baseDir|location of baseDirectory containing files to be ingested. |yes|
 
 #### IngestSegmentFirehose
 
@@ -109,15 +98,23 @@ This can be used to merge data from more than one firehoses.
 |type|combining|yes|
 |delegates|list of firehoses to combine data from|yes|
 
-Parsing Data
-------------
 
-There are several ways to parse data.
+#### EventReceiverFirehose
+EventReceiverFirehoseFactory can be used to ingest events using http endpoint.
+when using this firehose `druid.realtime.chathandler.type` needs to be set to `announce` in runtime.properties.
 
-#### StringInputRowParser
+```json
+{
+  "type": "receiver",
+  "serviceName": "eventReceiverServiceName",
+  "bufferSize": 10000
+}
+```
+when using above firehose the events can be sent via submitting a POST request to the http endpoint -
+`http://<peonHost>:<port>/druid/worker/v1/chat/<eventReceiverServiceName>/push-events/`
 
-This parser converts Strings.
-
-#### MapInputRowParser
-
-This parser converts flat, key/value pair maps.
+|property|description|required?|
+|--------|-----------|---------|
+|type|receiver|yes|
+|serviceName|name used to announce the event receiver service endpoint|yes|
+|bufferSize| size of buffer used by firehose to store events|no default(100000)|
