@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
+import com.google.inject.Provider;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
@@ -61,6 +62,7 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.PartitionChunk;
 import io.druid.utils.Runnables;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -68,7 +70,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -166,15 +167,43 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
         dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensions();
       } else {
-        Set<String> dimSet = new HashSet<>();
-        for (TimelineObjectHolder<String, DataSegment> timelineObjectHolder : timeLineSegments) {
-          dimSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getDimensions());
-        }
+        Set<String> dimSet = Sets.newHashSet(
+            Iterables.concat(
+                Iterables.transform(
+                    timeLineSegments,
+                    new Function<TimelineObjectHolder<String, DataSegment>, Iterable<String>>()
+                    {
+                      @Override
+                      public Iterable<String> apply(
+                          TimelineObjectHolder<String, DataSegment> timelineObjectHolder
+                      )
+                      {
+                        return Iterables.concat(
+                            Iterables.transform(
+                                timelineObjectHolder.getObject(),
+                                new Function<PartitionChunk<DataSegment>, Iterable<String>>()
+                                {
+                                  @Override
+                                  public Iterable<String> apply(PartitionChunk<DataSegment> input)
+                                  {
+                                    return input.getObject().getDimensions();
+                                  }
+                                }
+                            )
+                        );
+                      }
+                    }
+
+                )
+            )
+        );
         dims = Lists.newArrayList(
             Sets.difference(
                 dimSet,
-                inputRowParser.getParseSpec().getDimensionsSpec()
-                              .getDimensionExclusions()
+                inputRowParser
+                    .getParseSpec()
+                    .getDimensionsSpec()
+                    .getDimensionExclusions()
             )
         );
       }
@@ -183,35 +212,79 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       if (metrics != null) {
         metricsList = metrics;
       } else {
-        Set<String> metricsSet = new HashSet<>();
-        for (TimelineObjectHolder<String, DataSegment> timelineObjectHolder : timeLineSegments) {
-          metricsSet.addAll(timelineObjectHolder.getObject().getChunk(0).getObject().getMetrics());
-        }
+        Set<String> metricsSet = Sets.newHashSet(
+            Iterables.concat(
+                Iterables.transform(
+                    timeLineSegments,
+                    new Function<TimelineObjectHolder<String, DataSegment>, Iterable<String>>()
+                    {
+                      @Override
+                      public Iterable<String> apply(
+                          TimelineObjectHolder<String, DataSegment> input
+                      )
+                      {
+                        return Iterables.concat(
+                            Iterables.transform(
+                                input.getObject(),
+                                new Function<PartitionChunk<DataSegment>, Iterable<String>>()
+                                {
+                                  @Override
+                                  public Iterable<String> apply(PartitionChunk<DataSegment> input)
+                                  {
+                                    return input.getObject().getMetrics();
+                                  }
+                                }
+                            )
+                        );
+                      }
+                    }
+                )
+            )
+        );
         metricsList = Lists.newArrayList(metricsSet);
       }
 
 
-      final List<StorageAdapter> adapters = Lists.transform(
-          timeLineSegments,
-          new Function<TimelineObjectHolder<String, DataSegment>, StorageAdapter>()
-          {
-            @Override
-            public StorageAdapter apply(TimelineObjectHolder<String, DataSegment> input)
-            {
-              final DataSegment segment = input.getObject().getChunk(0).getObject();
-              final File file = Preconditions.checkNotNull(
-                  segmentFileMap.get(segment),
-                  "File for segment %s", segment.getIdentifier()
-              );
-
-              try {
-                return new QueryableIndexStorageAdapter((IndexIO.loadIndex(file)));
-              }
-              catch (IOException e) {
-                throw Throwables.propagate(e);
-              }
-            }
-          }
+      final List<StorageAdapter> adapters = Lists.newArrayList(
+          Iterables.concat(
+              Iterables.transform(
+                  timeLineSegments,
+                  new Function<TimelineObjectHolder<String, DataSegment>, Iterable<StorageAdapter>>()
+                  {
+                    @Override
+                    public Iterable<StorageAdapter> apply(
+                        TimelineObjectHolder<String, DataSegment> input
+                    )
+                    {
+                      return
+                          Iterables.transform(
+                              input.getObject(),
+                              new Function<PartitionChunk<DataSegment>, StorageAdapter>()
+                              {
+                                @Override
+                                public StorageAdapter apply(PartitionChunk<DataSegment> input)
+                                {
+                                  final DataSegment segment = input.getObject();
+                                  try {
+                                    return new QueryableIndexStorageAdapter(
+                                        IndexIO.loadIndex(
+                                            Preconditions.checkNotNull(
+                                                segmentFileMap.get(segment),
+                                                "File for segment %s", segment.getIdentifier()
+                                            )
+                                        )
+                                    );
+                                  }
+                                  catch (IOException e) {
+                                    throw Throwables.propagate(e);
+                                  }
+                                }
+                              }
+                          );
+                    }
+                  }
+              )
+          )
       );
 
       return new IngestSegmentFirehose(adapters, dims, metricsList);
@@ -235,112 +308,112 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       Sequence<InputRow> rows = Sequences.concat(
           Iterables.transform(
               adapters, new Function<StorageAdapter, Sequence<InputRow>>()
-          {
-            @Nullable
-            @Override
-            public Sequence<InputRow> apply(StorageAdapter adapter)
-            {
-              return Sequences.concat(
-                  Sequences.map(
-                      adapter.makeCursors(
-                          Filters.convertDimensionFilters(dimFilter),
-                          interval,
-                          QueryGranularity.ALL
-                      ), new Function<Cursor, Sequence<InputRow>>()
-                  {
-                    @Nullable
-                    @Override
-                    public Sequence<InputRow> apply(final Cursor cursor)
-                    {
-                      final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-
-                      final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-                      for (String dim : dims) {
-                        final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim, null);
-                        // dimSelector is null if the dimension is not present
-                        if (dimSelector != null) {
-                          dimSelectors.put(dim, dimSelector);
-                        }
-                      }
-
-                      final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
-                      for (String metric : metrics) {
-                        final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
-                        if (metricSelector != null) {
-                          metSelectors.put(metric, metricSelector);
-                        }
-                      }
-
-                      return Sequences.simple(
-                          new Iterable<InputRow>()
+              {
+                @Nullable
+                @Override
+                public Sequence<InputRow> apply(StorageAdapter adapter)
+                {
+                  return Sequences.concat(
+                      Sequences.map(
+                          adapter.makeCursors(
+                              Filters.convertDimensionFilters(dimFilter),
+                              interval,
+                              QueryGranularity.ALL
+                          ), new Function<Cursor, Sequence<InputRow>>()
                           {
+                            @Nullable
                             @Override
-                            public Iterator<InputRow> iterator()
+                            public Sequence<InputRow> apply(final Cursor cursor)
                             {
-                              return new Iterator<InputRow>()
-                              {
-                                @Override
-                                public boolean hasNext()
-                                {
-                                  return !cursor.isDone();
+                              final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
+
+                              final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+                              for (String dim : dims) {
+                                final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim, null);
+                                // dimSelector is null if the dimension is not present
+                                if (dimSelector != null) {
+                                  dimSelectors.put(dim, dimSelector);
                                 }
+                              }
 
-                                @Override
-                                public InputRow next()
-                                {
-                                  final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-                                  final long timestamp = timestampColumnSelector.get();
-                                  theEvent.put(EventHolder.timestampKey, new DateTime(timestamp));
+                              final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
+                              for (String metric : metrics) {
+                                final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
+                                if (metricSelector != null) {
+                                  metSelectors.put(metric, metricSelector);
+                                }
+                              }
 
-                                  for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
-                                    final String dim = dimSelector.getKey();
-                                    final DimensionSelector selector = dimSelector.getValue();
-                                    final IndexedInts vals = selector.getRow();
+                              return Sequences.simple(
+                                  new Iterable<InputRow>()
+                                  {
+                                    @Override
+                                    public Iterator<InputRow> iterator()
+                                    {
+                                      return new Iterator<InputRow>()
+                                      {
+                                        @Override
+                                        public boolean hasNext()
+                                        {
+                                          return !cursor.isDone();
+                                        }
 
-                                    if (vals.size() == 1) {
-                                      final String dimVal = selector.lookupName(vals.get(0));
-                                      theEvent.put(dim, dimVal);
-                                    } else {
-                                      List<String> dimVals = Lists.newArrayList();
-                                      for (int i = 0; i < vals.size(); ++i) {
-                                        dimVals.add(selector.lookupName(vals.get(i)));
-                                      }
-                                      theEvent.put(dim, dimVals);
+                                        @Override
+                                        public InputRow next()
+                                        {
+                                          final Map<String, Object> theEvent = Maps.newLinkedHashMap();
+                                          final long timestamp = timestampColumnSelector.get();
+                                          theEvent.put(EventHolder.timestampKey, new DateTime(timestamp));
+
+                                          for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
+                                            final String dim = dimSelector.getKey();
+                                            final DimensionSelector selector = dimSelector.getValue();
+                                            final IndexedInts vals = selector.getRow();
+
+                                            if (vals.size() == 1) {
+                                              final String dimVal = selector.lookupName(vals.get(0));
+                                              theEvent.put(dim, dimVal);
+                                            } else {
+                                              List<String> dimVals = Lists.newArrayList();
+                                              for (int i = 0; i < vals.size(); ++i) {
+                                                dimVals.add(selector.lookupName(vals.get(i)));
+                                              }
+                                              theEvent.put(dim, dimVals);
+                                            }
+                                          }
+
+                                          for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
+                                            final String metric = metSelector.getKey();
+                                            final ObjectColumnSelector selector = metSelector.getValue();
+                                            theEvent.put(metric, selector.get());
+                                          }
+                                          cursor.advance();
+                                          return new MapBasedInputRow(timestamp, dims, theEvent);
+                                        }
+
+                                        @Override
+                                        public void remove()
+                                        {
+                                          throw new UnsupportedOperationException("Remove Not Supported");
+                                        }
+                                      };
                                     }
                                   }
-
-                                  for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {
-                                    final String metric = metSelector.getKey();
-                                    final ObjectColumnSelector selector = metSelector.getValue();
-                                    theEvent.put(metric, selector.get());
-                                  }
-                                  cursor.advance();
-                                  return new MapBasedInputRow(timestamp, dims, theEvent);
-                                }
-
-                                @Override
-                                public void remove()
-                                {
-                                  throw new UnsupportedOperationException("Remove Not Supported");
-                                }
-                              };
+                              );
                             }
                           }
-                      );
-                    }
-                  }
-                  )
-              );
-            }
-          }
+                      )
+                  );
+                }
+              }
           )
       );
       rowYielder = rows.toYielder(
           null,
-          new YieldingAccumulator()
+          new YieldingAccumulator<InputRow, InputRow>()
           {
             @Override
-            public Object accumulate(Object accumulated, Object in)
+            public InputRow accumulate(InputRow accumulated, InputRow in)
             {
               yield();
               return in;

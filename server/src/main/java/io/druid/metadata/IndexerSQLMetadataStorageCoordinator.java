@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -115,19 +116,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    final List<DataSegment> segments = Lists.transform(
-        timeline.lookup(interval),
-        new Function<TimelineObjectHolder<String, DataSegment>, DataSegment>()
-        {
-          @Override
-          public DataSegment apply(TimelineObjectHolder<String, DataSegment> input)
-          {
-            return input.getObject().getChunk(0).getObject();
-          }
-        }
+    return Lists.newArrayList(
+        Iterables.concat(
+            Iterables.transform(
+                timeline.lookup(interval),
+                new Function<TimelineObjectHolder<String, DataSegment>, Iterable<DataSegment>>()
+                {
+                  @Override
+                  public Iterable<DataSegment> apply(TimelineObjectHolder<String, DataSegment> input)
+                  {
+                    return input.getObject().payloads();
+                  }
+                }
+            )
+        )
     );
-
-    return segments;
   }
 
   /**
