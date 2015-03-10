@@ -31,7 +31,7 @@ public class ZkPathsConfig
   @JsonProperty
   private
   String announcementsPath;
-  @JsonProperty
+  @JsonProperty @Deprecated
   private
   String servedSegmentsPath;
   @JsonProperty
@@ -62,6 +62,7 @@ public class ZkPathsConfig
     return (null == announcementsPath) ? defaultPath("announcements") : announcementsPath;
   }
 
+  @Deprecated
   public String getServedSegmentsPath()
   {
     return (null == servedSegmentsPath) ?  defaultPath("servedSegments") : servedSegmentsPath;

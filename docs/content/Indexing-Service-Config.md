@@ -190,13 +190,40 @@ Middle managers pass their configurations down to their child peons. The middle 
 
 |Property|Description|Default|
 |--------|-----------|-------|
+|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone","file.encoding"|
+|`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|true|
+|`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
+|`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
+|`druid.indexer.runner.javaOpts`|-X Java options to run the peon in its own JVM.|""|
+|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
+|`druid.indexer.runner.startPort`|The port that peons begin running on.|8100|
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the middle manager.|0|
 |`druid.worker.capacity`|Maximum number of tasks the middle manager can accept.|Number of available processors - 1|
-|`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|false|
-|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
-|`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
-|`druid.indexer.runner.javaOpts`|-X Java options to run the peon in its own JVM.|""|
-|`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
-|`druid.indexer.runner.startPort`|The port that peons begin running on.|8100|
-|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "io.druid", "user.timezone","file.encoding"|
+
+
+#### Peon Configs
+Although peons inherit the configurations of their parent middle managers, explicit child peon configs in middlemanager can be set by prefixing them with:
+
+```
+druid.indexer.fork.property
+```
+Additional peon configs include:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone node (Not recommended).|remote|
+|`druid.indexer.task.baseDir`|Base temporary working directory.|/tmp|
+|`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|/tmp/persistent/tasks|
+|`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|/tmp/druid-indexing|
+|`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|50000|
+|`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|org.apache.hadoop:hadoop-client:2.3.0|
+|`druid.indexer.task.chathandler.type`|Choices are "noop" and "announce". Certain tasks will use service discovery to announce an HTTP endpoint that events can be posted to.|noop|
+
+If the peon is running in remote mode, there must be an overlord up and running. Peons in remote mode can set the following configurations:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with overlord.|PT1M|
+|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT10M|
+|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|10|
