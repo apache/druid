@@ -17,8 +17,10 @@
 
 package io.druid.query.extraction.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavascriptExtractionFn;
 import org.joda.time.DateTime;
@@ -306,5 +308,24 @@ public class JavascriptExtractionFnTest
       String res = extractionFn.apply(inputs.next());
       Assert.assertEquals(it.next(), res);
     }
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"type\" : \"javascript\", \"function\" : \"function(str) { return str.substring(0,3); }\" }";
+    JavascriptExtractionFn extractionFn = (JavascriptExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+
+    Assert.assertEquals("function(str) { return str.substring(0,3); }", extractionFn.getFunction());
+
+    // round trip
+    Assert.assertEquals(
+        extractionFn,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionFn),
+            ExtractionFn.class
+        )
+    );
   }
 }

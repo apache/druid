@@ -110,4 +110,38 @@ public class TimeFormatExtractionFn implements ExtractionFn
   {
     return false;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TimeFormatExtractionFn that = (TimeFormatExtractionFn) o;
+
+    if (locale != null ? !locale.equals(that.locale) : that.locale != null) {
+      return false;
+    }
+    if (!pattern.equals(that.pattern)) {
+      return false;
+    }
+    if (tz != null ? !tz.equals(that.tz) : that.tz != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = tz != null ? tz.hashCode() : 0;
+    result = 31 * result + pattern.hashCode();
+    result = 31 * result + (locale != null ? locale.hashCode() : 0);
+    return result;
+  }
 }

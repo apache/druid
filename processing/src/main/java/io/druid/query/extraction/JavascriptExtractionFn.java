@@ -20,6 +20,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import org.mozilla.javascript.Context;
@@ -67,6 +68,8 @@ public class JavascriptExtractionFn implements ExtractionFn
       @JsonProperty("function") String function
   )
   {
+    Preconditions.checkNotNull(function, "function must not be null");
+
     this.function = function;
     this.fn = compile(function);
   }
@@ -117,5 +120,30 @@ public class JavascriptExtractionFn implements ExtractionFn
     return "JavascriptDimExtractionFn{" +
            "function='" + function + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    JavascriptExtractionFn that = (JavascriptExtractionFn) o;
+
+    if (!function.equals(that.function)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return function.hashCode();
   }
 }

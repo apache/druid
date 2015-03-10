@@ -17,7 +17,9 @@
 
 package io.druid.query.extraction.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import org.junit.Assert;
@@ -98,5 +100,24 @@ public class RegexDimExtractionFnTest
     Assert.assertTrue(extracted.contains("a"));
     Assert.assertTrue(extracted.contains("b"));
     Assert.assertTrue(extracted.contains("c"));
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"type\" : \"regex\", \"expr\" : \".(...)?\" }";
+    RegexDimExtractionFn extractionFn = (RegexDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+
+    Assert.assertEquals(".(...)?", extractionFn.getExpr());
+
+    // round trip
+    Assert.assertEquals(
+        extractionFn,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionFn),
+            ExtractionFn.class
+        )
+    );
   }
 }

@@ -87,12 +87,35 @@ public class TimeFormatExtractionFnTest
   }
 
   public void testSerde(TimeFormatExtractionFn fn, String format, DateTimeZone tz, String locale) throws Exception {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    String json = objectMapper.writeValueAsString(fn);
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final  String json = objectMapper.writeValueAsString(fn);
     TimeFormatExtractionFn deserialized = objectMapper.readValue(json, TimeFormatExtractionFn.class);
 
     Assert.assertEquals(format, deserialized.getFormat());
     Assert.assertEquals(tz, deserialized.getTimeZone());
     Assert.assertEquals(locale, deserialized.getLocale());
+
+    Assert.assertEquals(fn, deserialized);
+  }
+
+  @Test
+  public void testSerdeFromJson() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"type\" : \"timeFormat\", \"format\" : \"HH\" }";
+    TimeFormatExtractionFn extractionFn = (TimeFormatExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+
+    Assert.assertEquals("HH", extractionFn.getFormat());
+    Assert.assertEquals(null, extractionFn.getLocale());
+    Assert.assertEquals(null, extractionFn.getTimeZone());
+
+    // round trip
+    Assert.assertEquals(
+        extractionFn,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionFn),
+            ExtractionFn.class
+        )
+    );
   }
 }

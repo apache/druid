@@ -17,8 +17,11 @@
 
 package io.druid.query.extraction.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.MatchingDimExtractionFn;
 import io.druid.query.extraction.TimeDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,5 +72,25 @@ public class TimeDimExtractionFnTest
     Assert.assertTrue(quarters.contains("Q1/2012"));
     Assert.assertTrue(quarters.contains("Q2/2012"));
     Assert.assertTrue(quarters.contains("Q4/2012"));
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"type\" : \"time\", \"timeFormat\" : \"MM/dd/yyyy\", \"resultFormat\" : \"QQQ/yyyy\" }";
+    TimeDimExtractionFn extractionFn = (TimeDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+
+    Assert.assertEquals("MM/dd/yyyy", extractionFn.getTimeFormat());
+    Assert.assertEquals("QQQ/yyyy", extractionFn.getResultFormat());
+
+    // round trip
+    Assert.assertEquals(
+        extractionFn,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionFn),
+            ExtractionFn.class
+        )
+    );
   }
 }
