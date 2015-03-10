@@ -25,7 +25,10 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import com.google.common.io.BaseEncoding;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2EnvironmentConfig;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2NodeData;
@@ -89,8 +92,8 @@ public class EC2AutoScalerTest
         1,
         new EC2EnvironmentConfig(
             "us-east-1a",
-            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo"),
-                        new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
+            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo", "mySubnet"),
+            new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
         ),
         amazonEC2Client,
         managementConfig
