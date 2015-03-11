@@ -43,7 +43,8 @@ public class EC2AutoScalerSerdeTest
                       + "         \"maxInstances\" : 1,\n"
                       + "         \"minInstances\" : 1,\n"
                       + "         \"securityGroupIds\" : [\"kingsguard\"],\n"
-                      + "         \"subnetId\" : \"redkeep\"\n"
+                      + "         \"subnetId\" : \"redkeep\",\n"
+                      + "         \"iamProfile\" : {\"name\": \"foo\", \"arn\": \"bar\"}\n"
                       + "      },\n"
                       + "      \"userData\" : {\n"
                       + "         \"data\" : \"VERSION=:VERSION:\\n\","
@@ -74,7 +75,19 @@ public class EC2AutoScalerSerdeTest
     );
 
     final EC2AutoScaler autoScaler = objectMapper.readValue(json, EC2AutoScaler.class);
+    verifyAutoScaler(autoScaler);
 
+    final EC2AutoScaler roundTripAutoScaler = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(autoScaler),
+        EC2AutoScaler.class
+    );
+    verifyAutoScaler(roundTripAutoScaler);
+
+    Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
+  }
+
+  private static void verifyAutoScaler(final EC2AutoScaler autoScaler)
+  {
     Assert.assertEquals(3, autoScaler.getMaxNumWorkers());
     Assert.assertEquals(2, autoScaler.getMinNumWorkers());
     Assert.assertEquals("westeros-east-1a", autoScaler.getEnvConfig().getAvailabilityZone());
@@ -90,6 +103,22 @@ public class EC2AutoScalerSerdeTest
         autoScaler.getEnvConfig().getNodeData().getSecurityGroupIds()
     );
     Assert.assertEquals("redkeep", autoScaler.getEnvConfig().getNodeData().getSubnetId());
+    Assert.assertEquals(
+        "foo",
+        autoScaler.getEnvConfig()
+                  .getNodeData()
+                  .getIamProfile()
+                  .toIamInstanceProfileSpecification()
+                  .getName()
+    );
+    Assert.assertEquals(
+        "bar",
+        autoScaler.getEnvConfig()
+                  .getNodeData()
+                  .getIamProfile()
+                  .toIamInstanceProfileSpecification()
+                  .getArn()
+    );
 
     // userData
     Assert.assertEquals(
@@ -99,13 +128,6 @@ public class EC2AutoScalerSerdeTest
                         .decode(autoScaler.getEnvConfig().getUserData().withVersion("1234").getUserDataBase64()),
             Charsets.UTF_8
         )
-    );
-
-    // Round trip.
-    Assert.assertEquals(
-        "Round trip",
-        autoScaler,
-        objectMapper.readValue(objectMapper.writeValueAsBytes(autoScaler), EC2AutoScaler.class)
     );
   }
 }
