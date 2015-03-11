@@ -17,16 +17,19 @@
 
 package io.druid.query.extraction.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import io.druid.query.extraction.DimExtractionFn;
-import io.druid.query.extraction.JavascriptDimExtractionFn;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavascriptExtractionFn;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Iterator;
 
-public class JavascriptDimExtractionFnTest
+public class JavascriptExtractionFnTest
 {
   private static final String[] testStrings = {
       "Quito",
@@ -43,24 +46,46 @@ public class JavascriptDimExtractionFnTest
   public void testJavascriptSubstring()
   {
     String function = "function(str) { return str.substring(0,3); }";
-    DimExtractionFn dimExtractionFn = new JavascriptDimExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
 
     for (String str : testStrings) {
-      String res = dimExtractionFn.apply(str);
+      String res = extractionFn.apply(str);
       Assert.assertEquals(str.substring(0, 3), res);
     }
+  }
+
+  @Test
+  public void testTimeExample() throws Exception
+  {
+    String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
+    final long millis = new DateTime("2015-01-02T13:00:59.999Z").getMillis();
+    Assert.assertEquals("Second 59" , new JavascriptExtractionFn(utcHour).apply(millis));
+  }
+
+  @Test
+  public void testLongs() throws Exception
+  {
+    String typeOf = "function(x) {\nreturn typeof x\n}";
+    Assert.assertEquals("number", new JavascriptExtractionFn(typeOf).apply(1234L));
+  }
+
+  @Test
+  public void testFloats() throws Exception
+  {
+    String typeOf = "function(x) {\nreturn typeof x\n}";
+    Assert.assertEquals("number", new JavascriptExtractionFn(typeOf).apply(1234.0));
   }
 
   @Test
   public void testCastingAndNull()
   {
     String function = "function(x) {\n  x = Number(x);\n  if(isNaN(x)) return null;\n  return Math.floor(x / 5) * 5;\n}";
-    DimExtractionFn dimExtractionFn = new JavascriptDimExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
 
     Iterator<String> it = Iterators.forArray("0", "5", "5", "10", null);
 
     for(String str : Lists.newArrayList("1", "5", "6", "10", "CA")) {
-      String res = dimExtractionFn.apply(str);
+      String res = extractionFn.apply(str);
       String expected = it.next();
       Assert.assertEquals(expected, res);
     }
@@ -70,11 +95,11 @@ public class JavascriptDimExtractionFnTest
   public void testJavascriptRegex()
   {
     String function = "function(str) { return str.replace(/[aeiou]/g, ''); }";
-    DimExtractionFn dimExtractionFn = new JavascriptDimExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
 
     Iterator it = Iterators.forArray("Qt", "Clgry", "Tky", "Stckhlm", "Vncvr", "Prtr", "Wllngtn", "Ontr");
     for (String str : testStrings) {
-      String res = dimExtractionFn.apply(str);
+      String res = extractionFn.apply(str);
       Assert.assertEquals(it.next(), res);
     }
   }
@@ -274,14 +299,33 @@ public class JavascriptDimExtractionFnTest
                       + ""
                       + "}";
 
-    DimExtractionFn dimExtractionFn = new JavascriptDimExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
 
     Iterator<String> inputs = Iterators.forArray("introducing", "exploratory", "analytics", "on", "large", "datasets");
     Iterator<String> it = Iterators.forArray("introduc", "exploratori", "analyt", "on", "larg", "dataset");
 
     while(inputs.hasNext()) {
-      String res = dimExtractionFn.apply(inputs.next());
+      String res = extractionFn.apply(inputs.next());
       Assert.assertEquals(it.next(), res);
     }
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"type\" : \"javascript\", \"function\" : \"function(str) { return str.substring(0,3); }\" }";
+    JavascriptExtractionFn extractionFn = (JavascriptExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+
+    Assert.assertEquals("function(str) { return str.substring(0,3); }", extractionFn.getFunction());
+
+    // round trip
+    Assert.assertEquals(
+        extractionFn,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionFn),
+            ExtractionFn.class
+        )
+    );
   }
 }

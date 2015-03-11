@@ -19,6 +19,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -27,7 +28,7 @@ import java.util.regex.Pattern;
 
 /**
  */
-public class MatchingDimExtractionFn implements DimExtractionFn
+public class MatchingDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x2;
 
@@ -39,6 +40,8 @@ public class MatchingDimExtractionFn implements DimExtractionFn
       @JsonProperty("expr") String expr
   )
   {
+    Preconditions.checkNotNull(expr, "expr must not be null");
+
     this.expr = expr;
     this.pattern = Pattern.compile(expr);
   }
@@ -77,5 +80,30 @@ public class MatchingDimExtractionFn implements DimExtractionFn
   public String toString()
   {
     return String.format("regex_matches(%s)", expr);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MatchingDimExtractionFn that = (MatchingDimExtractionFn) o;
+
+    if (!expr.equals(that.expr)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return expr.hashCode();
   }
 }

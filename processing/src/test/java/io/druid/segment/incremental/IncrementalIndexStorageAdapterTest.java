@@ -273,7 +273,7 @@ public class IncrementalIndexStorageAdapterTest
     Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
     DimensionSelector dimSelector;
 
-    dimSelector = cursor.makeDimensionSelector("sally");
+    dimSelector = cursor.makeDimensionSelector("sally", null);
     Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
     index.add(
@@ -287,7 +287,7 @@ public class IncrementalIndexStorageAdapterTest
     // Cursor reset should not be affected by out of order values
     cursor.reset();
 
-    dimSelector = cursor.makeDimensionSelector("sally");
+    dimSelector = cursor.makeDimensionSelector("sally", null);
     Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
   }
 

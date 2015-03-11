@@ -19,6 +19,7 @@ package io.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -27,6 +28,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -40,6 +42,7 @@ import io.druid.segment.data.Offset;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
@@ -96,7 +99,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return 0;
     }
     if (!column.getCapabilities().isDictionaryEncoded()) {
-      throw new UnsupportedOperationException("Only know cardinality of dictionary encoded columns.");
+      return Integer.MAX_VALUE;
     }
     return column.getDictionaryEncoding().getCardinality();
   }
@@ -272,14 +275,18 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public DimensionSelector makeDimensionSelector(String dimension)
+                    public DimensionSelector makeDimensionSelector(final String dimension, @Nullable final ExtractionFn extractionFn)
                     {
-                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
                         return NULL_DIMENSION_SELECTOR;
                       }
 
+                      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+                        return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
+                      }
+
+                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
                         dictionaryColumnCache.put(dimension, cachedColumn);
@@ -308,13 +315,18 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public String lookupName(int id)
                           {
-                            final String retVal = column.lookupName(id);
-                            return retVal == null ? "" : retVal;
+                            final String value = column.lookupName(id);
+                            return extractionFn == null ?
+                                   Strings.nullToEmpty(value) :
+                                   extractionFn.apply(Strings.nullToEmpty(value));
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
+                            if (extractionFn != null) {
+                              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+                            }
                             return column.lookupId(name);
                           }
                         };
@@ -356,12 +368,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public String lookupName(int id)
                           {
-                            return column.lookupName(id);
+                            final String value = column.lookupName(id);
+                            return extractionFn == null ? value : extractionFn.apply(value);
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
+                            if (extractionFn != null) {
+                              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+                            }
                             return column.lookupId(name);
                           }
                         };
@@ -702,4 +718,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return currentOffset;
     }
   }
+
 }

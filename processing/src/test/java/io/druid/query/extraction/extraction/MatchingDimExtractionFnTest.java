@@ -17,8 +17,10 @@
 
 package io.druid.query.extraction.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MatchingDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,12 +49,12 @@ public class MatchingDimExtractionFnTest
   public void testExtraction()
   {
     String regex = ".*[Tt][Oo].*";
-    DimExtractionFn dimExtractionFn = new MatchingDimExtractionFn(regex);
+    ExtractionFn extractionFn = new MatchingDimExtractionFn(regex);
     List<String> expected = Arrays.asList("Quito", "Tokyo", "Stockholm", "Pretoria", "Wellington");
     Set<String> extracted = Sets.newHashSet();
 
     for (String str : testStrings) {
-      String res = dimExtractionFn.apply(str);
+      String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);
       }
@@ -63,5 +65,24 @@ public class MatchingDimExtractionFnTest
     for (String str : extracted) {
       Assert.assertTrue(expected.contains(str));
     }
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"type\" : \"partial\", \"expr\" : \".(...)?\" }";
+    MatchingDimExtractionFn extractionFn = (MatchingDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+
+    Assert.assertEquals(".(...)?", extractionFn.getExpr());
+
+    // round trip
+    Assert.assertEquals(
+        extractionFn,
+        objectMapper.readValue(
+            objectMapper.writeValueAsBytes(extractionFn),
+            ExtractionFn.class
+        )
+    );
   }
 }

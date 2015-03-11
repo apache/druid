@@ -19,6 +19,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.ibm.icu.text.SimpleDateFormat;
 import com.metamx.common.StringUtils;
 
@@ -28,7 +29,7 @@ import java.util.Date;
 
 /**
  */
-public class TimeDimExtractionFn implements DimExtractionFn
+public class TimeDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x0;
 
@@ -43,6 +44,9 @@ public class TimeDimExtractionFn implements DimExtractionFn
       @JsonProperty("resultFormat") String resultFormat
   )
   {
+    Preconditions.checkNotNull(timeFormat, "timeFormat must not be null");
+    Preconditions.checkNotNull(resultFormat, "resultFormat must not be null");
+
     this.timeFormat = timeFormat;
     this.timeFormatter = new SimpleDateFormat(timeFormat);
     this.timeFormatter.setLenient(true);
@@ -99,5 +103,35 @@ public class TimeDimExtractionFn implements DimExtractionFn
            "timeFormat='" + timeFormat + '\'' +
            ", resultFormat='" + resultFormat + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TimeDimExtractionFn that = (TimeDimExtractionFn) o;
+
+    if (!resultFormat.equals(that.resultFormat)) {
+      return false;
+    }
+    if (!timeFormat.equals(that.timeFormat)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = timeFormat.hashCode();
+    result = 31 * result + resultFormat.hashCode();
+    return result;
   }
 }

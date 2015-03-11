@@ -52,9 +52,14 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.TimeFormatExtractionFn;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
+import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
 import io.druid.query.groupby.having.HavingSpec;
@@ -64,6 +69,7 @@ import io.druid.query.groupby.orderby.LimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -322,8 +328,8 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithNullProducingDimExtractionFn()
   {
-    final DimExtractionFn fn1 = new RegexDimExtractionFn("(\\w{1})");
-    final DimExtractionFn nullExtractionFn = new DimExtractionFn()
+    final ExtractionFn fn1 = new RegexDimExtractionFn("(\\w{1})");
+    final ExtractionFn nullExtractionFn = new DimExtractionFn()
     {
       @Override
       public byte[] getCacheKey()
@@ -354,7 +360,7 @@ public class GroupByQueryRunnerTest
         ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimensions(Lists.<DimensionSpec>newArrayList(
-                new ExtractionDimensionSpec("quality", "alias", nullExtractionFn)
+                new ExtractionDimensionSpec("quality", "alias", nullExtractionFn, null)
         ))
         .build();
 
@@ -389,8 +395,8 @@ public class GroupByQueryRunnerTest
    */
   public void testGroupByWithEmptyStringProducingDimExtractionFn()
   {
-    final DimExtractionFn fn1 = new RegexDimExtractionFn("(\\w{1})");
-    final DimExtractionFn emptyStringExtractionFn = new DimExtractionFn()
+    final ExtractionFn fn1 = new RegexDimExtractionFn("(\\w{1})");
+    final ExtractionFn emptyStringExtractionFn = new DimExtractionFn()
     {
       @Override
       public byte[] getCacheKey()
@@ -421,7 +427,7 @@ public class GroupByQueryRunnerTest
         ))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setDimensions(Lists.<DimensionSpec>newArrayList(
-            new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn)
+            new ExtractionDimensionSpec("quality", "alias", emptyStringExtractionFn, null)
         ))
         .build();
 
@@ -672,11 +678,13 @@ public class GroupByQueryRunnerTest
     final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularity.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<Row>() {
+        new QueryRunner<Row>()
+        {
           @Override
           public Sequence<Row> run(
               Query<Row> query, Map<String, Object> responseContext
-          ) {
+          )
+          {
             // simulate two daily segments
             final Query query1 = query.withQuerySegmentSpec(
                 new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
@@ -2267,6 +2275,63 @@ public class GroupByQueryRunnerTest
             "sumtime",
             33843139200000L
         )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByTimeExtraction()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(
+            Lists.newArrayList(
+                new DefaultDimensionSpec("market", "market"),
+                new ExtractionDimensionSpec(
+                    Column.TIME_COLUMN_NAME,
+                    "dayOfWeek",
+                    new TimeFormatExtractionFn("EEEE", null, null),
+                    null
+                )
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.indexDoubleSum
+            )
+        )
+        .setPostAggregatorSpecs(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .setDimFilter(
+            new OrDimFilter(
+                Arrays.<DimFilter>asList(
+                    new SelectorDimFilter("market", "spot"),
+                    new SelectorDimFilter("market", "upfront")
+                )
+            )
+        )
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Friday", "market", "spot", "index", 13219.574157714844, "rows", 117L, "addRowsIndexConstant", 13337.574157714844),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Monday", "market", "spot", "index", 13557.738830566406, "rows", 117L, "addRowsIndexConstant", 13675.738830566406),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Saturday", "market", "spot", "index", 13493.751281738281, "rows", 117L, "addRowsIndexConstant", 13611.751281738281),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Sunday", "market", "spot", "index", 13585.541015625, "rows", 117L, "addRowsIndexConstant", 13703.541015625),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Thursday", "market", "spot", "index", 14279.127197265625, "rows", 126L, "addRowsIndexConstant", 14406.127197265625),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Tuesday", "market", "spot", "index", 13199.471435546875, "rows", 117L, "addRowsIndexConstant", 13317.471435546875),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Wednesday", "market", "spot", "index", 14271.368591308594, "rows", 126L, "addRowsIndexConstant", 14398.368591308594),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Friday", "market", "upfront", "index", 27297.8623046875, "rows", 26L, "addRowsIndexConstant", 27324.8623046875),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Monday", "market", "upfront", "index", 27619.58447265625, "rows", 26L, "addRowsIndexConstant", 27646.58447265625),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Saturday", "market", "upfront", "index", 27820.83154296875, "rows", 26L, "addRowsIndexConstant", 27847.83154296875),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Sunday", "market", "upfront", "index", 24791.223876953125, "rows", 26L, "addRowsIndexConstant", 24818.223876953125),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Thursday", "market", "upfront", "index", 28562.748901367188, "rows", 28L, "addRowsIndexConstant", 28591.748901367188),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Tuesday", "market", "upfront", "index", 26968.280639648438, "rows", 26L, "addRowsIndexConstant", 26995.280639648438),
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "dayOfWeek", "Wednesday", "market", "upfront", "index", 28985.5751953125, "rows", 28L, "addRowsIndexConstant", 29014.5751953125)
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

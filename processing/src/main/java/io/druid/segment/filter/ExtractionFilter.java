@@ -20,7 +20,7 @@ package io.druid.segment.filter;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.WrappedConciseBitmap;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -36,12 +36,12 @@ public class ExtractionFilter implements Filter
 {
   private final String dimension;
   private final String value;
-  private final DimExtractionFn fn;
+  private final ExtractionFn fn;
 
   public ExtractionFilter(
       String dimension,
       String value,
-      DimExtractionFn fn
+      ExtractionFn fn
   )
   {
     this.dimension = dimension;

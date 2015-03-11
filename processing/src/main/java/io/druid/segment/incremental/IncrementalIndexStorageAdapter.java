@@ -28,6 +28,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -38,6 +39,7 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
@@ -99,6 +101,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
+    if(dimension.equals(Column.TIME_COLUMN_NAME)) {
+      return Integer.MAX_VALUE;
+    }
     IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
     if (dimDim == null) {
       return 0;
@@ -272,8 +277,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
-              public DimensionSelector makeDimensionSelector(String dimension)
+              public DimensionSelector makeDimensionSelector(final String dimension, @Nullable final ExtractionFn extractionFn)
               {
+                if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+                  return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
+                }
+
                 final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimension);
                 if (dimValLookup == null) {
                   return NULL_DIMENSION_SELECTOR;
@@ -331,12 +340,17 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   @Override
                   public String lookupName(int id)
                   {
-                    return dimValLookup.getValue(id);
+                    final String value = dimValLookup.getValue(id);
+                    return extractionFn == null ? value : extractionFn.apply(value);
+
                   }
 
                   @Override
                   public int lookupId(String name)
                   {
+                    if (extractionFn != null) {
+                      throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+                    }
                     return dimValLookup.getId(name);
                   }
                 };
