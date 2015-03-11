@@ -92,7 +92,7 @@ public class EC2AutoScalerTest
         1,
         new EC2EnvironmentConfig(
             "us-east-1a",
-            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo", "mySubnet"),
+            new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo", "mySubnet", null),
             new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
         ),
         amazonEC2Client,

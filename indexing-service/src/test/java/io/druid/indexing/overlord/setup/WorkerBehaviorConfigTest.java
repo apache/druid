@@ -55,7 +55,8 @@ public class WorkerBehaviorConfigTest
                     5,
                     Arrays.asList("securityGroupIds"),
                     "keyNames",
-                    "subnetId"
+                    "subnetId",
+                    null
                 ),
                 new StringEC2UserData(
                     "availZone",

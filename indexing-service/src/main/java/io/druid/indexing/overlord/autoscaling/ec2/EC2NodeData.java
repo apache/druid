@@ -33,6 +33,7 @@ public class EC2NodeData
   private final List<String> securityGroupIds;
   private final String keyName;
   private final String subnetId;
+  private final EC2IamProfileData iamProfile;
 
   @JsonCreator
   public EC2NodeData(
@@ -42,7 +43,8 @@ public class EC2NodeData
       @JsonProperty("maxInstances") int maxInstances,
       @JsonProperty("securityGroupIds") List<String> securityGroupIds,
       @JsonProperty("keyName") String keyName,
-      @JsonProperty("subnetId") String subnetId
+      @JsonProperty("subnetId") String subnetId,
+      @JsonProperty("iamProfile") EC2IamProfileData iamProfile
   )
   {
     this.amiId = amiId;
@@ -52,6 +54,7 @@ public class EC2NodeData
     this.securityGroupIds = securityGroupIds;
     this.keyName = keyName;
     this.subnetId = subnetId;
+    this.iamProfile = iamProfile;
   }
 
   @JsonProperty
@@ -96,6 +99,12 @@ public class EC2NodeData
     return subnetId;
   }
 
+  @JsonProperty
+  public EC2IamProfileData getIamProfile()
+  {
+    return iamProfile;
+  }
+
   @Override
   public String toString()
   {
@@ -107,6 +116,7 @@ public class EC2NodeData
            ", securityGroupIds=" + securityGroupIds +
            ", keyName='" + keyName + '\'' +
            ", subnetId='" + subnetId + '\'' +
+           ", iamProfile=" + iamProfile +
            '}';
   }
 
@@ -129,6 +139,9 @@ public class EC2NodeData
       return false;
     }
     if (amiId != null ? !amiId.equals(that.amiId) : that.amiId != null) {
+      return false;
+    }
+    if (iamProfile != null ? !iamProfile.equals(that.iamProfile) : that.iamProfile != null) {
       return false;
     }
     if (instanceType != null ? !instanceType.equals(that.instanceType) : that.instanceType != null) {
@@ -157,6 +170,7 @@ public class EC2NodeData
     result = 31 * result + (securityGroupIds != null ? securityGroupIds.hashCode() : 0);
     result = 31 * result + (keyName != null ? keyName.hashCode() : 0);
     result = 31 * result + (subnetId != null ? subnetId.hashCode() : 0);
+    result = 31 * result + (iamProfile != null ? iamProfile.hashCode() : 0);
     return result;
   }
 }
