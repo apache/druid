@@ -17,6 +17,8 @@ java -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8         \
 
 Note the "-classpath" in this example has the config dir before the jars under lib/*.
 
+To enable java logging to go through log4j2, set the `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` server parameter.
+
 An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sample file is also shown below:
 
 ```

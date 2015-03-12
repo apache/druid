@@ -71,6 +71,7 @@
         <druid.api.version>0.3.5</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
         <log4j.version>2.1</log4j.version>
+        <slf4j.version>1.7.10</slf4j.version>
     </properties>
 
     <modules>
@@ -399,6 +400,25 @@
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-1.2-api</artifactId>
                 <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+              <!-- This is not slf4j's version because of performance concerns
+              http://www.slf4j.org/api/org/slf4j/bridge/SLF4JBridgeHandler.html
+              Please make sure to do performance tests before switching this to slf4j
+              Users wishing to use slf4j's solution are encouraged to also use
+              Logback
+              More info at
+              http://logback.qos.ch/manual/configuration.html#LevelChangePropagator
+              http://www.slf4j.org/legacy.html#jul-to-slf4j
+              -->
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-jul</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jcl-over-slf4j</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.lmax</groupId>
