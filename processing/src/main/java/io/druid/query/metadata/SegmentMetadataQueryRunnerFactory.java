@@ -17,20 +17,13 @@
 
 package io.druid.query.metadata;
 
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
-import io.druid.query.AbstractPrioritizedCallable;
-import io.druid.query.ConcatQueryRunner;
+import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -44,11 +37,7 @@ import io.druid.segment.Segment;
 
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -122,60 +111,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
       ExecutorService exec, Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
-    final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
-    return new ConcatQueryRunner<SegmentAnalysis>(
-        Sequences.map(
-            Sequences.simple(queryRunners),
-            new Function<QueryRunner<SegmentAnalysis>, QueryRunner<SegmentAnalysis>>()
-            {
-              @Override
-              public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
-              {
-                return new QueryRunner<SegmentAnalysis>()
-                {
-                  @Override
-                  public Sequence<SegmentAnalysis> run(
-                      final Query<SegmentAnalysis> query,
-                      final Map<String, Object> responseContext
-                  )
-                  {
-                    final int priority = query.getContextPriority(0);
-                    ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
-                        new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
-                        {
-                          @Override
-                          public Sequence<SegmentAnalysis> call() throws Exception
-                          {
-                            return input.run(query, responseContext);
-                          }
-                        }
-                    );
-                    try {
-                      queryWatcher.registerQuery(query, future);
-                      final Number timeout = query.getContextValue("timeout", (Number) null);
-                      return timeout == null ? future.get() : future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
-                    }
-                    catch (InterruptedException e) {
-                      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryInterruptedException("Query interrupted");
-                    }
-                    catch(CancellationException e) {
-                      throw new QueryInterruptedException("Query cancelled");
-                    }
-                    catch(TimeoutException e) {
-                      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryInterruptedException("Query timeout");
-                    }
-                    catch (ExecutionException e) {
-                      throw Throwables.propagate(e.getCause());
-                    }
-                  }
-                };
-              }
-            }
-        )
+    return new ChainedExecutionQueryRunner<>(
+        exec, toolChest.getOrdering(), queryWatcher, queryRunners
     );
   }
 
