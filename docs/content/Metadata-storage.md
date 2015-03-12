@@ -60,3 +60,8 @@ Task-related Tables
 -------------------
 
 There are also a number of tables created and used by the [Indexing Service](Indexing-Service.html) in the course of its work.
+
+Audit Table
+-----------
+
+The Audit table is used to store the audit history for configuration changes e.g rule changes done by [Coordinator](Coordinator.html) and other config changes.

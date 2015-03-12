@@ -263,14 +263,22 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 .map(IntegerMapper.FIRST)
                 .first();
             if (count == 0) {
-              handle.createStatement(String.format("INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
-                                                   tableName, keyColumn, valueColumn))
+              handle.createStatement(
+                  String.format(
+                      "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
+                      tableName, keyColumn, valueColumn
+                  )
+              )
                     .bind("key", key)
                     .bind("value", value)
                     .execute();
             } else {
-              handle.createStatement(String.format("UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
-                                                   tableName, keyColumn, valueColumn))
+              handle.createStatement(
+                  String.format(
+                      "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
+                      tableName, keyColumn, valueColumn
+                  )
+              )
                     .bind("key", key)
                     .bind("value", value)
                     .execute();
@@ -367,6 +375,38 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     dataSource.setTestOnBorrow(true);
 
     return dataSource;
+  }
+
+  private void createAuditTable(final IDBI dbi, final String tableName)
+  {
+    createTable(
+        dbi,
+        tableName,
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  audit_key VARCHAR(255) NOT NULL,\n"
+                + "  type VARCHAR(255) NOT NULL,\n"
+                + "  author VARCHAR(255) NOT NULL,\n"
+                + "  comment VARCHAR(2048) NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  payload %3$s NOT NULL,\n"
+                + "  PRIMARY KEY(id)\n"
+                + ")",
+                tableName, getSerialType(), getPayloadType()
+            ),
+            String.format("CREATE INDEX idx_%1$s_key_time ON %1$s(audit_key, created_date)", tableName),
+            String.format("CREATE INDEX idx_%1$s_type_time ON %1$s(audit_key, created_date)", tableName),
+            String.format("CREATE INDEX idx_%1$s_audit_time ON %1$s(created_date)", tableName)
+        )
+    );
+  }
+  @Override
+  public void createAuditTable() {
+    if (config.get().isCreateTables()) {
+      createAuditTable(getDBI(), tablesConfigSupplier.get().getAuditTable());
+    }
   }
 
 }

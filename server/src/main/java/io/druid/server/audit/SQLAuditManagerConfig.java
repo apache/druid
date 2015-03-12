@@ -15,29 +15,19 @@
  * limitations under the License.
  */
 
-package io.druid.metadata;
+package io.druid.server.audit;
 
-import io.druid.audit.AuditInfo;
-import io.druid.server.coordinator.rules.Rule;
-
-import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public interface MetadataRuleManager
+public class SQLAuditManagerConfig
 {
-  public void start();
+  @JsonProperty
+  private long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
 
-  public void stop();
-
-  public void poll();
-
-  public Map<String, List<Rule>> getAllRules();
-
-  public List<Rule> getRules(final String dataSource);
-
-  public List<Rule> getRulesWithDefault(final String dataSource);
-
-  public boolean overrideRule(final String dataSource, final List<Rule> rulesConfig, final AuditInfo auditInfo);
+  public long getAuditHistoryMillis()
+  {
+    return auditHistoryMillis;
+  }
 }

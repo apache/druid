@@ -44,4 +44,6 @@ public interface MetadataStorageConnector
   public void createConfigTable();
 
   public void createTaskTables();
+
+  public void createAuditTable();
 }

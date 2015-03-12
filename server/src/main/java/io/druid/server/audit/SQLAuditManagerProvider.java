@@ -15,50 +15,47 @@
  * limitations under the License.
  */
 
-package io.druid.metadata;
+package io.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.audit.AuditManager;
-import io.druid.server.audit.SQLAuditManager;
-import org.skife.jdbi.v2.IDBI;
+import io.druid.guice.annotations.Json;
+import io.druid.metadata.MetadataStorageTablesConfig;
+import io.druid.metadata.SQLMetadataConnector;
 
-/**
- */
-public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvider
+public class SQLAuditManagerProvider implements AuditManagerProvider
 {
-  private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataRuleManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
-  private final IDBI dbi;
-  private final AuditManager auditManager;
-
+  private final ServiceEmitter emitter;
+  private final ObjectMapper mapper;
+  private final SQLAuditManagerConfig config;
   @Inject
-  public SQLMetadataRuleManagerProvider(
-      ObjectMapper jsonMapper,
-      Supplier<MetadataRuleManagerConfig> config,
+  public SQLAuditManagerProvider(
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector,
       Lifecycle lifecycle,
-      SQLAuditManager auditManager
+      ServiceEmitter emitter,
+      @Json ObjectMapper mapper,
+      SQLAuditManagerConfig config
   )
   {
-    this.jsonMapper = jsonMapper;
-    this.config = config;
     this.dbTables = dbTables;
     this.connector = connector;
-    this.dbi = connector.getDBI();
     this.lifecycle = lifecycle;
-    this.auditManager = auditManager;
+    this.emitter = emitter;
+    this.mapper = mapper;
+    this.config = config;
   }
 
   @Override
-  public SQLMetadataRuleManager get()
+  public AuditManager get()
   {
     try {
       lifecycle.addMaybeStartHandler(
@@ -67,10 +64,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
             @Override
             public void start() throws Exception
             {
-              connector.createRulesTable();
-              SQLMetadataRuleManager.createDefaultRule(
-                  dbi, dbTables.get().getRulesTable(), config.get().getDefaultRule(), jsonMapper
-              );
+              connector.createAuditTable();
             }
 
             @Override
@@ -85,6 +79,6 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       throw Throwables.propagate(e);
     }
 
-    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, connector, auditManager);
+    return new SQLAuditManager(connector, dbTables, emitter, mapper, config);
   }
 }
