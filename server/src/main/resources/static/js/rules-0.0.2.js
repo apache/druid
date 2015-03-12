@@ -297,7 +297,7 @@ $(document).ready(function() {
   });
 
   $("#create_new_rule").click(function (event) {
-    $('#rules_list').prepend(makeRuleDiv());
+    $('#rules_list').append(makeRuleDiv());
   });
 
   $("#cancel").click(function() {
