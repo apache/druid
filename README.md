@@ -1,4 +1,4 @@
-![Travis CI build status](https://travis-ci.org/druid-io/druid.svg?branch=master)
+![Travis CI build status](https://travis-ci.org/druid-io/druid.svg?branch=master) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master)
 
 ## Druid
 
