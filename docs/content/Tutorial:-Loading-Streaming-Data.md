@@ -41,12 +41,12 @@ cluster were adapted from the [Apache Kafka quickstart guide](http://kafka.apach
 
 1. Download Kafka
 
-    For this tutorial we will [download Kafka 0.8.2]
-    (https://www.apache.org/dyn/closer.cgi?path=/kafka/0.8.2.0/kafka_2.10-0.8.2.0.tgz)
+    For this tutorial we will [download Kafka 0.8.2.1]
+    (https://www.apache.org/dyn/closer.cgi?path=/kafka/0.8.2.1/kafka_2.10-0.8.2.1.tgz)
 
     ```bash
-    tar -xzf kafka_2.10-0.8.2.0.tgz
-    cd kafka_2.10-0.8.2.0
+    tar -xzf kafka_2.10-0.8.2.1.tgz
+    cd kafka_2.10-0.8.2.1
     ```
 
 1. Start Kafka
