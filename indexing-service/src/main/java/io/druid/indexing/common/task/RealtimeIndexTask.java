@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
@@ -57,18 +58,36 @@ import org.joda.time.Period;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Random;
 
 public class RealtimeIndexTask extends AbstractTask
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
+  private final static Random random = new Random();
 
   private static String makeTaskId(FireDepartment fireDepartment)
   {
-    return String.format(
-        "index_realtime_%s_%d_%s",
+    return makeTaskId(
         fireDepartment.getDataSchema().getDataSource(),
         fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
-        new DateTime().toString()
+        new DateTime(),
+        random.nextInt()
+    );
+  }
+
+  static String makeTaskId(String dataSource, int partitionNumber, DateTime timestamp, int randomBits)
+  {
+    final StringBuilder suffix = new StringBuilder(8);
+    for(int i = 0; i < Ints.BYTES * 2; ++i) {
+      suffix.append((char)('a' + ((randomBits >>> (i * 4)) & 0x0F)));
+    }
+    return String.format(
+        "index_realtime_%s_%d_%s_%s",
+        dataSource,
+        partitionNumber,
+        timestamp,
+        suffix
     );
   }
 
