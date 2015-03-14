@@ -825,7 +825,7 @@ public class IndexMaker
     dimBuilder.setHasMultipleValues(hasMultipleValues);
 
     // make dimension columns
-    VSizeIndexedInts singleValCol = null;
+    CompressedLongsIndexedSupplier singleValCol = null;
     VSizeIndexed multiValCol = null;
 
     ColumnDictionaryEntryStore adder = hasMultipleValues
@@ -1008,17 +1008,17 @@ public class IndexMaker
               Iterables.concat(nullList, dimensionValues),
               GenericIndexed.stringStrategy
           );
-          singleValCol = VSizeIndexedInts.fromList(
-              new AbstractList<Integer>()
+          singleValCol = CompressedLongsIndexedSupplier.fromList(
+              new AbstractList<Long>()
               {
                 @Override
-                public Integer get(int index)
+                public Long get(int index)
                 {
                   Integer val = vals.get(index);
                   if (val == null) {
-                    return 0;
+                    return 0L;
                   }
-                  return val + 1;
+                  return (long)val + 1;
                 }
 
                 @Override
@@ -1026,20 +1026,23 @@ public class IndexMaker
                 {
                   return vals.size();
                 }
-              }, dictionary.size()
+              },
+              CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
+              IndexIO.BYTE_ORDER,
+              CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
           );
         } else {
-          singleValCol = VSizeIndexedInts.fromList(
-              new AbstractList<Integer>()
+          singleValCol = CompressedLongsIndexedSupplier.fromList(
+              new AbstractList<Long>()
               {
                 @Override
-                public Integer get(int index)
+                public Long get(int index)
                 {
                   Integer val = vals.get(index);
                   if (val == null) {
-                    return 0;
+                    return 0L;
                   }
-                  return val;
+                  return (long)val;
                 }
 
                 @Override
@@ -1047,11 +1050,32 @@ public class IndexMaker
                 {
                   return vals.size();
                 }
-              }, dictionary.size()
+              },
+              CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
+              IndexIO.BYTE_ORDER,
+              CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
           );
         }
       } else {
-        singleValCol = VSizeIndexedInts.fromList(vals, dictionary.size());
+        singleValCol = CompressedLongsIndexedSupplier.fromList(
+            new AbstractList<Long>()
+            {
+              @Override
+              public Long get(int index)
+              {
+                return (long)vals.get(index);
+              }
+
+              @Override
+              public int size()
+              {
+                return vals.size();
+              }
+            },
+            CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
+            IndexIO.BYTE_ORDER,
+            CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        );
       }
     }
 
@@ -1182,7 +1206,8 @@ public class IndexMaker
             multiValCol,
             bitmapSerdeFactory,
             bitmaps,
-            spatialIndex
+            spatialIndex,
+            IndexIO.BYTE_ORDER
         ),
         dimBuilder,
         dimension

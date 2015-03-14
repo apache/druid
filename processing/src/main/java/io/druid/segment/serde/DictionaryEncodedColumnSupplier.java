@@ -22,6 +22,8 @@ import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 
@@ -30,13 +32,13 @@ import io.druid.segment.data.VSizeIndexedInts;
 public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn>
 {
   private final GenericIndexed<String> dictionary;
-  private final VSizeIndexedInts singleValuedColumn;
+  private final Supplier<IndexedLongs> singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
   private final int lookupCacheSize;
 
   public DictionaryEncodedColumnSupplier(
       GenericIndexed<String> dictionary,
-      VSizeIndexedInts singleValuedColumn,
+      Supplier<IndexedLongs> singleValuedColumn,
       VSizeIndexed multiValuedColumn,
       int lookupCacheSize
   )
@@ -51,7 +53,7 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
   public DictionaryEncodedColumn get()
   {
     return new SimpleDictionaryEncodedColumn(
-        singleValuedColumn,
+        singleValuedColumn.get(),
         multiValuedColumn,
         new CachingIndexed<>(dictionary, lookupCacheSize)
     );

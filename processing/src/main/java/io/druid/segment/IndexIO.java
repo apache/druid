@@ -20,6 +20,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -61,8 +62,10 @@ import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedIterable;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -85,6 +88,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.LongBuffer;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -404,7 +408,7 @@ public class IndexIO
             continue;
           }
 
-          VSizeIndexedInts singleValCol = null;
+          CompressedLongsIndexedSupplier singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
           ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
@@ -468,14 +472,14 @@ public class IndexIO
             }
 
             final VSizeIndexed finalMultiValCol = multiValCol;
-            singleValCol = VSizeIndexedInts.fromList(
-                new AbstractList<Integer>()
+            singleValCol = CompressedLongsIndexedSupplier.fromList(
+                new AbstractList<Long>()
                 {
                   @Override
-                  public Integer get(int index)
+                  public Long get(int index)
                   {
                     final VSizeIndexedInts ints = finalMultiValCol.get(index);
-                    return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
+                    return (long)(ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0));
                   }
 
                   @Override
@@ -484,7 +488,9 @@ public class IndexIO
                     return finalMultiValCol.size();
                   }
                 },
-                dictionary.size()
+                CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
+                BYTE_ORDER,
+                CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
             );
             multiValCol = null;
           } else {
@@ -498,7 +504,8 @@ public class IndexIO
                   multiValCol,
                   bitmapSerdeFactory,
                   bitmaps,
-                  spatialIndex
+                  spatialIndex,
+                  BYTE_ORDER
               )
           );
 
