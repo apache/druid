@@ -44,6 +44,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -84,7 +85,7 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
         configSupplier.get(),
         bufferPool
     );
-    final Pair<List, Accumulator<List, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
+    final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
     final boolean bySegment = query.getContextBySegment(false);
     final int priority = query.getContextPriority(0);
 
