@@ -473,7 +473,7 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.1</version>
+                <version>0.9.3</version>
                 <exclusions>
                     <exclusion>
                         <!-- exclude artifact not available in maven central -->
