@@ -159,7 +159,7 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    throw new UnsupportedOperationException("HistogramAggregatorFactory does not support getTypeName()");
+    return "histogram";
   }
 
   @Override

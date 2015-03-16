@@ -38,7 +38,7 @@ import io.druid.collections.OrderedMergeSequence;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryMetricUtil;
+import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -122,7 +122,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(SearchQuery query)
   {
-    return QueryMetricUtil.makeQueryTimeMetric(query);
+    return DruidMetrics.makePartialQueryTimeMetric(query);
   }
 
   @Override

@@ -118,9 +118,8 @@ public class DataSourceQueryQueryToolChest
   public ServiceMetricEvent.Builder makeMetricBuilder(DataSourceMetadataQuery query)
   {
     return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4(query.getType())
-        .setUser6("false");
+        .setDimension("dataSource", DataSourceUtil.getMetricName(query.getDataSource()))
+        .setDimension("type", query.getType());
   }
 
   @Override
