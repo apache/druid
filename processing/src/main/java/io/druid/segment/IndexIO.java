@@ -61,6 +61,7 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
+import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
@@ -408,7 +409,7 @@ public class IndexIO
             continue;
           }
 
-          CompressedLongsIndexedSupplier singleValCol = null;
+          CompressedIntsIndexedSupplier singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
           ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
@@ -472,14 +473,14 @@ public class IndexIO
             }
 
             final VSizeIndexed finalMultiValCol = multiValCol;
-            singleValCol = CompressedLongsIndexedSupplier.fromList(
-                new AbstractList<Long>()
+            singleValCol = CompressedIntsIndexedSupplier.fromList(
+                new AbstractList<Integer>()
                 {
                   @Override
-                  public Long get(int index)
+                  public Integer get(int index)
                   {
                     final VSizeIndexedInts ints = finalMultiValCol.get(index);
-                    return (long)(ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0));
+                    return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
                   }
 
                   @Override
@@ -488,7 +489,7 @@ public class IndexIO
                     return finalMultiValCol.size();
                   }
                 },
-                CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
+                CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
                 BYTE_ORDER,
                 CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
             );

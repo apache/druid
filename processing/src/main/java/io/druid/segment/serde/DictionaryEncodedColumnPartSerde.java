@@ -19,6 +19,7 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -30,6 +31,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
+import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongBufferObjectStrategy;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -49,11 +51,25 @@ import java.nio.channels.WritableByteChannel;
  */
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
+  public static enum TYPE {
+    SINGLE_VALUE, // 0x0
+    MULTI_VALUE;  // 0x1
+
+    public static TYPE fromByte(byte b) {
+      final TYPE[] values = TYPE.values();
+      Preconditions.checkArgument(b < values.length, "Unknown dictionary column type 0x%X", b);
+      return values[b];
+    }
+
+    public byte asByte() {
+      return (byte)this.ordinal();
+    }
+  }
   private final boolean isSingleValued;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
   private final GenericIndexed<String> dictionary;
-  private final CompressedLongsIndexedSupplier singleValuedColumn;
+  private final CompressedIntsIndexedSupplier singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final ImmutableRTree spatialIndex;
@@ -63,7 +79,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
   public DictionaryEncodedColumnPartSerde(
       GenericIndexed<String> dictionary,
-      CompressedLongsIndexedSupplier singleValCol,
+      CompressedIntsIndexedSupplier singleValCol,
       VSizeIndexed multiValCol,
       BitmapSerdeFactory bitmapSerdeFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
@@ -145,7 +161,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   @Override
   public void write(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{(byte) (isSingleValued ? 0x0 : 0x1)}));
+    final TYPE type = isSingleValued ? TYPE.SINGLE_VALUE : TYPE.MULTI_VALUE;
+    channel.write(ByteBuffer.wrap(new byte[]{type.asByte()}));
 
     if (dictionary != null) {
       dictionary.writeToChannel(channel);
@@ -177,39 +194,46 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   @Override
   public ColumnPartSerde read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
   {
-    final boolean isSingleValued = buffer.get() == 0x0;
+    final TYPE type = TYPE.fromByte(buffer.get());
     final GenericIndexed<String> dictionary = GenericIndexed.read(buffer, GenericIndexed.stringStrategy);
-    final CompressedLongsIndexedSupplier singleValuedColumn;
+    final CompressedIntsIndexedSupplier singleValuedColumn;
     final VSizeIndexed multiValuedColumn;
 
     builder.setType(ValueType.STRING);
 
-    if (isSingleValued) {
-      singleValuedColumn = //VSizeIndexedInts.readFromByteBuffer(buffer);
-          CompressedLongsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+    switch (type) {
+      case SINGLE_VALUE:
+        singleValuedColumn = //VSizeIndexedInts.readFromByteBuffer(buffer);
+            CompressedIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
 
-      multiValuedColumn = null;
-      builder.setHasMultipleValues(false)
-             .setDictionaryEncodedColumn(
-                 new DictionaryEncodedColumnSupplier(
-                     dictionary,
-                     singleValuedColumn,
-                     null,
-                     columnConfig.columnCacheSizeBytes()
-                 )
-             );
-    } else {
-      singleValuedColumn = null;
-      multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
-      builder.setHasMultipleValues(true)
-             .setDictionaryEncodedColumn(
-                 new DictionaryEncodedColumnSupplier(
-                     dictionary,
-                     null,
-                     multiValuedColumn,
-                     columnConfig.columnCacheSizeBytes()
-                 )
-             );
+        multiValuedColumn = null;
+        builder.setHasMultipleValues(false)
+               .setDictionaryEncodedColumn(
+                   new DictionaryEncodedColumnSupplier(
+                       dictionary,
+                       singleValuedColumn,
+                       null,
+                       columnConfig.columnCacheSizeBytes()
+                   )
+               );
+        break;
+
+      case MULTI_VALUE:
+        singleValuedColumn = null;
+        multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
+        builder.setHasMultipleValues(true)
+               .setDictionaryEncodedColumn(
+                   new DictionaryEncodedColumnSupplier(
+                       dictionary,
+                       null,
+                       multiValuedColumn,
+                       columnConfig.columnCacheSizeBytes()
+                   )
+               );
+        break;
+
+      default:
+        throw new IAE("Unsupported column type %s", type);
     }
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(

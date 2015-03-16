@@ -22,6 +22,7 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -103,5 +104,17 @@ public class BitmapCompressedIndexedInts implements IndexedInts, Comparable<Immu
         throw new UnsupportedOperationException();
       }
     };
+  }
+
+  @Override
+  public void fill(int index, int[] toFill)
+  {
+    throw new UnsupportedOperationException("fill not supported");
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+
   }
 }

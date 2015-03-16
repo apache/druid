@@ -17,11 +17,14 @@
 
 package io.druid.segment.data;
 
+import java.io.Closeable;
+
 /**
  * Get a int an index (array or list lookup abstraction without boxing).
  */
-public interface IndexedInts extends Iterable<Integer>
+public interface IndexedInts extends Iterable<Integer>, Closeable
 {
-  int size();
-  int get(int index);
+  public int size();
+  public int get(int index);
+  public void fill(int index, int[] toFill);
 }

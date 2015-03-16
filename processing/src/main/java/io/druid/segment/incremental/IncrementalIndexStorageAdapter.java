@@ -52,6 +52,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -327,6 +328,18 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       public Iterator<Integer> iterator()
                       {
                         return vals.iterator();
+                      }
+
+                      @Override
+                      public void fill(int index, int[] toFill)
+                      {
+                        throw new UnsupportedOperationException("fill not supported");
+                      }
+
+                      @Override
+                      public void close() throws IOException
+                      {
+
                       }
                     };
                   }

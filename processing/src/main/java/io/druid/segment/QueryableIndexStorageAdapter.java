@@ -356,6 +356,18 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               {
                                 return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
                               }
+
+                              @Override
+                              public void fill(int index, int[] toFill)
+                              {
+                                throw new UnsupportedOperationException("fill not supported");
+                              }
+
+                              @Override
+                              public void close() throws IOException
+                              {
+
+                              }
                             };
                           }
 

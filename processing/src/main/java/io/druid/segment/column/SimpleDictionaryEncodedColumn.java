@@ -17,12 +17,9 @@
 
 package io.druid.segment.column;
 
-import com.google.common.base.Supplier;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.VSizeIndexed;
-import io.druid.segment.data.VSizeIndexedInts;
 
 import java.io.IOException;
 
@@ -30,12 +27,12 @@ import java.io.IOException;
 */
 public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
 {
-  private final IndexedLongs column;
+  private final IndexedInts column;
   private final VSizeIndexed multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
-      IndexedLongs singleValueColumn,
+      IndexedInts singleValueColumn,
       VSizeIndexed multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
@@ -60,7 +57,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
   @Override
   public int getSingleValueRow(int rowNum)
   {
-    return (int)column.get(rowNum);
+    return column.get(rowNum);
   }
 
   @Override

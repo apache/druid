@@ -61,6 +61,7 @@ import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
+import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
@@ -825,7 +826,7 @@ public class IndexMaker
     dimBuilder.setHasMultipleValues(hasMultipleValues);
 
     // make dimension columns
-    CompressedLongsIndexedSupplier singleValCol = null;
+    CompressedIntsIndexedSupplier singleValCol = null;
     VSizeIndexed multiValCol = null;
 
     ColumnDictionaryEntryStore adder = hasMultipleValues
@@ -1008,17 +1009,17 @@ public class IndexMaker
               Iterables.concat(nullList, dimensionValues),
               GenericIndexed.stringStrategy
           );
-          singleValCol = CompressedLongsIndexedSupplier.fromList(
-              new AbstractList<Long>()
+          singleValCol = CompressedIntsIndexedSupplier.fromList(
+              new AbstractList<Integer>()
               {
                 @Override
-                public Long get(int index)
+                public Integer get(int index)
                 {
                   Integer val = vals.get(index);
                   if (val == null) {
-                    return 0L;
+                    return 0;
                   }
-                  return (long)val + 1;
+                  return val + 1;
                 }
 
                 @Override
@@ -1027,22 +1028,22 @@ public class IndexMaker
                   return vals.size();
                 }
               },
-              CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
+              CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
               IndexIO.BYTE_ORDER,
               CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
           );
         } else {
-          singleValCol = CompressedLongsIndexedSupplier.fromList(
-              new AbstractList<Long>()
+          singleValCol = CompressedIntsIndexedSupplier.fromList(
+              new AbstractList<Integer>()
               {
                 @Override
-                public Long get(int index)
+                public Integer get(int index)
                 {
                   Integer val = vals.get(index);
                   if (val == null) {
-                    return 0L;
+                    return 0;
                   }
-                  return (long)val;
+                  return val;
                 }
 
                 @Override
@@ -1057,13 +1058,13 @@ public class IndexMaker
           );
         }
       } else {
-        singleValCol = CompressedLongsIndexedSupplier.fromList(
-            new AbstractList<Long>()
+        singleValCol = CompressedIntsIndexedSupplier.fromList(
+            new AbstractList<Integer>()
             {
               @Override
-              public Long get(int index)
+              public Integer get(int index)
               {
-                return (long)vals.get(index);
+                return vals.get(index);
               }
 
               @Override
