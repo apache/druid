@@ -28,7 +28,7 @@ import java.util.UUID;
  */
 public class UUIDUtils
 {
-  public static final String UUID_DELIM = "-";
+  public static final String UUID_DELIM = "_";
 
   /**
    * Generates a universally unique identifier.
@@ -51,7 +51,7 @@ public class UUIDUtils
         extra = Joiner.on(UUID_DELIM).join(extraStrings);
       }
     }
-    final String uuid = UUID.randomUUID().toString();
+    final String uuid = UUID.randomUUID().toString().replace("-", ""); // We don't use "-" in general, so remove them here.
     return extra == null ? uuid : (extra + UUID_DELIM + uuid);
   }
 }

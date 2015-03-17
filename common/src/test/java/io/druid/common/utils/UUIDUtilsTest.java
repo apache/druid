@@ -91,8 +91,15 @@ public class UUIDUtilsTest
       String uuidString
   )
   {
-    UUID uuid = UUID.fromString(uuidString);
-    Assert.assertEquals(uuid.toString(), uuidString);
+    // Since we strip the "-" from the string, we need to break them back out
+    final ArrayList<String> strings = new ArrayList<>();
+    strings.add(uuidString.substring(0, 8));
+    strings.add(uuidString.substring(8, 12));
+    strings.add(uuidString.substring(12, 16));
+    strings.add(uuidString.substring(16, 20));
+    strings.add(uuidString.substring(20, 32));
+    UUID uuid = UUID.fromString(Joiner.on('-').join(strings));
+    Assert.assertEquals(uuid.toString().replace("-", ""), uuidString);
   }
 
   @Test
