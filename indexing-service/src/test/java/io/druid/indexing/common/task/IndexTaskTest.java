@@ -36,6 +36,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
@@ -113,6 +114,73 @@ public class IndexTaskTest
         new DefaultObjectMapper()
     );
 
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(2, segments.size());
+  }
+
+  @Test
+  public void testWithArbitraryGranularity() throws Exception
+  {
+    File tmpDir = Files.createTempDir();
+    tmpDir.deleteOnExit();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+    tmpFile.deleteOnExit();
+
+    PrintWriter writer = new PrintWriter(tmpFile);
+    writer.println("2014-01-01T00:00:10Z,a,1");
+    writer.println("2014-01-01T01:00:20Z,b,1");
+    writer.println("2014-01-01T02:00:30Z,c,1");
+    writer.close();
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "test",
+                new StringInputRowParser(
+                    new CSVParseSpec(
+                        new TimestampSpec(
+                            "ts",
+                            "auto"
+                        ),
+                        new DimensionsSpec(
+                            Arrays.asList("ts"),
+                            Lists.<String>newArrayList(),
+                            Lists.<SpatialDimensionSchema>newArrayList()
+                        ),
+                        null,
+                        Arrays.asList("ts", "dim", "val")
+                    )
+                ),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("val", "val")
+                },
+                new ArbitraryGranularitySpec(
+                    QueryGranularity.MINUTE,
+                    Arrays.asList(new Interval("2014/2015"))
+                )
+            ),
+            new IndexTask.IndexIOConfig(
+                new LocalFirehoseFactory(
+                    tmpDir,
+                    "druid*",
+                    null
+                )
+            ),
+            null
+        ),
+        new DefaultObjectMapper()
+    );
+
+    List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(1, segments.size());
+  }
+
+  private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
+  {
     final List<DataSegment> segments = Lists.newArrayList();
 
     indexTask.run(
@@ -156,6 +224,6 @@ public class IndexTaskTest
         )
     );
 
-    Assert.assertEquals(2, segments.size());
+    return segments;
   }
 }

@@ -70,10 +70,10 @@ public class GranularUnprocessedPathSpec extends GranularityPathSpec
 
     final Path betaInput = new Path(getInputPath());
     final FileSystem fs = betaInput.getFileSystem(job.getConfiguration());
-    final Granularity segmentGranularity = ((UniformGranularitySpec) config.getGranularitySpec()).getSegmentGranularity();
+    final Granularity segmentGranularity = config.getGranularitySpec().getSegmentGranularity();
 
-    Map<DateTime, Long> inputModifiedTimes = new TreeMap<DateTime, Long>(
-        Comparators.inverse(Comparators.<Comparable>comparable())
+    Map<DateTime, Long> inputModifiedTimes = new TreeMap<>(
+        Comparators.inverse(Comparators.comparable())
     );
 
     for (FileStatus status : FSSpideringIterator.spiderIterable(fs, betaInput)) {
