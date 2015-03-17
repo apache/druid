@@ -75,6 +75,7 @@ h2. Development
 * "Extending Druid":./Modules.html
 * "Build From Source":./Build-from-source.html
 * "Versioning":./Versioning.html
+* "Integration":./Integrating-Druid-With-Other-Technologies.html
 * Experimental Features
 ** "Overview":./About-Experimental-Features.html
 ** "Geographic Queries":./GeographicQueries.html
