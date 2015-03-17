@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -65,8 +66,11 @@ import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedLongs;
+import io.druid.segment.data.IndexedMultivalueInts;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -83,6 +87,7 @@ import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -671,17 +676,19 @@ public class IndexIO
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
                     null,
-                    index.getDimColumn(dimension),
+                    Suppliers.<IndexedMultivalueInts<IndexedInts>>ofInstance(
+                        index.getDimColumn(dimension)
+                    ),
                     columnConfig.columnCacheSizeBytes()
                 )
             )
-            .setBitmapIndex(
-                new BitmapIndexColumnPartSupplier(
-                    new ConciseBitmapFactory(),
-                    index.getBitmapIndexes().get(dimension),
-                    index.getDimValueLookup(dimension)
-                )
-            );
+                    .setBitmapIndex(
+                        new BitmapIndexColumnPartSupplier(
+                            new ConciseBitmapFactory(),
+                            index.getBitmapIndexes().get(dimension),
+                            index.getDimValueLookup(dimension)
+                        )
+                    );
         if (index.getSpatialIndexes().get(dimension) != null) {
           builder.setSpatialIndex(
               new SpatialIndexColumnPartSupplier(

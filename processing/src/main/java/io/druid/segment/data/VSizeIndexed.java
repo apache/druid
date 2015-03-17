@@ -29,7 +29,7 @@ import java.util.Iterator;
 
 /**
  */
-public class VSizeIndexed implements Indexed<VSizeIndexedInts>
+public class VSizeIndexed implements IndexedMultivalueInts<IndexedInts>
 {
   private static final byte version = 0x1;
 
@@ -140,7 +140,7 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
   }
 
   @Override
-  public int indexOf(VSizeIndexedInts value)
+  public int indexOf(IndexedInts value)
   {
     throw new UnsupportedOperationException("Reverse lookup not allowed.");
   }
@@ -176,8 +176,14 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
   }
 
   @Override
-  public Iterator<VSizeIndexedInts> iterator()
+  public Iterator<IndexedInts> iterator()
   {
     return IndexedIterable.create(this).iterator();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // no-op
   }
 }

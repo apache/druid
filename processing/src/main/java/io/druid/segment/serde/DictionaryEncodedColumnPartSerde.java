@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
@@ -36,8 +37,10 @@ import io.druid.segment.data.CompressedLongBufferObjectStrategy;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedLongs;
+import io.druid.segment.data.IndexedMultivalueInts;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -226,7 +229,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                    new DictionaryEncodedColumnSupplier(
                        dictionary,
                        null,
-                       multiValuedColumn,
+                       Suppliers.<IndexedMultivalueInts<IndexedInts>>ofInstance(multiValuedColumn),
                        columnConfig.columnCacheSizeBytes()
                    )
                );
