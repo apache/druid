@@ -24,15 +24,18 @@ public class AuditInfo
 {
   private final String author;
   private final String comment;
+  private final String ip;
 
   @JsonCreator
   public AuditInfo(
       @JsonProperty("author") String author,
-      @JsonProperty("comment") String comment
+      @JsonProperty("comment") String comment,
+      @JsonProperty("ip") String ip
   )
   {
     this.author = author;
     this.comment = comment;
+    this.ip = ip;
   }
 
   @JsonProperty
@@ -45,6 +48,12 @@ public class AuditInfo
   public String getComment()
   {
     return comment;
+  }
+
+  @JsonProperty
+  public String getIp()
+  {
+    return ip;
   }
 
   @Override
@@ -65,6 +74,9 @@ public class AuditInfo
     if (!comment.equals(that.comment)) {
       return false;
     }
+    if (!ip.equals(that.ip)) {
+      return false;
+    }
 
     return true;
   }
@@ -74,6 +86,7 @@ public class AuditInfo
   {
     int result = author.hashCode();
     result = 31 * result + comment.hashCode();
+    result = 31 * result + ip.hashCode();
     return result;
   }
 }

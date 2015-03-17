@@ -73,7 +73,8 @@ public class SQLAuditManagerTest
         "testType",
         new AuditInfo(
             "testAuthor",
-            "testComment"
+            "testComment",
+            "127.0.0.1"
         ),
         "testPayload",
         new DateTime("2013-01-01T00:00:00Z")
@@ -91,7 +92,8 @@ public class SQLAuditManagerTest
         "testType",
         new AuditInfo(
             "testAuthor",
-            "testComment"
+            "testComment",
+            "127.0.0.1"
         ),
         "testPayload",
         new DateTime("2013-01-01T00:00:00Z")
@@ -111,7 +113,8 @@ public class SQLAuditManagerTest
         "testType",
         new AuditInfo(
             "testAuthor",
-            "testComment"
+            "testComment",
+            "127.0.0.1"
         ),
         "testPayload",
         new DateTime("2013-01-01T00:00:00Z")

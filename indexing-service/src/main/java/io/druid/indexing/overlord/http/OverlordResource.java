@@ -49,6 +49,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -58,6 +59,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -196,10 +198,15 @@ public class OverlordResource
   public Response setWorkerConfig(
       final WorkerBehaviorConfig workerBehaviorConfig,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context HttpServletRequest req
   )
   {
-    if (!configManager.set(WorkerBehaviorConfig.CONFIG_KEY, workerBehaviorConfig, new AuditInfo(author, comment))) {
+    if (!configManager.set(
+        WorkerBehaviorConfig.CONFIG_KEY,
+        workerBehaviorConfig,
+        new AuditInfo(author, comment, req.getRemoteAddr())
+    )) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
