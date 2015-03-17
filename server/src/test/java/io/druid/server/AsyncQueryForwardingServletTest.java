@@ -52,6 +52,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
@@ -60,6 +61,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 
+@Ignore
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
   @Before
