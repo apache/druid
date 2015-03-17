@@ -22,6 +22,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -33,9 +34,14 @@ import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.BySegmentResultValue;
+import io.druid.query.BySegmentResultValueClass;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryToolChest;
+import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -88,6 +94,8 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
@@ -2336,5 +2344,60 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testBySegmentResults()
+  {
+    int segmentCount = 32;
+    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+        new DateTime("2011-01-12T00:00:00.000Z"),
+        new BySegmentResultValueClass(
+            Arrays.asList(
+                GroupByQueryRunnerTestHelper.createExpectedRow(
+                    "2011-04-01",
+                    "alias",
+                    "mezzanine",
+                    "rows",
+                    6L,
+                    "idx",
+                    4420L
+                )
+            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+        )
+    );
+    List<Result> bySegmentResults = Lists.newArrayList();
+    for (int i = 0; i < segmentCount; i++) {
+      bySegmentResults.add(singleSegmentResult);
+    }
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setDimFilter(new SelectorDimFilter("quality", "mezzanine"))
+        .setContext(ImmutableMap.<String, Object>of("bySegment", true));
+    final GroupByQuery fullQuery = builder.build();
+    QueryToolChest toolChest = factory.getToolchest();
+
+    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    for (int i = 0; i < segmentCount; i++) {
+      singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
+    }
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(factory.mergeRunners(Executors.newCachedThreadPool(), singleSegmentRunners)),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    exec.shutdownNow();
   }
 }

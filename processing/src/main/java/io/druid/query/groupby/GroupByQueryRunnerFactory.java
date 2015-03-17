@@ -49,6 +49,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -115,7 +116,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                               config.get(),
                               computationBufferPool
                           );
-                      final Pair<List, Accumulator<List, Row>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
+                      final Pair<Queue, Accumulator<Queue, Row>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
                       final int priority = query.getContextPriority(0);
                       final boolean bySegment = query.getContextBySegment(false);
 

@@ -36,7 +36,10 @@ import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
 {
@@ -130,18 +133,19 @@ public class GroupByQueryHelper
     return new Pair<>(index, accumulator);
   }
 
-  public static <T> Pair<List, Accumulator<List, T>> createBySegmentAccumulatorPair()
+  public static <T> Pair<Queue, Accumulator<Queue, T>> createBySegmentAccumulatorPair()
   {
-    List init = Lists.newArrayList();
-    Accumulator<List, T> accumulator = new Accumulator<List, T>()
+    // In parallel query runner multiple threads add to this queue concurrently
+    Queue init = new ConcurrentLinkedQueue<>();
+    Accumulator<Queue, T> accumulator = new Accumulator<Queue, T>()
     {
       @Override
-      public List accumulate(List accumulated, T in)
+      public Queue accumulate(Queue accumulated, T in)
       {
         if(in == null){
           throw new ISE("Cannot have null result");
         }
-        accumulated.add(in);
+        accumulated.offer(in);
         return accumulated;
       }
     };
