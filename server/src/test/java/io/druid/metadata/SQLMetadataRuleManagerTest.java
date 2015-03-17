@@ -94,7 +94,7 @@ public class SQLMetadataRuleManagerTest
         )
         )
     );
-    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment");
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
     ruleManager.overrideRule(
         "test_dataSource",
         rules,
