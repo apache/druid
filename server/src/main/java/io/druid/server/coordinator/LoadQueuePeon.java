@@ -86,6 +86,7 @@ public class LoadQueuePeon
   private final Object lock = new Object();
 
   private volatile SegmentHolder currentlyProcessing = null;
+  private boolean stopped = false;
 
   LoadQueuePeon(
       CuratorFramework curator,
@@ -209,9 +210,12 @@ public class LoadQueuePeon
               {
                 synchronized (lock) {
                   try {
+                    // expected when the coordinator looses leadership and LoadQueuePeon is stopped.
                     if (currentlyProcessing == null) {
-                      log.makeAlert("Crazy race condition! server[%s]", basePath)
-                         .emit();
+                      if(!stopped) {
+                        log.makeAlert("Crazy race condition! server[%s]", basePath)
+                           .emit();
+                      }
                       actionCompleted();
                       doNext();
                       return;
@@ -347,6 +351,7 @@ public class LoadQueuePeon
 
       queuedSize.set(0L);
       failedAssignCount.set(0);
+      stopped = true;
     }
   }
 
