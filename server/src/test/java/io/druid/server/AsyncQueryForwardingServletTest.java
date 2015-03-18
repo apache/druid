@@ -53,16 +53,49 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.runners.statements.FailOnTimeout;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
+
+  public void dumpThreads()
+  {
+    final StringBuilder dump = new StringBuilder("Thread dump \n");
+    final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+    final ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds(), 100);
+    for (ThreadInfo threadInfo : threadInfos) {
+      dump.append('"');
+      dump.append(threadInfo.getThreadName());
+      dump.append("\" ");
+      final Thread.State state = threadInfo.getThreadState();
+      dump.append("\n   java.lang.Thread.State: ");
+      dump.append(state);
+      final StackTraceElement[] stackTraceElements = threadInfo.getStackTrace();
+      for (final StackTraceElement stackTraceElement : stackTraceElements) {
+        dump.append("\n        at ");
+        dump.append(stackTraceElement);
+      }
+      dump.append("\n\n");
+    }
+    System.out.println(dump.toString());
+  }
+
   @Before
   public void setup() throws Exception
   {
@@ -105,7 +138,31 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
   }
 
-  @Test(timeout=5000)
+  @Rule
+  public TestRule timeout = new TestRule()
+  {
+    @Override
+    public Statement apply(
+        Statement base, Description description
+    )
+    {
+      return new FailOnTimeout(base, TimeUnit.MINUTES.toMillis(5))
+      {
+        @Override
+        public void evaluate() throws Throwable
+        {
+          try {
+            super.evaluate();
+          } catch(Exception e){
+            dumpThreads();
+            throw e;
+          }
+        }
+      };
+    }
+  };
+
+  @Test
   public void testProxyGzipCompression() throws Exception
   {
     System.out.println("testing testProxyGzipCompression");
@@ -185,7 +242,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                       // noop
                     }
                   }
-              ) {
+              )
+              {
                 @Override
                 protected URI rewriteURI(HttpServletRequest request)
                 {
