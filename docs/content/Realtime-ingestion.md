@@ -146,9 +146,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 #### Rejection Policy
 
 The following policies are available:
-    * `serverTime` &ndash; The recommended policy for "current time" data, it is optimal for current data that is generated and ingested in real time. Uses `windowPeriod` to accept only those events that are inside the window looking forward and back.
-    * `messageTime` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are rejected if they are less than `windowPeriod` from the event with the latest timestamp. Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod`.
-    * `none` &ndash; Never hands off data unless shutdown() is called on the configured firehose.
+
+* `serverTime` &ndash; The recommended policy for "current time" data, it is optimal for current data that is generated and ingested in real time. Uses `windowPeriod` to accept only those events that are inside the window looking forward and back.
+* `messageTime` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are rejected if they are less than `windowPeriod` from the event with the latest timestamp. Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod`.
+* `none` &ndash; Never hands off data unless shutdown() is called on the configured firehose.
 
 
 ####<a id="sharding"></a> Sharding
