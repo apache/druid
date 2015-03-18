@@ -10,4 +10,8 @@ after_success:
   - mvn clean cobertura:cobertura coveralls:report
 
 after_failure:
-  - print_surefire_reports.sh
+  - ./print_surefire_reports.sh
+
+after_script:
+  - ./print_surefire_reports.sh
+
