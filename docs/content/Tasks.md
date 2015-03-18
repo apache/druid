@@ -132,7 +132,6 @@ The Hadoop Index Config submitted as part of an Hadoop Index Task is identical t
 
 #### Using your own Hadoop distribution
 
-<<<<<<< HEAD
 Druid is compiled against Apache hadoop-client 2.6.0. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-client 2.3.0, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution. For non-API compatible versions, please see [here](Other-Hadoop.html).
 
 #### Resolving dependency conflicts running HadoopIndexTask
