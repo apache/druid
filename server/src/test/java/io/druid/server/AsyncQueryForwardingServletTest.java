@@ -105,7 +105,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
   }
 
-  @Test
+  @Test(timeout=5000)
   public void testProxyGzipCompression() throws Exception
   {
     System.out.println("testing testProxyGzipCompression");
