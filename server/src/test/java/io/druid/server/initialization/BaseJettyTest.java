@@ -167,7 +167,11 @@ public class BaseJettyTest
   @After
   public void teardown()
   {
+    System.out.println("doing teardown");
+
     lifecycle.stop();
+    System.out.println("teardown done");
+
   }
 
   public static class ClientHolder

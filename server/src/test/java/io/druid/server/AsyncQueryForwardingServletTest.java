@@ -61,14 +61,16 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 
-@Ignore
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
   @Before
   public void setup() throws Exception
   {
+    System.out.println("Starting setup");
     setProperties();
     Injector injector = setupInjector();
+    System.out.println("Injector setup done");
+
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPort();
 
@@ -76,6 +78,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);
     client = holder.getClient();
+    System.out.println("setup done");
   }
 
   @Override
@@ -105,23 +108,30 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testProxyGzipCompression() throws Exception
   {
+    System.out.println("testing testProxyGzipCompression");
+
     final URL url = new URL("http://localhost:" + port + "/proxy/default");
 
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
+    System.out.println("Assertion 1 Passed");
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestProperty("Accept-Encoding", "gzip");
     post.setRequestMethod("POST");
     Assert.assertEquals("gzip", post.getContentEncoding());
+    System.out.println("Assertion 2 Passed");
 
     final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
     Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
+    System.out.println("Assertion 3 Passed");
 
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
+    System.out.println("Assertion 4 Passed");
+
   }
 
   public static class ProxyJettyServerInit implements JettyServerInitializer
@@ -138,6 +148,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     @Override
     public void initialize(Server server, Injector injector)
     {
+      System.out.println("Initializing ProxyJettyServerInit");
+
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
@@ -192,6 +204,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(new Handler[]{root});
       server.setHandler(handlerList);
+      System.out.println("Initializing ProxyJettyServerInit done");
+
     }
   }
 }
