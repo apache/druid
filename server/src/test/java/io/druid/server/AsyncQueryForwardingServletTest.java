@@ -100,7 +100,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void setup() throws Exception
   {
     System.out.println("Starting setup");
-    //setProperties();
+    setProperties("PT120S");
     Injector injector = setupInjector();
     System.out.println("Injector setup done");
 
