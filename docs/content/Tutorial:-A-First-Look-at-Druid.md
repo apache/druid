@@ -47,24 +47,24 @@ To start, we need to get our hands on a Druid build. There are two ways to get D
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-0.7.0-bin.tar.gz). Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). Download this file to a directory of your choosing.
 
 ### Build From Source
 
-Follow the [Build From Source](Build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-0.7.0-bin.tar.gz.
+Follow the [Build From Source](Build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
 
 ### Unpack the Tarball
 
 You can extract the content within by issuing:
 
 ```
-tar -zxvf druid-0.7.0-bin.tar.gz
+tar -zxvf druid-0.7.1-bin.tar.gz
 ```
 
 If you cd into the directory:
 
 ```
-cd druid-0.7.0
+cd druid-0.7.1
 ```
 
 You should see a bunch of files:
