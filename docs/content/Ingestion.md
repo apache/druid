@@ -99,7 +99,7 @@ If `type` is not included, the parseSpec defaults to `tsv`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `json`. | no |
+| format | String | This should say `json`. | no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
@@ -109,7 +109,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `jsonLowercase`. | yes |
+| format | String | This should say `jsonLowercase`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
@@ -118,7 +118,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `csv`. | yes |
+| format | String | This should say `csv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
@@ -128,7 +128,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `tsv`. | yes |
+| format | String | This should say `tsv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default == \t) |
