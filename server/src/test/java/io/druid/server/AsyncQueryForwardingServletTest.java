@@ -125,7 +125,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", 9991)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
