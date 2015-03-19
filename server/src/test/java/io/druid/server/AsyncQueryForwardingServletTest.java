@@ -100,7 +100,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void setup() throws Exception
   {
     System.out.println("Starting setup");
-    setProperties();
+    //setProperties();
     Injector injector = setupInjector();
     System.out.println("Injector setup done");
 
@@ -168,7 +168,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     System.out.println("testing testProxyGzipCompression");
 
     final URL url = new URL("http://localhost:" + port + "/proxy/default");
-
+    System.out.println(url.toString());
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
