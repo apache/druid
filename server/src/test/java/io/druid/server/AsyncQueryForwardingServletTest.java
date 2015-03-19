@@ -165,6 +165,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testProxyGzipCompression() throws Exception
   {
+
+    testGzipCompression();
     System.out.println("testing testProxyGzipCompression");
 
     final URL url = new URL("http://localhost:" + port + "/proxy/default");
@@ -173,21 +175,53 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
     System.out.println("Assertion 1 Passed");
+    get.disconnect();
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestProperty("Accept-Encoding", "gzip");
     post.setRequestMethod("POST");
     Assert.assertEquals("gzip", post.getContentEncoding());
     System.out.println("Assertion 2 Passed");
+    post.disconnect();
 
     final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
     Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
+    getNoGzip.disconnect();
     System.out.println("Assertion 3 Passed");
 
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
+    postNoGzip.disconnect();
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
     System.out.println("Assertion 4 Passed");
+
+  }
+
+  public void testGzipCompression() throws Exception
+  {
+    System.out.println("testing testGzipCompression");
+
+    final URL url = new URL("http://localhost:" + port + "/default");
+    final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+    get.setRequestProperty("Accept-Encoding", "gzip");
+    Assert.assertEquals("gzip", get.getContentEncoding());
+    get.disconnect();
+
+    final HttpURLConnection post = (HttpURLConnection) url.openConnection();
+    post.setRequestProperty("Accept-Encoding", "gzip");
+    post.setRequestMethod("POST");
+    Assert.assertEquals("gzip", post.getContentEncoding());
+    post.disconnect();
+
+    final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
+    Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
+    getNoGzip.disconnect();
+
+    final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
+    postNoGzip.setRequestMethod("POST");
+    Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
+    postNoGzip.disconnect();
+    System.out.println("testing done testGzipCompression");
 
   }
 
