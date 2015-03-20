@@ -83,17 +83,17 @@ public class BaseJettyTest
   protected HttpClient client;
   protected int port = -1;
 
-  public static void setProperties()
+  public static void setProperties(String timeOut)
   {
     System.setProperty("druid.server.http.numThreads", "20");
-    System.setProperty("druid.server.http.maxIdleTime", "PT1S");
-    System.setProperty("druid.global.http.readTimeout", "PT1S");
+    System.setProperty("druid.server.http.maxIdleTime", timeOut);
+    System.setProperty("druid.global.http.readTimeout", timeOut);
   }
 
   @Before
   public void setup() throws Exception
   {
-    setProperties();
+    setProperties("PT1S");
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPort();
@@ -167,7 +167,11 @@ public class BaseJettyTest
   @After
   public void teardown()
   {
+    System.out.println("doing teardown");
+
     lifecycle.stop();
+    System.out.println("teardown done");
+
   }
 
   public static class ClientHolder
