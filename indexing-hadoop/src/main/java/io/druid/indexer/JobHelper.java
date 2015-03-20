@@ -62,7 +62,7 @@ public class JobHelper
     String[] jarFiles = classpathProperty.split(File.pathSeparator);
 
     final Configuration conf = job.getConfiguration();
-    final Path distributedClassPath = new Path(config.getWorkingPath(), "classpath");
+    final Path distributedClassPath = new Path(config.makeIntermediatePath(), "classpath");
     final FileSystem fs = distributedClassPath.getFileSystem(conf);
 
     if (fs instanceof LocalFileSystem) {
