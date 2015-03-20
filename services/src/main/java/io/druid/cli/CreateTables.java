@@ -110,5 +110,6 @@ public class CreateTables extends GuiceRunnable
     dbConnector.createRulesTable();
     dbConnector.createConfigTable();
     dbConnector.createTaskTables();
+    dbConnector.createAuditTable();
   }
 }

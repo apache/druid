@@ -48,6 +48,7 @@ import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
@@ -69,7 +70,8 @@ import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.server.QueryResource;
-import io.druid.server.initialization.JettyServerInitializer;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
+
 import org.eclipse.jetty.server.Server;
 
 import java.io.File;
@@ -185,6 +187,7 @@ public class CliPeon extends GuiceRunnable
             taskActionBinder.addBinding("local")
                             .to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             // all of these bindings are so that we can run the peon in local mode
+            JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
             binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(LazySingleton.class);

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -205,9 +206,13 @@ public class IndexTask extends AbstractFixedIntervalTask
     try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
-        Interval interval = granularitySpec.getSegmentGranularity()
-                                           .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
-        retVal.add(interval);
+        DateTime dt = new DateTime(inputRow.getTimestampFromEpoch());
+        Optional<Interval> interval = granularitySpec.bucketInterval(dt);
+        if (interval.isPresent()) {
+          retVal.add(interval.get());
+        } else {
+          throw new ISE("Unable to to find a matching interval for [%s]", dt);
+        }
       }
     }
 

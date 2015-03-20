@@ -17,7 +17,6 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ConciseBitmapFactory;
@@ -25,18 +24,15 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.WrappedConciseBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
-import io.druid.query.filter.Filter;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.Indexed;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -94,7 +90,7 @@ public class ExtractionDimFilterTest
       return null;
     }
   };
-  private static final DimExtractionFn DIM_EXTRACTION_FN = new DimExtractionFn()
+  private static final ExtractionFn DIM_EXTRACTION_FN = new DimExtractionFn()
   {
     @Override
     public byte[] getCacheKey()

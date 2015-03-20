@@ -34,6 +34,7 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -163,7 +164,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       @Override
-      public DimensionSelector makeDimensionSelector(final String dimension)
+      public DimensionSelector makeDimensionSelector(final String dimension, final ExtractionFn extractionFn)
       {
         return new DimensionSelector()
         {
@@ -209,12 +210,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           @Override
           public String lookupName(int id)
           {
-            return in.get().getDimension(dimension).get(id);
+            final String value = in.get().getDimension(dimension).get(id);
+            return extractionFn == null ? value : extractionFn.apply(value);
           }
 
           @Override
           public int lookupId(String name)
           {
+            if (extractionFn != null) {
+              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+            }
             return in.get().getDimension(dimension).indexOf(name);
           }
         };

@@ -27,7 +27,8 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.server.AsyncQueryForwardingServlet;
-import io.druid.server.initialization.BaseJettyServerInitializer;
+import io.druid.server.initialization.jetty.JettyServerInitUtils;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -41,7 +42,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 /**
  */
-public class RouterJettyServerInitializer extends BaseJettyServerInitializer
+public class RouterJettyServerInitializer implements JettyServerInitializer
 {
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -88,9 +89,9 @@ public class RouterJettyServerInitializer extends BaseJettyServerInitializer
         requestLogger
     );
     asyncQueryForwardingServlet.setTimeout(httpClientConfig.getReadTimeout().getMillis());
-
     root.addServlet(new ServletHolder(asyncQueryForwardingServlet), "/druid/v2/*");
-    root.addFilter(defaultAsyncGzipFilterHolder(), "/*", null);
+    JettyServerInitUtils.addExtensionFilters(root, injector);
+    root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
 

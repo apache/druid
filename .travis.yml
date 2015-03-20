@@ -5,3 +5,6 @@ jdk:
   - oraclejdk8
 
 sudo: false
+
+after_success:
+  - mvn clean cobertura:cobertura coveralls:report

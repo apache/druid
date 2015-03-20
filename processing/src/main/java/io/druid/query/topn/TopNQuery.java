@@ -139,8 +139,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)
   {
-    if (dimensionSpec.getDimExtractionFn() != null) {
-      selector.setHasDimExtractionFn(true);
+    if (dimensionSpec.getExtractionFn() != null) {
+      selector.setHasExtractionFn(true);
     }
     topNMetricSpec.initTopNAlgorithmSelector(selector);
   }

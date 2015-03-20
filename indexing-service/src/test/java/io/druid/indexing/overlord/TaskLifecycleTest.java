@@ -251,7 +251,7 @@ public class TaskLifecycleTest
         TaskQueueConfig.class
     );
     ts = new HeapMemoryTaskStorage(
-        new TaskStorageConfig()
+        new TaskStorageConfig(null)
         {
         }
     );

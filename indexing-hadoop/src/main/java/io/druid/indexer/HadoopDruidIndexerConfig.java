@@ -17,6 +17,41 @@
 
 package io.druid.indexer;
 
+import io.druid.common.utils.JodaUtils;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.granularity.QueryGranularity;
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
+import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.indexer.path.PathSpec;
+import io.druid.initialization.Initialization;
+import io.druid.segment.indexing.granularity.GranularitySpec;
+import io.druid.server.DruidNode;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.ShardSpec;
+import io.druid.timeline.partition.ShardSpecLookup;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.SortedSet;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.format.ISODateTimeFormat;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -36,38 +71,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
-import io.druid.common.utils.JodaUtils;
-import io.druid.data.input.InputRow;
-import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.granularity.QueryGranularity;
-import io.druid.guice.GuiceInjectors;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.annotations.Self;
-import io.druid.indexer.partitions.PartitionsSpec;
-import io.druid.indexer.path.PathSpec;
-import io.druid.initialization.Initialization;
-import io.druid.segment.indexing.granularity.GranularitySpec;
-import io.druid.server.DruidNode;
-import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.ShardSpec;
-import io.druid.timeline.partition.ShardSpecLookup;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.mapreduce.Job;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.format.ISODateTimeFormat;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.SortedSet;
 
 /**
  */
@@ -301,9 +304,9 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().isCombineText();
   }
 
-  public StringInputRowParser getParser()
+  public InputRowParser getParser()
   {
-    return (StringInputRowParser) schema.getDataSchema().getParser();
+    return schema.getDataSchema().getParser();
   }
 
   public HadoopyShardSpec getShardSpec(Bucket bucket)
@@ -314,6 +317,11 @@ public class HadoopDruidIndexerConfig
   public Job addInputPaths(Job job) throws IOException
   {
     return pathSpec.addInputPaths(this, job);
+  }
+
+  public Class<? extends InputFormat> getInputFormatClass()
+  {
+    return pathSpec.getInputFormat();
   }
 
   /********************************************

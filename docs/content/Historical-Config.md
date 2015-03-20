@@ -81,7 +81,7 @@ You can optionally only configure caching to be enabled on the historical by set
 |`druid.historical.cache.useCache`|true, false|Enable the cache on the historical.|false|
 |`druid.historical.cache.populateCache`|true, false|Populate the cache on the historical.|false|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
 
 #### Local Cache
 

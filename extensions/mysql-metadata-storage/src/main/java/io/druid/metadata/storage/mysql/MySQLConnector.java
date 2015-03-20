@@ -84,7 +84,7 @@ public class MySQLConnector extends SQLMetadataConnector
           "Database default character set is not UTF-8." + System.lineSeparator()
           + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
           + " If you are upgrading from Druid 0.6.x, please make all tables have been converted to utf8 and change the database default."
-          + " For more information on how to convert and set the default, please refer to section on updating from 0.6.x in the Druid 0.7.0 release notes."
+          + " For more information on how to convert and set the default, please refer to section on updating from 0.6.x in the Druid 0.7.1 release notes."
       );
     }
 

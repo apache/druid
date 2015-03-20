@@ -19,7 +19,7 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.query.extraction.DimExtractionFn;
+import io.druid.query.extraction.ExtractionFn;
 
 /**
  */
@@ -34,7 +34,7 @@ public interface DimensionSpec
 
   public String getOutputName();
 
-  public DimExtractionFn getDimExtractionFn();
+  public ExtractionFn getExtractionFn();
 
   public byte[] getCacheKey();
 

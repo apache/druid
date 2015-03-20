@@ -12,34 +12,24 @@ Depending on what `druid.storage.type` is set to, Druid will upload segments to 
 
 ## My realtime node is not handing segments off
 
-Make sure that the `druid.publish.type` on your real-time nodes is set to "metadata". Also make sure that `druid.storage.type` is set to a deep storage that makes sense. Some example configs:
-
-```
-druid.publish.type=db
-
-druid.db.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.db.connector.user=druid
-druid.db.connector.password=diurd
-
-druid.storage.type=s3
-druid.storage.bucket=druid
-druid.storage.baseKey=sample
-```
+First, make sure there are no exceptions in the logs of your node. Also make sure that `druid.storage.type` is set to a deep storage that makes sense.
 
 Other common reasons that hand-off fails are as follows:
 
-1) Historical nodes are out of capacity and cannot download any more segments. You'll see exceptions in the coordinator logs if this occurs.
+1) Druid is unable to write to the metadata storage. Make sure your configuration is correct.
 
-2) Segments are corrupt and cannot download. You'll see exceptions in your historical nodes if this occurs.
+2) Historical nodes are out of capacity and cannot download any more segments. You'll see exceptions in the coordinator logs if this occurs.
 
-3) Deep storage is improperly configured. Make sure that your segment actually exists in deep storage and that the coordinator logs have no errors.
+3) Segments are corrupt and cannot download. You'll see exceptions in your historical nodes if this occurs.
+
+4) Deep storage is improperly configured. Make sure that your segment actually exists in deep storage and that the coordinator logs have no errors.
 
 ## How do I get HDFS to work?
 
-Make sure to include the `druid-hdfs-storage` module as one of your extensions and set `druid.storage.type=hdfs`.
+Make sure to include the `druid-hdfs-storage` module as one of your extensions and set `druid.storage.type=hdfs`. You may also need to include hadoop configs on the classpath.
 
 ## I don't see my Druid segments on my historical nodes
-You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>/cluster.html`. Make sure that your segments have actually loaded on [historical nodes](Historical.html). If your segments are not present, check the coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because historical nodes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
+You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make sure that your segments have actually loaded on [historical nodes](Historical.html). If your segments are not present, check the coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because historical nodes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
 
 ```
 -Ddruid.segmentCache.locations=[{"path":"/tmp/druid/storageLocation","maxSize":"500000000000"}]
@@ -69,4 +59,4 @@ There are a few ways this can occur. Druid will throttle ingestion to prevent ou
 
 ## More information
 
-Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
+Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-user).

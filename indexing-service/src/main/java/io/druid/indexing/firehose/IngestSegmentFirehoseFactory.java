@@ -256,7 +256,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
 
                       final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                       for (String dim : dims) {
-                        final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
+                        final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim, null);
                         // dimSelector is null if the dimension is not present
                         if (dimSelector != null) {
                           dimSelectors.put(dim, dimSelector);

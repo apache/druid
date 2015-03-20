@@ -17,9 +17,11 @@
 
 package io.druid.cli;
 
+import io.druid.server.initialization.jetty.JettyServerInitUtils;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
+
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
-import io.druid.server.initialization.BaseJettyServerInitializer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
@@ -30,14 +32,15 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 /**
 */
-class MiddleManagerJettyServerInitializer extends BaseJettyServerInitializer
+class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 {
   @Override
   public void initialize(Server server, Injector injector)
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
-    root.addFilter(defaultGzipFilterHolder(), "/*", null);
+    JettyServerInitUtils.addExtensionFilters(root, injector);
+    root.addFilter(JettyServerInitUtils.defaultGzipFilterHolder(), "/*", null);
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();

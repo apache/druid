@@ -17,6 +17,7 @@
 
 package io.druid.metadata;
 
+import io.druid.audit.AuditInfo;
 import io.druid.server.coordinator.rules.Rule;
 
 import java.util.List;
@@ -38,5 +39,5 @@ public interface MetadataRuleManager
 
   public List<Rule> getRulesWithDefault(final String dataSource);
 
-  public boolean overrideRule(final String dataSource, final List<Rule> newRules);
+  public boolean overrideRule(final String dataSource, final List<Rule> rulesConfig, final AuditInfo auditInfo);
 }

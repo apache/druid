@@ -17,21 +17,33 @@
 
 package io.druid.indexer;
 
-import com.metamx.common.RE;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.segment.indexing.granularity.GranularitySpec;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.joda.time.DateTime;
 
-import java.io.IOException;
+import com.metamx.common.RE;
 
-public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<LongWritable, Text, KEYOUT, VALUEOUT>
+public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<Writable, Writable, KEYOUT, VALUEOUT>
 {
   private HadoopDruidIndexerConfig config;
-  private StringInputRowParser parser;
+  private InputRowParser parser;
   protected GranularitySpec granularitySpec;
 
   @Override
@@ -48,20 +60,20 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     return config;
   }
 
-  public StringInputRowParser getParser()
+  public InputRowParser getParser()
   {
     return parser;
   }
 
   @Override
   protected void map(
-      LongWritable key, Text value, Context context
+      Writable key, Writable value, Context context
   ) throws IOException, InterruptedException
   {
     try {
       final InputRow inputRow;
       try {
-        inputRow = parser.parse(value.toString());
+        inputRow = parseInputRow(value, parser);
       }
       catch (Exception e) {
         if (config.isIgnoreInvalidRows()) {
@@ -83,6 +95,17 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, Text text, Context context)
+  public final static InputRow parseInputRow(Writable value, InputRowParser parser)
+  {
+    if(parser instanceof StringInputRowParser && value instanceof Text) {
+      //Note: This is to ensure backward compatibility with 0.7.0 and before
+      return ((StringInputRowParser)parser).parse(value.toString());
+    } else {
+      return parser.parse(value);
+    }
+  }
+
+  abstract protected void innerMap(InputRow inputRow, Writable value, Context context)
       throws IOException, InterruptedException;
+
 }

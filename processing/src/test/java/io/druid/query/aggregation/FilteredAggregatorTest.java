@@ -18,6 +18,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -70,7 +71,7 @@ public class FilteredAggregatorTest
     return new ColumnSelectorFactory()
     {
       @Override
-      public DimensionSelector makeDimensionSelector(String dimensionName)
+      public DimensionSelector makeDimensionSelector(String dimensionName, ExtractionFn extractionFn)
       {
         if (dimensionName.equals("dim")) {
           return new DimensionSelector()

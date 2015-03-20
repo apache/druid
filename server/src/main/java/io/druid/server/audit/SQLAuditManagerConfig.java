@@ -15,14 +15,19 @@
  * limitations under the License.
  */
 
-package io.druid.server.initialization;
+package io.druid.server.audit;
 
-import com.google.inject.Injector;
-import org.eclipse.jetty.server.Server;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  */
-public interface JettyServerInitializer
+public class SQLAuditManagerConfig
 {
-  public void initialize(Server server, Injector injector);
+  @JsonProperty
+  private long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
+
+  public long getAuditHistoryMillis()
+  {
+    return auditHistoryMillis;
+  }
 }

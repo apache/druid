@@ -21,10 +21,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -59,10 +62,12 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -115,15 +120,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
 
         if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
-          return mergeGroupByResults(((GroupByQuery) input), runner, responseContext
-          );
+          return mergeGroupByResults(
+              (GroupByQuery) input,
+              runner,
+              responseContext);
         }
         return runner.run(input, responseContext);
       }
     };
   }
 
-  private Sequence<Row> mergeGroupByResults(final GroupByQuery query, QueryRunner<Row> runner, Map<String, Object> context)
+  private Sequence<Row> mergeGroupByResults(
+      final GroupByQuery query,
+      QueryRunner<Row> runner,
+      Map<String, Object> context
+  )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
 
@@ -168,7 +179,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           index
       );
     } else {
-      final IncrementalIndex index = makeIncrementalIndex(query, runner.run(query, context));
+      final IncrementalIndex index = makeIncrementalIndex(
+          query, runner.run(
+              new GroupByQuery(
+                  query.getDataSource(),
+                  query.getQuerySegmentSpec(),
+                  query.getDimFilter(),
+                  query.getGranularity(),
+                  query.getDimensions(),
+                  query.getAggregatorSpecs(),
+                  // Don't do post aggs until the end of this method.
+                  ImmutableList.<PostAggregator>of(),
+                  query.getHavingSpec(),
+                  query.getLimitSpec(),
+                  query.getContext()
+              ).withOverriddenContext(
+                  ImmutableMap.<String, Object>of(
+                      "finalize", false
+                  )
+              )
+              , context
+          )
+      );
       return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
     }
   }

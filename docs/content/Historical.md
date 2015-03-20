@@ -35,7 +35,7 @@ Querying Segments
 
 Please see [Querying](Querying.html) for more information on querying historical nodes.
 
-For every query that a historical node services, it will log the query and report metrics on the time taken to run the query.
+A historical can be configured to log and report metrics for every query it services.
 
 HTTP Endpoints
 --------------

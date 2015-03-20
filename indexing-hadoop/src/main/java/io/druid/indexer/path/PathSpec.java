@@ -20,6 +20,8 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+
+import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
@@ -35,4 +37,5 @@ import java.io.IOException;
 public interface PathSpec
 {
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException;
+  public Class<? extends InputFormat> getInputFormat();
 }

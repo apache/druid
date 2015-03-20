@@ -41,12 +41,12 @@ cluster were adapted from the [Apache Kafka quickstart guide](http://kafka.apach
 
 1. Download Kafka
 
-    For this tutorial we will [download Kafka 0.8.2]
-    (https://www.apache.org/dyn/closer.cgi?path=/kafka/0.8.2.0/kafka_2.10-0.8.2.0.tgz)
+    For this tutorial we will [download Kafka 0.8.2.1]
+    (https://www.apache.org/dyn/closer.cgi?path=/kafka/0.8.2.1/kafka_2.10-0.8.2.1.tgz)
 
     ```bash
-    tar -xzf kafka_2.10-0.8.2.0.tgz
-    cd kafka_2.10-0.8.2.0
+    tar -xzf kafka_2.10-0.8.2.1.tgz
+    cd kafka_2.10-0.8.2.1
     ```
 
 1. Start Kafka
@@ -81,7 +81,7 @@ cluster were adapted from the [Apache Kafka quickstart guide](http://kafka.apach
 
 The realtime spec for the data source in this tutorial is available under
 `examples/indexing/wikipedia.spec` from the [Druid
-download](http://static.druid.io/artifacts/releases/druid-services-0.7.0-bin.tar.gz)
+download](http://static.druid.io/artifacts/releases/druid-services-0.7.1-bin.tar.gz)
 
 1. Launch the realtime node
 
@@ -149,5 +149,5 @@ Druid solved the availability problem by switching from a pull-based model to a 
 Additional Information
 ----------------------
 
-Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
+Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-user).
 

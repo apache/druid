@@ -127,7 +127,7 @@ public class DeterminePartitionsJob implements Jobby
         );
 
         JobHelper.injectSystemProperties(groupByJob);
-        groupByJob.setInputFormatClass(TextInputFormat.class);
+        JobHelper.setInputFormat(groupByJob, config);
         groupByJob.setMapperClass(DeterminePartitionsGroupByMapper.class);
         groupByJob.setMapOutputKeyClass(BytesWritable.class);
         groupByJob.setMapOutputValueClass(NullWritable.class);
@@ -174,7 +174,7 @@ public class DeterminePartitionsJob implements Jobby
       } else {
         // Directly read the source data, since we assume it's already grouped.
         dimSelectionJob.setMapperClass(DeterminePartitionsDimSelectionAssumeGroupedMapper.class);
-        dimSelectionJob.setInputFormatClass(TextInputFormat.class);
+        JobHelper.setInputFormat(dimSelectionJob, config);
         config.addInputPaths(dimSelectionJob);
       }
 
@@ -260,7 +260,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Text text,
+        Writable value,
         Context context
     ) throws IOException, InterruptedException
     {
@@ -341,7 +341,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Text text,
+        Writable value,
         Context context
     ) throws IOException, InterruptedException
     {

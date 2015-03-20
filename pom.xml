@@ -26,7 +26,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.7.1-SNAPSHOT</version>
+    <version>0.7.1-rc2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -61,17 +61,18 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>druid-0.7.0-SNAPSHOT</tag>
+        <tag>druid-0.7.1-SNAPSHOT</tag>
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.26.14</metamx.java-util.version>
+        <metamx.java-util.version>0.26.15</metamx.java-util.version>
         <apache.curator.version>2.7.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
-        <druid.api.version>0.3.4</druid.api.version>
+        <druid.api.version>0.3.5</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
         <log4j.version>2.1</log4j.version>
         <hadoop.version>2.6.0</hadoop.version>
+        <slf4j.version>1.7.10</slf4j.version>
     </properties>
 
     <modules>
@@ -115,7 +116,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>http-client</artifactId>
-                <version>1.0.0</version>
+                <version>1.0.1</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -402,6 +403,25 @@
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
+              <!-- This is not slf4j's version because of performance concerns
+              http://www.slf4j.org/api/org/slf4j/bridge/SLF4JBridgeHandler.html
+              Please make sure to do performance tests before switching this to slf4j
+              Users wishing to use slf4j's solution are encouraged to also use
+              Logback
+              More info at
+              http://logback.qos.ch/manual/configuration.html#LevelChangePropagator
+              http://www.slf4j.org/legacy.html#jul-to-slf4j
+              -->
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-jul</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jcl-over-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.lmax</groupId>
                 <artifactId>disruptor</artifactId>
                 <version>3.3.0</version>
@@ -454,7 +474,7 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.1</version>
+                <version>0.9.3</version>
                 <exclusions>
                     <exclusion>
                         <!-- exclude artifact not available in maven central -->
@@ -580,6 +600,17 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>cobertura-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.eluder.coveralls</groupId>
+                <artifactId>coveralls-maven-plugin</artifactId>
+                <version>3.0.1</version>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -588,6 +619,8 @@
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <argLine>-Duser.language=en -Duser.country=US</argLine>
+                        <!-- our tests are very verbose, let's keep the volume down -->
+                        <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -661,6 +694,24 @@
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
                     <version>1.2.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>cobertura-maven-plugin</artifactId>
+                    <version>2.7</version>
+                    <configuration>
+                        <instrumentation>
+                            <ignores>
+                                <ignore>io.druid.sql.antlr4.*</ignore>
+                            </ignores>
+                            <excludes>
+                                <exclude>io/druid/sql/antlr4/**/*.class</exclude>
+                            </excludes>
+                        </instrumentation>
+                        <format>xml</format>
+                        <!-- aggregated reports for multi-module projects -->
+                        <aggregate>true</aggregate>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

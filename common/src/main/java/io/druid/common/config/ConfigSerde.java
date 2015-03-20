@@ -22,5 +22,6 @@ package io.druid.common.config;
 public interface ConfigSerde<T>
 {
   public byte[] serialize(T obj);
+  public String serializeToString(T obj);
   public T deserialize(byte[] bytes);
 }

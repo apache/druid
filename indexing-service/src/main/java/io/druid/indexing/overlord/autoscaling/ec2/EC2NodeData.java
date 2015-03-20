@@ -32,6 +32,8 @@ public class EC2NodeData
   private final int maxInstances;
   private final List<String> securityGroupIds;
   private final String keyName;
+  private final String subnetId;
+  private final EC2IamProfileData iamProfile;
 
   @JsonCreator
   public EC2NodeData(
@@ -40,7 +42,9 @@ public class EC2NodeData
       @JsonProperty("minInstances") int minInstances,
       @JsonProperty("maxInstances") int maxInstances,
       @JsonProperty("securityGroupIds") List<String> securityGroupIds,
-      @JsonProperty("keyName") String keyName
+      @JsonProperty("keyName") String keyName,
+      @JsonProperty("subnetId") String subnetId,
+      @JsonProperty("iamProfile") EC2IamProfileData iamProfile
   )
   {
     this.amiId = amiId;
@@ -49,6 +53,8 @@ public class EC2NodeData
     this.maxInstances = maxInstances;
     this.securityGroupIds = securityGroupIds;
     this.keyName = keyName;
+    this.subnetId = subnetId;
+    this.iamProfile = iamProfile;
   }
 
   @JsonProperty
@@ -87,6 +93,18 @@ public class EC2NodeData
     return keyName;
   }
 
+  @JsonProperty
+  public String getSubnetId()
+  {
+    return subnetId;
+  }
+
+  @JsonProperty
+  public EC2IamProfileData getIamProfile()
+  {
+    return iamProfile;
+  }
+
   @Override
   public String toString()
   {
@@ -97,6 +115,8 @@ public class EC2NodeData
            ", maxInstances=" + maxInstances +
            ", securityGroupIds=" + securityGroupIds +
            ", keyName='" + keyName + '\'' +
+           ", subnetId='" + subnetId + '\'' +
+           ", iamProfile=" + iamProfile +
            '}';
   }
 
@@ -121,6 +141,9 @@ public class EC2NodeData
     if (amiId != null ? !amiId.equals(that.amiId) : that.amiId != null) {
       return false;
     }
+    if (iamProfile != null ? !iamProfile.equals(that.iamProfile) : that.iamProfile != null) {
+      return false;
+    }
     if (instanceType != null ? !instanceType.equals(that.instanceType) : that.instanceType != null) {
       return false;
     }
@@ -128,6 +151,9 @@ public class EC2NodeData
       return false;
     }
     if (securityGroupIds != null ? !securityGroupIds.equals(that.securityGroupIds) : that.securityGroupIds != null) {
+      return false;
+    }
+    if (subnetId != null ? !subnetId.equals(that.subnetId) : that.subnetId != null) {
       return false;
     }
 
@@ -143,6 +169,8 @@ public class EC2NodeData
     result = 31 * result + maxInstances;
     result = 31 * result + (securityGroupIds != null ? securityGroupIds.hashCode() : 0);
     result = 31 * result + (keyName != null ? keyName.hashCode() : 0);
+    result = 31 * result + (subnetId != null ? subnetId.hashCode() : 0);
+    result = 31 * result + (iamProfile != null ? iamProfile.hashCode() : 0);
     return result;
   }
 }

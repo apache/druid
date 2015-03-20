@@ -4,16 +4,8 @@ layout: doc_page
 
 Peons
 -----
-Peons run a single task in a single JVM. MiddleManager is responsible for creating Peons for running tasks.
-Peons should rarely (if ever for testing purposes) be run on their own.
 
-#### JVM Configuration
-Although peons inherit the configurations of their parent middle managers, explicit child peon configs in middlemanager can be set by prefixing them with:
-
-```
-druid.indexer.fork.property
-```
-Additional peon configs include:
+For Peon Configuration, see [Peon Configuration](Indexing-Service-Config.html).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -32,10 +24,14 @@ If the peon is running in remote mode, there must be an overlord up and running.
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT10M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|10|
+=======
+Peons run a single task in a single JVM. MiddleManager is responsible for creating Peons for running tasks.
+Peons should rarely (if ever for testing purposes) be run on their own.
 
-#### Running
+Running
+-------
 
-The peon should very rarely ever be run independent of the middle manager.
+The peon should very rarely ever be run independent of the middle manager unless for development purposes.
 
 ```
 io.druid.cli.Main internal peon <task_file> <status_file>

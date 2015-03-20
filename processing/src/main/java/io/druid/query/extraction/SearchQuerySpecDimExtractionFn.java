@@ -19,13 +19,14 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import io.druid.query.search.search.SearchQuerySpec;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
+public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x3;
 
@@ -36,6 +37,8 @@ public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
       @JsonProperty("query") SearchQuerySpec searchQuerySpec
   )
   {
+    Preconditions.checkNotNull(searchQuerySpec, "search query must not be null");
+
     this.searchQuerySpec = searchQuerySpec;
   }
 
@@ -73,5 +76,30 @@ public class SearchQuerySpecDimExtractionFn implements DimExtractionFn
     return "SearchQuerySpecDimExtractionFn{" +
            "searchQuerySpec=" + searchQuerySpec +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SearchQuerySpecDimExtractionFn that = (SearchQuerySpecDimExtractionFn) o;
+
+    if (!searchQuerySpec.equals(that.searchQuerySpec)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return searchQuerySpec.hashCode();
   }
 }

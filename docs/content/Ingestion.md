@@ -99,7 +99,7 @@ If `type` is not included, the parseSpec defaults to `tsv`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `json`. | no |
+| format | String | This should say `json`. | no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
@@ -109,7 +109,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `jsonLowercase`. | yes |
+| format | String | This should say `jsonLowercase`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
@@ -118,7 +118,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `csv`. | yes |
+| format | String | This should say `csv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
@@ -128,7 +128,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `tsv`. | yes |
+| format | String | This should say `tsv`. | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default == \t) |
@@ -152,9 +152,26 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 ## GranularitySpec
 
+The default granularity spec is `uniform`.
+
+### Uniform Granularity Spec
+
+This spec is used to generated segments with uniform intervals.
+
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| type | string | The type of granularity spec. | no (default == 'uniform') |
 | segmentGranularity | string | The granularity to create segments at. | no (default == 'DAY') |
+| queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
+| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
+
+### Arbitrary Granularity Spec
+
+This spec is used to generate segments with arbitrary intervals (it tries to create evenly sized segments). This spec is not supported for real-time processing.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | string | The type of granularity spec. | no (default == 'uniform') |
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
 | intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
 

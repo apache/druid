@@ -89,3 +89,13 @@ Tasks
 -----
 
 See [Tasks](Tasks.html).
+
+HTTP Endpoints
+--------------
+
+### GET
+
+* `/status`
+
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+

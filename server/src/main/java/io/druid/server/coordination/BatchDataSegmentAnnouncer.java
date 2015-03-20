@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.common.utils.UUIDUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -49,6 +50,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   private final Announcer announcer;
   private final ObjectMapper jsonMapper;
   private final String liveSegmentLocation;
+  private final DruidServerMetadata server;
 
   private final Object lock = new Object();
   private final AtomicLong counter = new AtomicLong(0);
@@ -69,6 +71,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     this.config = config;
     this.announcer = announcer;
     this.jsonMapper = jsonMapper;
+    this.server = server;
 
     this.liveSegmentLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), server.getName());
   }
@@ -84,7 +87,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     synchronized (lock) {
       // create new batch
       if (availableZNodes.isEmpty()) {
-        SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath(new DateTime().toString()));
+        SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
         availableZNode.addSegment(segment);
 
       log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
@@ -140,7 +143,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
   @Override
   public void announceSegments(Iterable<DataSegment> segments) throws IOException
   {
-    SegmentZNode segmentZNode = new SegmentZNode(makeServedSegmentPath(new DateTime().toString()));
+    SegmentZNode segmentZNode = new SegmentZNode(makeServedSegmentPath());
     Set<DataSegment> batch = Sets.newHashSet();
     int byteSize = 0;
     int count = 0;
@@ -156,7 +159,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
         segmentZNode.addSegments(batch);
         announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
 
-        segmentZNode = new SegmentZNode(makeServedSegmentPath(new DateTime().toString()));
+        segmentZNode = new SegmentZNode(makeServedSegmentPath());
         batch = Sets.newHashSet();
         count = 0;
         byteSize = 0;
@@ -179,6 +182,11 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     for (DataSegment segment : segments) {
       unannounceSegment(segment);
     }
+  }
+
+  private String makeServedSegmentPath(){
+    // server.getName() is already in the zk path
+    return makeServedSegmentPath(UUIDUtils.generateUuid(server.getHost(), server.getType(), server.getTier(), new DateTime().toString()));
   }
 
   private String makeServedSegmentPath(String zNode)

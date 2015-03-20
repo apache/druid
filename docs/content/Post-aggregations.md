@@ -8,9 +8,21 @@ There are several post-aggregators available.
 
 ### Arithmetic post-aggregator
 
-The arithmetic post-aggregator applies the provided function to the given fields from left to right. The fields can be aggregators or other post aggregators.
+The arithmetic post-aggregator applies the provided function to the given
+fields from left to right. The fields can be aggregators or other post aggregators.
 
-Supported functions are `+`, `-`, `*`, and `/`
+Supported functions are `+`, `-`, `*`, `/`, and `quotient`.
+
+**Note**:
+
+* `/` division always returns `0` if dividing by`0`, regardless of the numerator.
+* `quotient` division behaves like regular floating point division
+
+Arithmetic post-aggregators may also specify an `ordering`, which defines the order
+of resulting values when sorting results (this can be useful for topN queries for instance):
+
+- If no ordering (or `null`) is specified, the default floating point ordering is used.
+- `numericFirst` ordering always returns finite values first, followed by `NaN`, and infinite values last.
 
 The grammar for an arithmetic post aggregation is:
 
@@ -19,12 +31,10 @@ postAggregation : {
   "type"  : "arithmetic",
   "name"  : <output_name>,
   "fn"    : <arithmetic_function>,
-  "fields": [<post_aggregator>, <post_aggregator>, ...]
+  "fields": [<post_aggregator>, <post_aggregator>, ...],
+  "ordering" : <null (default), or "numericFirst">
 }
 ```
-
-In the case of a division (`/`), if the denominator is `0` then `0` is returned regardless of the numerator.
-
 
 ### Field accessor post-aggregator
 

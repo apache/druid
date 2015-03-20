@@ -105,7 +105,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
               @Override
               public DimensionSelector apply(@Nullable String input)
               {
-                return columnFactory.makeDimensionSelector(input);
+                return columnFactory.makeDimensionSelector(input, null);
               }
             }
             ), Predicates.notNull()

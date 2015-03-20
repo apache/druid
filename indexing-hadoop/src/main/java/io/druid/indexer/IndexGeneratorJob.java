@@ -17,6 +17,60 @@
 
 package io.druid.indexer;
 
+import io.druid.collections.StupidPool;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.offheap.OffheapBufferPool;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.LoggingProgressIndicator;
+import io.druid.segment.ProgressIndicator;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.SegmentUtils;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.timeline.DataSegment;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
@@ -34,58 +88,6 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
-import io.druid.data.input.InputRow;
-import io.druid.data.input.Rows;
-import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.granularity.QueryGranularity;
-import io.druid.offheap.OffheapBufferPool;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
-import io.druid.segment.LoggingProgressIndicator;
-import io.druid.segment.ProgressIndicator;
-import io.druid.segment.QueryableIndex;
-import io.druid.segment.SegmentUtils;
-import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
-import io.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.InvalidJobConfException;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.Partitioner;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 /**
  */
@@ -158,18 +160,18 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
 
-      if (config.isCombineText()) {
-        job.setInputFormatClass(CombineTextInputFormat.class);
-      } else {
-        job.setInputFormatClass(TextInputFormat.class);
-      }
+      JobHelper.setInputFormat(job, config);
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(Text.class);
 
       SortableBytes.useSortableBytesAsMapOutputKey(job);
 
-      job.setNumReduceTasks(Iterables.size(config.getAllBuckets().get()));
+      int numReducers = Iterables.size(config.getAllBuckets().get());
+      if(numReducers == 0) {
+        throw new RuntimeException("No buckets?? seems there is no data to index.");
+      }
+      job.setNumReduceTasks(numReducers);
       job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
       setReducerClass(job);
@@ -213,14 +215,14 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Text>
+  public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, Writable>
   {
     private static final HashFunction hashFunction = Hashing.murmur3_128();
 
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Text text,
+        Writable value,
         Context context
     ) throws IOException, InterruptedException
     {
@@ -250,17 +252,17 @@ public class IndexGeneratorJob implements Jobby
                         .put(hashedDimensions)
                         .array()
           ).toBytesWritable(),
-          text
+          value
       );
     }
   }
 
-  public static class IndexGeneratorPartitioner extends Partitioner<BytesWritable, Text> implements Configurable
+  public static class IndexGeneratorPartitioner extends Partitioner<BytesWritable, Writable> implements Configurable
   {
     private Configuration config;
 
     @Override
-    public int getPartition(BytesWritable bytesWritable, Text text, int numPartitions)
+    public int getPartition(BytesWritable bytesWritable, Writable value, int numPartitions)
     {
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
@@ -289,11 +291,11 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static class IndexGeneratorReducer extends Reducer<BytesWritable, Text, BytesWritable, Text>
+  public static class IndexGeneratorReducer extends Reducer<BytesWritable, Writable, BytesWritable, Text>
   {
     private HadoopDruidIndexerConfig config;
     private List<String> metricNames = Lists.newArrayList();
-    private StringInputRowParser parser;
+    private InputRowParser parser;
 
     protected ProgressIndicator makeProgressIndicator(final Context context)
     {
@@ -346,7 +348,7 @@ public class IndexGeneratorJob implements Jobby
 
     @Override
     protected void reduce(
-        BytesWritable key, Iterable<Text> values, final Context context
+        BytesWritable key, Iterable<Writable> values, final Context context
     ) throws IOException, InterruptedException
     {
       SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
@@ -374,9 +376,9 @@ public class IndexGeneratorJob implements Jobby
         Set<String> allDimensionNames = Sets.newHashSet();
         final ProgressIndicator progressIndicator = makeProgressIndicator(context);
 
-        for (final Text value : values) {
+        for (final Writable value : values) {
           context.progress();
-          final InputRow inputRow = index.formatRow(parser.parse(value.toString()));
+          final InputRow inputRow = index.formatRow(HadoopDruidIndexerMapper.parseInputRow(value, parser));
           allDimensionNames.addAll(inputRow.getDimensions());
 
           int numRows = index.add(inputRow);

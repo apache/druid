@@ -2,14 +2,14 @@
 layout: doc_page
 ---
 
-Community Libraries
--------------------
+Community Query Libraries
+-------------------------
 
 Some great folks have written their own libraries to interact with Druid
 
-#### Ruby
+#### Node.js
 
-* [madvertise/ruby-druid](https://github.com/madvertise/ruby-druid) - A ruby client for Druid
+* [7eggs/node-druid-query](https://github.com/7eggs/node-druid-query) - A Node.js client for Druid
 
 #### Python
 
@@ -17,13 +17,19 @@ Some great folks have written their own libraries to interact with Druid
 
 #### R
 
--   [RDruid](https://github.com/metamx/RDruid) - Druid connector for R
+* [metamx/RDruid](https://github.com/metamx/RDruid) - Druid connector for R
 
-#### Node.js
+#### Ruby
 
--   [7eggs/node-druid-query](https://github.com/7eggs/node-druid-query) - A Node.js client for Druid
+* [madvertise/ruby-druid](https://github.com/madvertise/ruby-druid) - A ruby client for Druid
 
-#### Helper Libraries
+#### SQL
+
+* [srikalyc/Sql4D](https://github.com/srikalyc/Sql4D) - A SQL client for Druid. Used in production at Yahoo.
+
+
+Community Helper Libraries
+--------------------------
 
 * [madvertise/druid-dumbo](https://github.com/madvertise/druid-dumbo) - Scripts to help generate batch configs for the ingestion of data into Druid
 * [housejester/druid-test-harness](https://github.com/housejester/druid-test-harness) - A set of scripts to simplify standing up some servers and seeing how things work

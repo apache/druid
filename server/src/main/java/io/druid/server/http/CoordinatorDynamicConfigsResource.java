@@ -17,15 +17,23 @@
 
 package io.druid.server.http;
 
+import io.druid.audit.AuditInfo;
+import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.joda.time.Interval;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -35,13 +43,16 @@ import javax.ws.rs.core.Response;
 public class CoordinatorDynamicConfigsResource
 {
   private final JacksonConfigManager manager;
+  private final AuditManager auditManager;
 
   @Inject
   public CoordinatorDynamicConfigsResource(
-      JacksonConfigManager manager
+      JacksonConfigManager manager,
+      AuditManager auditManager
   )
   {
     this.manager = manager;
+    this.auditManager = auditManager;
   }
 
   @GET
@@ -56,14 +67,41 @@ public class CoordinatorDynamicConfigsResource
     ).build();
   }
 
+  // default value is used for backwards compatibility
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response setDynamicConfigs(final CoordinatorDynamicConfig dynamicConfig)
+  public Response setDynamicConfigs(final CoordinatorDynamicConfig dynamicConfig,
+                                    @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+                                    @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+                                    @Context HttpServletRequest req
+  )
   {
-    if (!manager.set(CoordinatorDynamicConfig.CONFIG_KEY, dynamicConfig)) {
+    if (!manager.set(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        dynamicConfig,
+        new AuditInfo(author, comment, req.getRemoteAddr())
+    )) {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
     return Response.ok().build();
+  }
+
+  @GET
+  @Path("/history")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getDatasourceRuleHistory(
+      @QueryParam("interval") final String interval
+  )
+  {
+    Interval theInterval = interval == null ? null : new Interval(interval);
+    return Response.ok(
+        auditManager.fetchAuditHistory(
+            CoordinatorDynamicConfig.CONFIG_KEY,
+            CoordinatorDynamicConfig.CONFIG_KEY,
+            theInterval
+        )
+    )
+                   .build();
   }
 
 }

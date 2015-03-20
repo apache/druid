@@ -17,6 +17,7 @@
 
 package io.druid.indexing.common.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -28,6 +29,16 @@ public class TaskStorageConfig
   @JsonProperty
   @NotNull
   public Duration recentlyFinishedThreshold = new Period("PT24H").toStandardDuration();
+
+  @JsonCreator
+  public TaskStorageConfig(
+      @JsonProperty("recentlyFinishedThreshold") Period period
+  )
+  {
+    if(period != null) {
+      this.recentlyFinishedThreshold = period.toStandardDuration();
+    }
+  }
 
   public Duration getRecentlyFinishedThreshold()
   {

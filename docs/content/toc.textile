@@ -5,6 +5,7 @@
 
 h2. Introduction
 * "About Druid":./
+* "Design":./Design.html
 * "Concepts and Terminology":./Concepts-and-Terminology.html
 
 h2. Getting Started
@@ -41,7 +42,7 @@ h2. Data Ingestion
 h2. Operations
 * "Performance FAQ":./Performance-FAQ.html
 * "Extending Druid":./Modules.html
-* "Booting a Production Cluster":./Booting-a-production-cluster.html
+* "Druid Metrics":./Metrics.html
 
 h2. Querying
 * "Querying":./Querying.html

@@ -38,9 +38,9 @@ import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
 import io.druid.query.Query;
-import io.druid.server.initialization.BaseJettyServerInitializer;
-import io.druid.server.initialization.JettyServerInitializer;
 import io.druid.server.initialization.BaseJettyTest;
+import io.druid.server.initialization.jetty.JettyServerInitUtils;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
@@ -122,7 +122,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
   }
 
-  public static class ProxyJettyServerInit extends BaseJettyServerInitializer
+  public static class ProxyJettyServerInit implements JettyServerInitializer
   {
 
     private final DruidNode node;
@@ -181,8 +181,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               }
           ), "/proxy/*"
       );
-
-      root.addFilter(defaultAsyncGzipFilterHolder(), "/*", null);
+      JettyServerInitUtils.addExtensionFilters(root, injector);
+      root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);

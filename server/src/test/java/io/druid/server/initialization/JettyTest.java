@@ -43,6 +43,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.servlet.http.HttpServletResponse;
+
 public class JettyTest extends BaseJettyTest
 {
 
@@ -178,5 +180,18 @@ public class JettyTest extends BaseJettyTest
     );
 
     latch.await(5, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void testExtensionAuthFilter() throws Exception
+  {
+    URL url = new URL("http://localhost:" + port + "/default");
+    HttpURLConnection get = (HttpURLConnection) url.openConnection();
+    get.setRequestProperty(DummyAuthFilter.AUTH_HDR, DummyAuthFilter.SECRET_USER);
+    Assert.assertEquals(HttpServletResponse.SC_OK, get.getResponseCode());
+
+    get = (HttpURLConnection) url.openConnection();
+    get.setRequestProperty(DummyAuthFilter.AUTH_HDR, "hacker");
+    Assert.assertEquals(HttpServletResponse.SC_UNAUTHORIZED, get.getResponseCode());
   }
 }

@@ -117,6 +117,12 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
               .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
               .withPlacement(new Placement(envConfig.getAvailabilityZone()))
               .withKeyName(workerConfig.getKeyName())
+              .withSubnetId(workerConfig.getSubnetId())
+              .withIamInstanceProfile(
+                  workerConfig.getIamProfile() == null
+                  ? null
+                  : workerConfig.getIamProfile().toIamInstanceProfileSpecification()
+              )
               .withUserData(userDataBase64)
       );
 

@@ -20,6 +20,8 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+
+import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
@@ -37,16 +39,21 @@ public class StaticPathSpec implements PathSpec
   @JsonProperty("paths")
   public String paths;
 
+  @JsonProperty("inputFormat")
+  private final Class<? extends InputFormat> inputFormat;
+
   public StaticPathSpec()
   {
-    this(null);
+    this(null, null);
   }
 
   public StaticPathSpec(
-      String paths
+      String paths,
+      Class<? extends InputFormat> inputFormat
   )
   {
     this.paths = paths;
+    this.inputFormat = inputFormat;
   }
 
   @Override
@@ -55,5 +62,10 @@ public class StaticPathSpec implements PathSpec
     log.info("Adding paths[%s]", paths);
     FileInputFormat.addInputPaths(job, paths);
     return job;
+  }
+
+  public Class<? extends InputFormat> getInputFormat()
+  {
+    return inputFormat;
   }
 }
