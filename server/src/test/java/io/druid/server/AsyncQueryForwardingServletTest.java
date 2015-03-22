@@ -154,33 +154,34 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         }
       };
 
-      root.addServlet(
-          new ServletHolder(
-              new AsyncQueryForwardingServlet(
-                  injector.getInstance(ObjectMapper.class),
-                  injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
-                  hostFinder,
-                  injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
-                  injector.getInstance(DruidHttpClientConfig.class),
-                  new NoopServiceEmitter(),
-                  new RequestLogger()
-                  {
-                    @Override
-                    public void log(RequestLogLine requestLogLine) throws IOException
-                    {
-                      // noop
-                    }
-                  }
-              ) {
+      ServletHolder holder = new ServletHolder(
+          new AsyncQueryForwardingServlet(
+              injector.getInstance(ObjectMapper.class),
+              injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
+              hostFinder,
+              injector.getProvider(org.eclipse.jetty.client.HttpClient.class),
+              injector.getInstance(DruidHttpClientConfig.class),
+              new NoopServiceEmitter(),
+              new RequestLogger()
+              {
                 @Override
-                protected URI rewriteURI(HttpServletRequest request)
+                public void log(RequestLogLine requestLogLine) throws IOException
                 {
-                  URI uri = super.rewriteURI(request);
-                  return URI.create(uri.toString().replace("/proxy", ""));
+                  // noop
                 }
               }
-          ), "/proxy/*"
-      );
+          )
+          {
+            @Override
+            protected URI rewriteURI(HttpServletRequest request)
+            {
+              URI uri = super.rewriteURI(request);
+              return URI.create(uri.toString().replace("/proxy", ""));
+            }
+          });
+      //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
+      holder.setInitParameter("maxThreads", "256");
+      root.addServlet(holder, "/proxy/*");
       JettyServerInitUtils.addExtensionFilters(root, injector);
       root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/slow/*", null);
