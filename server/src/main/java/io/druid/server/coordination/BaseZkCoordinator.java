@@ -119,7 +119,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                         child.getData(), DataSegmentChangeRequest.class
                     );
 
-                    log.info("New request[%s] with node[%s].", request.asString(), path);
+                    log.info("New request[%s] with zNode[%s].", request.asString(), path);
 
                     try {
                       request.go(
@@ -143,9 +143,9 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                                   curator.delete().guaranteed().forPath(path);
                                 }
                                 catch (Exception e1) {
-                                  log.error(e1, "Failed to delete node[%s], but ignoring exception.", path);
+                                  log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
                                 }
-                                log.error(e, "Exception while removing node[%s]", path);
+                                log.error(e, "Exception while removing zNode[%s]", path);
                                 throw Throwables.propagate(e);
                               }
                             }
@@ -157,7 +157,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
                         curator.delete().guaranteed().forPath(path);
                       }
                       catch (Exception e1) {
-                        log.error(e1, "Failed to delete node[%s], but ignoring exception.", path);
+                        log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
                       }
 
                       log.makeAlert(e, "Segment load/unload: uncaught exception.")
@@ -168,7 +168,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
 
                     break;
                   case CHILD_REMOVED:
-                    log.info("Node[%s] was removed", event.getData().getPath());
+                    log.info("zNode[%s] was removed", event.getData().getPath());
                     break;
                   default:
                     log.info("Ignoring event[%s]", event);
