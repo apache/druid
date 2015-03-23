@@ -79,7 +79,9 @@ When submitting a pull request (PR), please use the following guidelines:
 
   Go to your Druid fork main page
 
+  ```
   https://github.com/<username>/druid
+  ```
 
   If you recently pushed your changes GitHub will automatically pop up a
   `Compare & pull request` button for any branches you recently pushed to. If you
@@ -91,7 +93,7 @@ When submitting a pull request (PR), please use the following guidelines:
 
 1. Addressing code review comments
 
-  Repeat steps 4. through 6. to address any code review comments and
+  Repeat steps 5. through 7. to address any code review comments and
   rebase your changes if necessary.
 
   Push your updated changes to update the pull request
