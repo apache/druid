@@ -27,6 +27,7 @@ import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.segment.CompressedPools;
+import io.druid.segment.serde.ColumnPartSerde;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

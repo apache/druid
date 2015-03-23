@@ -76,8 +76,10 @@ import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.serde.CompressedDictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
+import io.druid.segment.serde.LegacyDictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
@@ -826,8 +828,8 @@ public class IndexMaker
     dimBuilder.setHasMultipleValues(hasMultipleValues);
 
     // make dimension columns
-    CompressedIntsIndexedSupplier singleValCol = null;
-    VSizeIndexed multiValCol = null;
+    List<Integer> singleValCol;
+    final VSizeIndexed multiValCol;
 
     ColumnDictionaryEntryStore adder = hasMultipleValues
                                        ? new MultiValColumnDictionaryEntryStore()
@@ -882,6 +884,8 @@ public class IndexMaker
           );
 
           final int dictionarySize = dictionary.size();
+
+          singleValCol = null;
           multiValCol = VSizeIndexed.fromIterable(
               FunctionalIterable
                   .create(vals)
@@ -936,6 +940,7 @@ public class IndexMaker
           );
         } else {
           final int dictionarySize = dictionary.size();
+          singleValCol = null;
           multiValCol = VSizeIndexed.fromIterable(
               FunctionalIterable
                   .create(vals)
@@ -974,6 +979,7 @@ public class IndexMaker
         }
       } else {
         final int dictionarySize = dictionary.size();
+        singleValCol = null;
         multiValCol = VSizeIndexed.fromIterable(
             FunctionalIterable
                 .create(vals)
@@ -1009,74 +1015,62 @@ public class IndexMaker
               Iterables.concat(nullList, dimensionValues),
               GenericIndexed.stringStrategy
           );
-          singleValCol = CompressedIntsIndexedSupplier.fromList(
-              new AbstractList<Integer>()
-              {
-                @Override
-                public Integer get(int index)
-                {
-                  Integer val = vals.get(index);
-                  if (val == null) {
-                    return 0;
-                  }
-                  return val + 1;
-                }
+          multiValCol = null;
+          singleValCol = new AbstractList<Integer>()
+          {
+            @Override
+            public Integer get(int index)
+            {
+              Integer val = vals.get(index);
+              if (val == null) {
+                return 0;
+              }
+              return val + 1;
+            }
 
-                @Override
-                public int size()
-                {
-                  return vals.size();
-                }
-              },
-              CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
-              IndexIO.BYTE_ORDER,
-              CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
-          );
+            @Override
+            public int size()
+            {
+              return vals.size();
+            }
+          };
         } else {
-          singleValCol = CompressedIntsIndexedSupplier.fromList(
-              new AbstractList<Integer>()
-              {
-                @Override
-                public Integer get(int index)
-                {
-                  Integer val = vals.get(index);
-                  if (val == null) {
-                    return 0;
-                  }
-                  return val;
-                }
+          multiValCol = null;
+          singleValCol = new AbstractList<Integer>()
+          {
+            @Override
+            public Integer get(int index)
+            {
+              Integer val = vals.get(index);
+              if (val == null) {
+                return 0;
+              }
+              return val;
+            }
 
-                @Override
-                public int size()
-                {
-                  return vals.size();
-                }
-              },
-              CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
-              IndexIO.BYTE_ORDER,
-              CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
-          );
+            @Override
+            public int size()
+            {
+              return vals.size();
+            }
+          };
         }
       } else {
-        singleValCol = CompressedIntsIndexedSupplier.fromList(
-            new AbstractList<Integer>()
-            {
-              @Override
-              public Integer get(int index)
-              {
-                return vals.get(index);
-              }
+        multiValCol = null;
+        singleValCol = new AbstractList<Integer>()
+        {
+          @Override
+          public Integer get(int index)
+          {
+            return vals.get(index);
+          }
 
-              @Override
-              public int size()
-              {
-                return vals.size();
-              }
-            },
-            CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
-            IndexIO.BYTE_ORDER,
-            CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
-        );
+          @Override
+          public int size()
+          {
+            return vals.size();
+          }
+        };
       }
     }
 
@@ -1199,17 +1193,38 @@ public class IndexMaker
 
     log.info("Completed dimension[%s] with cardinality[%,d]. Starting write.", dimension, dictionary.size());
 
+    final DictionaryEncodedColumnPartSerde dimPart;
+    final boolean compressed = true; // TODO make this configurable
+    if (compressed) {
+      dimPart = new CompressedDictionaryEncodedColumnPartSerde(
+          dictionary,
+          singleValCol == null ? null : CompressedIntsIndexedSupplier.fromList(
+              singleValCol,
+              CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
+              IndexIO.BYTE_ORDER,
+              CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+          ),
+          multiValCol,
+          bitmapSerdeFactory,
+          bitmaps,
+          spatialIndex,
+          IndexIO.BYTE_ORDER
+      );
+    } else {
+      dimPart = new LegacyDictionaryEncodedColumnPartSerde(
+          dictionary,
+          singleValCol == null ? null : VSizeIndexedInts.fromList(singleValCol, dictionary.size()),
+          multiValCol,
+          bitmapSerdeFactory,
+          bitmaps,
+          spatialIndex,
+          IndexIO.BYTE_ORDER
+      );
+    }
+
     writeColumn(
         v9Smoosher,
-        new DictionaryEncodedColumnPartSerde(
-            dictionary,
-            singleValCol,
-            multiValCol,
-            bitmapSerdeFactory,
-            bitmaps,
-            spatialIndex,
-            IndexIO.BYTE_ORDER
-        ),
+        dimPart,
         dimBuilder,
         dimension
     );

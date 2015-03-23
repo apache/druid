@@ -20,7 +20,6 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -66,35 +65,32 @@ import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
-import io.druid.segment.data.IndexedLongs;
-import io.druid.segment.data.IndexedMultivalueInts;
+import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
-import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
+import io.druid.segment.serde.CompressedDictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnSupplier;
+import io.druid.segment.serde.LegacyDictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -414,7 +410,7 @@ public class IndexIO
             continue;
           }
 
-          CompressedIntsIndexedSupplier singleValCol = null;
+          List<Integer> singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
           ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
@@ -478,42 +474,58 @@ public class IndexIO
             }
 
             final VSizeIndexed finalMultiValCol = multiValCol;
-            singleValCol = CompressedIntsIndexedSupplier.fromList(
-                new AbstractList<Integer>()
-                {
-                  @Override
-                  public Integer get(int index)
-                  {
-                    final VSizeIndexedInts ints = finalMultiValCol.get(index);
-                    return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
-                  }
+            singleValCol = new AbstractList<Integer>()
+            {
+              @Override
+              public Integer get(int index)
+              {
+                final VSizeIndexedInts ints = finalMultiValCol.get(index);
+                return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
+              }
 
-                  @Override
-                  public int size()
-                  {
-                    return finalMultiValCol.size();
-                  }
-                },
-                CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
-                BYTE_ORDER,
-                CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
-            );
+              @Override
+              public int size()
+              {
+                return finalMultiValCol.size();
+              }
+            };
+
             multiValCol = null;
           } else {
             builder.setHasMultipleValues(true);
           }
 
-          builder.addSerde(
-              new DictionaryEncodedColumnPartSerde(
-                  dictionary,
-                  singleValCol,
-                  multiValCol,
-                  bitmapSerdeFactory,
-                  bitmaps,
-                  spatialIndex,
-                  BYTE_ORDER
-              )
-          );
+          final boolean compressed = true; // TODO make this configurable
+          if(compressed) {
+            builder.addSerde(
+                new CompressedDictionaryEncodedColumnPartSerde(
+                    dictionary,
+                    singleValCol != null ? CompressedIntsIndexedSupplier.fromList(
+                        singleValCol,
+                        CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
+                        BYTE_ORDER,
+                        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+                    ) : null,
+                    multiValCol,
+                    bitmapSerdeFactory,
+                    bitmaps,
+                    spatialIndex,
+                    BYTE_ORDER
+                )
+            );
+          } else {
+            builder.addSerde(
+                new LegacyDictionaryEncodedColumnPartSerde(
+                    dictionary,
+                    singleValCol != null ? VSizeIndexedInts.fromList(singleValCol, dictionary.size()) : null,
+                    multiValCol,
+                    bitmapSerdeFactory,
+                    bitmaps,
+                    spatialIndex,
+                    BYTE_ORDER
+                )
+            );
+          }
 
           final ColumnDescriptor serdeficator = builder.build();
 
@@ -676,19 +688,19 @@ public class IndexIO
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
                     null,
-                    Suppliers.<IndexedMultivalueInts<IndexedInts>>ofInstance(
+                    Suppliers.<IndexedMultivalue<IndexedInts>>ofInstance(
                         index.getDimColumn(dimension)
                     ),
                     columnConfig.columnCacheSizeBytes()
                 )
             )
-                    .setBitmapIndex(
-                        new BitmapIndexColumnPartSupplier(
-                            new ConciseBitmapFactory(),
-                            index.getBitmapIndexes().get(dimension),
-                            index.getDimValueLookup(dimension)
-                        )
-                    );
+            .setBitmapIndex(
+                new BitmapIndexColumnPartSupplier(
+                    new ConciseBitmapFactory(),
+                    index.getBitmapIndexes().get(dimension),
+                    index.getDimValueLookup(dimension)
+                )
+            );
         if (index.getSpatialIndexes().get(dimension) != null) {
           builder.setSpatialIndex(
               new SpatialIndexColumnPartSupplier(

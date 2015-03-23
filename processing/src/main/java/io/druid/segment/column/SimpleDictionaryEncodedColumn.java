@@ -18,11 +18,9 @@
 package io.druid.segment.column;
 
 import io.druid.segment.data.CachingIndexed;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalueInts;
+import io.druid.segment.data.IndexedMultivalue;
 
-import java.io.Closeable;
 import java.io.IOException;
 
 /**
@@ -31,12 +29,12 @@ public class SimpleDictionaryEncodedColumn
     implements DictionaryEncodedColumn
 {
   private final IndexedInts column;
-  private final IndexedMultivalueInts<IndexedInts> multiValueColumn;
+  private final IndexedMultivalue<IndexedInts> multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
       IndexedInts singleValueColumn,
-      IndexedMultivalueInts<IndexedInts> multiValueColumn,
+      IndexedMultivalue<IndexedInts> multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {
