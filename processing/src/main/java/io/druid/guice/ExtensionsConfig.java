@@ -48,7 +48,7 @@ public class ExtensionsConfig
   @JsonProperty
   @NotNull
   private List<String> remoteRepositories = ImmutableList.of(
-      "http://repo1.maven.org/maven2/",
+      "https://repo1.maven.org/maven2/",
       "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
   );
 
