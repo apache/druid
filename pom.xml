@@ -70,7 +70,7 @@
         <jetty.version>9.2.5.v20141112</jetty.version>
         <druid.api.version>0.3.5</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
-        <log4j.version>2.1</log4j.version>
+        <log4j.version>2.2</log4j.version>
         <slf4j.version>1.7.10</slf4j.version>
     </properties>
 
@@ -611,7 +611,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
-                        <argLine>-Duser.language=en -Duser.country=US</argLine>
+                        <argLine>-Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager</argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>

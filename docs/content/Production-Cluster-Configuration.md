@@ -92,6 +92,7 @@ JVM Configuration:
 -XX:+PrintGCTimeStamps
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Djava.io.tmpdir=/mnt/tmp
 ```
 
@@ -147,6 +148,7 @@ JVM Configuration:
 -XX:+PrintGCTimeStamps
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Djava.io.tmpdir=/mnt/tmp
 ```
 
@@ -210,6 +212,7 @@ JVM Configuration:
 -XX:+PrintGCTimeStamps
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Djava.io.tmpdir=/mnt/tmp
 ```
 
@@ -249,6 +252,7 @@ JVM Configuration:
 -XX:+PrintGCTimeStamps
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Djava.io.tmpdir=/mnt/tmp
 ```
 
@@ -301,6 +305,7 @@ JVM Configuration:
 -XX:+PrintGCTimeStamps
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Djava.io.tmpdir=/mnt/tmp
 
 -Dcom.sun.management.jmxremote.port=17071
