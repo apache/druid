@@ -35,6 +35,10 @@ public class DruidHttpClientConfig
   @JsonProperty
   private Period readTimeout = new Period("PT15M");
 
+  @JsonProperty
+  @Min(1)
+  private int numMaxThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
+
   public int getNumConnections()
   {
     return numConnections;
@@ -43,5 +47,10 @@ public class DruidHttpClientConfig
   public Duration getReadTimeout()
   {
     return readTimeout == null ? null : readTimeout.toStandardDuration();
+  }
+
+  public int getNumMaxThreads()
+  {
+    return numMaxThreads;
   }
 }
