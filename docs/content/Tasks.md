@@ -120,18 +120,19 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 }
 ```
 
+
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index_hadoop".|yes|
 |spec|A Hadoop Index Spec. See [Batch Ingestion](Batch-ingestion.html)|yes|
-|hadoopCoordinates|The Maven \<groupId\>:\<artifactId\>:\<version\> of Hadoop to use. The default is "org.apache.hadoop:hadoop-client:2.3.0".|no|
+|hadoopCoordinates|The Maven \<groupId\>:\<artifactId\>:\<version\> of Hadoop to use. The default is "org.apache.hadoop:hadoop-client:2.6.0".|no|
 
 
 The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopBatchIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `updaterJobSpec`. The Indexing Service takes care of setting these fields internally.
 
 #### Using your own Hadoop distribution
 
-Druid is compiled against Apache hadoop-client 2.3.0. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-client 2.3.0, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution. For non-API compatible versions, please see [here](Other-Hadoop.html).
+Druid is compiled against Apache hadoop-client 2.6.0. However, if you happen to use a different flavor of hadoop that is API compatible with hadoop-client 2.3.0, you should only have to change the hadoopCoordinates property to point to the maven artifact used by your distribution. For non-API compatible versions, please see [here](Other-Hadoop.html).
 
 #### Resolving dependency conflicts running HadoopIndexTask
 

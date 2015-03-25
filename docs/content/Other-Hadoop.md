@@ -5,9 +5,9 @@ Working with different versions of Hadoop may require a bit of extra work for th
 
 Working with Hadoop 2.x
 -----------------------
-The default version of Hadoop bundled with Druid is 2.3. This should work out of the box.
+The default version of Hadoop bundled with Druid is 2.6.0. This should work out of the box.
 
-To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`. You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.4.0 as `["org.apache.hadoop:hadoop-client:2.4.0"]`).
+To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`. You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.6.0 as `["org.apache.hadoop:hadoop-client:2.6.0"]`).
 
 The Hadoop Index Task takes this parameter has part of the task JSON and the standalone Hadoop indexer takes this parameter as a command line argument.
 

@@ -44,7 +44,7 @@ import java.util.List;
 public class CliHadoopIndexer implements Runnable
 {
 
-  private static final String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.3.0";
+  private static final String DEFAULT_HADOOP_COORDINATES = "org.apache.hadoop:hadoop-client:2.6.0";
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
