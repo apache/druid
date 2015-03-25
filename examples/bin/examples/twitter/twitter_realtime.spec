@@ -1,12 +1,44 @@
-{
-  "description": "Ingestion spec for Twitter spritzer. Dimension values taken from io.druid.examples.twitter.TwitterSpritzerFirehoseFactory",
-  "spec": {
+[
+  {
     "dataSchema": {
       "dataSource": "twitterstream",
-      "granularitySpec": {
-        "queryGranularity": "all",
-        "segmentGranularity": "hour",
-        "type": "uniform"
+      "parser": {
+        "parseSpec": {
+          "format": "json",
+          "timestampSpec": {
+            "column": "utcdt",
+            "format": "iso"
+          },
+          "dimensionsSpec": {
+            "dimensions": [
+              "text",
+              "htags",
+              "contributors",
+              "lat",
+              "lon",
+              "retweet_count",
+              "follower_count",
+              "friendscount",
+              "lang",
+              "utc_offset",
+              "statuses_count",
+              "user_id",
+              "ts"
+            ],
+            "dimensionExclusions": [
+             
+            ],
+            "spatialDimensions": [
+              {
+                "dimName": "geo",
+                "dims": [
+                  "lat",
+                  "lon"
+                ]
+              }
+            ]
+          }
+        }
       },
       "metricsSpec": [
         {
@@ -94,58 +126,32 @@
           "type": "max"
         }
       ],
-      "parser": {
-        "parseSpec": {
-          "dimensionsSpec": {
-            "dimensions": [
-              "text",
-              "htags",
-              "contributors",
-              "lat",
-              "lon",
-              "retweet_count",
-              "follower_count",
-              "friendscount",
-              "lang",
-              "utc_offset",
-              "statuses_count",
-              "user_id",
-              "ts"
-            ],
-            "dimensionExclusions": [
-            ],
-            "spatialDimensions": [
-              {
-                "dimName": "geo",
-                "dims": [
-                  "lat",
-                  "lon"
-                ]
-              }
-            ]
-          },
-          "format": "json",
-          "timestampSpec": {
-            "column": "ts",
-            "format": "millis"
-          }
-        }
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "NONE"
       }
     },
     "ioConfig": {
+      "type": "realtime",
       "firehose": {
+        "type": "twitzer",
         "maxEventCount": 500000,
-        "maxRunMinutes": 120,
-        "type": "twitzer"
+        "maxRunMinutes": 120
       },
-      "type": "realtime"
+      "plumber": {
+        "type": "realtime"
+      }
     },
     "tuningConfig": {
-      "intermediatePersistPeriod": "PT10m",
-      "maxRowsInMemory": 500000,
       "type": "realtime",
-      "windowPeriod": "PT10m"
+      "maxRowsInMemory": 500000,
+      "intermediatePersistPeriod": "PT2m",
+      "windowPeriod": "PT3m",
+      "basePersistDirectory": "\/tmp\/realtime\/basePersist",
+      "rejectionPolicy": {
+        "type": "messageTime"
+      }
     }
-  },
-  "type": "index_realtime"
-}
+  }
+]
