@@ -43,7 +43,6 @@ public class DruidSecondaryModule implements Module
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final Validator validator;
-  private final JsonConfigurator jsonConfigurator;
 
   @Inject
   public DruidSecondaryModule(
@@ -51,8 +50,7 @@ public class DruidSecondaryModule implements Module
       ConfigurationObjectFactory factory,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      Validator validator,
-      JsonConfigurator jsonConfigurator
+      Validator validator
   )
   {
     this.properties = properties;
@@ -60,7 +58,6 @@ public class DruidSecondaryModule implements Module
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.validator = validator;
-    this.jsonConfigurator = jsonConfigurator;
   }
 
   @Override
@@ -69,10 +66,9 @@ public class DruidSecondaryModule implements Module
     binder.install(new DruidGuiceExtensions());
     binder.bind(Properties.class).toInstance(properties);
     binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
-    // make objectMapper eager to ensure jackson gets setup with guice injection for JsonConfigurator
-    binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class)).asEagerSingleton();
+    binder.bind(ObjectMapper.class).to(Key.get(ObjectMapper.class, Json.class));
     binder.bind(Validator.class).toInstance(validator);
-    binder.bind(JsonConfigurator.class).toInstance(jsonConfigurator);
+    binder.bind(JsonConfigurator.class);
   }
 
   @Provides @LazySingleton @Json
