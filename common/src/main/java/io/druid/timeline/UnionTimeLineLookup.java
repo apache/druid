@@ -20,8 +20,11 @@ package io.druid.timeline;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import com.metamx.common.guava.Comparators;
 import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
+
+import java.util.Comparator;
 
 
 public class UnionTimeLineLookup<VersionType, ObjectType> implements TimelineLookup<VersionType, ObjectType>
@@ -37,7 +40,7 @@ public class UnionTimeLineLookup<VersionType, ObjectType> implements TimelineLoo
   @Override
   public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookup(final Interval interval)
   {
-    return Iterables.concat(
+    return Iterables.mergeSorted(
         Iterables.transform(
             delegates,
             new Function<TimelineLookup<VersionType, ObjectType>, Iterable<TimelineObjectHolder<VersionType, ObjectType>>>()
@@ -48,7 +51,17 @@ public class UnionTimeLineLookup<VersionType, ObjectType> implements TimelineLoo
                 return input.lookup(interval);
               }
             }
-        )
+        ),
+        new Comparator<TimelineObjectHolder<VersionType, ObjectType>>()
+        {
+          @Override
+          public int compare(
+              TimelineObjectHolder<VersionType, ObjectType> o1, TimelineObjectHolder<VersionType, ObjectType> o2
+          )
+          {
+            return Comparators.intervalsByStartThenEnd().compare(o1.getInterval(), o2.getInterval());
+          }
+        }
     );
   }
 

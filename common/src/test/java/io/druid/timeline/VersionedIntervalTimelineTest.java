@@ -1608,10 +1608,10 @@ public class VersionedIntervalTimelineTest
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "3", 5),
-            createExpected("2011-04-02/2011-04-06", "2", 1),
-            createExpected("2011-04-06/2011-04-09", "3", 4),
             createExpected("2011-04-01/2011-04-02", "3", 5),
             createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-06/2011-04-09", "3", 4),
             createExpected("2011-04-06/2011-04-09", "3", 4)
         ),
         (List)Lists.newArrayList(lookup.lookup(new Interval("2011-04-01/2011-04-09")))
@@ -1632,12 +1632,43 @@ public class VersionedIntervalTimelineTest
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "3", 5),
-            createExpected("2011-04-02/2011-04-06", "2", 1),
-            createExpected("2011-04-06/2011-04-09", "3", 4),
             createExpected("2011-04-01/2011-04-02", "3", 5),
             createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-02/2011-04-06", "2", 1),
+            createExpected("2011-04-06/2011-04-09", "3", 4),
             createExpected("2011-04-06/2011-04-09", "3", 4)
         ),
         (List)Lists.newArrayList(lookup.lookup(new Interval("2011-04-01/2011-04-09")))    );
   }
+
+  @Test
+  public void testUnionTimeLineLookupReturnsSortedValues()
+  {
+    timeline = makeStringIntegerTimeline();
+    add("2011-04-02/2011-04-06", "1", 1);
+    add("2011-04-03/2011-04-09", "9", 2);
+    VersionedIntervalTimeline t1 = timeline;
+    timeline = makeStringIntegerTimeline();
+    add("2011-04-01/2011-04-03", "2", 1);
+    add("2011-04-03/2011-04-10", "8", 2);
+    VersionedIntervalTimeline t2 = timeline;
+    TimelineLookup<String, Integer> lookup = new UnionTimeLineLookup<String, Integer>(
+        Arrays.<TimelineLookup<String, Integer>>asList(
+            t1, t2
+        )
+    );
+    assertValues(
+        Arrays.asList(
+            createExpected("2011-04-01/2011-04-03", "2", 1),
+            createExpected("2011-04-02/2011-04-03", "1", 1),
+            createExpected("2011-04-03/2011-04-09", "9", 2),
+            createExpected("2011-04-03/2011-04-10", "8", 2)
+
+        ),
+        (List) Lists.newArrayList(lookup.lookup(new Interval("2011-04-01/2011-04-11")))
+    );
+  }
+
+
+
 }
