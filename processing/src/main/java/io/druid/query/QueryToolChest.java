@@ -76,6 +76,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return runner;
   }
 
+  /**
+   * @param query
+   * @param segments list of segments sorted by segment intervals.
+   * @return list of segments to be queried in order to determine query results.
+   */
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
