@@ -94,9 +94,6 @@
           "#de.wikipedia",
           "#ja.wikipedia"
         ]
-      },
-      "plumber": {
-        "type": "realtime"
       }
     },
     "tuningConfig": {

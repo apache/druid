@@ -230,9 +230,6 @@ The indexing service can also run real-time tasks. These tasks effectively trans
           "auto.commit.enable": "false"
         },
         "feed": "your_kafka_topic"
-      },
-      "plumber": {
-        "type": "realtime"
       }
     },
     "tuningConfig": {

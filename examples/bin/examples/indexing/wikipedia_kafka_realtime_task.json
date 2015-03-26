@@ -73,9 +73,6 @@
           "auto.commit.enable": "false"
         },
         "feed": "wikipedia"
-      },
-      "plumber": {
-        "type": "realtime"
       }
     },
     "tuningConfig": {
