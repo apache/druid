@@ -56,6 +56,9 @@ druid.router.tierToBrokerMap={"hot":"druid:prod:broker-hot","_default_tier":"dru
 druid.router.http.numConnections=50
 druid.router.http.readTimeout=PT5M
 
+# Number of threads used by the router proxy http client
+druid.router.http.numMaxThreads=100
+
 druid.server.http.numThreads=100
 ```
 

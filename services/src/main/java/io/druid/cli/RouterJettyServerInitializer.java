@@ -89,7 +89,11 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
         requestLogger
     );
     asyncQueryForwardingServlet.setTimeout(httpClientConfig.getReadTimeout().getMillis());
-    root.addServlet(new ServletHolder(asyncQueryForwardingServlet), "/druid/v2/*");
+    ServletHolder sh = new ServletHolder(asyncQueryForwardingServlet);
+    //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
+    sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
+
+    root.addServlet(sh, "/druid/v2/*");
     JettyServerInitUtils.addExtensionFilters(root, injector);
     root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
