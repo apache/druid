@@ -32,6 +32,7 @@ Configuration:
 -Xmx256m
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 
 -Ddruid.indexer.queue.startDelay=PT0M
 -Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
@@ -56,6 +57,7 @@ Configuration:
 -Xmx256m
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 
 druid.coordinator.startDelay=PT70s
 ```
@@ -77,6 +79,7 @@ Configuration:
 -Xmx256m
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 
 druid.server.maxSize=10000000000
 
@@ -103,6 +106,7 @@ Configuration:
 -Xmx256m
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 
 druid.processing.buffer.sizeBytes=100000000
 druid.processing.numThreads=1
