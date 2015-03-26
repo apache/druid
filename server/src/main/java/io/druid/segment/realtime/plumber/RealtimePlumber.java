@@ -267,6 +267,7 @@ public class RealtimePlumber implements Plumber
                           throw new ISE("No timeline entry at all!");
                         }
 
+                        // The realtime plumber always uses SingleElementPartitionChunk
                         final Sink theSink = holder.getObject().getChunk(0).getObject();
 
                         if (theSink == null) {
