@@ -66,38 +66,27 @@
 % 1st. author
 \alignauthor
 Fangjin Yang\\
-       \affaddr{Metamarkets Group, Inc.}\\
-       \email{fangjin@metamarkets.com}
+     \affaddr{Metamarkets Group, Inc.}\\
+     \email{fangjin@metamarkets.com}
 % 2nd. author
 \alignauthor
 Gian Merlino\\
-       \affaddr{Metamarkets Group, Inc.}\\
-       \email{gian@metamarkets.com}
+     \affaddr{Metamarkets Group, Inc.}\\
+     \email{gian@metamarkets.com}
 % 3rd. author
 \alignauthor 
 Xavier Léauté\\
-       \affaddr{Metamarkets Group, Inc.}\\
-       \email{xavier@metamarkets.com}
-\and  % use '\and' if you need 'another row' of author names
-% 4th. author
-\alignauthor
-Nishant Bangarwa\\
-       \affaddr{Metamarkets Group, Inc.}\\
-       \email{nishant.bangarwa@metamarkets.com}
-% 5th. author
-\alignauthor
-Charles Allen\\
-       \affaddr{Metamarkets Group, Inc.}\\
-       \email{charles.allen@metamarkets.com}
-% 6th. author
-\alignauthor
-Eric Tschetter\\
-       \email{echeddar@gmail.com}
+     \affaddr{Metamarkets Group, Inc.}\\
+     \email{xavier@metamarkets.com}
 }
 % There's nothing stopping you putting the seventh, eighth, etc.
 % author on the opening page (as the 'third row') but we ask,
 % for aesthetic reasons that you place these 'additional authors'
 % in the \additional authors block, viz.
+\additionalauthors{Nishant Bangarwa (Metamarkets Group, Inc.,
+{\texttt{nishant.bangarwa@metamarkets.com}}), Charles Allen, PhD (Metamarkets
+Group, Inc., {\texttt{charles.allen@metamarkets.com}}), Eric Tschetter
+({\texttt{echeddar@gmail.com}})}
 % Just remember to make sure that the TOTAL number of authors
 % is the number that will appear on the first page PLUS the
 % number that will appear in the \additionalauthors section.
@@ -128,7 +117,7 @@ is able to solve a wide range of distributed computing problems. However, as
 much as Hadoop is lauded for its wide range of use cases, it is derided for its
 high latency in processing and returning results. A common approach to surface
 data insights is to run MapReduce jobs that may take several hours to complete.
- 
+
 Data analysis and data-driven applications are becoming increasingly important
 in industry, and the long query times seen with using frameworks such as Hadoop
 are becoming increasingly intolerable. User facing applications are replacing
@@ -144,7 +133,8 @@ particularly designed for analytics, but these technologies are still
 frequently selected as serving layers because of their general popularity.
 Hence, solutions that involve these technologies can be inflexible, or suffer
 from architecture drawbacks that prevent them from returning queries fast
-enough to power interactive, user-facing applications \cite{tschetter2011druid}.
+enough to power interactive, user-facing applications
+\cite{tschetter2011druid}.
 
 An ideal serving layer by itself is still insufficient as a complete analytics
 solution. In most real-world use cases, raw data cannot be directly stored in
@@ -153,8 +143,9 @@ processed (transformed, or cleaned) before it is usable. Hadoop remains a
 popular option to process raw data and many organizations first process raw
 data in Hadoop before loading the result into the serving layer. The drawback
 of this approach is that loading and processing batch data is slow, and
-insights on events are often obtained hours after the events have occurred [].
- 
+insights on events are often obtained hours after the events have occurred
+\cite{yang2014radstack}.
+
 To address the problem of delays in data freshness caused by batch processing
 frameworks, numerous open-source stream processing frameworks such as Apache
 Storm\cite{marz2013storm}, Apache Spark Streaming\cite{zaharia2012discretized},
@@ -166,20 +157,21 @@ provide the same correctness guarantees as batch processing frameworks. Events
 can come in days late, and may need to be corrected after the fact. Large
 blocks of data may also need to be reprocessed at any time as new columns are
 added or removed.
- 
+
 The RADStack is an open source, end-to-end solution meant to offer flexible,
 low-latency analytic queries on near real-time data. The solution combines the
 low latency guarantees of stream processors and the correctness and flexibility
 guarantees of batch processors. It also introduces a serving layer specifically
 designed for interactive analytics. The stack’s main building blocks are Apache
-Kafka\cite{kreps2011kafka}, Apache Samza, Apache Hadoop, and Druid[], and we’ve
-found that the combination of technologies is flexible enough to handle a wide
-variety of processing requirements and query loads. Each piece of the stack is
-designed to do a specific set of things very well. This paper will cover the
-details and design principles of the RADStack. Our contributions are around the
-architecture of the stack itself, the introduction of Druid as a serving layer,
-and our model for unifying real-time and historical workflows.
- 
+Kafka\cite{kreps2011kafka}, Apache Samza, Apache Hadoop, and Druid
+\cite{yang2014druid}, and we’ve found that the combination of technologies is
+flexible enough to handle a wide variety of processing requirements and query
+loads. Each piece of the stack is designed to do a specific set of things very
+well. This paper will cover the details and design principles of the RADStack.
+Our contributions are around the architecture of the stack itself, the
+introduction of Druid as a serving layer, and our model for unifying real-time
+and historical workflows.
+
 The structure of the paper is as follows: Section \ref{sec:background}
 describes the problems and use cases that led to the creation of the RADStack.
 Section \ref{sec:serving} describes Druid, the serving layer of the stack, and
@@ -195,19 +187,19 @@ discuss the related work.
 \label{sec:background}
 
 \begin{table*}
-  \centering
-  \begin{tabular}{| l | l | l | l | l | l | l | l |}
-    \hline
-    \textbf{Timestamp} & \textbf{Publisher} & \textbf{Advertiser} & \textbf{Gender} & \textbf{City} & \textbf{Click} & \textbf{Price} \\ \hline
-    2011-01-01T01:01:35Z & bieberfever.com & google.com & Male & San Francisco & 0 & 0.65 \\ \hline
-    2011-01-01T01:03:63Z & bieberfever.com & google.com & Male & Waterloo & 0 & 0.62 \\ \hline
-    2011-01-01T01:04:51Z & bieberfever.com & google.com & Male & Calgary & 1 & 0.45 \\ \hline
-    2011-01-01T01:00:00Z & ultratrimfast.com & google.com & Female & Taiyuan & 0 & 0.87 \\ \hline
-    2011-01-01T02:00:00Z & ultratrimfast.com & google.com & Female & New York & 0 & 0.99 \\ \hline
-    2011-01-01T02:00:00Z & ultratrimfast.com & google.com & Female & Vancouver & 1 & 1.53 \\ \hline
-  \end{tabular}
-  \caption{Sample ad data. These events are created when users view or click on ads.}
-  \label{tab:sample_data}
+\centering
+\begin{tabular}{| l | l | l | l | l | l | l | l |}
+  \hline
+  \textbf{Timestamp} & \textbf{Publisher} & \textbf{Advertiser} & \textbf{Gender} & \textbf{City} & \textbf{Click} & \textbf{Price} \\ \hline
+  2011-01-01T01:01:35Z & bieberfever.com & google.com & Male & San Francisco & 0 & 0.65 \\ \hline
+  2011-01-01T01:03:63Z & bieberfever.com & google.com & Male & Waterloo & 0 & 0.62 \\ \hline
+  2011-01-01T01:04:51Z & bieberfever.com & google.com & Male & Calgary & 1 & 0.45 \\ \hline
+  2011-01-01T01:00:00Z & ultratrimfast.com & google.com & Female & Taiyuan & 0 & 0.87 \\ \hline
+  2011-01-01T02:00:00Z & ultratrimfast.com & google.com & Female & New York & 0 & 0.99 \\ \hline
+  2011-01-01T02:00:00Z & ultratrimfast.com & google.com & Female & Vancouver & 1 & 1.53 \\ \hline
+\end{tabular}
+\caption{Sample ad data. These events are created when users view or click on ads.}
+\label{tab:sample_data}
 \end{table*}
 
 The development of RADStack came about iteratively. Different technologies were
@@ -217,8 +209,8 @@ startup focused in the advertising technology space, and has since been adopted
 by other technology companies \cite{2014yahoo}. In the early days of Metamarkets, we wanted
 to build an analytics dashboard where users could arbitrarily explore their
 data. An example of the data found in online advertising space is shown in
-Table~\ref{tab:sample_data}. An example dashboard is shown in Figure [].
- 
+Table~\ref{tab:sample_data}. 
+
 The data shown in Table~\ref{tab:sample_data} is fairly standard in OLAP
 workflows. The data is transactional (timeseries data) and tends to be very
 append heavy. Each event is comprised of three components: a timestamp
@@ -230,7 +222,7 @@ publisher google.com?” or “How many impressions were seen over the last quar
 from the city of San Francisco?” We wanted to issue queries over any arbitrary
 number of dimensions and have results return in at most several hundred
 milliseconds.
- 
+
 In addition to the query latency needs, we needed to support multi-tenancy.
 User-facing applications often face highly concurrent workloads and good
 applications need to provide relatively consistent performance to all users.
@@ -239,7 +231,7 @@ is costly and many businesses cannot afford to wait if a system is unavailable
 in the face of software upgrades or network failure. Downtime for startups, who
 often lack proper internal operations management, can determine business
 success or failure.
- 
+
 Following industry standard practices, we evaluated various options for a
 serving layer. We tried to select a serving layer that was optimized for the
 types of queries we wanted to make, and we initially began our experiments with
@@ -249,21 +241,21 @@ the advertising data using a star schema, we had a set of aggregate tables to
 increase aggregation performance, and we had a query cache to further speed up
 queries.
 
-\begin{table*}
-  \centering
-  \scriptsize\begin{tabular}{| l | l |}
-    \hline
-    Native Benchmark Scan Rate & \~5.5M rows/second/core \\ \hline
-    1 day of summarized aggregates & 60M+ rows \\ \hline
-    1 query over 1 week, 16 cores & \~5 seconds \\ \hline
-    Page load with 20 queries over a week of data & several minutes \\ \hline
-  \end{tabular}
-  \normalsize
-  \caption{Initial evaluation with PostgreSQL on m2.2xlarge EC2 node.}
-  \label{tab:postgres_results}
-\end{table*}
- 
-Our findings with PostgreSQL are shown in Table \ref{tab:postgres_results}.
+\begin{table}
+\centering
+\scriptsize\begin{tabular}{| l | l |}
+  \hline
+  Native Benchmark Scan Rate & \~5.5M rows/s/core \\ \hline
+  1 day of summarized aggregates & 60M+ rows \\ \hline
+  1 query over 1 week, 16 cores & \~5 seconds \\ \hline
+  Page load with 20 queries over a week of data & several minutes \\ \hline
+\end{tabular}
+\normalsize
+\caption{Initial evaluation with PostgreSQL on m2.2xlarge EC2 node.}
+\label{tab:postgres_results}
+\end{table}
+
+Our findings with PostgreSQL are shown in Table~\ref{tab:postgres_results}.
 Query latencies were generally acceptable if the results were cached, less
 acceptable if we hit aggregate tables, and unacceptable if we needed to scan
 the base fact table. A single page load of the first version of our
@@ -273,17 +265,40 @@ was too slow to power an interactive application. We quickly realized a row
 store, and relational model as a whole, was a sub-optimal choice for the
 application we were trying to build.
 
-We next evaluated HBase \cite{george2011hbase}, a NoSQL key/value store. As is common with using
-key/value stores, we precomputed the total set of queries we anticipated users
-would make. An example of this precomputation is shown in Figure []. Our
-results with HBase are shown in Table []. Queries were obviously fast as we
-were effectively doing O(1) lookups into maps. However, the solution was not
-particularly flexible; if something precomputed, it wasn’t queryable, and the
-precomputation time became an incredible pain point. We attempted to build
-iceberg cubes as described in [], restricting the space of our
+\begin{figure}
+\centering
+\includegraphics[width = 2.6in]{precompute}
+\caption{Precomputation can explode the storage space.
+}
+\label{fig:precompute}
+\end{figure}
+
+We next evaluated HBase \cite{george2011hbase}, a NoSQL key/value store. As is
+common with using key/value stores, we precomputed the total set of queries we
+anticipated users would make. An example of this precomputation is shown in
+Figure~\ref{fig:precompute}. Our results with HBase are shown in
+Table~\ref{tab:hbase_results} for 500, 000 records. We restricted the result
+set such that users could only filter on 5 dimension values at any given time.
+Queries were acceptably fast with this solution as we were effectively doing
+O(1) lookups into maps.  However, the solution was not particularly flexible;
+if something precomputed, it wasn’t queryable, and the precomputation time
+became an incredible pain point. We attempted to build iceberg cubes as
+described in \cite{beyer1999bottom}, restricting the space of our
 pre-computations, but even then the precomputation times were unbearably slow.
 Our entire evaluation of both RDBMS and key/value stores is described in detail
 in \cite{tschetter2011druid}.
+
+\begin{table}
+\centering
+\scriptsize\begin{tabular}{| l | l |} \hline
+\textbf{Total Dimensions} & \textbf{Precomputation time} \\ \hline
+  11 & 4.5 hours on a 15 node Hadoop cluster \\ \hline
+  14 & 9 hours on a 25 node hadoop cluster \\ \hline
+\end{tabular}
+\normalsize
+\caption{Initial evaluation with PostgreSQL on m2.2xlarge EC2 node.}
+\label{tab:hbase_results}
+\end{table}
 
 Druid was developed in an attempt to solve some of the problems seen with
 traditional serving layers. Druid was designed from the ground up to provide
@@ -305,6 +320,13 @@ Kafka to our stack, and Kafka became the event delivery endpoint for our
 clients. Kafka provided a highly available message bus. Samza read data from
 Kafka, processed it, and delivered the output to Druid. 
 
+\begin{figure}
+\centering
+\includegraphics[width = 2.6in]{radstack}
+\caption{The various components of the RADStack.}
+\label{fig:radstack}
+\end{figure}
+
 Our stack would be complete here if real-time processing were perfect. Sadly,
 the open source stream processing space is still young. Processing jobs can go
 down for extended periods of time and events may be delivered more than once.
@@ -312,11 +334,11 @@ These are realities of any production data pipeline. To overcome these issues,
 we included Hadoop in our stack to periodically clean up any data generated by
 the real-time pipeline. We stored a copy of the raw events we received in a
 distributed file system, and periodically ran batch processing jobs over this
-data. The high level architecture of our setup is shown in Figure [], and
-illustrates the pieces of the RADStack. Each component in the RADStack is
-designed to do a specific set of things well, and there is isolation in terms
-of functionality. Individual components can entirely fail without impacting the
-services of the other components.
+data. The high level architecture of our setup is shown in Figure
+~\ref{fig:radstack}, and illustrates the pieces of the RADStack. Each component
+in the RADStack is designed to do a specific set of things well, and there is
+isolation in terms of functionality. Individual components can entirely fail
+without impacting the services of the other components.
 
 \begin{figure*}
 \centering
@@ -395,10 +417,11 @@ types to represent various data formats. For typical OLAP data, timestamps are
 stored in long columns, dimensions are stored in string columns, and measures
 (or metrics as they are called in Druid) are stored in int, float, long or
 double columns. Depending on the column type, different compression methods may
-be used. Metric columns are compressed using LZ4 [] compression. String columns
-are dictionary encoded, similar to other data stores such as PowerDrill\cite{hall2012processing}.
-Additional indexes may be created for particular columns. For example, Druid
-will by default create inverted indexes for string columns.
+be used. Metric columns are compressed using LZ4\cite{collet2013lz4}
+compression. String columns are dictionary encoded, similar to other data
+stores such as PowerDrill\cite{hall2012processing}.  Additional indexes may be
+created for particular columns. For example, Druid will by default create
+inverted indexes for string columns.
 
 \subsection{Exploratory Analytics}
 
@@ -496,10 +519,9 @@ nodes employ a sliding window to accept and reject events and use the
 wall-clock time as the basis of the window. Events within a configurable limit
 before or after the node’s wall-clock time are accepted, and events outside
 this window are dropped. This period is referred to as the window period and
-typical window periods are 10 minutes in length. The window period is
-illustrated in Figure []. At the end of the segment granularity period plus the
-window period, a real-time node will hand off the data it has collected during
-the segment granularity period. 
+typical window periods are 10 minutes in length. At the end of the segment
+granularity period plus the window period, a real-time node will hand off the
+data it has collected during the segment granularity period. 
 
 For further clarification, consider Figure~\ref{fig:realtime_timeline}.
 Figure~\ref{fig:realtime_timeline} illustrates the operations of a real-time
@@ -544,18 +566,18 @@ that were created by intermediate persists over the period of an hour). These
 segments are merged together to form a final immutable segment for handoff. 
 
 Handoff occurs in a few steps. First, the finalized segment is uploaded to a
-permanent backup storage, typically a distributed file system such as S3 [] or
-HDFS [], which Druid refers to as “deep storage”. Next, an entry is created in
-the metadata store (typically a RDBMS such as MySQL) to indicate that a new
-segment has been created. This entry in the metadata store will eventually
-cause other nodes in the Druid cluster to download and serve the segment. The
-real-time node continues to serve the segment until it notices that the segment
-is available on Druid historical nodes, which are nodes that are dedicated to
-serving historical data. At this point, the segment is dropped and unannounced
-from the real-time node. The entire handoff process is fluid; data remains
-continuously queryable throughout the entire handoff process. Segments created
-by real-time processing are versioned by the start of the segment granularity
-interval.
+permanent backup storage, typically a distributed file system such as S3
+§cite{decandia2007dynamo} or HDFS \cite{shvachko2010hadoop}, which Druid refers
+to as “deep storage”. Next, an entry is created in the metadata store
+(typically a RDBMS such as MySQL) to indicate that a new segment has been
+created. This entry in the metadata store will eventually cause other nodes in
+the Druid cluster to download and serve the segment. The real-time node
+continues to serve the segment until it notices that the segment is available
+on Druid historical nodes, which are nodes that are dedicated to serving
+historical data. At this point, the segment is dropped and unannounced from the
+real-time node. The entire handoff process is fluid; data remains continuously
+queryable throughout the entire handoff process. Segments created by real-time
+processing are versioned by the start of the segment granularity interval.
 
 \subsection{Batch Data Ingestion}
 The core component used by real-time ingestion is an index that can be
@@ -605,6 +627,17 @@ segments with lower version identifiers. If two segments exactly overlap for an
 interval, Druid only considers the data from the segment with the higher
 version interval.
 
+\begin{figure}
+\centering
+\includegraphics[width = 2.6in]{timeline}
+\caption{Real-time nodes buffer events to an in-memory index, which is
+regularly persisted to disk. On a periodic basis, persisted indexes are then merged
+together before getting handed off.
+Queries will hit both the in-memory and persisted indexes.
+}
+\label{fig:timeline}
+\end{figure}
+
 Segments are inserted into the timeline as they are announced. The timeline
 sorts the segment based on their data interval in a data structure similar to
 an interval tree. Lookups in the timeline will return all segments with
@@ -614,9 +647,8 @@ which the data in a segment is valid. This is illustrated in Figure [].
 Brokers extract the interval of a query and use it for lookups into the
 timeline. The result of the timeline is used to remap the original query into a
 set of specific queries for the actual historical and real-time nodes that hold
-the pertinent query data. This process is illustrated in Figure[]. The results
-from the historical and real-time nodes are finally merged by the broker, which
-returns the final result to the caller.
+the pertinent query data. The results from the historical and real-time nodes
+are finally merged by the broker, which returns the final result to the caller.
 
 The coordinator node also builds a segment timeline for segments in the
 cluster. If a segment is completely overshadowed by one or more segments, it
@@ -645,21 +677,21 @@ A sample count query over a week of data is as follows:
 
 {\scriptsize\begin{verbatim}
 {
-  "queryType": "timeseries",
-  "dataSource": “ads",
-  "intervals": "2013-01-01\/2013-01-08",
-  "filter": {
-    "type": "selector",
-    "dimension": "publisher",
-    "value": "google.com"
-  },
-  "granularity": "day",
-  "aggregations": [
-    {
-      "type": "count",
-      "name": "rows"
-    }
-  ]
+"queryType": "timeseries",
+"dataSource": “ads",
+"intervals": "2013-01-01\/2013-01-08",
+"filter": {
+  "type": "selector",
+  "dimension": "publisher",
+  "value": "google.com"
+},
+"granularity": "day",
+"aggregations": [
+  {
+    "type": "count",
+    "name": "rows"
+  }
+]
 }
 \end{verbatim}}
 
@@ -670,25 +702,25 @@ will be bucketed by day and will be a JSON array of the following form:
 
 {\scriptsize\begin{verbatim}
 [
-  {
-    "timestamp": "2012-01-01T00:00:00.000Z",
-    "result": {
-      "rows": 393298
-    }
-  },
-  {
-    "timestamp": "2012-01-02T00:00:00.000Z",
-    "result": {
-      "rows": 382932
-    }
-  },
-  ...
-  {
-    "timestamp": "2012-01-07T00:00:00.000Z",
-    "result": {
-      "rows": 1337
-    }
+{
+  "timestamp": "2012-01-01T00:00:00.000Z",
+  "result": {
+    "rows": 393298
   }
+},
+{
+  "timestamp": "2012-01-02T00:00:00.000Z",
+  "result": {
+    "rows": 382932
+  }
+},
+...
+{
+  "timestamp": "2012-01-07T00:00:00.000Z",
+  "result": {
+    "rows": 1337
+  }
+}
 ]
 \end{verbatim}}
 
@@ -750,10 +782,11 @@ Samza provides an API to write jobs that run over a sequence of tuples and
 perform operations over those tuples in a user-defined way. The input to each
 job is provided by Kafka, which can also act as a sink for the output of the
 job. Samza jobs are executed in a resource management and task execution
-framework such as YARN []. It is beyond the scope of this paper to go into the
-full details of Kafka/YARN/Samza interactions, but more information is
-available in other literature []. We will instead focus on how we leverage this
-framework for processing data for analytic use cases.
+framework such as YARN\cite{vavilapalli2013apache}. It is beyond the scope of
+this paper to go into the full details of Kafka/YARN/Samza interactions, but
+more information is available in other literature \cite{2014samza}. We will
+instead focus on how we leverage this framework for processing data for
+analytic use cases.
 
 On top of Samza infrastructure, we introduce the idea of a “pipeline”, which is
 a grouping for a series of related processing jobs, sorted in some logical
@@ -764,7 +797,7 @@ data source in Druid.
 
 Given that Druid does not support joins in queries, we require supporting joins
 at the data processing level. Our approach to do streaming joins is to leverage
-a key/value store such as Redis[] and buffer events in memory for a given
+a key/value store such as \cite{fitzpatrick2004distributed} and buffer events in memory for a given
 period of time. If an event arrives in the system with a join key that exists
 in the key/value store, the join occurs and the joined event is transmitted
 further down the pipeline. If events are substantially delayed and do not
@@ -789,13 +822,13 @@ both real-time nodes will drop their versions of the same segment.
 Our batch processing pipeline is composed of two stages. The first stage
 mirrors our streaming processing pipeline in that it transforms data and joins
 relevant events in preparation for the is data to be loaded into Druid. This is
-done via a MapReduce job, similar to the setup described in []. The second
-stage of batch processing is responsible for directly creating immutable Druid
-segments. We can run a second MapReduce\cite{dean2008mapreduce} job that feeds reads our processed
-data from the first stage and loads this data into Druid’s built in ingestion
-logic. The ingestion code for both streaming and batch ingestion in Druid is
-shared between the two modes of ingestion. The batch processing logic uploads
-these segments to deep storage, and writes a new entry in the metadata store to
+done via a MapReduce\cite{dean2008mapreduce} job. The second stage of batch
+processing is responsible for directly creating immutable Druid segments. We
+can run a second MapReduce job that feeds reads our processed data from the
+first stage and loads this data into Druid’s built in ingestion logic. The
+ingestion code for both streaming and batch ingestion in Druid is shared
+between the two modes of ingestion. The batch processing logic uploads these
+segments to deep storage, and writes a new entry in the metadata store to
 indicate that new segments are available. To Druid, there is no difference
 between segments generated by the real-time logic with those generated by batch
 processing, and Druid will proceed to load the batch generated segments.
@@ -852,15 +885,15 @@ multiple consumers can subscribe to the same topic and process the same set of
 events. We have two primary Kafka consumers. The first is a Samza job that
 reads messages from Kafka for stream processing as described in Section
 \ref{sec:streamprocessing}. The second consumer read messages from Kafka and
-stores them in a distributed file system, similar to Camus []. This file system
-is the same as the one used for Druid’s deep storage, and also acts as a backup
-for raw events. Topics in Kafka map directly to pipelines in Samza, and
-pipelines in Samza map directly to data sources in Druid. The purpose of
-storing raw events in deep storage is so that we can run batch processing jobs
-over them at any given time. For example, our stream processing layer may
-choose to not include certain columns when it first processes a few pipeline.
-If clients demand these columns be included in the future, we can reprocess the
-raw data to generate new Druid segments. 
+stores them in a distributed file system, similar to Camus \cite{2013linkedin}.
+This file system is the same as the one used for Druid’s deep storage, and also
+acts as a backup for raw events. Topics in Kafka map directly to pipelines in
+Samza, and pipelines in Samza map directly to data sources in Druid. The
+purpose of storing raw events in deep storage is so that we can run batch
+processing jobs over them at any given time. For example, our stream processing
+layer may choose to not include certain columns when it first processes a few
+pipeline.  If clients demand these columns be included in the future, we can
+reprocess the raw data to generate new Druid segments. 
 
 Kafka is the single point of delivery for events entering our system, and must
 have the highest availability. We replicate our Kafka producers across multiple
@@ -1102,27 +1135,27 @@ users are most interested in.
 \subsection{Hybrid Batch/Streaming Workflows}
 
 \subsubsection{Summingbird}
-Summingbird[] is a high-level dataflow language for streaming and batch
-processing. Summingbird enables counters on top of streams, and processes data
-for delivery to key/value stores. Summingbird can run on top of data processors
-such as Storm[] and Hadoop. The RADStack also offers a language for writing
-data processing jobs with Starfire. These jobs do not involve computation and
-focus entirely on data processing. Starfire enables more complex operations
-such as streaming joins. Moreover, the RADStack leaves all queries and
-aggregations to the serving layer, letting each layer of the stack focus on
-what it is best at.
+Summingbird\cite{boykin2014summingbird} is a high-level dataflow language for
+streaming and batch processing. Summingbird enables counters on top of streams,
+and processes data for delivery to key/value stores. Summingbird can run on top
+of data processors such as Storm\cite{marz2013storm} and Hadoop. The RADStack
+also offers a language for writing data processing jobs with Starfire. These
+jobs do not involve computation and focus entirely on data processing. Starfire
+enables more complex operations such as streaming joins. Moreover, the RADStack
+leaves all queries and aggregations to the serving layer, letting each layer of
+the stack focus on what it is best at.
 
 \subsubsection{Spark Ecosystem}
-Spark[] is a cluster computing framework optimized for iterative workflows.
-Spark Streaming[] is a separate project that converts sequences of tuples into
-immutable micro-batches. Each micro-batch can be processed using the underlying
-Spark framework. Spark SQL is a query optimization layer that can sit on top of
-Spark and issue SQL queries, along with Spark’s native analytic queries.
-Druid’s approach to querying is quite different and Druid insteads builds
-immutable indexed data structures optimized for low latency OLAP queries, and
-does not leverage lineage[] in computations. The RADStack can theoretically be
-composed of Spark and Spark Streaming for processing, Kafka for event delivery,
-and Druid to serve queries.
+Spark\cite{zaharia2012resilient} is a cluster computing framework optimized for
+iterative workflows.  Spark Streaming is a separate project that converts
+sequences of tuples into immutable micro-batches. Each micro-batch can be
+processed using the underlying Spark framework. Spark SQL is a query
+optimization layer that can sit on top of Spark and issue SQL queries, along
+with Spark’s native analytic queries.  Druid’s approach to querying is quite
+different and Druid insteads builds immutable indexed data structures optimized
+for low latency OLAP queries, and does not leverage lineage in computations.
+The RADStack can theoretically be composed of Spark and Spark Streaming for
+processing, Kafka for event delivery, and Druid to serve queries.
 
 \subsection{Druid and Other Data Stores}
 Although Druid builds on many of the same principles as other distributed
