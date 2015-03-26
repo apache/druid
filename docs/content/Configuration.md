@@ -21,9 +21,11 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.extensions.remoteRepositories`|If this is not set to '[]', Druid will try to download extensions at the specified remote repository.|["http://repo1.maven.org/maven2/", "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"]|
-|`druid.extensions.localRepository`|The local maven directory where extensions are installed. If this is set, remoteRepositories is not required.|[]|
-|`druid.extensions.coordinates`|The list of extensions to include.|[]|
+|`druid.extensions.remoteRepositories`|This is a JSON Array list of remote repositories to load dependencies from. If this is not set to '[]', Druid will try to download extensions at the specified remote repository.|["http://repo1.maven.org/maven2/", "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"]|
+|`druid.extensions.localRepository`|.  The way maven gets dependencies is that it downloads them to a "local repository" on your local disk and then collects the paths to each of the jars.  This specifies the directory to consider the "local repository". If this is set, remoteRepositories is not required.|`~/.m2/repository`|
+|`druid.extensions.coordinates`|This is a JSON array of "groupId:artifactId[:version]" maven coordinates. For artifacts without version specified, Druid will append the default version.|[]|
+|`druid.extensions.defaultVersion`|Version to use for extension artifacts without version information.|`druid-server` artifact version.|
+|`druid.extensions.searchCurrentClassloader`|This is a boolean flag that determines if Druid will search the main classloader for extensions.  It defaults to true but can be turned off if you have reason to not automatically add all modules on the classpath.|true|
 
 ### Zookeeper
 We recommend just setting the base ZK path and the ZK service host, but all ZK paths that Druid uses can be overwritten to absolute paths.

@@ -48,13 +48,13 @@ There are 7 main parts to a timeseries query:
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "timeseries"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
-|dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
-|granularity|Defines the granularity of the query. See [Granularities](Granularities.html)|yes|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](DataSource.html) for more information.|yes|
+|intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
+|granularity|Defines the granularity to bucket query results. See [Granularities](Granularities.html)|yes|
 |filter|See [Filters](Filters.html)|no|
 |aggregations|See [Aggregations](Aggregations.html)|yes|
 |postAggregations|See [Post Aggregations](Post-aggregations.html)|no|
-|intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
-|context|An additional JSON Object which can be used to specify certain flags.|no|
+|context|See [Context](Context.html)|no|
 
 To pull it all together, the above query would return 2 data points, one for each day between 2012-01-01 and 2012-01-03, from the "sample\_datasource" table. Each data point would be the (long) sum of sample\_fieldName1, the (double) sum of sample\_fieldName2 and the (double) the result of sample\_fieldName1 divided by sample\_fieldName2 for the filter set. The output looks like this:
 

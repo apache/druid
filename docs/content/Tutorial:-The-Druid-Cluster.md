@@ -45,11 +45,10 @@ CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
 
 #### Set up Zookeeper
 
-```bash
-Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
-Install zookeeper.
+* Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
+* Install zookeeper.
 
-e.g.
+```bash
 curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
 tar xzf zookeeper-3.4.6.tar.gz
 cd zookeeper-3.4.6

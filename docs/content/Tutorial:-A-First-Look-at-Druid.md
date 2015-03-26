@@ -47,24 +47,24 @@ To start, we need to get our hands on a Druid build. There are two ways to get D
 
 ### Download a Tarball
 
-We've built a tarball that contains everything you'll need. You'll find it [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). Download this file to a directory of your choosing.
+We've built a tarball that contains everything you'll need. You'll find it [here](http://druid.io/downloads.html). Download this file to a directory of your choosing.
 
 ### Build From Source
 
-Follow the [Build From Source](Build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
+Follow the [Build From Source](Build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-<version>-bin.tar.gz.
 
 ### Unpack the Tarball
 
 You can extract the content within by issuing:
 
 ```
-tar -zxvf druid-0.7.1-bin.tar.gz
+tar -zxvf druid-<version>-bin.tar.gz
 ```
 
 If you cd into the directory:
 
 ```
-cd druid-0.7.1
+cd druid-<version>
 ```
 
 You should see a bunch of files:
@@ -80,11 +80,10 @@ Druid requires 3 external dependencies. A "deep storage" that acts as a backup d
 
 #### Set up Zookeeper
 
-```bash
-Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
-Install zookeeper.
+* Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/)
+* Install zookeeper.
 
-e.g.
+```bash
 curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
 tar xzf zookeeper-3.4.6.tar.gz
 cd zookeeper-3.4.6
@@ -102,7 +101,7 @@ Let's start doing stuff. You can start an example Druid [Realtime](Realtime.html
 ./run_example_server.sh
 ```
 
-Select "2" for the "wikipedia" example.
+Select the "wikipedia" example.
 
 Note that the first time you start the example, it may take some extra time due to its fetching various dependencies. Once the node starts up you will see a bunch of logs about setting up properties and connecting to the data source. If everything was successful, you should see messages of the form shown below.
 

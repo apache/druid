@@ -4,7 +4,7 @@ layout: doc_page
 Segments
 ========
 
-The latest Druid segment version is `v9`.
+Druid segments contain data for a time interval, stored as separate columns. Dimensions (string columns) have inverted indexes associated with them for each dimension value. Metric columns are LZ4 compressed.
 
 Naming Convention
 -----------------
@@ -34,6 +34,8 @@ A segment is comprised of several files, listed below.
     The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
 
     There is also a special column called `__time` that refers to the time column of the segment. This will hopefully become less and less special as the code evolves, but for now it’s as special as my Mommy always told me I am.
+
+In the codebase, segments have an internal format version. The current segment format version is `v9`.
 
 Format of a column
 ------------------
