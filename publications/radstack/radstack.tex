@@ -119,44 +119,41 @@ high latency in processing and returning results. A common approach to surface
 data insights is to run MapReduce jobs that may take several hours to complete.
 
 Data analysis and data-driven applications are becoming increasingly important
-in industry, and the long query times seen with using frameworks such as Hadoop
-are becoming increasingly intolerable. User facing applications are replacing
-traditional reporting interfaces as the preferred means for organizations to
-derive value from their datasets. In order to provide an interactive user
-experience, user interactions with data-driven applications must complete in an
-order of milliseconds. Because most of these interactions revolve around data
-exploration and computation, organizations quickly realized that in order
+in industry, and the long query times encountered when using batch frameworks
+such as Hadoop are becoming increasingly intolerable. User facing applications
+are replacing traditional reporting interfaces as the preferred means for
+organizations to derive value from their datasets. In order to provide an
+interactive user experience with data-driven applications queries must complete
+in an order of milliseconds. Because most of these interactions revolve around
+data exploration and computation, organizations quickly realized that in order
 support low latency queries, dedicated serving layers are necessary. Today,
 most of these serving layers are Relational Database Management Systems (RDBMS)
 or NoSQL key/value stores. Neither RDBMS nor NoSQL key/value stores are
 particularly designed for analytics, but these technologies are still
-frequently selected as serving layers because of their general popularity.
-Hence, solutions that involve these technologies can be inflexible, or suffer
-from architecture drawbacks that prevent them from returning queries fast
-enough to power interactive, user-facing applications
-\cite{tschetter2011druid}.
+frequently selected as serving layers because of their general reliability in a
+production setting. Solutions that involve these broad-focus technologies can
+be inflexible once tailored to specific report cases, or suffer from
+architecture drawbacks that prevent them from returning queries fast enough to
+power interactive, user-facing applications \cite{tschetter2011druid}.
 
-An ideal serving layer by itself is still insufficient as a complete analytics
+An ideal data serving layer alone will not suffice as a complete analytics
 solution. In most real-world use cases, raw data cannot be directly stored in
 the serving layer. Raw data suffers from many imperfections and must first be
-processed (transformed, or cleaned) before it is usable. Hadoop remains a
-popular option to process raw data and many organizations first process raw
-data in Hadoop before loading the result into the serving layer. The drawback
-of this approach is that loading and processing batch data is slow, and
-insights on events are often obtained hours after the events have occurred
+processed (transformed, or cleaned) before it is usable. The drawback of this
+approach is that loading and processing batch data is slow, and insights on
+events cannot be obtained until hours after the events have occurred
 \cite{yang2014radstack}.
 
 To address the problem of delays in data freshness caused by batch processing
 frameworks, numerous open-source stream processing frameworks such as Apache
 Storm\cite{marz2013storm}, Apache Spark Streaming\cite{zaharia2012discretized},
 and Apache Samza\cite{2014samza} have been gaining popularity for offering a
-low-latency model to ingest and process event streams. These stream processing
-frameworks have enabled data processing at near real-time speeds. The drawback
-of popular open-source stream processors is that they do not necessarily
-provide the same correctness guarantees as batch processing frameworks. Events
-can come in days late, and may need to be corrected after the fact. Large
-blocks of data may also need to be reprocessed at any time as new columns are
-added or removed.
+low-latency model to ingest and process event streams at near real-time speeds.
+The drawback of popular open-source stream processors is that they do not
+necessarily provide the same correctness guarantees as batch processing
+frameworks. Events can come in days late, and may need to be corrected after
+the fact. Large batches of data may also need to be reprocessed when new
+columns are added or removed.
 
 The RADStack is an open source, end-to-end solution meant to offer flexible,
 low-latency analytic queries on near real-time data. The solution combines the
@@ -181,7 +178,7 @@ and Hadoop for data processing, and Section \ref{sec:delivery} describes the
 role of Kafka for event delivery. In Section \ref{sec:performance}, we present
 our production metrics.  Section \ref{sec:experiences} presents our experiences
 with running the RADStack in production, and in Section \ref{sec:related} we
-discuss the related work.
+discuss the related solutions.
 
 \section{Background}
 \label{sec:background}
@@ -198,7 +195,7 @@ discuss the related work.
   2011-01-01T02:00:00Z & ultratrimfast.com & google.com & Female & New York & 0 & 0.99 \\ \hline
   2011-01-01T02:00:00Z & ultratrimfast.com & google.com & Female & Vancouver & 1 & 1.53 \\ \hline
 \end{tabular}
-\caption{Sample ad data. These events are created when users view or click on ads.}
+\caption{Sample ad data. These events are created when users views or clicks on ads.}
 \label{tab:sample_data}
 \end{table*}
 
@@ -228,9 +225,7 @@ User-facing applications often face highly concurrent workloads and good
 applications need to provide relatively consistent performance to all users.
 Finally, we needed our backend infrastructure to be highly available. Downtime
 is costly and many businesses cannot afford to wait if a system is unavailable
-in the face of software upgrades or network failure. Downtime for startups, who
-often lack proper internal operations management, can determine business
-success or failure.
+in the face of software upgrades or network failure.
 
 Following industry standard practices, we evaluated various options for a
 serving layer. We tried to select a serving layer that was optimized for the
@@ -268,7 +263,9 @@ application we were trying to build.
 \begin{figure}
 \centering
 \includegraphics[width = 2.6in]{precompute}
-\caption{Precomputation can explode the storage space.
+\caption{Precomputating queries scales exponentially. To support every possible
+combination of queries, even a small data set can generate many possible
+queries.
 }
 \label{fig:precompute}
 \end{figure}
@@ -296,7 +293,7 @@ in \cite{tschetter2011druid}.
   14 & 9 hours on a 25 node hadoop cluster \\ \hline
 \end{tabular}
 \normalsize
-\caption{Initial evaluation with PostgreSQL on m2.2xlarge EC2 node.}
+\caption{Initial evaluation with HBase on m2.2xlarge EC2 nodes.}
 \label{tab:hbase_results}
 \end{table}
 
@@ -320,11 +317,14 @@ Kafka to our stack, and Kafka became the event delivery endpoint for our
 clients. Kafka provided a highly available message bus. Samza read data from
 Kafka, processed it, and delivered the output to Druid. 
 
-\begin{figure}
-\centering
-\includegraphics[width = 2.6in]{radstack}
-\caption{The various components of the RADStack.}
-\label{fig:radstack}
+\begin{figure} 
+\centering \includegraphics[width = 2.6in]{radstack}
+\caption{
+The components of the RADStack. Kafka acts as the event delivery
+endpoints. Samza and Hadoop process data to load data into Druid. Druid acts as
+the endpoint for queries.
+} 
+\label{fig:radstack} 
 \end{figure}
 
 Our stack would be complete here if real-time processing were perfect. Sadly,
@@ -476,11 +476,13 @@ and the data they serve in Zookeeper\cite{hunt2010zookeeper}.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.6in]{realtime_flow}
-\caption{Real-time nodes buffer events to an in-memory index, which is
-regularly persisted to disk. On a periodic basis, persisted indexes are then merged
-together before getting handed off.
-Queries will hit both the in-memory and persisted indexes.
+\includegraphics[width = 2.6in]{realtime_flow} 
+\caption{
+Real-time nodes write events to an write optimized in-memory index.
+Periodically, events are persisted to disk, converting the write optimized
+format to a read optimized one.. On a periodic basis, persisted indexes are
+then merged together and the finalized segment is handed off.  Queries will hit
+both the in-memory and persisted indexes.  
 }
 \label{fig:realtime_flow}
 \end{figure}
@@ -630,10 +632,10 @@ version interval.
 \begin{figure}
 \centering
 \includegraphics[width = 2.6in]{timeline}
-\caption{Real-time nodes buffer events to an in-memory index, which is
-regularly persisted to disk. On a periodic basis, persisted indexes are then merged
-together before getting handed off.
-Queries will hit both the in-memory and persisted indexes.
+\caption{
+Druid utilies multi-version concurrency control and reads data from segments
+with the latest version for a given interval. Segments are that completely
+overshadowed are ignored and eventually automatically dropped from the cluster.
 }
 \label{fig:timeline}
 \end{figure}
@@ -776,62 +778,74 @@ is usable by an application.
 \subsection{Stream Processing}
 \label{sec:streamprocessing}
 Stream processors provide infrastructure to develop processing logic for
-unbounded sequences of tuples. We will focus our discussions on Apache Samza as
-our stream processor, although other technologies are viable alternatives.
-Samza provides an API to write jobs that run over a sequence of tuples and
-perform operations over those tuples in a user-defined way. The input to each
-job is provided by Kafka, which can also act as a sink for the output of the
-job. Samza jobs are executed in a resource management and task execution
-framework such as YARN\cite{vavilapalli2013apache}. It is beyond the scope of
-this paper to go into the full details of Kafka/YARN/Samza interactions, but
-more information is available in other literature \cite{2014samza}. We will
-instead focus on how we leverage this framework for processing data for
-analytic use cases.
+unbounded sequences of messages. We use Apache Samza as our stream processor,
+although other technologies are viable alternatives. Samza provides an API to
+write jobs that run over a sequence of tuples and perform operations over those
+tuples in a user-defined way. The input to each job is provided by Kafka, which
+can also act as a sink for the output of the job. Samza jobs are executed in a
+resource management and task execution framework such as
+YARN\cite{vavilapalli2013apache}. It is beyond the scope of this paper to go
+into the full details of Kafka/YARN/Samza interactions, but more information is
+available in other literature\cite{2014samza}. We will instead focus on how we
+leverage this framework for processing data for analytic use cases.
 
 On top of Samza infrastructure, we introduce the idea of a “pipeline”, which is
-a grouping for a series of related processing jobs, sorted in some logical
-order. The output of one job may act as the input for the next job. Some of our
-jobs involve operations include renaming data, inserting default values for
-nulls and empty strings, and filtering data. One pipeline maps logically to one
-data source in Druid.
+a grouping for a series of related processing stages where “upstream” stages
+produce messages that are consumed by “downstream” stages. Some of our jobs
+involve operations include renaming data, inserting default values for nulls
+and empty strings, and filtering data. One pipeline may write to many data
+sources in Druid.
 
 Given that Druid does not support joins in queries, we require supporting joins
-at the data processing level. Our approach to do streaming joins is to leverage
-a key/value store such as \cite{fitzpatrick2004distributed} and buffer events in memory for a given
-period of time. If an event arrives in the system with a join key that exists
-in the key/value store, the join occurs and the joined event is transmitted
-further down the pipeline. If events are substantially delayed and do not
-arrive in the allocated window period, the original event is dropped. This
-means that our stream processing layer is not guaranteed to deliver 100%
-accurate results. Furthermore, Samza does not offer exactly-once processing
-semantics. Problems in network connectivity or node failure can lead to
-duplicated events. For this reason, we run a separate batch pipeline that will
-generate an accurate copy of the ingested data.
+at the data processing level. Our approach to do streaming joins is to buffer
+events for a configurable period of time. If an event arrives in the system
+with a join key that exists in the buffer, the join occurs and the joined event
+is transmitted further down the pipeline. If events are substantially delayed
+and do not arrive in the allocated window period, they will not be joined. In
+practice, this generally leads to one “primary” event continuing through the
+pipeline and other secondary events with the same join key getting dropped.
+This means that our stream processing layer is not guaranteed to deliver 100%
+accurate results. Furthermore, even absent this restriction, Samza does not
+offer exactly-once processing semantics. Problems in network connectivity or
+node failure can lead to duplicated events. For these reasons, we run a
+separate batch pipeline that generates a more accurate transformation of the
+ingested data.
 
-The final job in our processing pipeline is to deliver data to Druid. For high
+The final job of our processing pipeline is to deliver data to Druid. For high
 availability, processed events from Samza are transmitted concurrently to two
-real-time nodes. Both nodes receive the same copy of data, and one node
-effectively acts as a replica. The Druid broker does not distinguish between
-the two copies of data, and queries will go to either node. When handoff
-occurs, both real-time nodes race to hand off the segments they’ve created. The
-segment that is pushed into deep storage first will be the one that is used for
+real-time nodes. Both nodes receive the same copy of data, and effectively act
+as replicas of each other. The Druid broker does not distinguish between the
+two copies of data, and queries will go to either node. When handoff occurs,
+both real-time nodes race to hand off the segments they’ve created. The segment
+that is pushed into deep storage first will be the one that is used for
 historical querying, and once that segment is loaded on the historical nodes,
 both real-time nodes will drop their versions of the same segment.
 
 \subsection{Batch Processing}
-Our batch processing pipeline is composed of two stages. The first stage
-mirrors our streaming processing pipeline in that it transforms data and joins
-relevant events in preparation for the is data to be loaded into Druid. This is
-done via a MapReduce\cite{dean2008mapreduce} job. The second stage of batch
-processing is responsible for directly creating immutable Druid segments. We
-can run a second MapReduce job that feeds reads our processed data from the
-first stage and loads this data into Druid’s built in ingestion logic. The
-ingestion code for both streaming and batch ingestion in Druid is shared
-between the two modes of ingestion. The batch processing logic uploads these
-segments to deep storage, and writes a new entry in the metadata store to
-indicate that new segments are available. To Druid, there is no difference
-between segments generated by the real-time logic with those generated by batch
-processing, and Druid will proceed to load the batch generated segments.
+Our batch processing pipeline is composed a multi-stage MapReduce pipeline. The
+first set of jobs mirrors our streaming processing pipeline in that it
+transforms data and joins relevant events in preparation for the is data to be
+loaded into Druid. The second set of jobs is responsible for directly creating
+immutable Druid segments. A final set of MapReduce\cite{dean2008mapreduce} jobs
+that reads our processed data from the first set and indexes this data to
+create Druid segments. The indexing code for both streaming and batch ingestion
+in Druid is shared between the two modes of ingestion. These segments are then
+uploaded to deep storage and registered with the  metadata store. Druid will
+proceed to load the batch generated segments.
+
+The batch process typically runs much less frequently than the real-time
+process, and may run many hours or even days after raw events have been
+delivered. The wait is necessary for severely delayed events, and to ensure
+that the raw data is indeed complete. 
+
+Segments generated by the batch process are versioned by the start time of the
+process. Hence, segments created by batch processing will have a version
+identifier that is greater than segments created by real-time processing. When
+these batch created segments are loaded in the cluster, they atomically replace
+segments created by real-time processing for their processed interval. Hence,
+soon after batch processing completes, Druid queries begin reflecting
+batch-originated data rather than real-time-originated data.
+
 
 Our ingestion model is hopefully more clear at this point. We use the streaming
 data pipeline described in Section\ref{sec:streamprocessing} to deliver
@@ -862,12 +876,12 @@ windows.
 
 Starfire programs ask for a particular window size (measured in time, like 15
 minutes or two hours) that particular drivers must provide. The Hadoop driver
-provides a window size by loading up data surrounding the data that you are
-actually interested in. The Samza driver does it by buffering data in a
-key/value store for a period of time. Starfire supports using different window
-sizes from driver to driver, which can be useful if you are running a
-combination batch/real-time architecture. We hope to explore Starfire more in
-future literature.
+provides a window by loading up extra data surrounding the data that the user
+requested to process. The Samza driver does it by buffering data in a key/value
+store for a period of time. Starfire supports using different window sizes from
+driver to driver, which can be useful if you are running a combination
+batch/real-time architecture and would like to use larger windows in batch than
+in real-time. We hope to explore Starfire more in future literature.
 
 \section{The Delivery Layer}
 \label{sec:delivery}
@@ -884,16 +898,16 @@ consumers of data. The publish/subscribe model works well for our use case as
 multiple consumers can subscribe to the same topic and process the same set of
 events. We have two primary Kafka consumers. The first is a Samza job that
 reads messages from Kafka for stream processing as described in Section
-\ref{sec:streamprocessing}. The second consumer read messages from Kafka and
-stores them in a distributed file system, similar to Camus \cite{2013linkedin}.
+\ref{sec:streamprocessing}. The second consumer reads messages from Kafka and
+stores them in a distributed file system, similar to Camus\cite{2013linkedin}.
 This file system is the same as the one used for Druid’s deep storage, and also
 acts as a backup for raw events. Topics in Kafka map directly to pipelines in
 Samza, and pipelines in Samza map directly to data sources in Druid. The
 purpose of storing raw events in deep storage is so that we can run batch
 processing jobs over them at any given time. For example, our stream processing
-layer may choose to not include certain columns when it first processes a few
-pipeline.  If clients demand these columns be included in the future, we can
-reprocess the raw data to generate new Druid segments. 
+layer may choose to not include certain columns when it first processes a new
+pipeline. If we want to include these columns in the future, we can reprocess
+the raw data to generate new Druid segments. 
 
 Kafka is the single point of delivery for events entering our system, and must
 have the highest availability. We replicate our Kafka producers across multiple
