@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.timeline.DataSegment;
 
@@ -41,17 +42,20 @@ public class MergeTask extends MergeTaskBase
 {
   @JsonIgnore
   private final List<AggregatorFactory> aggregators;
+  private final IndexSpec indexSpec;
 
   @JsonCreator
   public MergeTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
-      @JsonProperty("aggregations") List<AggregatorFactory> aggregators
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
+      @JsonProperty("indexSpec") IndexSpec indexSpec
   )
   {
     super(id, dataSource, segments);
     this.aggregators = aggregators;
+    this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
   }
 
   @Override
@@ -76,7 +80,8 @@ public class MergeTask extends MergeTaskBase
             }
         ),
         aggregators.toArray(new AggregatorFactory[aggregators.size()]),
-        outDir
+        outDir,
+        indexSpec
     );
   }
 

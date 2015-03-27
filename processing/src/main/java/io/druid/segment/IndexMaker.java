@@ -111,7 +111,7 @@ public class IndexMaker
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
   private static final ObjectMapper mapper;
-  private static final BitmapSerdeFactory bitmapSerdeFactory;
+  private static final BitmapSerdeFactory defaultBitmapSerdeFactory;
 
   static {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
@@ -127,12 +127,12 @@ public class IndexMaker
         )
     );
     mapper = injector.getInstance(ObjectMapper.class);
-    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
+    defaultBitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
   }
 
-  public static File persist(final IncrementalIndex index, File outDir) throws IOException
+  public static File persist(final IncrementalIndex index, File outDir, final IndexSpec indexSpec) throws IOException
   {
-    return persist(index, index.getInterval(), outDir);
+    return persist(index, index.getInterval(), outDir, indexSpec);
   }
 
   /**
@@ -148,16 +148,18 @@ public class IndexMaker
   public static File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
-      File outDir
+      File outDir,
+      final IndexSpec indexSpec
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, new LoggingProgressIndicator(outDir.toString()));
+    return persist(index, dataInterval, outDir, indexSpec, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
+      final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
   {
@@ -189,26 +191,28 @@ public class IndexMaker
             new IncrementalIndexAdapter(
                 dataInterval,
                 index,
-                bitmapSerdeFactory.getBitmapFactory()
+                defaultBitmapSerdeFactory.getBitmapFactory()
             )
         ),
         index.getMetricAggs(),
         outDir,
+        indexSpec,
         progress
     );
   }
 
   public static File mergeQueryableIndex(
-      List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir
+      List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir, final IndexSpec indexSpec
   ) throws IOException
   {
-    return mergeQueryableIndex(indexes, metricAggs, outDir, new LoggingProgressIndicator(outDir.toString()));
+    return mergeQueryableIndex(indexes, metricAggs, outDir, indexSpec, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
+      final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
   {
@@ -226,21 +230,23 @@ public class IndexMaker
         ),
         metricAggs,
         outDir,
+        indexSpec,
         progress
     );
   }
 
   public static File merge(
-      List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir
+      List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir, final IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(adapters, metricAggs, outDir, new LoggingProgressIndicator(outDir.toString()));
+    return merge(adapters, metricAggs, outDir, indexSpec, new LoggingProgressIndicator(outDir.toString()));
   }
 
   public static File merge(
       List<IndexableAdapter> adapters,
       final AggregatorFactory[] metricAggs,
       File outDir,
+      final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
   {
@@ -329,21 +335,23 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn);
-  }
-
-  public static File append(
-      final List<IndexableAdapter> adapters,
-      File outDir
-  ) throws IOException
-  {
-    return append(adapters, outDir, new LoggingProgressIndicator(outDir.toString()));
+    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
   }
 
   public static File append(
       final List<IndexableAdapter> adapters,
       final File outDir,
-      final ProgressIndicator progress
+      final IndexSpec indexSpec
+  ) throws IOException
+  {
+    return append(adapters, outDir, new LoggingProgressIndicator(outDir.toString()), indexSpec);
+  }
+
+  public static File append(
+      final List<IndexableAdapter> adapters,
+      final File outDir,
+      final ProgressIndicator progress,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
@@ -412,7 +420,7 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn);
+    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
   }
 
   private static File makeIndexFiles(
@@ -421,7 +429,8 @@ public class IndexMaker
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
-      final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
+      final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     progress.start();
@@ -504,7 +513,8 @@ public class IndexMaker
         theRows,
         columnCapabilities,
         dimensionValuesLookup,
-        rowNumConversions
+        rowNumConversions,
+        indexSpec
     );
 
     progress.progress();
@@ -771,7 +781,8 @@ public class IndexMaker
       final Iterable<Rowboat> theRows,
       final Map<String, ColumnCapabilitiesImpl> columnCapabilities,
       final Map<String, Iterable<String>> dimensionValuesLookup,
-      final List<IntBuffer> rowNumConversions
+      final List<IntBuffer> rowNumConversions,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     final String dimSection = "make dimension columns";
@@ -784,6 +795,13 @@ public class IndexMaker
         continue;
       }
 
+      final IndexSpec.ColumnSpec columnSpec;
+      if(indexSpec.getColumnSpecs().containsKey(dimension)) {
+        columnSpec = indexSpec.getColumnSpecs().get(dimension);
+      } else {
+        columnSpec = IndexSpec.defaultColumnSpec();
+      }
+
       makeDimColumn(
           v9Smoosher,
           adapters,
@@ -793,7 +811,9 @@ public class IndexMaker
           dimension,
           columnCapabilities,
           dimensionValuesLookup,
-          rowNumConversions
+          rowNumConversions,
+          indexSpec.getBitmapSerdeFactory(),
+          columnSpec
       );
       dimIndex++;
     }
@@ -809,7 +829,9 @@ public class IndexMaker
       final String dimension,
       final Map<String, ColumnCapabilitiesImpl> columnCapabilities,
       final Map<String, Iterable<String>> dimensionValuesLookup,
-      final List<IntBuffer> rowNumConversions
+      final List<IntBuffer> rowNumConversions,
+      final BitmapSerdeFactory bitmapSerdeFactory,
+      final IndexSpec.ColumnSpec columnSpec
   ) throws IOException
   {
     final String section = String.format("make %s", dimension);
@@ -1194,15 +1216,16 @@ public class IndexMaker
     log.info("Completed dimension[%s] with cardinality[%,d]. Starting write.", dimension, dictionary.size());
 
     final DictionaryEncodedColumnPartSerde dimPart;
-    final boolean compressed = true; // TODO make this configurable
-    if (compressed) {
+    final CompressedObjectStrategy.CompressionStrategy compression = columnSpec.getCompression();
+
+    if (compression != null) {
       dimPart = new CompressedDictionaryEncodedColumnPartSerde(
           dictionary,
           singleValCol == null ? null : CompressedIntsIndexedSupplier.fromList(
               singleValCol,
               CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
               IndexIO.BYTE_ORDER,
-              CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+              compression
           ),
           multiValCol,
           bitmapSerdeFactory,
@@ -1391,7 +1414,7 @@ public class IndexMaker
     GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.stringStrategy);
     GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.stringStrategy);
 
-    final String bitmapSerdeFactoryType = mapper.writeValueAsString(bitmapSerdeFactory);
+    final String bitmapSerdeFactoryType = mapper.writeValueAsString(defaultBitmapSerdeFactory);
     final long numBytes = cols.getSerializedSize()
                           + dims.getSerializedSize()
                           + 16

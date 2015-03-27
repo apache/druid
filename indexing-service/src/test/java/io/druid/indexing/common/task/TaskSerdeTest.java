@@ -31,6 +31,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -53,6 +54,8 @@ public class TaskSerdeTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
+  private final IndexSpec indexSpec = new IndexSpec();
+
   @Test
   public void testIndexTaskSerde() throws Exception
   {
@@ -70,7 +73,7 @@ public class TaskSerdeTest
                 )
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
-            new IndexTask.IndexTuningConfig(10000, -1, -1)
+            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)
         ),
         jsonMapper
     );
@@ -107,7 +110,8 @@ public class TaskSerdeTest
         ),
         ImmutableList.<AggregatorFactory>of(
             new CountAggregatorFactory("cnt")
-        )
+        ),
+        indexSpec
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -179,7 +183,8 @@ public class TaskSerdeTest
   {
     final VersionConverterTask.SubTask task = new VersionConverterTask.SubTask(
         "myGroupId",
-        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
+        indexSpec
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -229,6 +234,7 @@ public class TaskSerdeTest
                 null,
                 1,
                 new NoneShardSpec(),
+                indexSpec,
                 false,
                 false,
                 null
@@ -277,7 +283,8 @@ public class TaskSerdeTest
         "foo",
         ImmutableList.of(
             DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
-        )
+        ),
+        indexSpec
     );
 
     final String json = jsonMapper.writeValueAsString(task);

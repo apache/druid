@@ -127,7 +127,6 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private static final ObjectMapper mapper;
-  private static final BitmapSerdeFactory bitmapSerdeFactory;
 
   protected static final ColumnConfig columnConfig;
 
@@ -153,7 +152,6 @@ public class IndexIO
     );
     mapper = injector.getInstance(ObjectMapper.class);
     columnConfig = injector.getInstance(ColumnConfig.class);
-    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
   }
 
   public static QueryableIndex loadIndex(File inDir) throws IOException
@@ -192,7 +190,7 @@ public class IndexIO
     }
   }
 
-  public static boolean convertSegment(File toConvert, File converted) throws IOException
+  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
 
@@ -211,11 +209,12 @@ public class IndexIO
         log.info("Old version, re-persisting.");
         IndexMerger.append(
             Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
-            converted
+            converted,
+            indexSpec
         );
         return true;
       case 8:
-        DefaultIndexIOHandler.convertV8toV9(toConvert, converted);
+        DefaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec);
         return true;
       default:
         log.info("Version[%s], skipping.", version);
@@ -334,7 +333,7 @@ public class IndexIO
       return retVal;
     }
 
-    public static void convertV8toV9(File v8Dir, File v9Dir) throws IOException
+    public static void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec) throws IOException
     {
       log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
 
@@ -359,6 +358,8 @@ public class IndexIO
 
       Map<String, GenericIndexed<ImmutableBitmap>> bitmapIndexes = Maps.newHashMap();
       final ByteBuffer invertedBuffer = v8SmooshedFiles.mapFile("inverted.drd");
+      BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
+
       while (invertedBuffer.hasRemaining()) {
         final String dimName = serializerUtils.readString(invertedBuffer);
         bitmapIndexes.put(
@@ -495,8 +496,15 @@ public class IndexIO
             builder.setHasMultipleValues(true);
           }
 
-          final boolean compressed = true; // TODO make this configurable
-          if(compressed) {
+          final CompressedObjectStrategy.CompressionStrategy compression;
+          final IndexSpec.ColumnSpec columnSpec = indexSpec.getColumnSpecs().get(dimension);
+          if(columnSpec != null) {
+            compression = columnSpec.getCompression();
+          } else {
+            compression = null;
+          }
+
+          if(compression != null) {
             builder.addSerde(
                 new CompressedDictionaryEncodedColumnPartSerde(
                     dictionary,
@@ -504,7 +512,7 @@ public class IndexIO
                         singleValCol,
                         CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
                         BYTE_ORDER,
-                        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+                        compression
                     ) : null,
                     multiValCol,
                     bitmapSerdeFactory,

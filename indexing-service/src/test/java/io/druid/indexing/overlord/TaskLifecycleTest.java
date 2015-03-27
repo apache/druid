@@ -63,6 +63,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentArchiver;
@@ -109,6 +110,7 @@ public class TaskLifecycleTest
   private MockIndexerMetadataStorageCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
+  private IndexSpec indexSpec;
 
   private static MockIndexerMetadataStorageCoordinator newMockMDC()
   {
@@ -248,6 +250,7 @@ public class TaskLifecycleTest
         "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\"}",
         TaskQueueConfig.class
     );
+    indexSpec = new IndexSpec();
     ts = new HeapMemoryTaskStorage(
         new TaskStorageConfig(null)
         {
@@ -361,7 +364,7 @@ public class TaskLifecycleTest
                                                  IR("2010-01-02T01", "a", "c", 1)
                                              )
                                          )),
-                                         new IndexTask.IndexTuningConfig(10000, -1, -1)),
+                                         new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)),
         TestUtils.MAPPER
     );
 
@@ -415,7 +418,7 @@ public class TaskLifecycleTest
                 )
             ),
             new IndexTask.IndexIOConfig(newMockExceptionalFirehoseFactory()),
-            new IndexTask.IndexTuningConfig(10000, -1, -1)
+            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)
         ),
         TestUtils.MAPPER
     );

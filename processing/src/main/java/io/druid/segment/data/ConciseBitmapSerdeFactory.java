@@ -97,4 +97,10 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
       return conciseComparator.compare((WrappedImmutableConciseBitmap) o1, (WrappedImmutableConciseBitmap) o2);
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "ConciseBitmapSerdeFactory{}";
+  }
 }

@@ -62,6 +62,7 @@ public class SinkTest
         null,
         null,
         null,
+        null,
         false,
         false,
         null

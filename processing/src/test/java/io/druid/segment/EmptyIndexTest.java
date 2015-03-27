@@ -60,7 +60,8 @@ public class EmptyIndexTest
     IndexMerger.merge(
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
         new AggregatorFactory[0],
-        tmpDir
+        tmpDir,
+        new IndexSpec()
     );
 
     QueryableIndex emptyQueryableIndex = IndexIO.loadIndex(tmpDir);
