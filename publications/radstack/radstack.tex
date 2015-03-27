@@ -110,7 +110,7 @@ environment to handle a variety of real-world workloads.
 \section{Introduction}
 The rapid growth of the Hadoop\cite{shvachko2010hadoop} ecosystem has enabled
 many organizations to flexibly process and gain insights from large quantities
-of data. These insights are typically business intelligence questions, or
+of data. These insights are typically generated from business intelligence, or
 OnLine Analytical Processing (OLAP) queries. Hadoop has proven to be an
 extremely effective framework capable of providing many analytical insights and
 is able to solve a wide range of distributed computing problems. However, as
@@ -119,32 +119,32 @@ high latency in processing and returning results. A common approach to surface
 data insights is to run MapReduce jobs that may take several hours to complete.
 
 Data analysis and data-driven applications are becoming increasingly important
-in industry, and the long query times encountered when using batch frameworks
+in industry, and the long query times encountered with using batch frameworks
 such as Hadoop are becoming increasingly intolerable. User facing applications
 are replacing traditional reporting interfaces as the preferred means for
 organizations to derive value from their datasets. In order to provide an
-interactive user experience with data-driven applications queries must complete
-in an order of milliseconds. Because most of these interactions revolve around
-data exploration and computation, organizations quickly realized that in order
-support low latency queries, dedicated serving layers are necessary. Today,
+interactive user experience with data applications queries must complete in an
+order of milliseconds. Because most of these interactions revolve around data
+exploration and computation, organizations quickly realized that in order
+support low latency queries, dedicated serving layers were necessary. Today,
 most of these serving layers are Relational Database Management Systems (RDBMS)
 or NoSQL key/value stores. Neither RDBMS nor NoSQL key/value stores are
-particularly designed for analytics, but these technologies are still
-frequently selected as serving layers because of their general reliability in a
-production setting. Solutions that involve these broad-focus technologies can
-be inflexible once tailored to specific report cases, or suffer from
-architecture drawbacks that prevent them from returning queries fast enough to
-power interactive, user-facing applications \cite{tschetter2011druid}.
+particularly designed for analytics \cite{stonebraker2009requirements}, but
+these technologies are still frequently selected as serving layers. Solutions
+that involve these broad-focus technologies can be inflexible once tailored to
+the analytics use case, or suffer from architecture drawbacks that prevent them
+from returning queries fast enough to power interactive, user-facing
+applications \cite{tschetter2011druid}.
 
-An ideal data serving layer alone will not suffice as a complete analytics
+An ideal data serving layer alone is often not sufficient as a complete analytics
 solution. In most real-world use cases, raw data cannot be directly stored in
 the serving layer. Raw data suffers from many imperfections and must first be
-processed (transformed, or cleaned) before it is usable. The drawback of this
-approach is that loading and processing batch data is slow, and insights on
-events cannot be obtained until hours after the events have occurred
-\cite{yang2014radstack}.
+processed (transformed, or cleaned) before it is usable
+\cite{stonebraker2010mapreduce}. The drawback of this requirement is that
+loading and processing batch data is slow, and insights on events cannot be
+obtained until hours after the events have occurred \cite{yang2014radstack}.
 
-To address the problem of delays in data freshness caused by batch processing
+To address the delays in data freshness caused by batch processing
 frameworks, numerous open-source stream processing frameworks such as Apache
 Storm\cite{marz2013storm}, Apache Spark Streaming\cite{zaharia2012discretized},
 and Apache Samza\cite{2014samza} have been gaining popularity for offering a
@@ -152,7 +152,7 @@ low-latency model to ingest and process event streams at near real-time speeds.
 The drawback of popular open-source stream processors is that they do not
 necessarily provide the same correctness guarantees as batch processing
 frameworks. Events can come in days late, and may need to be corrected after
-the fact. Large batches of data may also need to be reprocessed when new
+{the fact. Large batches of data may also need to be reprocessed when new
 columns are added or removed.
 
 The RADStack is an open source, end-to-end solution meant to offer flexible,
@@ -200,7 +200,7 @@ discuss the related solutions.
 \end{table*}
 
 The development of RADStack came about iteratively. Different technologies were
-introduced to address various problems and use cases that came up over time.
+introduced to address new problems and use cases that came up over time.
 The initial concept of the RADStack started at Metamarkets, an analytics
 startup focused in the advertising technology space, and has since been adopted
 by other technology companies \cite{2014yahoo}. In the early days of Metamarkets, we wanted
@@ -278,12 +278,12 @@ Table~\ref{tab:hbase_results} for 500, 000 records. We restricted the result
 set such that users could only filter on 5 dimension values at any given time.
 Queries were acceptably fast with this solution as we were effectively doing
 O(1) lookups into maps.  However, the solution was not particularly flexible;
-if something precomputed, it wasn’t queryable, and the precomputation time
-became an incredible pain point. We attempted to build iceberg cubes as
-described in \cite{beyer1999bottom}, restricting the space of our
-pre-computations, but even then the precomputation times were unbearably slow.
-Our entire evaluation of both RDBMS and key/value stores is described in detail
-in \cite{tschetter2011druid}.
+if something wasn't precomputed, it wasn’t queryable, and the precomputation
+time became a big pain point. We attempted to build iceberg cubes as described
+in \cite{beyer1999bottom}, restricting the space of our pre-computations, but
+even then the precomputation times were unacceptable.  Our entire evaluation of
+both RDBMS and key/value stores is described in detail in
+\cite{tschetter2011druid}.
 
 \begin{table}
 \centering
@@ -304,21 +304,21 @@ Druid was also designed to intake fully denormalized data, and moves away from
 the traditional relational model. Since much of raw data is not denormalized,
 it must be processed before it can be ingested and queried. Multiple streams of
 data had to be joined, cleaned up, and transformed before it was usable in
-Druid, but that was the trade-off we decided was necessary in order to get the
-performance necessary for an interactive data application. We introduced stream
-processing to our stack to provide the business logic processing that was
-required before raw data could be loaded into Druid. Our streaming processing
-jobs range from simple data transformations, such as id to name lookups, up to
-complex operations such as multi-stream joins. Pairing Druid with a stream
-processor enabled flexible data processing and querying, but because events
-were delivered from many different locations and sources, we also required
-technology that was designed for high throughput event delivery. Thus, we added
-Kafka to our stack, and Kafka became the event delivery endpoint for our
-clients. Kafka provided a highly available message bus. Samza read data from
-Kafka, processed it, and delivered the output to Druid. 
+Druid, but that was the trade-off in order to get the performance necessary to
+power an interactive data application. We introduced stream processing to our
+stack to provide the processing required before raw data could be loaded into
+Druid. Our streaming processing jobs range from simple data transformations,
+such as id to name lookups, up to complex operations such as multi-stream
+joins. Pairing Druid with a stream processor enabled flexible data processing
+and querying, but because events were delivered from many different locations
+and sources, we also required a message bus for high throughput event delivery.
+Kafka was added to our stack, and Kafka became the event delivery endpoint for
+our clients.  Samza read data from Kafka, processed it, and delivered the
+output to Druid. 
 
 \begin{figure} 
-\centering \includegraphics[width = 2.6in]{radstack}
+\centering 
+\includegraphics[width = 2.6in]{radstack}
 \caption{
 The components of the RADStack. Kafka acts as the event delivery
 endpoints. Samza and Hadoop process data to load data into Druid. Druid acts as
@@ -354,19 +354,15 @@ data store designed for exploratory analytics. A Druid cluster consists of
 different types of nodes and, similar to the overall design of the RADStack,
 each node type is instrumented to perform a specific set of things well. We
 believe this design separates concerns and simplifies the complexity of the
-overall system. The different node types operate fairly independent of each
-other and there is minimal interaction among them. Hence, intra-cluster
-communication failures have minimal impact on data availability. To solve
-complex data analysis problems, the different node types come together to form
-a fully working system. The composition of and flow of data in a Druid cluster
-are shown in Figure~\ref{fig:cluster}.
+overall system. To solve complex data analysis problems, the different node
+types come together to form a fully working system. The composition of and flow
+of data in a Druid cluster are shown in Figure~\ref{fig:cluster}.
 
 \subsection{Segments}
 \label{sec:segments}
-Data tables in Druid (called data sources) are collections of timestamped
+Data tables in Druid (called "data sources") are collections of timestamped
 events and partitioned into a set of segments, where each segment is typically
-5–10 million rows. We define a segment as a collection of rows of data that
-span some period of time. Segments represent the fundamental storage unit in
+5–10 million rows. Segments represent the fundamental storage unit in
 Druid and Druid queries only understand how to scan segments. 
 
 Druid always requires a timestamp column as a method of simplifying data
@@ -388,13 +384,13 @@ range from the segments with the latest version identifiers for that time
 range.
 
 Druid segments are stored in a column orientation. Given that Druid is best
-used for aggregating event streams (all data going into Druid must have a
-timestamp), the advantages of storing aggregate information as columns rather
-than rows are well documented \cite{abadi2008column}. Column storage allows for
-more efficient CPU usage as only what is needed is actually loaded and scanned.
-In a row oriented data store, all columns associated with a row must be scanned
-as part of an aggregation. The additional scan time can introduce significant
-performance degradations \cite{abadi2008column}.
+used for aggregating event streams, the advantages of storing aggregate
+information as columns rather than rows are well documented
+\cite{abadi2008column}. Column storage allows for more efficient CPU usage as
+only what is needed is actually loaded and scanned.  In a row oriented data
+store, all columns associated with a row must be scanned as part of an
+aggregation. The additional scan time can introduce significant performance
+degradations \cite{abadi2008column}.
 
 Druid nodes use one thread to scan one segment at a time, and the amount of
 data that can be scanned in parallel is directly correlated to the number of
@@ -403,30 +399,29 @@ confers a few advantages. Immutable segments enable read consistency, and
 multiple threads can scan the same segment at the same. This helps enable
 higher read throughput. 
 
-A single query may require scanning thousands of segments concurrently, and
+A single query may scan thousands of segments concurrently, and
 many queries may run at the same time. We want to ensure that the entire
 cluster is not starved out while a single expensive query is executing. Thus,
-segments have an upper limit in how much data they can hold, and are designed
+segments have an upper limit in how much data they can hold, and are sized
 to be scanned in a few milliseconds. By keeping segment computation very fast,
-cores and other resources are constantly being yielded.This ensures segments
+cores and other resources are constantly being yielded. This ensures segments
 from different queries are always being scanned.
 
 Druid segments are very self-contained for the time interval of data that they
 hold. Column data is stored directly in the segment. Druid has multiple column
-types to represent various data formats. For typical OLAP data, timestamps are
-stored in long columns, dimensions are stored in string columns, and measures
-(or metrics as they are called in Druid) are stored in int, float, long or
-double columns. Depending on the column type, different compression methods may
-be used. Metric columns are compressed using LZ4\cite{collet2013lz4}
-compression. String columns are dictionary encoded, similar to other data
-stores such as PowerDrill\cite{hall2012processing}.  Additional indexes may be
-created for particular columns. For example, Druid will by default create
-inverted indexes for string columns.
+types to represent various data formats. Timestamps are stored in long columns,
+dimensions are stored in string columns, and metrics are stored in int, float,
+long or double columns. Depending on the column type, different compression
+methods may be used. Metric columns are compressed using
+LZ4\cite{collet2013lz4} compression. String columns are dictionary encoded,
+similar to other data stores such as PowerDrill\cite{hall2012processing}.
+Additional indexes may be created for particular columns. For example, Druid
+will by default create inverted indexes for string columns.
 
 \subsection{Exploratory Analytics}
 
 Real-world OLAP queries often ask for the aggregated totals for some set of
-metrics, filtered for some boolean expressions of dimension specifications,
+metrics, filtered for some boolean expression of dimension specifications,
 over some period of time. An example query for Table~\ref{tab:sample_data} may
 ask: “How many clicks occurred where publisher is bieberfever.com and users
 were male?”. 
@@ -451,7 +446,7 @@ ultratrimfast.com, we can OR together the two arrays.
 \end{verbatim}}
 
 Our query is aggregating two metrics. Our metrics are also stored in a column
-orientation such as the following:
+orientation:
 
 {\small\begin{verbatim}
 Clicks -> [0, 0, 1, 0, 0, 1]
@@ -466,13 +461,14 @@ we need to scan, and Druid has an internal cursor to only walk through the rows
 that match the final inverted index.
 
 \subsection{Streaming Data Ingestion}
-Druid real-time nodes encapsulate the functionality to ingest and query event
-streams. Events indexed via these nodes are immediately available for querying.
-The nodes are only concerned with events for some small time range and
-periodically hand off immutable batches of events they have collected over this
-small time range to other nodes in the Druid cluster that are specialized in
-dealing with batches of immutable events. The nodes announce their online state
-and the data they serve in Zookeeper\cite{hunt2010zookeeper}.
+Druid real-time nodes encapsulate the functionality to ingest query, and create
+segments from event streams. Events indexed via these nodes are immediately
+available for querying.  The nodes are only concerned with events for some
+small time range and periodically hand off immutable batches of events they
+have collected over this small time range to other nodes in the Druid cluster
+that are specialized in dealing with batches of immutable events. The nodes
+announce their online state and the data they serve using the distributed
+coordination piece (this is currenlty Zookeeper\cite{hunt2010zookeeper}).
 
 \begin{figure}
 \centering
@@ -481,7 +477,7 @@ and the data they serve in Zookeeper\cite{hunt2010zookeeper}.
 Real-time nodes write events to an write optimized in-memory index.
 Periodically, events are persisted to disk, converting the write optimized
 format to a read optimized one.. On a periodic basis, persisted indexes are
-then merged together and the finalized segment is handed off.  Queries will hit
+then merged together and the final segment is handed off.  Queries will hit
 both the in-memory and persisted indexes.  
 }
 \label{fig:realtime_flow}
@@ -493,17 +489,16 @@ in-memory buffer is directly queryable and Druid behaves as a row store for
 queries on events that exist in this JVM heap-based store. The in-memory buffer
 is heavily write optimized, and given that Druid is really designed for heavy
 concurrent reads, events do not remain in the in-memory buffer for very long.
-To avoid heap overflow problems and to improve read latency, real-time nodes
-persist their in-memory indexes to disk either periodically or after some
-maximum row limit is reached. This persist process converts data stored in the
-in-memory buffer to the column oriented segment storage format described in
-Section \ref{sec:segments}.  Persisted segments are memory mapped and loaded
-into off-heap memory such that they can still be queried. This is illustrated
-in Figure~\ref{fig:realtime_timeline}. Data is continuously queryable during
-the persist process.
+Real-time nodes persist their in-memory indexes to disk either periodically or
+after some maximum row limit is reached. This persist process converts data
+stored in the in-memory buffer to the column oriented segment storage format
+described in Section \ref{sec:segments}.  Persisted segments are memory mapped
+and loaded into off-heap memory such that they can still be queried. This is
+illustrated in Figure~\ref{fig:realtime_timeline}. Data is continuously
+queryable during the persist process.
 
 Real-time ingestion in Druid is self-throttling. If a significant spike occurs
-in the number of events transferred from the upstream event producer, there are
+in event volume from the upstream event producer, there are
 a few safety mechanisms built in. Recall that events are first stored in an
 in-memory buffer and persists can occur when a maximum configurable row limit
 is reached. Spikes in event volume should cause persists to occur more often
@@ -518,31 +513,29 @@ is on the upstream consumer to be resilient in the face of increasing backlog.
 Real-time nodes store recent data for a configurable period of time, typically
 an hour. This period is referred to as the segment granularity period. The
 nodes employ a sliding window to accept and reject events and use the
-wall-clock time as the basis of the window. Events within a configurable limit
-before or after the node’s wall-clock time are accepted, and events outside
-this window are dropped. This period is referred to as the window period and
-typical window periods are 10 minutes in length. At the end of the segment
-granularity period plus the window period, a real-time node will hand off the
-data it has collected during the segment granularity period. 
+wall-clock time as the basis of the window. Events within a range of the node’s
+wall-clock time are accepted, and events outside this window are dropped. This
+period is referred to as the window period and typical window periods are 10
+minutes in length. At the end of the segment granularity period plus the window
+period, a real-time node will hand off the data it has collected during the
+segment granularity period. The use of the window period means that delayed
+events may be dropped. In practice, we see that these occurrences are rare, but
+they do occur. Druid's real-time logic does not guarantee exactly once
+processing and is instead best effort. The lack of exactly once processing in
+Druid is one of hte motivations for requiring batch fix up in the RADStack.
 
 For further clarification, consider Figure~\ref{fig:realtime_timeline}.
 Figure~\ref{fig:realtime_timeline} illustrates the operations of a real-time
 node. The node starts at 13:37 and, with a 10 minute window period, will only
-accept events for a window between 13:17 and 13:47.  When events are ingested,
-the node announces that it is serving a segment of data for an interval from
-13:00 to 14:00. Every 10 minutes (the persist period is configurable), the node
-will flush and persist its in-memory buffer to disk.  Near the end of the hour,
-the node will likely see events for 14:00 to 15:00.  When this occurs, the node
-prepares to serve data for the next hour and creates a new in-memory buffer.
-The node then announces that it is also serving a segment from 14:00 to 15:00.
-The node does not immediately merge persisted indexes from 13:00 to 14:00,
-instead it waits for a configurable window period for straggling events from
-13:00 to 14:00 to arrive. This window period minimizes the risk of data loss
-from delays in event delivery. At the end of the window period, the node merges
-all persisted indexes from 13:00 to 14:00 into a single immutable segment and
-hands the segment off. Once this segment is loaded and queryable somewhere else
-in the Druid cluster, the real-time node flushes all information about the data
-it collected for 13:00 to 14:00 and unannounces it is serving this data.
+accept events for a window between 13:27 and 13:47.  When the first events are
+ingested, the node announces that it is serving a segment for an
+interval from 13:00 to 14:00. Every 10 minutes (the persist period is
+configurable), the node will flush and persist its in-memory buffer to disk.
+Near the end of the hour, the node will likely see events for 14:00 to 15:00.
+When this occurs, the node prepares to serve data for the next hour and creates
+a new in-memory buffer.  The node then announces that it is also serving a
+segment from 14:00 to 15:00.  At 13:10, which is the end of the hour plus the
+window period, the node begins the hand off process.
 
 \begin{figure*}
 \centering
@@ -569,13 +562,13 @@ segments are merged together to form a final immutable segment for handoff.
 
 Handoff occurs in a few steps. First, the finalized segment is uploaded to a
 permanent backup storage, typically a distributed file system such as S3
-§cite{decandia2007dynamo} or HDFS \cite{shvachko2010hadoop}, which Druid refers
+\cite{decandia2007dynamo} or HDFS \cite{shvachko2010hadoop}, which Druid refers
 to as “deep storage”. Next, an entry is created in the metadata store
 (typically a RDBMS such as MySQL) to indicate that a new segment has been
 created. This entry in the metadata store will eventually cause other nodes in
 the Druid cluster to download and serve the segment. The real-time node
 continues to serve the segment until it notices that the segment is available
-on Druid historical nodes, which are nodes that are dedicated to serving
+on Druid historical nodes, which are nodes that are dedicatea to serving
 historical data. At this point, the segment is dropped and unannounced from the
 real-time node. The entire handoff process is fluid; data remains continuously
 queryable throughout the entire handoff process. Segments created by real-time
@@ -593,7 +586,7 @@ Similar to the real-time ingestion logic, segments created through batch
 ingestion are directly uploaded to deep storage. Druid’s Hadoop-based batch
 indexer will also create an entry in the metadata storage once all segments
 have been created. The version of the segments created by batch ingestion are
-based on the time the batch processing job starts at.
+based on the time the batch processing job starteed at.
 
 \subsection{Unifying Views}
 When new entries are created in the metadata storage, they will eventually be
@@ -604,7 +597,7 @@ nodes will tell historical nodes to load new segments, drop outdated segments,
 and move segments across nodes.
 
 Druid historical nodes are very simple in operation. They know how to load,
-drop, and respond to queries that scan segments. Historical nodes typically
+drop, and respond to queries to scan segments. Historical nodes typically
 store all the data that is older than an hour (recent data lives on the
 real-time node). The real-time handoff process requires that a historical must
 load first load and begin serving queries for a segment before that segment can
@@ -613,7 +606,7 @@ of a segment can exist on multiple historical nodes and real-time nodes. Most
 nodes in typical production Druid clusters are historical nodes.
 
 To consolidate results from historical and real-time nodes, Druid has a set of
-broker nodes which act as the endpoint that clients query. Broker nodes
+broker nodes which act as the client query endpoint. Broker nodes in part
 function as query routers to historical and real-time nodes. Broker nodes
 understand the metadata published in Zookeeper about what segments are
 queryable and where those segments are located. Broker nodes route incoming
@@ -627,13 +620,13 @@ multi-version concuncurrency control to manage how data is extracted from
 segments. Segments with higher version identifiers have precedence over
 segments with lower version identifiers. If two segments exactly overlap for an
 interval, Druid only considers the data from the segment with the higher
-version interval.
+version interval. This is illustrated in Figure~\ref{fig:timeline}
 
 \begin{figure}
 \centering
 \includegraphics[width = 2.6in]{timeline}
 \caption{
-Druid utilies multi-version concurrency control and reads data from segments
+Druid utilizes multi-version concurrency control and reads data from segments
 with the latest version for a given interval. Segments are that completely
 overshadowed are ignored and eventually automatically dropped from the cluster.
 }
@@ -644,7 +637,7 @@ Segments are inserted into the timeline as they are announced. The timeline
 sorts the segment based on their data interval in a data structure similar to
 an interval tree. Lookups in the timeline will return all segments with
 intervals that overlap the lookup interval, along with interval ranges for
-which the data in a segment is valid. This is illustrated in Figure [].
+which the data in a segment is valid. 
 
 Brokers extract the interval of a query and use it for lookups into the
 timeline. The result of the timeline is used to remap the original query into a
@@ -657,7 +650,7 @@ cluster. If a segment is completely overshadowed by one or more segments, it
 will be flagged in this timeline. When the coordinator notices overshadowed
 segments, it tells historical nodes to drop these segments from the cluster.
 
-\subsection{Supported Queries}
+\subsection{Analytic Queries}
 Druid has its own query language and accepts queries as POST requests. Broker,
 historical, and real-time nodes all share the same query API. 
 
@@ -734,14 +727,11 @@ beyond the scope of this paper to fully describe the query API but more
 information can be found
 online\footnote{\href{http://druid.io/docs/latest/Querying.html}{http://druid.io/docs/latest/Querying.html}}. 
 
-As of this writing, a join query for Druid is not yet implemented. This has
-been a function of engineering resource allocation and use case decisions more
-than a decision driven by technical merit. Indeed, Druid’s storage format would
-allow for the implementation of joins (there is no loss of fidelity for columns
-included as dimensions) and the implementation of them has been a conversation
-that we have every few months. To date, we have made the choice that the
-implementation cost is not worth the investment for our organization. The
-reasons for this decision are generally two-fold. 
+As of this writing, a join query for Druid is not yet implemented.  Although
+Druid’s storage format would allow for the implementation of joins (there is no
+loss of fidelity for columns included as dimensions), implementation time is
+costly and a strong enough use case has not yet arised. The reasons for this
+decision are generally two-fold. 
 
 1. Scaling join queries has been, in our professional experience, a constant
 bottleneck of working with distributed databases. 
@@ -771,7 +761,7 @@ being.
 \section{The Processing Layer}
 \label{sec:processing}
 Although Druid can ingest events that are streamed in one at a time, data must
-be denormalized before it is ingested in Druid, as Druid cannot yet support
+be denormalized beforehand as Druid cannot yet support
 join queries. Furthermore, real world data must often be transformed before it
 is usable by an application.
 
@@ -804,8 +794,8 @@ is transmitted further down the pipeline. If events are substantially delayed
 and do not arrive in the allocated window period, they will not be joined. In
 practice, this generally leads to one “primary” event continuing through the
 pipeline and other secondary events with the same join key getting dropped.
-This means that our stream processing layer is not guaranteed to deliver 100%
-accurate results. Furthermore, even absent this restriction, Samza does not
+This means that our stream processing layer is not guaranteed to deliver 100 percent 
+accurate results. Furthermore, even without this restriction, Samza does not
 offer exactly-once processing semantics. Problems in network connectivity or
 node failure can lead to duplicated events. For these reasons, we run a
 separate batch pipeline that generates a more accurate transformation of the
@@ -822,16 +812,16 @@ historical querying, and once that segment is loaded on the historical nodes,
 both real-time nodes will drop their versions of the same segment.
 
 \subsection{Batch Processing}
-Our batch processing pipeline is composed a multi-stage MapReduce pipeline. The
-first set of jobs mirrors our streaming processing pipeline in that it
-transforms data and joins relevant events in preparation for the is data to be
-loaded into Druid. The second set of jobs is responsible for directly creating
-immutable Druid segments. A final set of MapReduce\cite{dean2008mapreduce} jobs
-that reads our processed data from the first set and indexes this data to
-create Druid segments. The indexing code for both streaming and batch ingestion
-in Druid is shared between the two modes of ingestion. These segments are then
-uploaded to deep storage and registered with the  metadata store. Druid will
-proceed to load the batch generated segments.
+Our batch processing pipeline is composed a multi-stage
+MapReduce\cite{dean2008mapreduce} pipeline. The first set of jobs mirrors our
+streaming processing pipeline in that it transforms data and joins relevant
+events in preparation for the is data to be loaded into Druid. The second set
+of jobs is responsible for directly creating immutable Druid segments. A final
+set of MapReduce jobs that reads our processed data from the first set and
+indexes this data to create Druid segments. The indexing code for both
+streaming and batch ingestion in Druid is shared between the two modes of
+ingestion. These segments are then uploaded to deep storage and registered with
+the  metadata store. Druid will proceed to load the batch generated segments.
 
 The batch process typically runs much less frequently than the real-time
 process, and may run many hours or even days after raw events have been
@@ -855,14 +845,6 @@ process typically runs much less frequently than the real-time process, and may
 run many hours or even days after raw events have been delivered. The wait is
 necessary for severely delayed events, and to ensure that the raw data is
 indeed complete. 
-
-Segments generated by the batch process are versioned by the start time of the
-process. Hence, segments created by batch processing will have a version
-identifier that is greater than segments created by real-time processing. When
-these batch created segments are loaded in the cluster, they atomically replace
-segments created by real-time processing for their processed interval. Hence,
-soon after batch processing completes, Druid switches to querying for the
-accurate copy of the data.
 
 \subsection{Starfire}
 To avoid writing the same processing logic on both Hadoop and Samza, we created
@@ -899,21 +881,21 @@ multiple consumers can subscribe to the same topic and process the same set of
 events. We have two primary Kafka consumers. The first is a Samza job that
 reads messages from Kafka for stream processing as described in Section
 \ref{sec:streamprocessing}. The second consumer reads messages from Kafka and
-stores them in a distributed file system, similar to Camus\cite{2013linkedin}.
-This file system is the same as the one used for Druid’s deep storage, and also
-acts as a backup for raw events. Topics in Kafka map directly to pipelines in
-Samza, and pipelines in Samza map directly to data sources in Druid. The
-purpose of storing raw events in deep storage is so that we can run batch
-processing jobs over them at any given time. For example, our stream processing
-layer may choose to not include certain columns when it first processes a new
-pipeline. If we want to include these columns in the future, we can reprocess
-the raw data to generate new Druid segments. 
+stores them in a distributed file system.  This file system is the same as the
+one used for Druid’s deep storage, and also acts as a backup for raw events.
+Topics in Kafka map to pipelines in Samza, and pipelines in Samza map
+to data sources in Druid. The purpose of storing raw events in deep
+storage is so that we can run batch processing jobs over them at any given
+time. For example, our stream processing layer may choose to not include
+certain columns when it first processes a new pipeline. If we want to include
+these columns in the future, we can reprocess the raw data to generate new
+Druid segments. 
 
 Kafka is the single point of delivery for events entering our system, and must
 have the highest availability. We replicate our Kafka producers across multiple
 datacenters. In the event that Kafka brokers and consumers become unresponsive,
 as long as our HTTP endpoints are still available, we can buffer events on the
-producer side while recovering the system. Similarity, if our processing and
+producer side while recovering the system. Similarily, if our processing and
 serving layers completely fail, we can recover by replaying events from Kafka.
 
 \section{Performance}
@@ -1076,13 +1058,14 @@ characteristics.
 
 \subsection{Experiences with Druid}
 \subsubsection{Query Patterns}
-Druid is used for exploratory analytics and reporting, which are two very
+Druid is often used for exploratory analytics and reporting, which are two very
 distinct use cases. Exploratory analytic workflows uncover discoveries by
 progressively narrowing down a view of data until an interesting insight is
 made. Users tend to explore short intervals of recent data. In the reporting
 use case, users query for much longer data intervals, and the volume of queries
 is generally much less. The insights that users are looking for are often
-pre-determined. 
+pre-determined. We've made several optimizations in the code that take into
+account these two disctinct use cases.
 
 \subsubsection{Multitenancy}
 Expensive concurrent queries can be problematic in a multitenant environment.
@@ -1108,7 +1091,7 @@ from 2 historical nodes.
 \subsection{Experiences with Ingestion}
 \subsubsection{Multitenancy}
 Before moving our streaming pipeline to Samza, we experimented with other
-stream processors. One of the biggest pains we felt was multi-tenancy. Multiple
+stream processors. One of the biggest pains we felt was around multi-tenancy. Multiple
 pipelines may contend for resources, and it is often unclear how various jobs
 impact one another when running in the same environment. Given that each of our
 pipelines is composed of different tasks, Samza was able to provide per task
@@ -1121,7 +1104,7 @@ problem. Production load is not constant, and different peaks can occur at
 vastly different times during a day. We’ve elected to focus on the problem of
 gradually increasing load, instead dealing with immediate spikes or dips in
 load. As load increases, we add new resources but set a configurable limit on
-how fast they can be added. We scale down our cluster very slowly, excess
+how fast they can be added. We scale down our cluster very slowly, and excess
 capacity may remain for several hours before the system decides they are no
 longer necessary.
 
@@ -1155,7 +1138,7 @@ and processes data for delivery to key/value stores. Summingbird can run on top
 of data processors such as Storm\cite{marz2013storm} and Hadoop. The RADStack
 also offers a language for writing data processing jobs with Starfire. These
 jobs do not involve computation and focus entirely on data processing. Starfire
-enables more complex operations such as streaming joins. Moreover, the RADStack
+enables more complex operations such as streaming joins. The RADStack also 
 leaves all queries and aggregations to the serving layer, letting each layer of
 the stack focus on what it is best at.
 
@@ -1165,9 +1148,9 @@ iterative workflows.  Spark Streaming is a separate project that converts
 sequences of tuples into immutable micro-batches. Each micro-batch can be
 processed using the underlying Spark framework. Spark SQL is a query
 optimization layer that can sit on top of Spark and issue SQL queries, along
-with Spark’s native analytic queries.  Druid’s approach to querying is quite
+with Spark’s native API.  Druid’s approach to querying is quite
 different and Druid insteads builds immutable indexed data structures optimized
-for low latency OLAP queries, and does not leverage lineage in computations.
+for low latency OLAP queries, and does not leverage lineage in its architecture.
 The RADStack can theoretically be composed of Spark and Spark Streaming for
 processing, Kafka for event delivery, and Druid to serve queries.
 
@@ -1215,15 +1198,14 @@ applications. The key pieces of the stack are Kafka, Samza, Hadoop, and Druid.
 Druid is designed for exploratory analytics and is optimized for low latency
 data exploration, aggregation, and ingestion, and is well suited for OLAP
 workflows. Samza and Hadoop complement Druid and add data processing
-functionality, and Kafka solves the event delivery problem. 
+functionality, and Kafka enables high throughput event delivery problem. 
 
-We believe that although our solution currently requires batch processing, in
-later iterations of this work, that piece of the stack may not be necessary. As
-open source technologies mature, the existing problems around exactly-once
-processing will eventually be solved. The Druid, Samza and Kafka communities
-are actively working on exactly once, lossless processing for their respective
-systems, and in the near future, the same guarantees that the RADStack provides
-right now will be available using only these technologies.
+We believe that in later iterations of this work, batch processing may not be
+necessary. As open source technologies mature, the existing problems around
+exactly-once processing will eventually be solved. The Druid, Samza and Kafka
+communities are working on exactly once, lossless processing for their
+respective systems, and in the near future, the same guarantees that the
+RADStack provides right now should be available using only these technologies.
 
 %\end{document}  % This is where a 'short' article might terminate
 
