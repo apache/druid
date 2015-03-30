@@ -19,7 +19,6 @@ package io.druid.storage.s3;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.metamx.common.FileUtils;
 import com.metamx.common.RetryUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
@@ -52,38 +51,30 @@ public class S3Utils
     }
   }
 
-  public static boolean isServiceExceptionRecoverable(ServiceException ex)
-  {
-    final boolean isIOException = ex.getCause() instanceof IOException;
-    final boolean isTimeout = "RequestTimeout".equals(((ServiceException) ex).getErrorCode());
-    return isIOException || isTimeout;
-  }
-
-  public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable e)
-    {
-      if (e == null) {
-        return false;
-      } else if (e instanceof IOException) {
-        return true;
-      } else if (e instanceof ServiceException) {
-        return isServiceExceptionRecoverable((ServiceException) e);
-      } else {
-        return apply(e.getCause());
-      }
-    }
-  };
-
   /**
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
   public static <T> T retryS3Operation(Callable<T> f) throws Exception
   {
+    final Predicate<Throwable> shouldRetry = new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable e)
+      {
+        if (e instanceof IOException) {
+          return true;
+        } else if (e instanceof ServiceException) {
+          final boolean isIOException = e.getCause() instanceof IOException;
+          final boolean isTimeout = "RequestTimeout".equals(((ServiceException) e).getErrorCode());
+          return isIOException || isTimeout;
+        } else {
+          return false;
+        }
+      }
+    };
     final int maxTries = 10;
-    return RetryUtils.retry(f, S3RETRY, maxTries);
+    return RetryUtils.retry(f, shouldRetry, maxTries);
   }
 
   public static boolean isObjectInBucket(RestS3Service s3Client, String bucketName, String objectKey)

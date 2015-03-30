@@ -18,7 +18,7 @@
 package io.druid.indexing.common;
 
 import com.google.inject.Inject;
-import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import io.druid.segment.loading.OmniSegmentLoader;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
@@ -30,11 +30,11 @@ import java.util.Arrays;
  */
 public class SegmentLoaderFactory
 {
-  private final SegmentLoaderLocalCacheManager loader;
+  private final OmniSegmentLoader loader;
 
   @Inject
   public SegmentLoaderFactory(
-      SegmentLoaderLocalCacheManager loader
+      OmniSegmentLoader loader
   )
   {
     this.loader = loader;

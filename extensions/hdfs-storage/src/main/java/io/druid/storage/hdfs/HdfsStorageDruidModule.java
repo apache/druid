@@ -17,7 +17,6 @@
 
 package io.druid.storage.hdfs;
 
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -37,7 +36,6 @@ import java.util.Properties;
  */
 public class HdfsStorageDruidModule implements DruidModule
 {
-  public static final String SCHEME = "hdfs";
   private Properties props = null;
 
   @Inject
@@ -49,36 +47,15 @@ public class HdfsStorageDruidModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(
-        new Module()
-        {
-          @Override
-          public String getModuleName()
-          {
-            return "DruidHDFSStorage-" + System.identityHashCode(this);
-          }
-
-          @Override
-          public Version version()
-          {
-            return Version.unknownVersion();
-          }
-
-          @Override
-          public void setupModule(SetupContext context)
-          {
-            context.registerSubtypes(HdfsLoadSpec.class);
-          }
-        }
-    );
+    return ImmutableList.of();
   }
 
   @Override
   public void configure(Binder binder)
   {
-    Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
-    Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
+    Binders.dataSegmentPullerBinder(binder).addBinding("hdfs").to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
+    Binders.dataSegmentPusherBinder(binder).addBinding("hdfs").to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder).addBinding("hdfs").to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
     if (props != null) {
