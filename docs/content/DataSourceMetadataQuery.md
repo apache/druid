@@ -7,7 +7,7 @@ Data Source Metadata queries return metadata information for a dataSource. It re
 ```json
 {
     "queryType" : "dataSourceMetadata",
-    "dataSource": "sample_datasource",
+    "dataSource": "sample_datasource"
 }
 ```
 
