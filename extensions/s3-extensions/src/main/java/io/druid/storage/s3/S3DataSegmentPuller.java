@@ -17,37 +17,125 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.services.s3.AmazonS3URI;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
+import com.metamx.common.CompressionUtils;
+import com.metamx.common.FileUtils;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
+import com.metamx.common.UOE;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
-import io.druid.utils.CompressionUtils;
-import org.apache.commons.io.FileUtils;
 import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
+import javax.tools.FileObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.net.URI;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.zip.GZIPInputStream;
 
 /**
+ * A data segment puller that also hanldes URI data pulls.
  */
-public class S3DataSegmentPuller implements DataSegmentPuller
+public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static FileObject buildFileObject(final URI uri, final RestS3Service s3Client) throws S3ServiceException
+  {
+    final URI checkedUri = checkURI(uri);
+    final AmazonS3URI s3URI = new AmazonS3URI(checkedUri);
+    final String key = s3URI.getKey();
+    final String bucket = s3URI.getBucket();
+    final S3Object s3Obj = s3Client.getObject(bucket, key);
+    final String path = uri.getPath();
+
+    return new FileObject()
+    {
+      @Override
+      public URI toUri()
+      {
+        return uri;
+      }
+
+      @Override
+      public String getName()
+      {
+        final String ext = Files.getFileExtension(path);
+        return Files.getNameWithoutExtension(path) + (Strings.isNullOrEmpty(ext) ? "" : ("." + ext));
+      }
+
+      @Override
+      public InputStream openInputStream() throws IOException
+      {
+        try {
+          return s3Obj.getDataInputStream();
+        }
+        catch (ServiceException e) {
+          throw new IOException(String.format("Could not load S3 URI [%s]", checkedUri.toString()), e);
+        }
+      }
+
+      @Override
+      public OutputStream openOutputStream() throws IOException
+      {
+        throw new UOE("Cannot stream S3 output");
+      }
+
+      @Override
+      public Reader openReader(boolean ignoreEncodingErrors) throws IOException
+      {
+        throw new UOE("Cannot open reader");
+      }
+
+      @Override
+      public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException
+      {
+        throw new UOE("Cannot open character sequence");
+      }
+
+      @Override
+      public Writer openWriter() throws IOException
+      {
+        throw new UOE("Cannot open writer");
+      }
+
+      @Override
+      public long getLastModified()
+      {
+        return s3Obj.getLastModifiedDate().getTime();
+      }
+
+      @Override
+      public boolean delete()
+      {
+        throw new UOE("Cannot delete S3 items anonymously. jetS3t doesn't support authenticated deletes easily.");
+      }
+    };
+  }
+
+  public static final String scheme = S3StorageDruidModule.SCHEME;
+
   private static final Logger log = new Logger(S3DataSegmentPuller.class);
 
-  private static final String BUCKET = "bucket";
-  private static final String KEY = "key";
+  protected static final String BUCKET = "bucket";
+  protected static final String KEY = "key";
 
   private final RestS3Service s3Client;
 
@@ -62,7 +150,12 @@ public class S3DataSegmentPuller implements DataSegmentPuller
   @Override
   public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
   {
-    final S3Coords s3Coords = new S3Coords(segment);
+    getSegmentFiles(new S3Coords(segment), outDir);
+  }
+
+  public FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir)
+      throws SegmentLoadingException
+  {
 
     log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
 
@@ -79,60 +172,131 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
 
     try {
-      S3Utils.retryS3Operation(
-          new Callable<Void>()
-          {
-            @Override
-            public Void call() throws Exception
-            {
-              long startTime = System.currentTimeMillis();
-              S3Object s3Obj = null;
-
-              try {
-                s3Obj = s3Client.getObject(s3Coords.bucket, s3Coords.path);
-
-                try (InputStream in = s3Obj.getDataInputStream()) {
-                  final String key = s3Obj.getKey();
-                  if (key.endsWith(".zip")) {
-                    CompressionUtils.unzip(in, outDir);
-                  } else if (key.endsWith(".gz")) {
-                    final File outFile = new File(outDir, toFilename(key, ".gz"));
-                    ByteStreams.copy(new GZIPInputStream(in), Files.newOutputStreamSupplier(outFile));
-                  } else {
-                    ByteStreams.copy(in, Files.newOutputStreamSupplier(new File(outDir, toFilename(key, ""))));
-                  }
-                  log.info(
-                      "Pull of file[%s/%s] completed in %,d millis",
-                      s3Obj.getBucketName(),
-                      s3Obj.getKey(),
-                      System.currentTimeMillis() - startTime
-                  );
-                  return null;
-                }
-                catch (IOException e) {
-                  throw new IOException(String.format("Problem decompressing object[%s]", s3Obj), e);
-                }
-              }
-              finally {
-                S3Utils.closeStreamsQuietly(s3Obj);
+      final URI uri = URI.create(String.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
+      final ByteSource byteSource = new ByteSource()
+      {
+        @Override
+        public InputStream openStream() throws IOException
+        {
+          try {
+            return buildFileObject(uri, s3Client).openInputStream();
+          }
+          catch (ServiceException e) {
+            if (e.getCause() != null) {
+              if (S3Utils.S3RETRY.apply(e)) {
+                throw new IOException("Recoverable exception", e);
               }
             }
+            throw Throwables.propagate(e);
           }
-      );
+        }
+      };
+      if (CompressionUtils.isZip(s3Coords.path)) {
+        final FileUtils.FileCopyResult result = CompressionUtils.unzip(
+            byteSource,
+            outDir,
+            S3Utils.S3RETRY,
+            true
+        );
+        log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
+        return result;
+      }
+      if (CompressionUtils.isGz(s3Coords.path)) {
+        final String fname = Paths.get(uri).getFileName().toString();
+        final File outFile = new File(outDir, CompressionUtils.getGzBaseName(fname));
+
+        final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile);
+        log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outFile.getAbsolutePath());
+        return result;
+      }
+      throw new IAE("Do not know how to load file type at [%s]", uri.toString());
     }
     catch (Exception e) {
       try {
-        FileUtils.deleteDirectory(outDir);
+        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
       }
       catch (IOException ioe) {
         log.warn(
             ioe,
-            "Failed to remove output directory for segment[%s] after exception: %s",
-            segment.getIdentifier(),
-            outDir
+            "Failed to remove output directory [%s] for segment pulled from [%s]",
+            outDir.getAbsolutePath(),
+            s3Coords.toString()
         );
       }
       throw new SegmentLoadingException(e, e.getMessage());
+    }
+  }
+
+  public static URI checkURI(URI uri)
+  {
+    if (uri.getScheme().equalsIgnoreCase(scheme)) {
+      uri = URI.create("s3" + uri.toString().substring(scheme.length()));
+    } else if (!uri.getScheme().equalsIgnoreCase("s3")) {
+      throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
+    }
+    return uri;
+  }
+
+  @Override
+  public InputStream getInputStream(URI uri) throws IOException
+  {
+    try {
+      return buildFileObject(uri, s3Client).openInputStream();
+    }
+    catch (ServiceException e) {
+      throw new IOException(String.format("Could not load URI [%s]", uri.toString()), e);
+    }
+  }
+
+  @Override
+  public Predicate<Throwable> shouldRetryPredicate()
+  {
+    // Yay! smart retries!
+    return new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable e)
+      {
+        if (e == null) {
+          return false;
+        }
+        if (e instanceof ServiceException) {
+          return S3Utils.isServiceExceptionRecoverable((ServiceException) e);
+        }
+        if (S3Utils.S3RETRY.apply(e)) {
+          return true;
+        }
+        // Look all the way down the cause chain, just in case something wraps it deep.
+        return apply(e.getCause());
+      }
+    };
+  }
+
+  /**
+   * Returns the "version" (aka last modified timestamp) of the URI
+   *
+   * @param uri The URI to check the last timestamp
+   *
+   * @return The time in ms of the last modification of the URI in String format
+   *
+   * @throws IOException
+   */
+  @Override
+  public String getVersion(URI uri) throws IOException
+  {
+    try {
+      return String.format("%d", buildFileObject(uri, s3Client).getLastModified());
+    }
+    catch (S3ServiceException e) {
+      if (S3Utils.isServiceExceptionRecoverable(e)) {
+        // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
+        throw new IOException(
+            String.format("Could not fetch last modified timestamp from URI [%s]", uri.toString()),
+            e
+        );
+      } else {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
@@ -165,7 +329,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller
     }
   }
 
-  private static class S3Coords
+  protected static class S3Coords
   {
     String bucket;
     String path;
@@ -178,6 +342,12 @@ public class S3DataSegmentPuller implements DataSegmentPuller
       if (path.startsWith("/")) {
         path = path.substring(1);
       }
+    }
+
+    public S3Coords(String bucket, String key)
+    {
+      this.bucket = bucket;
+      this.path = key;
     }
 
     public String toString()

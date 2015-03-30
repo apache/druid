@@ -24,4 +24,8 @@ public class SegmentMissingException extends ISE
   public SegmentMissingException(String formatText, Object... arguments) {
     super(String.format(formatText, arguments));
   }
+
+  public SegmentMissingException(Throwable cause, String formatText, Object... arguments){
+    super(cause, formatText, arguments);
+  }
 }

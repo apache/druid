@@ -68,10 +68,8 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.LocalDataSegmentPuller;
-import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
@@ -314,11 +312,7 @@ public class TaskLifecycleTest
         null, // query executor service
         null, // monitor scheduler
         new SegmentLoaderFactory(
-            new OmniSegmentLoader(
-                ImmutableMap.<String, DataSegmentPuller>of(
-                    "local",
-                    new LocalDataSegmentPuller()
-                ),
+            new SegmentLoaderLocalCacheManager(
                 null,
                 new SegmentLoaderConfig()
                 {
@@ -327,7 +321,7 @@ public class TaskLifecycleTest
                   {
                     return Lists.newArrayList();
                   }
-                }
+                }, new DefaultObjectMapper()
             )
         ),
         new DefaultObjectMapper()

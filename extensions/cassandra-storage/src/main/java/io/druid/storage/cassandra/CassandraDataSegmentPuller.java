@@ -17,79 +17,105 @@
 
 package io.druid.storage.cassandra;
 
-import com.google.common.io.Files;
+import com.google.common.base.Predicates;
 import com.google.inject.Inject;
+import com.metamx.common.CompressionUtils;
 import com.metamx.common.ISE;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.logger.Logger;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import com.netflix.astyanax.recipes.storage.ObjectMetadata;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import io.druid.utils.CompressionUtils;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.Callable;
 
 /**
  * Cassandra Segment Puller
- *
- * @author boneill42
  */
 public class CassandraDataSegmentPuller extends CassandraStorage implements DataSegmentPuller
 {
-	private static final Logger log = new Logger(CassandraDataSegmentPuller.class);
-	private static final int CONCURRENCY = 10;
-	private static final int BATCH_SIZE = 10;
+  private static final Logger log = new Logger(CassandraDataSegmentPuller.class);
+  private static final int CONCURRENCY = 10;
+  private static final int BATCH_SIZE = 10;
 
   @Inject
-	public CassandraDataSegmentPuller(CassandraDataSegmentConfig config)
-	{
-		super(config);
-	}
+  public CassandraDataSegmentPuller(CassandraDataSegmentConfig config)
+  {
+    super(config);
+  }
 
-	@Override
-	public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
-	{
-		String key = (String) segment.getLoadSpec().get("key");
-		log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
+  @Override
+  public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
+  {
+    String key = (String) segment.getLoadSpec().get("key");
+    getSegmentFiles(key, outDir);
+  }
+  public com.metamx.common.FileUtils.FileCopyResult getSegmentFiles(final String key, final File outDir) throws SegmentLoadingException{
+    log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
+    if (!outDir.exists()) {
+      outDir.mkdirs();
+    }
 
-		if (!outDir.exists())
-		{
-			outDir.mkdirs();
-		}
+    if (!outDir.isDirectory()) {
+      throw new ISE("outDir[%s] must be a directory.", outDir);
+    }
 
-		if (!outDir.isDirectory())
-		{
-			throw new ISE("outDir[%s] must be a directory.", outDir);
-		}
+    long startTime = System.currentTimeMillis();
+    final File tmpFile = new File(outDir, "index.zip");
+    log.info("Pulling to temporary local cache [%s]", tmpFile.getAbsolutePath());
 
-		long startTime = System.currentTimeMillis();
-		ObjectMetadata meta = null;
-		final File outFile = new File(outDir, "index.zip");
-		try
-		{
-			try
-			{
-				log.info("Writing to [%s]", outFile.getAbsolutePath());
-				OutputStream os = Files.newOutputStreamSupplier(outFile).getOutput();
-				meta = ChunkedStorage
-				    .newReader(indexStorage, key, os)
-				    .withBatchSize(BATCH_SIZE)
-				    .withConcurrencyLevel(CONCURRENCY)
-				    .call();
-				os.close();
-				CompressionUtils.unzip(outFile, outDir);
-			} catch (Exception e)
-			{
-				FileUtils.deleteDirectory(outDir);
-			}
-		} catch (Exception e)
-		{
-			throw new SegmentLoadingException(e, e.getMessage());
-		}
-		log.info("Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
-		    meta.getObjectSize());
-	}
+    final com.metamx.common.FileUtils.FileCopyResult localResult;
+    try {
+      localResult = RetryUtils.retry(
+          new Callable<com.metamx.common.FileUtils.FileCopyResult>()
+          {
+            @Override
+            public com.metamx.common.FileUtils.FileCopyResult call() throws Exception
+            {
+              try (OutputStream os = new FileOutputStream(tmpFile)) {
+                final ObjectMetadata meta = ChunkedStorage
+                    .newReader(indexStorage, key, os)
+                    .withBatchSize(BATCH_SIZE)
+                    .withConcurrencyLevel(CONCURRENCY)
+                    .call();
+              }
+              return new com.metamx.common.FileUtils.FileCopyResult(tmpFile);
+            }
+          },
+          Predicates.<Throwable>alwaysTrue(),
+          10
+      );
+    }catch (Exception e){
+      throw new SegmentLoadingException(e, "Unable to copy key [%s] to file [%s]", key, tmpFile.getAbsolutePath());
+    }
+    try{
+    final com.metamx.common.FileUtils.FileCopyResult result =  CompressionUtils.unzip(tmpFile, outDir);
+      log.info(
+          "Pull of file[%s] completed in %,d millis (%s bytes)", key, System.currentTimeMillis() - startTime,
+          result.size()
+      );
+      return result;
+    }
+    catch (Exception e) {
+      try {
+        FileUtils.deleteDirectory(outDir);
+      }
+      catch (IOException e1) {
+        log.error(e1, "Error clearing segment directory [%s]", outDir.getAbsolutePath());
+        e.addSuppressed(e1);
+      }
+      throw new SegmentLoadingException(e, e.getMessage());
+    } finally {
+      if(!tmpFile.delete()){
+        log.warn("Could not delete cache file at [%s]", tmpFile.getAbsolutePath());
+      }
+    }
+  }
 }
