@@ -17,12 +17,11 @@
 
 package io.druid.segment.loading;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
-import io.druid.guice.annotations.Json;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
@@ -33,31 +32,32 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
-public class SegmentLoaderLocalCacheManager implements SegmentLoader
+public class OmniSegmentLoader implements SegmentLoader
 {
-  private static final Logger log = new Logger(SegmentLoaderLocalCacheManager.class);
+  private static final Logger log = new Logger(OmniSegmentLoader.class);
 
+  private final Map<String, DataSegmentPuller> pullers;
   private final QueryableIndexFactory factory;
   private final SegmentLoaderConfig config;
-  private final ObjectMapper jsonMapper;
 
   private final List<StorageLocation> locations;
 
   private final Object lock = new Object();
 
   @Inject
-  public SegmentLoaderLocalCacheManager(
+  public OmniSegmentLoader(
+      Map<String, DataSegmentPuller> pullers,
       QueryableIndexFactory factory,
-      SegmentLoaderConfig config,
-      @Json ObjectMapper mapper
+      SegmentLoaderConfig config
   )
   {
+    this.pullers = pullers;
     this.factory = factory;
     this.config = config;
-    this.jsonMapper = mapper;
 
     this.locations = Lists.newArrayList();
     for (StorageLocationConfig locationConfig : config.getLocations()) {
@@ -65,9 +65,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     }
   }
 
-  public SegmentLoaderLocalCacheManager withConfig(SegmentLoaderConfig config)
+  public OmniSegmentLoader withConfig(SegmentLoaderConfig config)
   {
-    return new SegmentLoaderLocalCacheManager(factory, config, jsonMapper);
+    return new OmniSegmentLoader(pullers, factory, config);
   }
 
   @Override
@@ -127,25 +127,21 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           log.debug("Unable to make parent file[%s]", storageDir);
         }
         try {
-          if (!downloadStartMarker.createNewFile()) {
-            throw new SegmentLoadingException("Was not able to create new download marker for [%s]", storageDir);
-          }
+          downloadStartMarker.createNewFile();
         }
         catch (IOException e) {
-          throw new SegmentLoadingException(e, "Unable to create marker file for [%s]", storageDir);
+          throw new SegmentLoadingException("Unable to create marker file for [%s]", storageDir);
         }
       }
 
-      // LoadSpec isn't materialized until here so that any system can interpret Segment without having to have all the LoadSpec dependencies.
-      final LoadSpec loadSpec = jsonMapper.convertValue(segment.getLoadSpec(), LoadSpec.class);
-      final LoadSpec.LoadSpecResult result = loadSpec.loadSegment(storageDir);
-      if(result.getSize() != segment.getSize()){
-        log.warn("Segment [%s] is different than expected size. Expected [%d] found [%d]", segment.getIdentifier(), segment.getSize(), result.getSize());
-      }
+      getPuller(segment.getLoadSpec()).getSegmentFiles(segment, storageDir);
 
       if (!downloadStartMarker.delete()) {
         throw new SegmentLoadingException("Unable to remove marker file for [%s]", storageDir);
       }
+
+
+      loc.addSegment(segment);
 
       retVal = storageDir;
     } else {
@@ -181,6 +177,18 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     catch (IOException e) {
       throw new SegmentLoadingException(e, e.getMessage());
     }
+  }
+
+  private DataSegmentPuller getPuller(Map<String, Object> loadSpec) throws SegmentLoadingException
+  {
+    String type = MapUtils.getString(loadSpec, "type");
+    DataSegmentPuller loader = pullers.get(type);
+
+    if (loader == null) {
+      throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, pullers.keySet());
+    }
+
+    return loader;
   }
 
   public void cleanupCacheFiles(File baseFile, File cacheFile) throws IOException

@@ -20,6 +20,7 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
@@ -35,7 +36,9 @@ import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import io.druid.segment.loading.DataSegmentPuller;
+import io.druid.segment.loading.LocalDataSegmentPuller;
+import io.druid.segment.loading.OmniSegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -121,7 +124,11 @@ public class WorkerTaskMonitorTest
             new TaskToolboxFactory(
                 new TaskConfig(tmp.toString(), null, null, 0, null),
                 null, null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
-                new SegmentLoaderLocalCacheManager(
+                new OmniSegmentLoader(
+                    ImmutableMap.<String, DataSegmentPuller>of(
+                        "local",
+                        new LocalDataSegmentPuller()
+                    ),
                     null,
                     new SegmentLoaderConfig()
                     {
@@ -131,7 +138,7 @@ public class WorkerTaskMonitorTest
                         return Lists.newArrayList();
                       }
                     }
-                , jsonMapper)
+                )
             ), jsonMapper
             ),
             null

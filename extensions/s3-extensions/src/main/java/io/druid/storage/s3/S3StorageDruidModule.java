@@ -18,7 +18,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -38,32 +37,10 @@ import java.util.List;
  */
 public class S3StorageDruidModule implements DruidModule
 {
-  public static final String SCHEME = "s3_zip";
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(
-        new Module()
-        {
-          @Override
-          public String getModuleName()
-          {
-            return "DruidS3-" + System.identityHashCode(this);
-          }
-
-          @Override
-          public Version version()
-          {
-            return Version.unknownVersion();
-          }
-
-          @Override
-          public void setupModule(SetupContext context)
-          {
-            context.registerSubtypes(S3LoadSpec.class);
-          }
-        }
-    );
+    return ImmutableList.of();
   }
 
   @Override
@@ -71,10 +48,10 @@ public class S3StorageDruidModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
 
-    Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(S3DataSegmentPuller.class).in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(S3DataSegmentKiller.class).in(LazySingleton.class);
-    Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME).to(S3DataSegmentMover.class).in(LazySingleton.class);
-    Binders.dataSegmentArchiverBinder(binder).addBinding(SCHEME).to(S3DataSegmentArchiver.class).in(LazySingleton.class);
+    Binders.dataSegmentPullerBinder(binder).addBinding("s3_zip").to(S3DataSegmentPuller.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder).addBinding("s3_zip").to(S3DataSegmentKiller.class).in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder).addBinding("s3_zip").to(S3DataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentArchiverBinder(binder).addBinding("s3_zip").to(S3DataSegmentArchiver.class).in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding("s3").to(S3DataSegmentPusher.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentArchiverConfig.class);
