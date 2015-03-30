@@ -113,9 +113,9 @@ of data. These insights are typically generated from business intelligence, or
 OnLine Analytical Processing (OLAP) queries. Hadoop has proven to be an
 extremely effective framework capable of providing many analytical insights and
 is able to solve a wide range of distributed computing problems. However, as
-much as Hadoop is lauded for its wide range of use cases, it is derided for its
-high latency in processing and returning results. A common approach to surface
-data insights is to run MapReduce jobs that may take several hours to complete.
+much as Hadoop is lauded for its wide range of use cases, it suffers from
+high latency in processing and returning results, with typical map-reduce jobs
+taking several hours to complete before offering any data insights.
 
 Data analysis and data-driven applications are becoming increasingly important
 in industry, and the long query times encountered with using batch frameworks
@@ -146,9 +146,9 @@ obtained until hours after the events have occurred.
 To address the delays in data freshness caused by batch processing
 frameworks, numerous open-source stream processing frameworks such as Apache
 Storm\cite{marz2013storm}, Apache Spark Streaming\cite{zaharia2012discretized},
-and Apache Samza\cite{2014samza} have been gaining popularity for offering a
+and Apache Samza\cite{2014samza} have gained popularity for offering a
 low-latency model to ingest and process event streams at near real-time speeds.
-The drawback of popular open-source stream processors is that they do not
+The drawback of almost all stream processors is that they do not
 necessarily provide the same correctness guarantees as batch processing
 frameworks. Events can come in days late, and may need to be corrected after
 the fact. Large batches of data may also need to be reprocessed when new
@@ -160,7 +160,7 @@ low latency guarantees of stream processors and the correctness and flexibility
 guarantees of batch processors. It also introduces a serving layer specifically
 designed for interactive analytics. The stack’s main building blocks are Apache
 Kafka\cite{kreps2011kafka}, Apache Samza, Apache Hadoop, and Druid
-\cite{yang2014druid}, and we’ve found that the combination of technologies is
+\cite{yang2014druid}, and we have found that the combination of technologies is
 flexible enough to handle a wide variety of processing requirements and query
 loads. Each piece of the stack is designed to do a specific set of things very
 well. This paper will cover the details and design principles of the RADStack.
@@ -215,8 +215,8 @@ attributes about the event; and a set of metrics concerning the event. Our goal
 is to rapidly compute drill-down and aggregates with this data, to answer
 questions such as “How many clicks occurred over the span of one week for
 publisher google.com?” or “How many impressions were seen over the last quarter
-from the city of San Francisco?” We wanted to issue queries over any arbitrary
-number of dimensions and have results return in at most several hundred
+in San Francisco?” We wanted to issue queries over any arbitrary
+number of dimensions and have results return in a few hundred
 milliseconds.
 
 In addition to the query latency needs, we needed to support multi-tenancy.
@@ -231,8 +231,8 @@ serving layer. We tried to select a serving layer that was optimized for the
 types of queries we wanted to make, and we initially began our experiments with
 PostgreSQL\cite{stonebraker1987extendability}. Our setup with PostgreSQL
 followed the common conventions of using RDBMSs as data warehouses. We modeled
-the advertising data using a star schema, we had a set of aggregate tables to
-increase aggregation performance, and we had a query cache to further speed up
+the advertising data using a star schema, using aggregate tables to
+increase aggregation performance, and overlaid a query cache to further speed up
 queries.
 
 \begin{table}
@@ -256,7 +256,7 @@ the base fact table. A single page load of the first version of our
 application, which issued about 20 concurrent queries to the serving layer and
 only required aggregating a few metrics, took several minutes to complete. This
 was too slow to power an interactive application. We quickly realized a row
-store, and relational model as a whole, was a sub-optimal choice for the
+store, or relational model in general, was a sub-optimal choice for the
 application we were trying to build.
 
 \begin{figure}
@@ -297,11 +297,12 @@ both RDBMS and key/value stores is described in detail in
 Druid was developed in an attempt to solve some of the problems seen with
 traditional serving layers. Druid was designed from the ground up to provide
 arbitrary data exploration, low latency aggregations, and fast data ingestion.
-Druid was also designed to intake fully denormalized data, and moves away from
-the traditional relational model. Since much of raw data is not denormalized,
+Druid was also designed to accept fully denormalized data, and moves away from
+the traditional relational model. Since most raw data is not denormalized,
 it must be processed before it can be ingested and queried. Multiple streams of
 data had to be joined, cleaned up, and transformed before it was usable in
-Druid, but that was the trade-off in order to get the performance necessary to
+Druid, but that was the trade-off we were willing to make,
+in order to get the performance necessary to
 power an interactive data application. We introduced stream processing to our
 stack to provide the processing required before raw data could be loaded into
 Druid. Our stream processing jobs range from simple data transformations, such
@@ -491,7 +492,7 @@ Real-time nodes persist their in-memory indexes to disk either periodically or
 after some maximum row limit is reached. This persist process converts data
 stored in the in-memory buffer to the column oriented segment storage format
 described in Section \ref{sec:segments}.  Persisted segments are memory mapped
-and loaded into off-heap memory such that they can still be queried. This is
+to off-heap memory such that they can still be queried. This is
 illustrated in Figure~\ref{fig:realtime_timeline}. Data is continuously
 queryable during the persist process.
 
@@ -613,7 +614,7 @@ multi-version concuncurrency control to manage how data is extracted from
 segments. Segments with higher version identifiers have precedence over
 segments with lower version identifiers. If two segments exactly overlap for an
 interval, Druid only considers the data from the segment with the higher
-version interval. This is illustrated in Figure~\ref{fig:timeline}
+version. This is illustrated in Figure~\ref{fig:timeline}
 
 \begin{figure}
 \centering
@@ -715,7 +716,7 @@ is transmitted further down the pipeline. If events are substantially delayed
 and do not arrive in the allocated window period, they will not be joined. In
 practice, this generally leads to one “primary” event continuing through the
 pipeline and other secondary events with the same join key getting dropped.
-This means that our stream processing layer is not guaranteed to deliver 100 percent 
+This means that our stream processing layer is not guaranteed to deliver 100\%
 accurate results. Furthermore, even without this restriction, Samza does not
 offer exactly-once processing semantics. Problems in network connectivity or
 node failure can lead to duplicated events. For these reasons, we run a
