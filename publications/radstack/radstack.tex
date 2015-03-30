@@ -284,8 +284,7 @@ We next evaluated HBase \cite{george2011hbase}, a NoSQL key/value store. As is
 common with using key/value stores, we precomputed the total set of queries we
 anticipated users would make. An example of this precomputation is shown in
 Figure~\ref{fig:precompute}. Our results with HBase are shown in
-Table~\ref{tab:hbase_results} for 500, 000 records. We restricted the result
-set such that users could only filter on 5 dimension values at any given time.
+Table~\ref{tab:hbase_results} for 500, 000 records. 
 Queries were acceptably fast with this solution as we were effectively doing
 O(1) lookups into maps.  However, the solution was not particularly flexible;
 if something wasn't precomputed, it wasn’t queryable, and the precomputation
