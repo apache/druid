@@ -418,10 +418,10 @@ will by default create inverted indexes for string columns.
 \subsection{Exploratory Analytics}
 
 Real-world OLAP queries often ask for the aggregated totals for some set of
-metrics, filtered for some boolean expression of dimension specifications,
-over some period of time. An example query for Table~\ref{tab:sample_data} may
-ask: “How many clicks occurred where publisher is bieberfever.com and users
-were male?”. 
+metrics, filtered for some boolean expression of dimension specifications, over
+some period of time. An example query for Table~\ref{tab:sample_data} may ask:
+“How many clicks occurred and how much revenue was generated for publishers
+bieberfever.com and ultratrimfast.com?”. 
 
 Consider the publisher column in Table~\ref{tab:sample_data}, a string column.
 For each unique publisher in Table 1, our inverted index tells us in which
@@ -450,7 +450,7 @@ Clicks -> [0, 0, 1, 0, 0, 1]
 Price  -> [0.65, 0.62. 0.45, 0.87, 0.99, 1.53]
 \end{verbatim}}
 
-We can quickly load up only the metric columns we need for the query. We do not
+We can load up only the metric columns we need for the query. We do not
 need to scan the entire metric column for a given query. For example, queries
 for results where publisher is bieberfever.com only requires scanning rows 0,
 1, and 2 in the metrics column. The inverted indexes tell us exactly the rows
@@ -464,8 +464,8 @@ available for querying.  The nodes are only concerned with events for some
 small time range and periodically hand off immutable batches of events they
 have collected over this small time range to other nodes in the Druid cluster
 that are specialized in dealing with batches of immutable events. The nodes
-announce their online state and the data they serve using the distributed
-coordination piece (this is currenlty Zookeeper\cite{hunt2010zookeeper}).
+announce their online state and the data they serve using a distributed
+coordination service (this is currently Zookeeper\cite{hunt2010zookeeper}).
 
 \begin{figure}
 \centering
@@ -519,7 +519,7 @@ segment granularity period. The use of the window period means that delayed
 events may be dropped. In practice, we see that these occurrences are rare, but
 they do occur. Druid's real-time logic does not guarantee exactly once
 processing and is instead best effort. The lack of exactly once processing in
-Druid is one of hte motivations for requiring batch fix up in the RADStack.
+Druid is one of hte motivations for requiring batch fixup in the RADStack.
 
 For further clarification, consider Figure~\ref{fig:realtime_timeline}.
 Figure~\ref{fig:realtime_timeline} illustrates the operations of a real-time
@@ -543,12 +543,6 @@ real-time node operations are configurable.}
 \label{fig:realtime_timeline}
 \end{figure*}
 
-The use of the window period means that events that are substantially delayed
-will be dropped. In practice, we see that these occurrences are rare, but they
-do occur. Druid’s real-time logic does not guarantee exactly once processing
-and is instead best effort. The lack of exactly once processing in Druid is one
-of the motivations for requiring batch fix up in the RADStack.
-
 \subsection{Hand off}
 Real-time nodes are designed to deal with a small window of recent data and
 need periodically hand off segments they’ve built. The hand-off process first
@@ -565,7 +559,7 @@ to as “deep storage”. Next, an entry is created in the metadata store
 created. This entry in the metadata store will eventually cause other nodes in
 the Druid cluster to download and serve the segment. The real-time node
 continues to serve the segment until it notices that the segment is available
-on Druid historical nodes, which are nodes that are dedicatea to serving
+on Druid historical nodes, which are nodes that are dedicated to serving
 historical data. At this point, the segment is dropped and unannounced from the
 real-time node. The entire handoff process is fluid; data remains continuously
 queryable throughout the entire handoff process. Segments created by real-time
@@ -583,7 +577,7 @@ Similar to the real-time ingestion logic, segments created through batch
 ingestion are directly uploaded to deep storage. Druid’s Hadoop-based batch
 indexer will also create an entry in the metadata storage once all segments
 have been created. The version of the segments created by batch ingestion are
-based on the time the batch processing job starteed at.
+based on the time the batch processing job started at.
 
 \subsection{Unifying Views}
 When new entries are created in the metadata storage, they will eventually be
@@ -820,21 +814,20 @@ distributed Kafka cluster consists of numerous brokers, which store messages in
 a replicated commit log. Kafka consumers subscribe to topics and process feeds
 of published messages. 
 
-Kafka provides isolation of functionality in terms with producers of data and
-consumers of data. The publish/subscribe model works well for our use case as
-multiple consumers can subscribe to the same topic and process the same set of
-events. We have two primary Kafka consumers. The first is a Samza job that
-reads messages from Kafka for stream processing as described in Section
-\ref{sec:streamprocessing}. The second consumer reads messages from Kafka and
-stores them in a distributed file system.  This file system is the same as the
-one used for Druid’s deep storage, and also acts as a backup for raw events.
-Topics in Kafka map to pipelines in Samza, and pipelines in Samza map
-to data sources in Druid. The purpose of storing raw events in deep
-storage is so that we can run batch processing jobs over them at any given
-time. For example, our stream processing layer may choose to not include
-certain columns when it first processes a new pipeline. If we want to include
-these columns in the future, we can reprocess the raw data to generate new
-Druid segments. 
+Kafka provides functionality isolation between producers of data and consumers
+of data. The publish/subscribe model works well for our use case as multiple
+consumers can subscribe to the same topic and process the same set of events.
+We have two primary Kafka consumers. The first is a Samza job that reads
+messages from Kafka for stream processing as described in Section
+\ref{sec:streamprocessing}. Topics in Kafka map to pipelines in Samza, and
+pipelines in Samza map to data sources in Druid. The second consumer reads
+messages from Kafka and stores them in a distributed file system.  This file
+system is the same as the one used for Druid’s deep storage, and also acts as a
+backup for raw events. The purpose of storing raw events in deep storage is so
+that we can run batch processing jobs over them at any given time. For example,
+our stream processing layer may choose to not include certain columns when it
+first processes a new pipeline. If we want to include these columns in the
+future, we can reprocess the raw data to generate new Druid segments. 
 
 Kafka is the single point of delivery for events entering our system, and must
 have the highest availability. We replicate our Kafka producers across multiple
