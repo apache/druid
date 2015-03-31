@@ -31,7 +31,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.SegmentLoaderConfig;
@@ -68,7 +68,7 @@ public class TaskToolboxTest
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
   private ExecutorService mockQueryExecutorService = EasyMock.createMock(ExecutorService.class);
   private ObjectMapper ObjectMapper = new ObjectMapper();
-  private OmniSegmentLoader mockOmniSegmentLoader = EasyMock.createMock(OmniSegmentLoader.class);
+  private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
 
   @Rule
@@ -93,7 +93,7 @@ public class TaskToolboxTest
         mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
-        new SegmentLoaderFactory(mockOmniSegmentLoader),
+        new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),
         ObjectMapper
     );
   }
@@ -144,11 +144,11 @@ public class TaskToolboxTest
   public void testFetchSegments() throws SegmentLoadingException, IOException
   {
     File expectedFile = temporaryFolder.newFile();
-    EasyMock.expect(mockOmniSegmentLoader.getSegmentFiles((DataSegment)EasyMock.anyObject()))
+    EasyMock.expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles((DataSegment)EasyMock.anyObject()))
         .andReturn(expectedFile).anyTimes();
-    EasyMock.expect(mockOmniSegmentLoader.withConfig((SegmentLoaderConfig)EasyMock.anyObject()))
-        .andReturn(mockOmniSegmentLoader).anyTimes();
-    EasyMock.replay(mockOmniSegmentLoader);
+    EasyMock.expect(mockSegmentLoaderLocalCacheManager.withConfig((SegmentLoaderConfig)EasyMock.anyObject()))
+        .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
+    EasyMock.replay(mockSegmentLoaderLocalCacheManager);
     DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(new Interval("2012-01-01/P1D")).version("1").size(1).build();
     List<DataSegment> segments = ImmutableList.of
         (

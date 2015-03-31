@@ -17,6 +17,11 @@
 
 package io.druid.indexing.firehose;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
+import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
+import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +45,7 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
+import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -60,11 +66,11 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPuller;
-import io.druid.segment.loading.OmniSegmentLoader;
+import io.druid.segment.loading.LocalLoadSpec;
 import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.timeline.DataSegment;
@@ -169,6 +175,37 @@ public class IngestSegmentFirehoseFactoryTest
         ts,
         new TaskActionToolbox(tl, mdc, newMockEmitter())
     );
+
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.registerModule(
+        new SimpleModule("testModule").registerSubtypes(LocalLoadSpec.class)
+    );
+
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+    objectMapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
+        ),
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
+    );
+    objectMapper.setInjectableValues(
+        new GuiceInjectableValues(
+            GuiceInjectors.makeStartupInjectorWithModules(
+                ImmutableList.of(
+                    new Module()
+                    {
+                      @Override
+                      public void configure(Binder binder)
+                      {
+                        binder.bind(LocalDataSegmentPuller.class);
+                      }
+                    }
+                )
+            )
+        )
+    );
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
         new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null),
         tac,
@@ -224,11 +261,7 @@ public class IngestSegmentFirehoseFactoryTest
         null, // query executor service
         null, // monitor scheduler
         new SegmentLoaderFactory(
-            new OmniSegmentLoader(
-                ImmutableMap.<String, DataSegmentPuller>of(
-                    "local",
-                    new LocalDataSegmentPuller()
-                ),
+            new SegmentLoaderLocalCacheManager(
                 null,
                 new SegmentLoaderConfig()
                 {
@@ -237,10 +270,10 @@ public class IngestSegmentFirehoseFactoryTest
                   {
                     return Lists.newArrayList();
                   }
-                }
+                }, objectMapper
             )
         ),
-        new DefaultObjectMapper()
+        objectMapper
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(
