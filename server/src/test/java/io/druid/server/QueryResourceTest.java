@@ -18,20 +18,28 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.jackson.JacksonModule;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
+import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,8 +49,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  *
@@ -101,12 +115,36 @@ public class QueryResourceTest
     com.metamx.emitter.EmittingLogger.registerEmitter(noopServiceEmitter);
   }
 
+  private NamespaceExtractionCacheManager namespaceExtractionCacheManager;
+  private Lifecycle lifecycle;
+
   @Before
   public void setup()
   {
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON);
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     EasyMock.replay(testServletRequest);
+    lifecycle = new Lifecycle();
+    namespaceExtractionCacheManager = new NamespaceExtractionCacheManager(lifecycle)
+    {
+      @Override
+      public ConcurrentMap<String, String> getCacheMap(String namespace)
+      {
+        return new ConcurrentHashMap<>();
+      }
+
+      @Override
+      public Collection<String> getKnownNamespaces()
+      {
+        return ImmutableList.of();
+      }
+    };
+  }
+
+  @After
+  public void tearDown()
+  {
+    lifecycle.stop();
   }
 
   private static final String simpleTimeSeriesQuery = "{\n"

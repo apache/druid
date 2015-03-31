@@ -58,6 +58,7 @@ public class ZkPathsConfigTest extends JsonConfigTesterBase<ZkPathsConfig>
     propertyValues.put(String.format("%s.coordinatorPath", configPrefix), ZKPaths.makePath(base, "coordinator"));
     propertyValues.put(String.format("%s.loadQueuePath", configPrefix), ZKPaths.makePath(base, "loadQueue"));
     propertyValues.put(String.format("%s.connectorPath", configPrefix), ZKPaths.makePath(base, "connector"));
+    propertyValues.put(String.format("%s.namespacePath", configPrefix), ZKPaths.makePath(base, "namespaces"));
 
     ZkPathsConfig zkPathsConfigObj = zkPathsConfig.get().get();
     validateEntries(zkPathsConfigObj);

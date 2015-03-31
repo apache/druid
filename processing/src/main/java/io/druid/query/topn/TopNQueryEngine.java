@@ -20,6 +20,8 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.metamx.common.IAE;
+import com.metamx.common.MapUtils;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -38,6 +40,7 @@ import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -113,7 +116,11 @@ public class TopNQueryEngine
       // currently relies on the dimension cardinality to support lexicographic sorting
       topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
     } else if(selector.isHasExtractionFn()) {
-      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+      if(useOptimized(query.getContext())){
+        topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      } else {
+        topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+      }
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextValue("doAggregateTopNMetricFirst", false)) {
@@ -123,5 +130,21 @@ public class TopNQueryEngine
     }
 
     return new TopNMapFn(query, topNAlgorithm);
+  }
+  public static Boolean useOptimized(Map<String, Object> context){
+    Boolean useOptimized = false;
+    if(null != context){
+      final Object o = context.get("topNFastRename");
+      if(o != null){
+        if(o instanceof Boolean){
+          useOptimized = (Boolean)o;
+        } else if(o instanceof String){
+          useOptimized = Boolean.parseBoolean((String)o);
+        } else {
+          throw new IAE("Could not parse context value for topNFastRename: [%s]", o.toString());
+        }
+      }
+    }
+    return useOptimized;
   }
 }

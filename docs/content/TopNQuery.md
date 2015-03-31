@@ -212,3 +212,6 @@ Users who can tolerate *approximate rank* topN over a dimension with greater tha
     "threshold": 2
 }
 ```
+
+### DimExtractionFn
+A TopN over a dimension which is extracted has its own code path to be able to properly capture re-bucketing data. If the query issuer knows that data does not need to be rebucketed (for example, changing a name from one unique value to another unique value), a query context of `topNFastRename` set to `true` can be specified to enable a more optimized codepath.

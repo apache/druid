@@ -22,6 +22,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -162,5 +163,11 @@ public class MapCache implements Cache
   public boolean isLocal()
   {
     return true;
+  }
+
+  @Override
+  public Collection<String> getNamespaces()
+  {
+    return namespaceId.keySet();
   }
 }

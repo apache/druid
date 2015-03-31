@@ -23,6 +23,7 @@ import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -38,6 +39,8 @@ public interface Cache
   public CacheStats getStats();
 
   public boolean isLocal();
+
+  public Collection<String> getNamespaces();
 
   public class NamedKey
   {

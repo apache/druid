@@ -59,6 +59,10 @@ public class LocalDataStorageDruidModule implements DruidModule
            .addBinding(SCHEME)
            .to(LocalDataSegmentPuller.class)
            .in(LazySingleton.class);
+    Binders.dataSegmentPullerBinder(binder)
+           .addBinding(LocalDataSegmentPuller.URI_SCHEMA)
+           .to(LocalDataSegmentPuller.class)
+           .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
             .addBinding(SCHEME)

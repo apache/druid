@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-package io.druid.query.extraction.extraction;
+package io.druid.query.extraction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.MatchingDimExtractionFn;
+import io.druid.query.extraction.SearchQuerySpecDimExtractionFn;
+import io.druid.query.search.search.FragmentSearchQuerySpec;
+import io.druid.query.search.search.SearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,26 +31,27 @@ import java.util.Set;
 
 /**
  */
-public class MatchingDimExtractionFnTest
+public class SearchQuerySpecDimExtractionFnTest
 {
   private static final String[] testStrings = {
-      "Quito",
+      "Kyoto",
       "Calgary",
       "Tokyo",
       "Stockholm",
-      "Vancouver",
+      "Toyokawa",
       "Pretoria",
-      "Wellington",
-      null,
+      "Yorktown",
       "Ontario"
   };
 
   @Test
   public void testExtraction()
   {
-    String regex = ".*[Tt][Oo].*";
-    ExtractionFn extractionFn = new MatchingDimExtractionFn(regex);
-    List<String> expected = Arrays.asList("Quito", "Tokyo", "Stockholm", "Pretoria", "Wellington");
+    SearchQuerySpec spec = new FragmentSearchQuerySpec(
+        Arrays.asList("to", "yo")
+    );
+    ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
+    List<String> expected = Arrays.asList("Kyoto", "Tokyo", "Toyokawa", "Yorktown");
     Set<String> extracted = Sets.newHashSet();
 
     for (String str : testStrings) {
@@ -60,29 +61,10 @@ public class MatchingDimExtractionFnTest
       }
     }
 
-    Assert.assertEquals(5, extracted.size());
+    Assert.assertEquals(4, extracted.size());
 
     for (String str : extracted) {
       Assert.assertTrue(expected.contains(str));
     }
-  }
-
-  @Test
-  public void testSerde() throws Exception
-  {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final String json = "{ \"type\" : \"partial\", \"expr\" : \".(...)?\" }";
-    MatchingDimExtractionFn extractionFn = (MatchingDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
-
-    Assert.assertEquals(".(...)?", extractionFn.getExpr());
-
-    // round trip
-    Assert.assertEquals(
-        extractionFn,
-        objectMapper.readValue(
-            objectMapper.writeValueAsBytes(extractionFn),
-            ExtractionFn.class
-        )
-    );
   }
 }

@@ -17,6 +17,7 @@
 
 package io.druid.client.cache;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.Min;
@@ -25,17 +26,30 @@ import javax.validation.constraints.Min;
  */
 public class LocalCacheProvider implements CacheProvider
 {
+  public LocalCacheProvider(){
+    this(null, null, null);
+  }
+  @JsonCreator
+  public LocalCacheProvider(
+      @Min(0) @JsonProperty("sizeInBytes") Long sizeInBytes,
+      @Min(0) @JsonProperty("initialSize") Integer initialSize,
+      @Min(0) @JsonProperty("logEvictionCount") Integer logEvictionCount
+  ){
+    this.sizeInBytes = sizeInBytes == null ? 0 : sizeInBytes;
+    this.initialSize = initialSize == null ? 500_000 : initialSize;
+    this.logEvictionCount = logEvictionCount == null ? 0 : logEvictionCount;
+  }
   @JsonProperty
   @Min(0)
-  private long sizeInBytes = 0;
+  private final long sizeInBytes;
 
   @JsonProperty
   @Min(0)
-  private int initialSize = 500000;
+  private final int initialSize;
 
   @JsonProperty
   @Min(0)
-  private int logEvictionCount = 0;
+  private final int logEvictionCount;
 
   @Override
   public Cache get()

@@ -24,9 +24,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.IAE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -42,15 +44,22 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavascriptExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryEngine;
+import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -94,7 +103,7 @@ public class TopNQueryRunnerTest
                       @Override
                       public ByteBuffer get()
                       {
-                        return ByteBuffer.allocate(2000);
+                        return ByteBuffer.allocate(20000);
                       }
                     }
                 ),
@@ -834,13 +843,13 @@ public class TopNQueryRunnerTest
                                       .fields(
                                           Lists.<DimFilter>newArrayList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                  .dimension(QueryRunnerTestHelper.marketDimension)
-                                                  .value("billyblank")
-                                                  .build(),
+                                                    .dimension(QueryRunnerTestHelper.marketDimension)
+                                                    .value("billyblank")
+                                                    .build(),
                                               Druids.newSelectorDimFilterBuilder()
-                                                  .dimension(QueryRunnerTestHelper.qualityDimension)
-                                                  .value("mezzanine")
-                                                  .build()
+                                                    .dimension(QueryRunnerTestHelper.qualityDimension)
+                                                    .value("mezzanine")
+                                                    .build()
                                           )
                                       ).build();
     TopNQuery query = new TopNQueryBuilder()
@@ -1103,13 +1112,14 @@ public class TopNQueryRunnerTest
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>(){{
-                      put("doesn't exist", null);
-                      put("rows", 26L);
-                      put("index", 12459.361190795898D);
-                      put("addRowsIndexConstant", 12486.361190795898D);
-                      put("uniques", QueryRunnerTestHelper.UNIQUES_9);
-                    }}
+                    new LinkedHashMap<String, Object>()
+                    {{
+                        put("doesn't exist", null);
+                        put("rows", 26L);
+                        put("index", 12459.361190795898D);
+                        put("addRowsIndexConstant", 12486.361190795898D);
+                        put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+                      }}
                 )
             )
         )
@@ -1138,13 +1148,14 @@ public class TopNQueryRunnerTest
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>(){{
-                      put("doesn't exist", null);
-                      put("rows", 4L);
-                      put("index", 4875.669677734375D);
-                      put("addRowsIndexConstant", 4880.669677734375D);
-                      put("uniques", QueryRunnerTestHelper.UNIQUES_2);
-                    }}
+                    new LinkedHashMap<String, Object>()
+                    {{
+                        put("doesn't exist", null);
+                        put("rows", 4L);
+                        put("index", 4875.669677734375D);
+                        put("addRowsIndexConstant", 4880.669677734375D);
+                        put("uniques", QueryRunnerTestHelper.UNIQUES_2);
+                      }}
                 )
             )
         )
@@ -1173,13 +1184,14 @@ public class TopNQueryRunnerTest
             new DateTime("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    new LinkedHashMap<String, Object>(){{
-                      put("doesn't exist", null);
-                      put("rows", 26L);
-                      put("index", 12459.361190795898D);
-                      put("addRowsIndexConstant", 12486.361190795898D);
-                      put("uniques", QueryRunnerTestHelper.UNIQUES_9);
-                    }}
+                    new LinkedHashMap<String, Object>()
+                    {{
+                        put("doesn't exist", null);
+                        put("rows", 26L);
+                        put("index", 12459.361190795898D);
+                        put("addRowsIndexConstant", 12486.361190795898D);
+                        put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+                      }}
                 )
             )
         )
@@ -1400,6 +1412,87 @@ public class TopNQueryRunnerTest
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
   }
 
+
+  @Test
+  public void testTopNDimExtractionToOne() throws IOException
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new JavascriptExtractionFn("function(f) { return \"POTATO\"; }"),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(10)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    QueryGranularity gran = QueryGranularity.DAY;
+    TimeseriesQuery tsQuery = Druids.newTimeseriesQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(gran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .aggregators(
+                                        Arrays.asList(
+                                            QueryRunnerTestHelper.rowsCount,
+                                            QueryRunnerTestHelper.indexDoubleSum,
+                                            QueryRunnerTestHelper.qualityUniques
+                                        )
+                                    )
+                                    .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                    .build();
+
+    DateTime expectedEarliest = new DateTime("2011-01-12");
+    DateTime expectedLast = new DateTime("2011-04-15");
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, ImmutableMap.<String, Object>of()),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    final List<Result<TimeseriesResultValue>> tsResult = Sequences.toList(
+        (
+            (QueryRunner<Result<TimeseriesResultValue>>) ((List<Object[]>) QueryRunnerTestHelper.makeQueryRunners(
+                new TimeseriesQueryRunnerFactory(
+                    new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    new TimeseriesQueryEngine(),
+                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                )
+            )).get(0)[0]
+        ).run(tsQuery, ImmutableMap.<String, Object>of()), new ArrayList<Result<TimeseriesResultValue>>()
+    );
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        "addRowsIndexConstant", 504542.5071372986D,
+                        "index", 503332.5071372986D,
+                        QueryRunnerTestHelper.marketDimension, "POTATO",
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9,
+                        "rows", 1209l
+                    )
+                )
+            )
+        )
+    );
+    List<Result<TopNResultValue>> list = Sequences.toList(
+        runner.run(query, ImmutableMap.<String, Object>of()),
+        new ArrayList<Result<TopNResultValue>>()
+    );
+    Assert.assertEquals(list.size(), 1);
+    Assert.assertEquals("Didn't merge results", list.get(0).getValue().getValue().size(), 1);
+    TestHelper.assertExpectedResults(expectedResults, list, "Failed to match");
+  }
+
   @Test
   public void testTopNCollapsingDimExtraction()
   {
@@ -1499,6 +1592,226 @@ public class TopNQueryRunnerTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+  }
+
+
+
+  @Test
+  // In general, this is a "bad idea"^(tm) but to clarify the functionality of such a case we do it here
+  public void testTopNDimExtractionFastTopNContextLiesAndDeceit()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new JavascriptExtractionFn("function(f) { return \"POTATO\"; }"),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "POTATO",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "POTATO",
+                        "rows", 4L,
+                        "index", 5351.814697265625D,
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "POTATO",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(
+        expectedResults,
+        runner.run(
+            query.withOverriddenContext(
+                ImmutableMap.<String, Object>of(
+                    "topNFastRename",
+                    true
+                )
+            ), ImmutableMap.<String, Object>of()
+        )
+    );
+  }
+
+  @Test
+  public void testTopNDimExtractionFastTopNContext()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new RegexDimExtractionFn("(.)"),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "s",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "t",
+                        "rows", 4L,
+                        "index", 5351.814697265625D,
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "u",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(
+        expectedResults,
+        runner.run(
+            query.withOverriddenContext(
+                ImmutableMap.<String, Object>of(
+                    "topNFastRename",
+                    true
+                )
+            ), ImmutableMap.<String, Object>of()
+        )
+    );
+  }
+
+  @Test(expected = IAE.class)
+  public void testTopNDimExtractionFastTopNContextBad()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new RegexDimExtractionFn("(.)"),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+    runner.run(
+        query.withOverriddenContext(ImmutableMap.<String, Object>of("topNFastRename", new Object())),
+        ImmutableMap.<String, Object>of()
+    );
+  }
+
+  @Test
+  public void testTopNDimExtractionFastTopNContextString1()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new RegexDimExtractionFn("(.)"),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "s",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "t",
+                        "rows", 4L,
+                        "index", 5351.814697265625D,
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "u",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(
+        expectedResults, runner.run(
+            query.withOverriddenContext(
+                ImmutableMap.<String, Object>of(
+                    "topNFastRename",
+                    "TRUE"
+                )
+            ), ImmutableMap.<String, Object>of()
+        )
+    );
   }
 
   @Test
@@ -1855,13 +2168,14 @@ public class TopNQueryRunnerTest
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
-                    new LinkedHashMap<String, Object>(){{
-                      put(QueryRunnerTestHelper.marketDimension, null);
-                      put("rows", 4L);
-                      put("index", 5351.814697265625D);
-                      put("addRowsIndexConstant", 5356.814697265625D);
-                      put("uniques", QueryRunnerTestHelper.UNIQUES_2);
-                    }},
+                    new LinkedHashMap<String, Object>()
+                    {{
+                        put(QueryRunnerTestHelper.marketDimension, null);
+                        put("rows", 4L);
+                        put("index", 5351.814697265625D);
+                        put("addRowsIndexConstant", 5356.814697265625D);
+                        put("uniques", QueryRunnerTestHelper.UNIQUES_2);
+                      }},
                     ImmutableMap.<String, Object>of(
                         QueryRunnerTestHelper.marketDimension, "upfront",
                         "rows", 4L,
@@ -2220,20 +2534,20 @@ public class TopNQueryRunnerTest
   public void testTopNWithTimeColumn()
   {
     TopNQuery query = new TopNQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
-                                  .aggregators(
-                                      Arrays.asList(
-                                          QueryRunnerTestHelper.rowsCount,
-                                          QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
-                                          QueryRunnerTestHelper.__timeLongSum
-                                      )
-                                  )
-                                  .granularity(QueryRunnerTestHelper.allGran)
-                                  .dimension(QueryRunnerTestHelper.marketDimension)
-                                  .metric("ntimestamps")
-                                  .threshold(3)
-                                  .build();
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.jsCountIfTimeGreaterThan,
+                QueryRunnerTestHelper.__timeLongSum
+            )
+        )
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("ntimestamps")
+        .threshold(3)
+        .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
