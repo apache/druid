@@ -25,7 +25,7 @@ Druid is a good fit for products that require real-time data ingestion of a sing
 
 Druid is architected as a grouping of systems each with a distinct role and together they form a working system. The name comes from the Druid class in many role-playing games: it is a shape-shifter, capable of taking many different forms to fulfill various different roles in a group.
 
-Each of the systems, or components, described below also has a dedicated page with more details. You can find the page in the menu on the left, or click the link in the component's description.
+Each of the systems, or components, described below also has a dedicated page with more details. You can find the page in the menu on the right, or click the link in the component's description.
 
 The node types that currently exist are:
 
