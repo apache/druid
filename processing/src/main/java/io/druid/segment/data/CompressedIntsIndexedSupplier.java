@@ -39,7 +39,6 @@ import java.util.List;
 
 public class CompressedIntsIndexedSupplier implements Supplier<IndexedInts>
 {
-  public static final byte LZF_VERSION = 0x1;
   public static final byte version = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Ints.BYTES;
 
@@ -49,7 +48,7 @@ public class CompressedIntsIndexedSupplier implements Supplier<IndexedInts>
   private final GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
-  CompressedIntsIndexedSupplier(
+    CompressedIntsIndexedSupplier(
       int totalSize,
       int sizePer,
       GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers,
@@ -134,16 +133,6 @@ public class CompressedIntsIndexedSupplier implements Supplier<IndexedInts>
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
-      return new CompressedIntsIndexedSupplier(
-          totalSize,
-          sizePer,
-          GenericIndexed.read(buffer, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
-          compression
-      );
-    } else if (versionFromBuffer == LZF_VERSION) {
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
       return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,

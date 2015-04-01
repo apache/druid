@@ -61,9 +61,9 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
-import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
@@ -508,9 +508,10 @@ public class IndexIO
             builder.addSerde(
                 new CompressedDictionaryEncodedColumnPartSerde(
                     dictionary,
-                    singleValCol != null ? CompressedIntsIndexedSupplier.fromList(
+                    singleValCol != null ? CompressedVSizeIntsIndexedSupplier.fromList(
                         singleValCol,
-                        CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
+                        dictionary.size(),
+                        CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
                         BYTE_ORDER,
                         compression
                     ) : null,

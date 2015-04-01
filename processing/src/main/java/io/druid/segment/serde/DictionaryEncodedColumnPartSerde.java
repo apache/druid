@@ -19,7 +19,6 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.metamx.common.ISE;
 import io.druid.segment.column.ColumnBuilder;
@@ -36,8 +35,8 @@ import java.nio.channels.WritableByteChannel;
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
   protected static enum TYPE {
-    LEGACY_SINGLE_VALUE,             // 0x0
-    LEGACY_MULTI_VALUE,              // 0x1
+    UNCOMPRESSED_SINGLE_VALUE,             // 0x0
+    UNCOMPRESSED_MULTI_VALUE,              // 0x1
     COMPRESSED;  // 0x2
 
     public static TYPE fromByte(byte b) {
@@ -95,8 +94,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     final byte version = buffer.get(buffer.position());
     final TYPE type = TYPE.fromByte(version);
     switch (type) {
-      case LEGACY_SINGLE_VALUE:
-      case LEGACY_MULTI_VALUE:
+      case UNCOMPRESSED_SINGLE_VALUE:
+      case UNCOMPRESSED_MULTI_VALUE:
         return new LegacyDictionaryEncodedColumnPartSerde(bitmapSerdeFactory, byteOrder).read(buffer, builder, columnConfig);
 
       case COMPRESSED:

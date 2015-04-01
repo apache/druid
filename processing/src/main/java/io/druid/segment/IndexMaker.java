@@ -64,6 +64,7 @@ import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -1221,9 +1222,10 @@ public class IndexMaker
     if (compression != null) {
       dimPart = new CompressedDictionaryEncodedColumnPartSerde(
           dictionary,
-          singleValCol == null ? null : CompressedIntsIndexedSupplier.fromList(
+          singleValCol == null ? null : CompressedVSizeIntsIndexedSupplier.fromList(
               singleValCol,
-              CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
+              dictionary.size(),
+              CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
               IndexIO.BYTE_ORDER,
               compression
           ),

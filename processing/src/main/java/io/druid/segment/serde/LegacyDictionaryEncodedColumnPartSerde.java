@@ -107,8 +107,8 @@ public class LegacyDictionaryEncodedColumnPartSerde extends DictionaryEncodedCol
   @Override
   public void write(WritableByteChannel channel) throws IOException
   {
-    final DictionaryEncodedColumnPartSerde.TYPE type = isSingleValued ? DictionaryEncodedColumnPartSerde.TYPE.LEGACY_SINGLE_VALUE
-                                                                      : DictionaryEncodedColumnPartSerde.TYPE.LEGACY_MULTI_VALUE;
+    final DictionaryEncodedColumnPartSerde.TYPE type = isSingleValued ? DictionaryEncodedColumnPartSerde.TYPE.UNCOMPRESSED_SINGLE_VALUE
+                                                                      : DictionaryEncodedColumnPartSerde.TYPE.UNCOMPRESSED_MULTI_VALUE;
     channel.write(ByteBuffer.wrap(new byte[]{type.asByte()}));
 
     if (dictionary != null) {
@@ -152,13 +152,13 @@ public class LegacyDictionaryEncodedColumnPartSerde extends DictionaryEncodedCol
 
     final boolean hasMultipleValues;
     switch (type) {
-      case LEGACY_SINGLE_VALUE:
+      case UNCOMPRESSED_SINGLE_VALUE:
         singleValuedColumn = VSizeIndexedInts.readFromByteBuffer(buffer);
         multiValuedColumn = null;
         hasMultipleValues = false;
         break;
 
-      case LEGACY_MULTI_VALUE:
+      case UNCOMPRESSED_MULTI_VALUE:
         singleValuedColumn = null;
         multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
         hasMultipleValues = true;

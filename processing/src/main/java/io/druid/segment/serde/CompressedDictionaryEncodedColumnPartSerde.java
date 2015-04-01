@@ -31,6 +31,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedIntsIndexedSupplier;
+import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
@@ -46,7 +47,7 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedDictionaryEncodedColumnPartSerde extends DictionaryEncodedColumnPartSerde
 {
   private final GenericIndexed<String> dictionary;
-  private final CompressedIntsIndexedSupplier singleValuedColumn;
+  private final CompressedVSizeIntsIndexedSupplier singleValuedColumn;
   private final VSizeIndexed multiValuedColumn;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final ImmutableRTree spatialIndex;
@@ -76,7 +77,7 @@ public class CompressedDictionaryEncodedColumnPartSerde extends DictionaryEncode
 
   public CompressedDictionaryEncodedColumnPartSerde(
       GenericIndexed<String> dictionary,
-      CompressedIntsIndexedSupplier singleValuedColumn,
+      CompressedVSizeIntsIndexedSupplier singleValuedColumn,
       VSizeIndexed multiValuedColumn,
       BitmapSerdeFactory bitmapSerdeFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
@@ -165,7 +166,7 @@ public class CompressedDictionaryEncodedColumnPartSerde extends DictionaryEncode
         )
     );
 
-    final CompressedIntsIndexedSupplier singleValuedColumn;
+    final CompressedVSizeIntsIndexedSupplier singleValuedColumn;
     final VSizeIndexed multiValuedColumn;
 
     final boolean isMultiValued = Feature.MULTI_VALUE.isSet(flags);
@@ -173,7 +174,7 @@ public class CompressedDictionaryEncodedColumnPartSerde extends DictionaryEncode
       multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
       singleValuedColumn = null;
     } else {
-      singleValuedColumn = CompressedIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+      singleValuedColumn = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
       multiValuedColumn = null;
     }
     builder.setHasMultipleValues(isMultiValued)
