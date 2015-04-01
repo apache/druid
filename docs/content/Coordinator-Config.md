@@ -28,6 +28,7 @@ The coordinator node uses several of the global configs in [Configuration](Confi
 |`druid.coordinator.merge.on`|Boolean flag for whether or not the coordinator should try and merge small segments into a more optimal segment size.|false|
 |`druid.coordinator.conversion.on`|Boolean flag for converting old segment indexing versions to the latest segment indexing version.|false|
 |`druid.coordinator.load.timeout`|The timeout duration for when the coordinator assigns a segment to a historical node.|PT15M|
+|`druid.coordinator.load.queue.size`|Size of Load Queue for each historical node, defines maximum no. of concurrent segments will be assigned for loading to a historical node. |10|
 
 ### Metadata Retrieval
 

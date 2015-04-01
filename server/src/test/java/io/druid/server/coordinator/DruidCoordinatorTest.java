@@ -92,6 +92,12 @@ public class DruidCoordinatorTest
           {
             return null;
           }
+
+          @Override
+          public int getLoadQueueSize()
+          {
+            return 10;
+          }
         },
         new ZkPathsConfig()
         {

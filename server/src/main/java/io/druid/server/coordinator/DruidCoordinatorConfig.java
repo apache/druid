@@ -60,4 +60,8 @@ public abstract class DruidCoordinatorConfig
   {
     return null;
   }
+
+  @Config("druid.coordinator.load.queue.size")
+  @Default("10")
+  public abstract int getLoadQueueSize();
 }

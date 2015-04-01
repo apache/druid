@@ -39,7 +39,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -83,9 +85,10 @@ public class LoadQueuePeon
       segmentComparator
   );
 
-  private final Object lock = new Object();
+  // Map of zk paths vs currently processing segments
+  private final Map<String, SegmentHolder> currentlyProcessing = new ConcurrentHashMap<>();
 
-  private volatile SegmentHolder currentlyProcessing = null;
+  private final Object lock = new Object();
 
   LoadQueuePeon(
       CuratorFramework curator,
@@ -131,11 +134,11 @@ public class LoadQueuePeon
       final LoadPeonCallback callback
   )
   {
+    String segmentPath = pathFor(segment);
     synchronized (lock) {
-      if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentIdentifier().equals(segment.getIdentifier())) {
+      if (currentlyProcessing.containsKey(segmentPath)) {
         if (callback != null) {
-          currentlyProcessing.addCallback(callback);
+          currentlyProcessing.get(segmentPath).addCallback(callback);
         }
         return;
       }
@@ -162,11 +165,11 @@ public class LoadQueuePeon
       final LoadPeonCallback callback
   )
   {
+    String segmentPath = pathFor(segment);
     synchronized (lock) {
-      if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentIdentifier().equals(segment.getIdentifier())) {
+      if (currentlyProcessing.containsKey(segmentPath)) {
         if (callback != null) {
-          currentlyProcessing.addCallback(callback);
+          currentlyProcessing.get(segmentPath).addCallback(callback);
         }
         return;
       }
@@ -190,126 +193,138 @@ public class LoadQueuePeon
   private void doNext()
   {
     synchronized (lock) {
-      if (currentlyProcessing == null) {
-        if (!segmentsToDrop.isEmpty()) {
-          currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-          log.info("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-        } else if (!segmentsToLoad.isEmpty()) {
-          currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-          log.info("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-        } else {
-          return;
-        }
-
-        zkWritingExecutor.execute(
-            new Runnable()
-            {
-              @Override
-              public void run()
+      if (canProcessNext()) {
+        while (canProcessNext()) {
+          Map.Entry<DataSegment, SegmentHolder> entryToProcess;
+          if (!segmentsToDrop.isEmpty()) {
+            entryToProcess = segmentsToDrop.pollFirstEntry();
+            log.info("Server[%s] dropping [%s]", basePath, entryToProcess.getValue().getSegmentIdentifier());
+          } else if (!segmentsToLoad.isEmpty()) {
+            entryToProcess = segmentsToLoad.pollFirstEntry();
+            log.info("Server[%s] loading [%s]", basePath, entryToProcess.getValue().getSegmentIdentifier());
+          } else {
+            return;
+          }
+          currentlyProcessing.put(pathFor(entryToProcess.getKey()), entryToProcess.getValue());
+          final SegmentHolder segmentToProcess = entryToProcess.getValue();
+          final String path = pathFor(segmentToProcess.getSegment());
+          zkWritingExecutor.execute(
+              new Runnable()
               {
-                synchronized (lock) {
-                  try {
-                    if (currentlyProcessing == null) {
-                      log.makeAlert("Crazy race condition! server[%s]", basePath)
-                         .emit();
-                      actionCompleted();
-                      doNext();
-                      return;
-                    }
-                    log.info("Server[%s] processing segment[%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-                    final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentIdentifier());
-                    final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
-                    curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-
-                    zkWritingExecutor.schedule(
-                        new Runnable()
-                        {
-                          @Override
-                          public void run()
+                @Override
+                public void run()
+                {
+                  synchronized (lock) {
+                    try {
+                      if (!currentlyProcessing.containsKey(path)) {
+                        log.makeAlert("Crazy race condition! server[%s]", basePath)
+                           .emit();
+                        actionCompleted(path);
+                        doNext();
+                        return;
+                      }
+                      log.info("Server[%s] processing segment[%s]", basePath, segmentToProcess.getSegmentIdentifier());
+                      final byte[] payload = jsonMapper.writeValueAsBytes(segmentToProcess.getChangeRequest());
+                      curator.create().forPath(path, payload);
+                      log.info("node created");
+                      zkWritingExecutor.schedule(
+                          new Runnable()
                           {
-                            try {
-                              if (curator.checkExists().forPath(path) != null) {
-                                failAssign(new ISE("%s was never removed! Failing this operation!", path));
+                            @Override
+                            public void run()
+                            {
+                              try {
+                                if (curator.checkExists().forPath(path) != null) {
+                                  failAssign(new ISE("%s was never removed! Failing this operation!", path), path);
+                                }
+                              }
+                              catch (Exception e) {
+                                failAssign(e, path);
                               }
                             }
-                            catch (Exception e) {
-                              failAssign(e);
-                            }
-                          }
-                        },
-                        config.getLoadTimeoutDelay().getMillis(),
-                        TimeUnit.MILLISECONDS
-                    );
+                          },
+                          config.getLoadTimeoutDelay().getMillis(),
+                          TimeUnit.MILLISECONDS
+                      );
 
-                    final Stat stat = curator.checkExists().usingWatcher(
-                        new CuratorWatcher()
-                        {
-                          @Override
-                          public void process(WatchedEvent watchedEvent) throws Exception
+                      final Stat stat = curator.checkExists().usingWatcher(
+                          new CuratorWatcher()
                           {
-                            switch (watchedEvent.getType()) {
-                              case NodeDeleted:
-                                entryRemoved(watchedEvent.getPath());
+                            @Override
+                            public void process(WatchedEvent watchedEvent) throws Exception
+                            {
+                              switch (watchedEvent.getType()) {
+                                case NodeDeleted:
+                                  entryRemoved(watchedEvent.getPath());
+                              }
                             }
                           }
-                        }
-                    ).forPath(path);
+                      ).forPath(path);
 
-                    if (stat == null) {
-                      final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
+                      if (stat == null) {
+                        log.info("WTF null stat found");
+                        final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
 
-                      // Create a node and then delete it to remove the registered watcher.  This is a work-around for
-                      // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
-                      // that happens for that node.  If no events happen, the watcher stays registered foreverz.
-                      // Couple that with the fact that you cannot set a watcher when you create a node, but what we
-                      // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
-                      // set a watcher when you check to see if it exists so, we first create the node and then set a
-                      // watcher on its existence.  However, if already does not exist by the time the existence check
-                      // returns, then the watcher that was set will never fire (nobody will ever create the node
-                      // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
-                      // that watcher to fire and delete it right away.
-                      //
-                      // We do not create the existence watcher first, because then it will fire when we create the
-                      // node and we'll have the same race when trying to refresh that watcher.
-                      curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
+                        // Create a node and then delete it to remove the registered watcher.  This is a work-around for
+                        // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
+                        // that happens for that node.  If no events happen, the watcher stays registered foreverz.
+                        // Couple that with the fact that you cannot set a watcher when you create a node, but what we
+                        // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
+                        // set a watcher when you check to see if it exists so, we first create the node and then set a
+                        // watcher on its existence.  However, if already does not exist by the time the existence check
+                        // returns, then the watcher that was set will never fire (nobody will ever create the node
+                        // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
+                        // that watcher to fire and delete it right away.
+                        //
+                        // We do not create the existence watcher first, because then it will fire when we create the
+                        // node and we'll have the same race when trying to refresh that watcher.
+                        curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
 
-                      entryRemoved(path);
+                        entryRemoved(path);
+                      }
                     }
-                  }
-                  catch (Exception e) {
-                    failAssign(e);
+                    catch (Exception e) {
+
+                      failAssign(e, path);
+                    }
                   }
                 }
               }
-            }
-        );
+          );
+        }
       } else {
         log.info(
             "Server[%s] skipping doNext() because something is currently loading[%s].",
             basePath,
-            currentlyProcessing.getSegmentIdentifier()
+            currentlyProcessing
         );
       }
     }
   }
 
-  private void actionCompleted()
+  private boolean canProcessNext()
   {
-    if (currentlyProcessing != null) {
-      switch (currentlyProcessing.getType()) {
+    return currentlyProcessing.size() < config.getLoadQueueSize();
+  }
+
+
+  private void actionCompleted(String path)
+  {
+    SegmentHolder segmentHolder = currentlyProcessing.remove(path);
+    log.info("actionCompleted for path %s, %s", path, currentlyProcessing);
+    if (segmentHolder != null) {
+      switch (segmentHolder.getType()) {
         case LOAD:
-          segmentsToLoad.remove(currentlyProcessing.getSegment());
-          queuedSize.addAndGet(-currentlyProcessing.getSegmentSize());
+          queuedSize.addAndGet(-segmentHolder.getSegmentSize());
           break;
         case DROP:
-          segmentsToDrop.remove(currentlyProcessing.getSegment());
+          // NOTHING TO DO
           break;
         default:
           throw new UnsupportedOperationException();
       }
 
-      final List<LoadPeonCallback> callbacks = currentlyProcessing.getCallbacks();
-      currentlyProcessing = null;
+      final List<LoadPeonCallback> callbacks = segmentHolder.getCallbacks();
       callBackExecutor.execute(
           new Runnable()
           {
@@ -326,10 +341,12 @@ public class LoadQueuePeon
   public void stop()
   {
     synchronized (lock) {
-      if (currentlyProcessing != null) {
-        executeCallbacks(currentlyProcessing.getCallbacks());
-        currentlyProcessing = null;
+      if (!currentlyProcessing.isEmpty()) {
+        for (SegmentHolder holder : currentlyProcessing.values()) {
+          executeCallbacks(holder.getCallbacks());
+        }
       }
+      currentlyProcessing.clear();
 
       if (!segmentsToDrop.isEmpty()) {
         for (SegmentHolder holder : segmentsToDrop.values()) {
@@ -353,31 +370,36 @@ public class LoadQueuePeon
   private void entryRemoved(String path)
   {
     synchronized (lock) {
-      if (currentlyProcessing == null) {
+      if (!currentlyProcessing.containsKey(path)) {
         log.warn("Server[%s] an entry[%s] was removed even though it wasn't loading!?", basePath, path);
         return;
       }
-      if (!ZKPaths.getNodeFromPath(path).equals(currentlyProcessing.getSegmentIdentifier())) {
+      if (!ZKPaths.getNodeFromPath(path).equals(currentlyProcessing.get(path).getSegmentIdentifier())) {
         log.warn(
             "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
-            basePath, path, currentlyProcessing
+            basePath, path, currentlyProcessing.get(path)
         );
         return;
       }
-      actionCompleted();
+      actionCompleted(path);
       log.info("Server[%s] done processing [%s]", basePath, path);
     }
 
     doNext();
   }
 
-  private void failAssign(Exception e)
+  String pathFor(DataSegment segment)
+  {
+    return ZKPaths.makePath(basePath, segment.getIdentifier());
+  }
+
+  private void failAssign(Exception e, String path)
   {
     synchronized (lock) {
       log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyProcessing);
       failedAssignCount.getAndIncrement();
       // Act like it was completed so that the coordinator gives it to someone else
-      actionCompleted();
+      actionCompleted(path);
       doNext();
     }
   }

@@ -62,4 +62,29 @@ public class SegmentChangeRequestDrop implements DataSegmentChangeRequest
            "segment=" + segment +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SegmentChangeRequestDrop that = (SegmentChangeRequestDrop) o;
+
+    if (!segment.equals(that.segment)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return segment.hashCode();
+  }
 }
