@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
@@ -37,7 +36,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
 
-public class CompressedIntsIndexedSupplier implements Supplier<IndexedInts>
+public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
   public static final byte version = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Ints.BYTES;
@@ -48,7 +47,7 @@ public class CompressedIntsIndexedSupplier implements Supplier<IndexedInts>
   private final GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
-    CompressedIntsIndexedSupplier(
+  CompressedIntsIndexedSupplier(
       int totalSize,
       int sizePer,
       GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers,

@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
@@ -32,11 +31,12 @@ import io.druid.segment.CompressedPools;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
 
-public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
+public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
   public static final byte version = 0x2;
 
@@ -48,7 +48,7 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
-  public CompressedVSizeIntsIndexedSupplier(
+  CompressedVSizeIntsIndexedSupplier(
       int totalSize,
       int sizePer,
       int numBytes,
@@ -62,11 +62,12 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
     this.compression = compression;
     this.numBytes = numBytes;
     this.bitsToShift = Integer.SIZE - (numBytes << 3); // numBytes * 8
-    this.bitMask = (1 << (numBytes << 3)) - 1;
+    this.bitMask = (int)((1L << (numBytes << 3)) - 1); // set numBytes * 8 lower bits to 1
   }
 
   public static int maxIntsInBufferForBytes(int numBytes) {
-    return CompressedPools.BUFFER_SIZE / numBytes;
+    final int padding = Ints.BYTES - numBytes;
+    return (CompressedPools.BUFFER_SIZE - padding) / numBytes;
   }
 
   public static int maxIntsInBufferForValue(int maxValue) {
@@ -81,27 +82,33 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
   @Override
   public IndexedInts get()
   {
-    final int div = Integer.numberOfTrailingZeros(sizePer);
-    final int rem = sizePer - 1;
-    final boolean powerOf2 = sizePer == (1 << div);
+    final boolean powerOf2 = sizePer == (1 << Integer.numberOfTrailingZeros(sizePer));
+
     if(powerOf2) {
-      return new CompressedVSizeIndexedInts() {
-        @Override
-        public int get(int index)
-        {
-          // optimize division and remainder for powers of 2
-          final int bufferNum = index >> div;
-
-          if (bufferNum != currIndex) {
-            loadBuffer(bufferNum);
+      if(numBytes == Ints.BYTES) {
+        return new CompressedFullSizeIndexedInts() {
+          @Override
+          public int get(int index)
+          {
+            return get2(index);
           }
-
-          final int bufferIndex = index & rem;
-          return buffer.get(buffer.position() + bufferIndex);
-        }
-      };
+        };
+      } else {
+        return new CompressedVSizeIndexedInts()
+        {
+          @Override
+          public int get(int index)
+          {
+            return get2(index);
+          }
+        };
+      }
     } else {
-      return new CompressedVSizeIndexedInts();
+      if(numBytes == Ints.BYTES) {
+        return new CompressedFullSizeIndexedInts();
+      } else {
+        return new CompressedVSizeIndexedInts();
+      }
     }
   }
 
@@ -125,17 +132,6 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
     baseBuffers.writeToChannel(channel);
   }
 
-  public CompressedVSizeIntsIndexedSupplier convertByteOrder(ByteOrder order)
-  {
-    return new CompressedVSizeIntsIndexedSupplier(
-        totalSize,
-        sizePer,
-        numBytes,
-        GenericIndexed.fromIterable(baseBuffers, CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
-        compression
-    );
-  }
-
   /**
    * For testing.  Do not use unless you like things breaking
    */
@@ -152,87 +148,40 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
       final int numBytes = buffer.get();
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
+      final int padding = Ints.BYTES - numBytes;
+      final int chunkBytes = sizePer * numBytes + padding;
+
       final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
+
       return new CompressedVSizeIntsIndexedSupplier(
           totalSize,
           sizePer,
           numBytes,
-          GenericIndexed.read(buffer, CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          GenericIndexed.read(
+              buffer,
+              CompressedByteBufferObjectStrategy.getBufferForOrder(order, compression, chunkBytes)
+          ),
           compression
       );
+
     }
 
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
-
-//  public static CompressedVSizeIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
-//  {
-//    return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression);
-//  }
-//
-//  public static CompressedVSizeIntsIndexedSupplier fromIntBuffer(
-//      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
-//  )
-//  {
-//    Preconditions.checkArgument(
-//        chunkFactor <= MAX_INTS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
-//    );
-//
-//    return new CompressedVSizeIntsIndexedSupplier(
-//        buffer.remaining(),
-//        chunkFactor,
-//        numBytes,
-//        GenericIndexed.fromIterable(
-//            new Iterable<ResourceHolder<IntBuffer>>()
-//            {
-//              @Override
-//              public Iterator<ResourceHolder<IntBuffer>> iterator()
-//              {
-//                return new Iterator<ResourceHolder<ByteBuffer>>()
-//                {
-//                  ByteBuffer myBuffer = buffer.asReadOnlyBuffer();
-//
-//                  @Override
-//                  public boolean hasNext()
-//                  {
-//                    return myBuffer.hasRemaining();
-//                  }
-//
-//                  @Override
-//                  public ResourceHolder<IntBuffer> next()
-//                  {
-//                    IntBuffer retVal = myBuffer.asReadOnlyBuffer();
-//
-//                    if (chunkFactor < myBuffer.remaining()) {
-//                      retVal.limit(retVal.position() + chunkFactor);
-//                    }
-//                    myBuffer.position(myBuffer.position() + retVal.remaining());
-//
-//                    return StupidResourceHolder.create(retVal);
-//                  }
-//
-//                  @Override
-//                  public void remove()
-//                  {
-//                    throw new UnsupportedOperationException();
-//                  }
-//                };
-//              }
-//            },
-//            CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
-//        ),
-//        compression
-//    );
-//  }
 
   public static CompressedVSizeIntsIndexedSupplier fromList(
       final List<Integer> list, final int maxValue, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     final int numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
+    // always leave extra bytes to read a full int
+    final int padding = Ints.BYTES - numBytes;
+    final int chunkBytes = chunkFactor * numBytes + padding;
 
     Preconditions.checkArgument(
-        chunkFactor <= maxIntsInBufferForBytes(numBytes), "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
+        chunkFactor <= maxIntsInBufferForBytes(numBytes),
+        "Chunks must be <= 64k bytes. chunkFactor was[%s]",
+        chunkFactor
     );
 
     return new CompressedVSizeIntsIndexedSupplier(
@@ -247,8 +196,6 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
               {
                 return new Iterator<ResourceHolder<ByteBuffer>>()
                 {
-                  // always leave extra bytes to read a full int
-                  final int chunkBytes = chunkFactor * numBytes + (Ints.BYTES - numBytes);
                   int position = 0;
 
                   @Override
@@ -266,9 +213,11 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
 
                     if (chunkFactor > list.size() - position) {
                       retVal.limit((list.size() - position) * numBytes);
+                    } else {
+                      retVal.limit(chunkFactor * numBytes);
                     }
 
-                    final List<Integer> ints = list.subList(position, position + retVal.remaining());
+                    final List<Integer> ints = list.subList(position, position + retVal.remaining() / numBytes);
                     for(int value : ints) {
                       if(byteOrder.equals(ByteOrder.BIG_ENDIAN)) {
                         byte[] intAsBytes = Ints.toByteArray(value);
@@ -278,12 +227,6 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
                             .allocate(Ints.BYTES)
                             .order(byteOrder)
                             .putInt(value);
-                        // TODO check if this byte[] thing is faster or not
-//                        byte[] bytes = new byte[]{
-//                            (byte) value,
-//                            (byte) (value << 8),
-//                            (byte) (value << 16)
-//                        };
                         retVal.put(buf.array(), 0, numBytes);
                       }
                     }
@@ -301,15 +244,35 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
                 };
               }
             },
-            CompressedByteBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+            CompressedByteBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkBytes)
         ),
         compression
     );
   }
 
+  private class CompressedFullSizeIndexedInts extends CompressedVSizeIndexedInts {
+    IntBuffer intBuffer;
+
+    @Override
+    protected void loadBuffer(int bufferNum)
+    {
+      super.loadBuffer(bufferNum);
+      intBuffer = buffer.asIntBuffer();
+    }
+
+    @Override
+    protected int _get(int index)
+    {
+      return intBuffer.get(intBuffer.position() + index);
+    }
+  }
+
   private class CompressedVSizeIndexedInts implements IndexedInts
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedBuffers = baseBuffers.singleThreaded();
+
+    final int div = Integer.numberOfTrailingZeros(sizePer);
+    final int rem = sizePer - 1;
 
     int currIndex = -1;
     ResourceHolder<ByteBuffer> holder;
@@ -331,11 +294,30 @@ public class CompressedVSizeIntsIndexedSupplier implements Supplier<IndexedInts>
         loadBuffer(bufferNum);
       }
 
+      return _get(bufferIndex);
+    }
+
+    protected int get2(int index)
+    {
+      // optimize division and remainder for powers of 2
+      final int bufferNum = index >> div;
+
+      if (bufferNum != currIndex) {
+        loadBuffer(bufferNum);
+      }
+
+      return _get(index & rem);
+    }
+
+    protected int _get(final int index)
+    {
+      final int pos = buffer.position() + index * numBytes;
+      // example for numBytes = 3
       // big-endian: 0x000c0b0a stored  0c 0b 0a XX, read 0x0c0b0aXX >>> 8
       // little-endian: 0x000c0b0a stored 0a 0b 0c XX, read 0xXX0c0b0a & 0x00FFFFFF
       return buffer.order().equals(ByteOrder.BIG_ENDIAN) ?
-             buffer.getInt(buffer.position() + bufferIndex) >>> bitsToShift :
-             buffer.getInt(buffer.position() + bufferIndex) & bitMask;
+             buffer.getInt(pos) >>> bitsToShift :
+             buffer.getInt(pos) & bitMask;
     }
 
     @Override

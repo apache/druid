@@ -34,7 +34,7 @@ public class CompressedByteBufferObjectStrategy extends FixedSizeCompressedObjec
   public CompressedByteBufferObjectStrategy(
       ByteOrder order,
       CompressionStrategy compression,
-      int sizePer
+      final int sizePer
   )
   {
     super(

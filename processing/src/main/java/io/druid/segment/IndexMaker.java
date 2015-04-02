@@ -61,7 +61,6 @@ import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
-import io.druid.segment.data.CompressedIntsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
@@ -77,10 +76,8 @@ import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import io.druid.segment.serde.CompressedDictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
-import io.druid.segment.serde.LegacyDictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
@@ -1219,26 +1216,37 @@ public class IndexMaker
     final DictionaryEncodedColumnPartSerde dimPart;
     final CompressedObjectStrategy.CompressionStrategy compression = columnSpec.getCompression();
 
-    if (compression != null) {
-      dimPart = new CompressedDictionaryEncodedColumnPartSerde(
-          dictionary,
-          singleValCol == null ? null : CompressedVSizeIntsIndexedSupplier.fromList(
-              singleValCol,
-              dictionary.size(),
-              CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
-              IndexIO.BYTE_ORDER,
-              compression
-          ),
-          multiValCol,
-          bitmapSerdeFactory,
-          bitmaps,
-          spatialIndex,
-          IndexIO.BYTE_ORDER
-      );
+    if (singleValCol != null) {
+      if (compression != null) {
+        CompressedVSizeIntsIndexedSupplier compressedColumn = CompressedVSizeIntsIndexedSupplier.fromList(
+            singleValCol,
+            dictionary.size(),
+            CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
+            IndexIO.BYTE_ORDER,
+            compression
+        );
+        dimPart = DictionaryEncodedColumnPartSerde.createCompressedSingleValue(
+            dictionary,
+            compressedColumn,
+            bitmapSerdeFactory,
+            bitmaps,
+            spatialIndex,
+            IndexIO.BYTE_ORDER
+        );
+      } else {
+        VSizeIndexedInts uncompressedColumn = VSizeIndexedInts.fromList(singleValCol, dictionary.size());
+        dimPart = DictionaryEncodedColumnPartSerde.createUncompressedSingleValue(
+            dictionary,
+            uncompressedColumn,
+            bitmapSerdeFactory,
+            bitmaps,
+            spatialIndex,
+            IndexIO.BYTE_ORDER
+        );
+      }
     } else {
-      dimPart = new LegacyDictionaryEncodedColumnPartSerde(
+      dimPart = DictionaryEncodedColumnPartSerde.createUncompressedMultiValue(
           dictionary,
-          singleValCol == null ? null : VSizeIndexedInts.fromList(singleValCol, dictionary.size()),
           multiValCol,
           bitmapSerdeFactory,
           bitmaps,
