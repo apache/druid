@@ -75,7 +75,7 @@ public class JobHelper
         final Path hdfsPath = new Path(distributedClassPath, jarFile.getName());
 
         if (!existing.contains(hdfsPath)) {
-          if (jarFile.getName().endsWith("SNAPSHOT.jar") || !fs.exists(hdfsPath)) {
+          if (jarFile.getName().matches(".*SNAPSHOT(-selfcontained)?\\.jar$") || !fs.exists(hdfsPath)) {
             log.info("Uploading jar to path[%s]", hdfsPath);
             ByteStreams.copy(
                 Files.newInputStreamSupplier(jarFile),
