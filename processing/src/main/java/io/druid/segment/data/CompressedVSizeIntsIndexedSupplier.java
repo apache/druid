@@ -123,10 +123,10 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
         };
       }
     } else {
+      // optimized versions for 1, 2, and 4 byte indices
       if(numBytes == Ints.BYTES) {
         return new CompressedFullSizeIndexedInts();
       } else if (numBytes == Shorts.BYTES) {
-        // about 10% faster than vsized version
         return new CompressedShortSizeIndexedInts();
       } else if (numBytes == 1) {
         return new CompressedByteSizeIndexedInts();
@@ -304,7 +304,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     @Override
     protected int _get(int index)
     {
-      return shortBuffer.get(shortBuffer.position() + index);
+      return shortBuffer.get(shortBuffer.position() + index) & 0xFFFF;
     }
   }
 
@@ -312,7 +312,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     @Override
     protected int _get(int index)
     {
-      return buffer.get(buffer.position() + index);
+      return buffer.get(buffer.position() + index) & 0xFF;
     }
   }
 
