@@ -22,6 +22,7 @@ package io.druid.segment.data;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Shorts;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
@@ -93,6 +95,23 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
             return get2(index);
           }
         };
+      } else if(numBytes == Shorts.BYTES) {
+        return new CompressedShortSizeIndexedInts() {
+          @Override
+          public int get(int index)
+          {
+            return get2(index);
+          }
+        };
+      } else if (numBytes == 1) {
+        return new CompressedByteSizeIndexedInts()
+        {
+          @Override
+          public int get(int index)
+          {
+            return get2(index);
+          }
+        };
       } else {
         return new CompressedVSizeIndexedInts()
         {
@@ -106,6 +125,11 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     } else {
       if(numBytes == Ints.BYTES) {
         return new CompressedFullSizeIndexedInts();
+      } else if (numBytes == Shorts.BYTES) {
+        // about 10% faster than vsized version
+        return new CompressedShortSizeIndexedInts();
+      } else if (numBytes == 1) {
+        return new CompressedByteSizeIndexedInts();
       } else {
         return new CompressedVSizeIndexedInts();
       }
@@ -267,6 +291,31 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     }
   }
 
+  private class CompressedShortSizeIndexedInts extends CompressedVSizeIndexedInts {
+    ShortBuffer shortBuffer;
+
+    @Override
+    protected void loadBuffer(int bufferNum)
+    {
+      super.loadBuffer(bufferNum);
+      shortBuffer = buffer.asShortBuffer();
+    }
+
+    @Override
+    protected int _get(int index)
+    {
+      return shortBuffer.get(shortBuffer.position() + index);
+    }
+  }
+
+  private class CompressedByteSizeIndexedInts extends CompressedVSizeIndexedInts {
+    @Override
+    protected int _get(int index)
+    {
+      return buffer.get(buffer.position() + index);
+    }
+  }
+
   private class CompressedVSizeIndexedInts implements IndexedInts
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedBuffers = baseBuffers.singleThreaded();
@@ -277,6 +326,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     int currIndex = -1;
     ResourceHolder<ByteBuffer> holder;
     ByteBuffer buffer;
+    boolean bigEndian;
 
     @Override
     public int size()
@@ -313,9 +363,9 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     {
       final int pos = buffer.position() + index * numBytes;
       // example for numBytes = 3
-      // big-endian: 0x000c0b0a stored  0c 0b 0a XX, read 0x0c0b0aXX >>> 8
+      // big-endian:    0x000c0b0a stored 0c 0b 0a XX, read 0x0c0b0aXX >>> 8
       // little-endian: 0x000c0b0a stored 0a 0b 0c XX, read 0xXX0c0b0a & 0x00FFFFFF
-      return buffer.order().equals(ByteOrder.BIG_ENDIAN) ?
+      return bigEndian ?
              buffer.getInt(pos) >>> bitsToShift :
              buffer.getInt(pos) & bitMask;
     }
@@ -338,6 +388,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       holder = singleThreadedBuffers.get(bufferNum);
       buffer = holder.get();
       currIndex = bufferNum;
+      bigEndian = buffer.order().equals(ByteOrder.BIG_ENDIAN);
     }
 
     @Override
