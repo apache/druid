@@ -65,7 +65,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
     public static VERSION fromByte(byte b) {
       final VERSION[] values = VERSION.values();
-      Preconditions.checkArgument(b < values.length, "Unsupported dictionary column version 0x%X", b);
+      Preconditions.checkArgument(b < values.length, "Unsupported dictionary column version[%s]", b);
       return values[b];
     }
 
@@ -197,11 +197,11 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                                     "multi-value flag must be set for version[%s]", version.asByte());
         break;
       case UNCOMPRESSED_SINGLE_VALUE:
-        Preconditions.checkArgument(version.equals(VERSION.UNCOMPRESSED_SINGLE_VALUE) && !Feature.MULTI_VALUE.isSet(flags),
+        Preconditions.checkArgument(!Feature.MULTI_VALUE.isSet(flags),
                                     "multi-value flag must not be set for version[%s]", version.asByte());
         break;
       case COMPRESSED:
-        Preconditions.checkArgument(version.equals(VERSION.COMPRESSED) && !Feature.MULTI_VALUE.isSet(flags),
+        Preconditions.checkArgument(!Feature.MULTI_VALUE.isSet(flags),
                                     "compressed columns currently do not support multi-value columns", version.asByte());
         break;
       default:
@@ -381,7 +381,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         break;
 
       default:
-        throw new IAE("Unsupported version %s", version);
+        throw new IAE("Unsupported version[%s]", version);
     }
 
     return Pair.of(singleValuedColumn, multiValuedColumn);

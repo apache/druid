@@ -114,7 +114,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
     Random rand = new Random(0);
     for(int i = 0; i < vals.length; ++i) {
       // VSizeIndexed only allows positive values
-      vals[i] = Math.abs(rand.nextInt(maxValue + 1));
+      vals[i] = rand.nextInt(maxValue);
     }
 
     makeWithSerde(chunkSize);
