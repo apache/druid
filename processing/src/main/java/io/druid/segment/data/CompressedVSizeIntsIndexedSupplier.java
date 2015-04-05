@@ -154,8 +154,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   {
     return 1 +             // version
            1 +             // numBytes
-           Integer.BYTES + // totalSize
-           Integer.BYTES + // sizePer
+           Ints.BYTES + // totalSize
+           Ints.BYTES + // sizePer
            1 +             // compression id
            baseBuffers.getSerializedSize(); // data
   }
