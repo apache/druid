@@ -177,10 +177,10 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   @Test
   public void testmaxIntsInBuffer() throws Exception
   {
-    Assert.assertEquals(CompressedPools.BUFFER_SIZE - 3, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(1));
-    Assert.assertEquals((CompressedPools.BUFFER_SIZE - 2) / 2, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(2));
+    Assert.assertEquals(CompressedPools.BUFFER_SIZE, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(1));
+    Assert.assertEquals(CompressedPools.BUFFER_SIZE / 2, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(2));
     Assert.assertEquals((CompressedPools.BUFFER_SIZE - 1) / 3, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(3));
-    Assert.assertEquals((CompressedPools.BUFFER_SIZE) / 4, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(4));
+    Assert.assertEquals(CompressedPools.BUFFER_SIZE / 4, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(4));
   }
 
   @Test

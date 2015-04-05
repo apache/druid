@@ -45,8 +45,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   private final int totalSize;
   private final int sizePer;
   private final int numBytes;
-  private final int bitsToShift;
-  private final int bitMask;
+  private final int bigEndianShift;
+  private final int littleEndianMask;
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
@@ -63,16 +63,29 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     this.baseBuffers = baseBuffers;
     this.compression = compression;
     this.numBytes = numBytes;
-    this.bitsToShift = Integer.SIZE - (numBytes << 3); // numBytes * 8
-    this.bitMask = (int)((1L << (numBytes << 3)) - 1); // set numBytes * 8 lower bits to 1
+    this.bigEndianShift = Integer.SIZE - (numBytes << 3); // numBytes * 8
+    this.littleEndianMask = (int)((1L << (numBytes << 3)) - 1); // set numBytes * 8 lower bits to 1
   }
 
-  public static int maxIntsInBufferForBytes(int numBytes) {
-    final int padding = Ints.BYTES - numBytes;
-    return (CompressedPools.BUFFER_SIZE - padding) / numBytes;
+  public static int maxIntsInBufferForBytes(int numBytes)
+  {
+    return (CompressedPools.BUFFER_SIZE - bufferPadding(numBytes)) / numBytes;
   }
 
-  public static int maxIntsInBufferForValue(int maxValue) {
+  private static int bufferPadding(int numBytes)
+  {
+    // when numBytes == 3 we need to pad the buffer to allow reading an extra byte
+    // beyond the end of the last value, since we use buffer.getInt() to read values.
+    // for numBytes < 3 we remove the need for padding by reading short or bytes directly.
+    if (numBytes == 3) {
+      return Ints.BYTES - numBytes;
+    } else {
+      return 0;
+    }
+  }
+
+  public static int maxIntsInBufferForValue(int maxValue)
+  {
     return maxIntsInBufferForBytes(VSizeIndexedInts.getNumBytesForMax(maxValue));
   }
 
@@ -172,8 +185,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       final int numBytes = buffer.get();
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      final int padding = Ints.BYTES - numBytes;
-      final int chunkBytes = sizePer * numBytes + padding;
+      final int chunkBytes = sizePer * numBytes + bufferPadding(numBytes);
 
       final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
 
@@ -198,9 +210,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   )
   {
     final int numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
-    // always leave extra bytes to read a full int
-    final int padding = Ints.BYTES - numBytes;
-    final int chunkBytes = chunkFactor * numBytes + padding;
+    final int chunkBytes = chunkFactor * numBytes + bufferPadding(numBytes);
 
     Preconditions.checkArgument(
         chunkFactor <= maxIntsInBufferForBytes(numBytes),
@@ -304,6 +314,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     @Override
     protected int _get(int index)
     {
+      // removes the need for padding
       return shortBuffer.get(shortBuffer.position() + index) & 0xFFFF;
     }
   }
@@ -312,6 +323,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     @Override
     protected int _get(int index)
     {
+      // removes the need for padding
       return buffer.get(buffer.position() + index) & 0xFF;
     }
   }
@@ -366,8 +378,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       // big-endian:    0x000c0b0a stored 0c 0b 0a XX, read 0x0c0b0aXX >>> 8
       // little-endian: 0x000c0b0a stored 0a 0b 0c XX, read 0xXX0c0b0a & 0x00FFFFFF
       return bigEndian ?
-             buffer.getInt(pos) >>> bitsToShift :
-             buffer.getInt(pos) & bitMask;
+             buffer.getInt(pos) >>> bigEndianShift :
+             buffer.getInt(pos) & littleEndianMask;
     }
 
     @Override
