@@ -203,6 +203,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
 
     SortedSet<Interval> retVal = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+    int unparsed = 0;
     try (Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser())) {
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();
@@ -211,9 +212,12 @@ public class IndexTask extends AbstractFixedIntervalTask
         if (interval.isPresent()) {
           retVal.add(interval.get());
         } else {
-          throw new ISE("Unable to to find a matching interval for [%s]", dt);
+          unparsed++;
         }
       }
+    }
+    if (unparsed > 0) {
+      log.warn("Unable to to find a matching interval for [%,d] events", unparsed);
     }
 
     return retVal;

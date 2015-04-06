@@ -226,4 +226,65 @@ public class IndexTaskTest
 
     return segments;
   }
+
+  @Test
+    public void testIntervalBucketing() throws Exception
+    {
+      File tmpDir = Files.createTempDir();
+      tmpDir.deleteOnExit();
+
+      File tmpFile = File.createTempFile("druid", "index", tmpDir);
+      tmpFile.deleteOnExit();
+
+      PrintWriter writer = new PrintWriter(tmpFile);
+      writer.println("2015-03-01T07:59:59.977Z,a,1");
+      writer.println("2015-03-01T08:00:00.000Z,b,1");
+      writer.close();
+
+      IndexTask indexTask = new IndexTask(
+          null,
+          new IndexTask.IndexIngestionSpec(
+              new DataSchema(
+                  "test",
+                  new StringInputRowParser(
+                      new CSVParseSpec(
+                          new TimestampSpec(
+                              "ts",
+                              "auto"
+                          ),
+                          new DimensionsSpec(
+                              Arrays.asList("dim"),
+                              Lists.<String>newArrayList(),
+                              Lists.<SpatialDimensionSchema>newArrayList()
+                          ),
+                          null,
+                          Arrays.asList("ts", "dim", "val")
+                      )
+                  ),
+                  new AggregatorFactory[]{
+                      new LongSumAggregatorFactory("val", "val")
+                  },
+                  new UniformGranularitySpec(
+                      Granularity.HOUR,
+                      QueryGranularity.HOUR,
+                      Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
+                  )
+              ),
+              new IndexTask.IndexIOConfig(
+                  new LocalFirehoseFactory(
+                      tmpDir,
+                      "druid*",
+                      null
+                  )
+              ),
+              null
+          ),
+          new DefaultObjectMapper()
+      );
+
+      final List<DataSegment> segments = runTask(indexTask);
+
+      Assert.assertEquals(1, segments.size());
+    }
+
 }
