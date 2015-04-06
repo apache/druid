@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -34,6 +35,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.MaxAggregatorFactory;
 import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -46,11 +48,13 @@ import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -62,9 +66,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
@@ -2324,5 +2330,202 @@ public class TopNQueryRunnerTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+  }
+
+  @Test
+  public void testTopNOverNullDimension()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension("null_column")
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new MaxAggregatorFactory("maxIndex", "index"),
+                        new MinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("null_column", null);
+    map.put("rows", 1209L);
+    map.put("index", 503332.5071372986D);
+    map.put("addRowsIndexConstant", 504542.5071372986D);
+    map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+    map.put("maxIndex", 1870.06103515625D);
+    map.put("minIndex", 59.02102279663086D);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    map
+                )
+            )
+        )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+  }
+
+  @Test
+  public void testTopNOverNullDimensionWithFilter()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension("null_column")
+        .filters(
+            new SelectorDimFilter("null_column", null)
+        )
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators,
+                    Lists.newArrayList(
+                        new MaxAggregatorFactory("maxIndex", "index"),
+                        new MinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("null_column", null);
+    map.put("rows", 1209L);
+    map.put("index", 503332.5071372986D);
+    map.put("addRowsIndexConstant", 504542.5071372986D);
+    map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+    map.put("maxIndex", 1870.06103515625D);
+    map.put("minIndex", 59.02102279663086D);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    map
+                )
+            )
+        )
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+  }
+
+  @Test
+  public void testTopNOverPartialNullDimension()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryGranularity.ALL)
+        .dimension("partial_null_column")
+        .metric(QueryRunnerTestHelper.uniqueMetric)
+        .threshold(1000)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .build();
+
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("partial_null_column", null);
+    map.put("rows", 22L);
+    map.put("index", 7583.691513061523D);
+    map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    map,
+                    ImmutableMap.<String, Object>of(
+                        "partial_null_column", "value",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+
+  }
+
+  @Test
+  public void testTopNOverPartialNullDimensionWithFilterOnNullValue()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryGranularity.ALL)
+        .dimension("partial_null_column")
+        .metric(QueryRunnerTestHelper.uniqueMetric)
+        .filters(new SelectorDimFilter("partial_null_column", null))
+        .threshold(1000)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .build();
+
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("partial_null_column", null);
+    map.put("rows", 22L);
+    map.put("index", 7583.691513061523D);
+    map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    map
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+  }
+
+  @Test
+  public void testTopNOverPartialNullDimensionWithFilterOnNOTNullValue()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryGranularity.ALL)
+        .dimension("partial_null_column")
+        .metric(QueryRunnerTestHelper.uniqueMetric)
+        .filters(new SelectorDimFilter("partial_null_column", "value"))
+        .threshold(1000)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    ImmutableMap.<String, Object>of(
+                        "partial_null_column", "value",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
   }
 }

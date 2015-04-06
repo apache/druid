@@ -18,6 +18,7 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
@@ -295,7 +296,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     metricTypes = metricTypesBuilder.build();
 
     this.dimensionOrder = Maps.newLinkedHashMap();
-    this.dimensions = new CopyOnWriteArrayList<>();
+    this.dimensions = new CopyOnWriteArrayList<>(incrementalIndexSchema.getDimensionsSpec().getDimensions());
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = incrementalIndexSchema.getDimensionsSpec().getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
@@ -316,10 +317,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       capabilities.setType(type);
       columnCapabilities.put(entry.getKey(), capabilities);
     }
+    this.dimValues = new DimensionHolder();
     for (String dimension : dimensions) {
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
       capabilities.setType(ValueType.STRING);
       columnCapabilities.put(dimension, capabilities);
+      dimensionOrder.put(dimension, dimensionOrder.size());
+      dimValues.add(dimension);
     }
     for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
@@ -327,7 +331,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       capabilities.setHasSpatialIndexes(true);
       columnCapabilities.put(spatialDimension.getDimName(), capabilities);
     }
-    this.dimValues = new DimensionHolder();
   }
 
   public abstract ConcurrentNavigableMap<TimeAndDims, Integer> getFacts();
@@ -481,7 +484,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private String[] getDimVals(final DimDim dimLookup, final List<String> dimValues)
   {
     final String[] retVal = new String[dimValues.size()];
-
+    if (dimValues.size() == 0) {
+      // NULL VALUE
+      if (!dimLookup.contains(null)) {
+        dimLookup.add(null);
+      }
+      return null;
+    }
     int count = 0;
     for (String dimValue : dimValues) {
       String canonicalDimValue = dimLookup.get(dimValue);
@@ -639,7 +648,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     {
       DimDim holder = dimensions.get(dimension);
       if (holder == null) {
-        holder = makeDimDim(dimension);
+        holder = new NullValueConverterDimDim(makeDimDim(dimension));
         dimensions.put(dimension, holder);
       } else {
         throw new ISE("dimension[%s] already existed even though add() was called!?", dimension);
@@ -674,6 +683,79 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public void sort();
 
     public boolean compareCannonicalValues(String s1, String s2);
+  }
+
+  /**
+   * implementation which converts null strings to empty strings and vice versa.
+   */
+  static class NullValueConverterDimDim implements DimDim
+  {
+    private final DimDim delegate;
+
+    NullValueConverterDimDim(DimDim delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public String get(String value)
+    {
+      return delegate.get(Strings.nullToEmpty(value));
+    }
+
+    @Override
+    public int getId(String value)
+    {
+      return delegate.getId(Strings.nullToEmpty(value));
+    }
+
+    @Override
+    public String getValue(int id)
+    {
+      return Strings.emptyToNull(delegate.getValue(id));
+    }
+
+    @Override
+    public boolean contains(String value)
+    {
+      return delegate.contains(Strings.nullToEmpty(value));
+    }
+
+    @Override
+    public int size()
+    {
+      return delegate.size();
+    }
+
+    @Override
+    public int add(String value)
+    {
+      return delegate.add(Strings.nullToEmpty(value));
+    }
+
+    @Override
+    public int getSortedId(String value)
+    {
+      return delegate.getSortedId(Strings.nullToEmpty(value));
+    }
+
+    @Override
+    public String getSortedValue(int index)
+    {
+      return Strings.emptyToNull(delegate.getSortedValue(index));
+    }
+
+    @Override
+    public void sort()
+    {
+      delegate.sort();
+    }
+
+    @Override
+    public boolean compareCannonicalValues(String s1, String s2)
+    {
+      return delegate.compareCannonicalValues(Strings.nullToEmpty(s1), Strings.nullToEmpty(s2));
+    }
   }
 
   static class TimeAndDims implements Comparable<TimeAndDims>

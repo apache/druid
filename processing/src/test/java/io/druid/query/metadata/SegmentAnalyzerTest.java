@@ -66,14 +66,17 @@ public class SegmentAnalyzerTest
     Assert.assertEquals("test_1", analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
-    Assert.assertEquals(TestIndex.COLUMNS.length, columns.size()); // All columns including time
+    Assert.assertEquals(TestIndex.COLUMNS.length -1, columns.size()); // All columns including time and excluding empty/null column
 
     for (String dimension : TestIndex.DIMENSIONS) {
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
-
-      Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
-      Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
-      Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+      if (dimension.equals("null_column")) {
+        Assert.assertNull(columnAnalysis);
+      } else {
+        Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+        Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
+        Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+      }
     }
 
     for (String metric : TestIndex.METRICS) {

@@ -18,13 +18,16 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.UOE;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -33,6 +36,7 @@ import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
@@ -44,6 +48,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
@@ -186,12 +191,18 @@ public class IndexIOTest
                           @Override
                           public Object[] next()
                           {
-
-                            final BitSet bitset2 = BitSet.valueOf(new long[]{nextMap2Bits++});
+                            final List<Map<String, Object>> maplist2 = filterByBitset(
+                                maps,
+                                BitSet.valueOf(
+                                    new long[]{nextMap2Bits++}
+                                )
+                            );
                             return new Object[]{
                                 maplist1,
-                                filterByBitset(maps, bitset2),
-                                nextMap2Bits == nextMap1Bits ? null : SegmentValidationException.class
+                                maplist2,
+                                filterNullValues(maplist1).equals(filterNullValues(maplist2))
+                                ? null
+                                : SegmentValidationException.class
                             };
                           }
 
@@ -217,6 +228,21 @@ public class IndexIOTest
     );
   }
 
+  public static List<Map> filterNullValues(List<Map<String, Object>> mapList)
+  {
+    return Lists.transform(
+        mapList, new Function<Map, Map>()
+        {
+          @Nullable
+          @Override
+          public Map apply(@Nullable Map input)
+          {
+            return Maps.filterValues(input, Predicates.notNull());
+          }
+        }
+    );
+  }
+
   private final Collection<Map<String, Object>> events1;
   private final Collection<Map<String, Object>> events2;
   private final Class<? extends Exception> exception;
@@ -233,24 +259,46 @@ public class IndexIOTest
   }
 
   final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex(
-      DEFAULT_INTERVAL.getStart().getMillis(),
-      QueryGranularity.NONE,
-      new AggregatorFactory[]{
-          new CountAggregatorFactory(
-              "count"
-          )
-      },
+      new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
+                                          .withQueryGranularity(QueryGranularity.NONE)
+                                          .withMetrics(
+                                              new AggregatorFactory[]{
+                                                  new CountAggregatorFactory(
+                                                      "count"
+                                                  )
+                                              }
+                                          )
+                                          .withDimensionsSpec(
+                                              new DimensionsSpec(
+                                                  Arrays.asList("dim0", "dim1"),
+                                                  null,
+                                                  null
+                                              )
+                                          )
+                                          .build(),
+      true,
       1000000
   );
 
   final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex(
-      DEFAULT_INTERVAL.getStart().getMillis(),
-      QueryGranularity.NONE,
-      new AggregatorFactory[]{
-          new CountAggregatorFactory(
-              "count"
-          )
-      },
+      new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
+                                          .withQueryGranularity(QueryGranularity.NONE)
+                                          .withMetrics(
+                                              new AggregatorFactory[]{
+                                                  new CountAggregatorFactory(
+                                                      "count"
+                                                  )
+                                              }
+                                          )
+                                          .withDimensionsSpec(
+                                              new DimensionsSpec(
+                                                  Arrays.asList("dim0", "dim1"),
+                                                  null,
+                                                  null
+                                              )
+                                          )
+                                          .build(),
+      true,
       1000000
   );
 
