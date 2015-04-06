@@ -129,6 +129,9 @@ public class IndexIO
 
   protected static final ColumnConfig columnConfig;
 
+  @Deprecated // specify bitmap type in IndexSpec instead
+  protected static final BitmapSerdeFactory CONFIGURED_BITMAP_SERDE_FACTORY;
+
   static {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.<Module>of(
@@ -144,6 +147,7 @@ public class IndexIO
                 );
                 binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
 
+                // this property is deprecated, use IndexSpec instead
                 JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
               }
             }
@@ -151,6 +155,7 @@ public class IndexIO
     );
     mapper = injector.getInstance(ObjectMapper.class);
     columnConfig = injector.getInstance(ColumnConfig.class);
+    CONFIGURED_BITMAP_SERDE_FACTORY = injector.getInstance(BitmapSerdeFactory.class);
   }
 
   public static QueryableIndex loadIndex(File inDir) throws IOException
