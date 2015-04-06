@@ -500,16 +500,10 @@ public class IndexIO
             builder.setHasMultipleValues(true);
           }
 
-          final CompressedObjectStrategy.CompressionStrategy compression;
-          final IndexSpec.ColumnSpec columnSpec = indexSpec.getColumnSpecs().get(dimension);
-          if(columnSpec != null) {
-            compression = columnSpec.getCompression();
-          } else {
-            compression = null;
-          }
+          final CompressedObjectStrategy.CompressionStrategy compression = indexSpec.getDimensionCompression();
 
-        if(singleValCol != null) {
-          if(compression != null) {
+          if (singleValCol != null) {
+            if (compression != null) {
               builder.addSerde(
                   DictionaryEncodedColumnPartSerde.createCompressedSingleValue(
                       dictionary,

@@ -68,8 +68,9 @@ public class IndexMergerTest
     IndexSpec indexSpec;
     if(bitmapSerdeFactory != null || compressionStrategy != null) {
       return new IndexSpec(
-          ImmutableMap.of("dim1", new IndexSpec.ColumnSpec(compressionStrategy)),
-          bitmapSerdeFactory
+          bitmapSerdeFactory,
+          compressionStrategy,
+          null
       );
     } else {
       return new IndexSpec();

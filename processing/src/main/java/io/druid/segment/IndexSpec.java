@@ -21,41 +21,38 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import java.util.Map;
 
 public class IndexSpec
 {
-  private final Map<String, ColumnSpec> columnSpecs;
   private final BitmapSerdeFactory bitmapSerdeFactory;
+  private final CompressedObjectStrategy.CompressionStrategy dimensionCompression;
+  private final CompressedObjectStrategy.CompressionStrategy metricCompression;
 
   public IndexSpec()
   {
-    this(null, null);
+    this(null, null, null);
   }
 
   @JsonCreator
   public IndexSpec(
-      @JsonProperty("columnSpecs") Map<String, ColumnSpec> columnSpecs,
-      @JsonProperty("bitmapType") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("bitmapType") BitmapSerdeFactory bitmapSerdeFactory,
+      @JsonProperty("dimensionCompression") CompressedObjectStrategy.CompressionStrategy dimensionCompression,
+      @JsonProperty("metricCompression") CompressedObjectStrategy.CompressionStrategy metricCompression
   )
   {
-    this.columnSpecs = columnSpecs == null
-                       ? ImmutableMap.<String, ColumnSpec>of()
-                       : columnSpecs;
-    this.bitmapSerdeFactory = bitmapSerdeFactory == null
-                              ? new BitmapSerde.DefaultBitmapSerdeFactory()
-                              : bitmapSerdeFactory;
-  }
-
-  @JsonProperty("columnSpecs")
-  public Map<String, ColumnSpec> getColumnSpecs()
-  {
-    return columnSpecs;
+    if (bitmapSerdeFactory != null) {
+      this.bitmapSerdeFactory = bitmapSerdeFactory;
+    } else {
+      this.bitmapSerdeFactory = IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY;
+    }
+    this.metricCompression = metricCompression != null ? metricCompression : CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
+    this.dimensionCompression = dimensionCompression;
   }
 
   @JsonProperty("bitmapType")
@@ -64,25 +61,48 @@ public class IndexSpec
     return bitmapSerdeFactory;
   }
 
-  public static ColumnSpec defaultColumnSpec() {
-    return new ColumnSpec(null);
+  @JsonProperty("dimensionCompression")
+  public CompressedObjectStrategy.CompressionStrategy getDimensionCompression()
+  {
+    return dimensionCompression;
   }
 
-  public static class ColumnSpec {
-    private final CompressedObjectStrategy.CompressionStrategy compression;
+  @JsonProperty("metricCompression")
+  public CompressedObjectStrategy.CompressionStrategy getMetricCompression()
+  {
+    return metricCompression;
+  }
 
-    @JsonCreator
-    public ColumnSpec(
-        @JsonProperty("compression") CompressedObjectStrategy.CompressionStrategy compression
-    )
-    {
-      this.compression = compression;
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
 
-    @JsonProperty("compression")
-    public CompressedObjectStrategy.CompressionStrategy getCompression()
-    {
-      return compression;
+    IndexSpec indexSpec = (IndexSpec) o;
+
+    if (bitmapSerdeFactory != null
+        ? !bitmapSerdeFactory.equals(indexSpec.bitmapSerdeFactory)
+        : indexSpec.bitmapSerdeFactory != null) {
+      return false;
     }
+    if (dimensionCompression != indexSpec.dimensionCompression) {
+      return false;
+    }
+    return metricCompression == indexSpec.metricCompression;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = bitmapSerdeFactory != null ? bitmapSerdeFactory.hashCode() : 0;
+    result = 31 * result + (dimensionCompression != null ? dimensionCompression.hashCode() : 0);
+    result = 31 * result + (metricCompression != null ? metricCompression.hashCode() : 0);
+    return result;
   }
 }

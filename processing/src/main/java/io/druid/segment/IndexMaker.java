@@ -516,7 +516,7 @@ public class IndexMaker
     );
 
     progress.progress();
-    makeMetricColumns(v9Smoosher, progress, theRows, mergedMetrics, valueTypes, metricTypeNames, rowCount);
+    makeMetricColumns(v9Smoosher, progress, theRows, mergedMetrics, valueTypes, metricTypeNames, rowCount, indexSpec);
 
     progress.progress();
     makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, skippedDimensions, progress);
@@ -793,13 +793,6 @@ public class IndexMaker
         continue;
       }
 
-      final IndexSpec.ColumnSpec columnSpec;
-      if(indexSpec.getColumnSpecs().containsKey(dimension)) {
-        columnSpec = indexSpec.getColumnSpecs().get(dimension);
-      } else {
-        columnSpec = IndexSpec.defaultColumnSpec();
-      }
-
       makeDimColumn(
           v9Smoosher,
           adapters,
@@ -811,7 +804,7 @@ public class IndexMaker
           dimensionValuesLookup,
           rowNumConversions,
           indexSpec.getBitmapSerdeFactory(),
-          columnSpec
+          indexSpec.getDimensionCompression()
       );
       dimIndex++;
     }
@@ -829,7 +822,7 @@ public class IndexMaker
       final Map<String, Iterable<String>> dimensionValuesLookup,
       final List<IntBuffer> rowNumConversions,
       final BitmapSerdeFactory bitmapSerdeFactory,
-      final IndexSpec.ColumnSpec columnSpec
+      final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
     final String section = String.format("make %s", dimension);
@@ -1214,7 +1207,6 @@ public class IndexMaker
     log.info("Completed dimension[%s] with cardinality[%,d]. Starting write.", dimension, dictionary.size());
 
     final DictionaryEncodedColumnPartSerde dimPart;
-    final CompressedObjectStrategy.CompressionStrategy compression = columnSpec.getCompression();
 
     if (singleValCol != null) {
       if (compression != null) {
@@ -1272,7 +1264,8 @@ public class IndexMaker
       final List<String> mergedMetrics,
       final Map<String, ValueType> valueTypes,
       final Map<String, String> metricTypeNames,
-      final int rowCount
+      final int rowCount,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     final String metSection = "make metric columns";
@@ -1280,7 +1273,17 @@ public class IndexMaker
 
     int metIndex = 0;
     for (String metric : mergedMetrics) {
-      makeMetricColumn(v9Smoosher, progress, theRows, metIndex, metric, valueTypes, metricTypeNames, rowCount);
+      makeMetricColumn(
+          v9Smoosher,
+          progress,
+          theRows,
+          metIndex,
+          metric,
+          valueTypes,
+          metricTypeNames,
+          rowCount,
+          indexSpec.getMetricCompression()
+      );
       metIndex++;
     }
     progress.stopSection(metSection);
@@ -1294,7 +1297,8 @@ public class IndexMaker
       final String metric,
       final Map<String, ValueType> valueTypes,
       final Map<String, String> metricTypeNames,
-      final int rowCount
+      final int rowCount,
+      final CompressedObjectStrategy.CompressionStrategy compression
   ) throws IOException
   {
     final String section = String.format("make column[%s]", metric);
@@ -1317,7 +1321,7 @@ public class IndexMaker
         CompressedFloatsIndexedSupplier compressedFloats = CompressedFloatsIndexedSupplier.fromFloatBuffer(
             FloatBuffer.wrap(arr),
             IndexIO.BYTE_ORDER,
-            CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+            compression
         );
 
         writeColumn(
@@ -1341,7 +1345,7 @@ public class IndexMaker
         CompressedLongsIndexedSupplier compressedLongs = CompressedLongsIndexedSupplier.fromLongBuffer(
             LongBuffer.wrap(arr),
             IndexIO.BYTE_ORDER,
-            CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+            compression
         );
 
         writeColumn(
