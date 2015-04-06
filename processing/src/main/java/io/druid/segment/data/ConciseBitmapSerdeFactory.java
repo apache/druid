@@ -103,4 +103,16 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
   {
     return "ConciseBitmapSerdeFactory{}";
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    return this == o || o instanceof ConciseBitmapSerdeFactory;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
+  }
 }
