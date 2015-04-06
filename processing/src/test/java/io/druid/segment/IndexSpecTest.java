@@ -32,6 +32,7 @@ public class IndexSpecTest
   @Test
   public void testConfiguredBitmap() throws Exception
   {
+    // this is just to make sure testSerde correctly tests the bitmap type override
     Assert.assertEquals(new ConciseBitmapSerdeFactory(), IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY);
   }
 
@@ -39,7 +40,7 @@ public class IndexSpecTest
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final String json = "{ \"bitmapType\" : { \"type\" : \"roaring\" }, \"dimensionCompression\" : \"lz4\", \"metricCompression\" : \"lzf\" }";
+    final String json = "{ \"bitmap\" : { \"type\" : \"roaring\" }, \"dimensionCompression\" : \"lz4\", \"metricCompression\" : \"lzf\" }";
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
     Assert.assertEquals(new RoaringBitmapSerdeFactory(), spec.getBitmapSerdeFactory());

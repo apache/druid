@@ -41,7 +41,7 @@ public class IndexSpec
 
   @JsonCreator
   public IndexSpec(
-      @JsonProperty("bitmapType") BitmapSerdeFactory bitmapSerdeFactory,
+      @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") CompressedObjectStrategy.CompressionStrategy dimensionCompression,
       @JsonProperty("metricCompression") CompressedObjectStrategy.CompressionStrategy metricCompression
   )
@@ -55,7 +55,7 @@ public class IndexSpec
     this.dimensionCompression = dimensionCompression;
   }
 
-  @JsonProperty("bitmapType")
+  @JsonProperty("bitmap")
   public BitmapSerdeFactory getBitmapSerdeFactory()
   {
     return bitmapSerdeFactory;
