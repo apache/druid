@@ -25,6 +25,7 @@ import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
@@ -74,71 +75,121 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     }
   }
 
+  public static class Builder {
+    private GenericIndexed<String> dictionary = null;
+    private VSizeIndexedInts singleValuedColumn = null;
+    private CompressedVSizeIntsIndexedSupplier compressedSingleValuedColumn = null;
+    private VSizeIndexed multiValuedColumn = null;
+    private BitmapSerdeFactory bitmapSerdeFactory = null;
+    private GenericIndexed<ImmutableBitmap> bitmaps = null;
+    private ImmutableRTree spatialIndex = null;
+    private ByteOrder byteOrder = null;
 
-  public static DictionaryEncodedColumnPartSerde createUncompressedSingleValue(
-      GenericIndexed<String> dictionary,
-      VSizeIndexedInts singleValuedColumn,
-      BitmapSerdeFactory bitmapSerdeFactory,
-      GenericIndexed<ImmutableBitmap> bitmaps,
-      ImmutableRTree spatialIndex,
-      ByteOrder byteOrder
-  )
-  {
-    return new DictionaryEncodedColumnPartSerde(
-        VERSION.UNCOMPRESSED_SINGLE_VALUE,
-        NO_FLAGS,
-        dictionary,
-        singleValuedColumn.asWriteableSupplier(),
-        null,
-        bitmapSerdeFactory,
-        bitmaps,
-        spatialIndex,
-        byteOrder
-    );
+    private Builder()
+    {
+    }
+
+    public Builder withDictionary(GenericIndexed<String> dictionary)
+    {
+      this.dictionary = dictionary;
+      return this;
+    }
+
+    public Builder withBitmapSerdeFactory(BitmapSerdeFactory bitmapSerdeFactory)
+    {
+      this.bitmapSerdeFactory = bitmapSerdeFactory;
+      return this;
+    }
+
+    public Builder withBitmaps(GenericIndexed<ImmutableBitmap> bitmaps)
+    {
+      this.bitmaps = bitmaps;
+      return this;
+    }
+
+    public Builder withSpatialIndex(ImmutableRTree spatialIndex)
+    {
+      this.spatialIndex = spatialIndex;
+      return this;
+    }
+
+    public Builder withByteOrder(ByteOrder byteOrder)
+    {
+      this.byteOrder = byteOrder;
+      return this;
+    }
+
+    public Builder withSingleValuedColumn(VSizeIndexedInts singleValuedColumn)
+    {
+      Preconditions.checkState(compressedSingleValuedColumn == null, "Cannot set both singleValuedColumn and compressedSingleValuedColumn");
+      Preconditions.checkState(multiValuedColumn == null, "Cannot set both singleValuedColumn and multiValuedColumn");
+      this.singleValuedColumn = singleValuedColumn;
+      return this;
+    }
+
+    public Builder withCompressedSingleValuedColumn(CompressedVSizeIntsIndexedSupplier compressedSingleValuedColumn)
+    {
+      Preconditions.checkState(singleValuedColumn == null, "Cannot set both compressedSingleValuedColumn and singleValuedColumn");
+      Preconditions.checkState(multiValuedColumn == null, "Cannot set both compressedSingleValuedColumn and multiValuedColumn");
+      this.compressedSingleValuedColumn = compressedSingleValuedColumn;
+      return this;
+    }
+
+    public Builder withMultiValuedColumn(VSizeIndexed multiValuedColumn)
+    {
+      Preconditions.checkState(singleValuedColumn == null, "Cannot set both multiValuedColumn and singleValuedColumn");
+      Preconditions.checkState(compressedSingleValuedColumn == null, "Cannot set both multiValuedColumn and compressedSingleValuedColumn");
+      this.multiValuedColumn = multiValuedColumn;
+      return this;
+    }
+
+    public DictionaryEncodedColumnPartSerde build()
+    {
+      if(compressedSingleValuedColumn != null) {
+        return new DictionaryEncodedColumnPartSerde(
+            VERSION.COMPRESSED,
+            NO_FLAGS,
+            dictionary,
+            compressedSingleValuedColumn,
+            null,
+            bitmapSerdeFactory,
+            bitmaps,
+            spatialIndex,
+            byteOrder
+        );
+      } else if(singleValuedColumn != null) {
+        return new DictionaryEncodedColumnPartSerde(
+            VERSION.UNCOMPRESSED_SINGLE_VALUE,
+            NO_FLAGS,
+            dictionary,
+            singleValuedColumn.asWriteableSupplier(),
+            null,
+            bitmapSerdeFactory,
+            bitmaps,
+            spatialIndex,
+            byteOrder
+        );
+      } else if(multiValuedColumn != null) {
+        return new DictionaryEncodedColumnPartSerde(
+            VERSION.UNCOMPRESSED_MULTI_VALUE,
+            Feature.MULTI_VALUE.getMask(),
+            dictionary,
+            null,
+            multiValuedColumn,
+            bitmapSerdeFactory,
+            bitmaps,
+            spatialIndex,
+            byteOrder
+        );
+      } else {
+        throw new ISE("One of singleValuedColumn, compressedSingleValuedColumn, or multiValuedColumn must be set");
+      }
+    }
   }
 
-  public static DictionaryEncodedColumnPartSerde createCompressedSingleValue(
-      GenericIndexed<String> dictionary,
-      CompressedVSizeIntsIndexedSupplier singleValuedColumn,
-      BitmapSerdeFactory bitmapSerdeFactory,
-      GenericIndexed<ImmutableBitmap> bitmaps,
-      ImmutableRTree spatialIndex,
-      ByteOrder byteOrder
-  )
+  public static Builder builder()
   {
-    return new DictionaryEncodedColumnPartSerde(
-        VERSION.COMPRESSED,
-        NO_FLAGS,
-        dictionary,
-        singleValuedColumn,
-        null,
-        bitmapSerdeFactory,
-        bitmaps,
-        spatialIndex,
-        byteOrder
-    );
-  }
-
-  public static DictionaryEncodedColumnPartSerde createUncompressedMultiValue(
-      GenericIndexed<String> dictionary,
-      VSizeIndexed multiValuedColumn,
-      BitmapSerdeFactory bitmapSerdeFactory,
-      GenericIndexed<ImmutableBitmap> bitmaps,
-      ImmutableRTree spatialIndex,
-      ByteOrder byteOrder
-  )
-  {
-    return new DictionaryEncodedColumnPartSerde(
-        VERSION.UNCOMPRESSED_MULTI_VALUE,
-        Feature.MULTI_VALUE.getMask(),
-        dictionary,
-        null,
-        multiValuedColumn,
-        bitmapSerdeFactory,
-        bitmaps,
-        spatialIndex,
-        byteOrder
-    );
+    return new Builder();
   }
 
   private final BitmapSerdeFactory bitmapSerdeFactory;

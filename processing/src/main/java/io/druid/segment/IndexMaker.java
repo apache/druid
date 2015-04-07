@@ -1206,50 +1206,35 @@ public class IndexMaker
 
     log.info("Completed dimension[%s] with cardinality[%,d]. Starting write.", dimension, dictionary.size());
 
-    final DictionaryEncodedColumnPartSerde dimPart;
+    final DictionaryEncodedColumnPartSerde.Builder dimPartBuilder = DictionaryEncodedColumnPartSerde
+        .builder()
+        .withDictionary(dictionary)
+        .withBitmapSerdeFactory(bitmapSerdeFactory)
+        .withBitmaps(bitmaps)
+        .withSpatialIndex(spatialIndex)
+        .withByteOrder(IndexIO.BYTE_ORDER);
 
     if (singleValCol != null) {
       if (compression != null) {
-        CompressedVSizeIntsIndexedSupplier compressedColumn = CompressedVSizeIntsIndexedSupplier.fromList(
-            singleValCol,
-            dictionary.size(),
-            CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
-            IndexIO.BYTE_ORDER,
-            compression
-        );
-        dimPart = DictionaryEncodedColumnPartSerde.createCompressedSingleValue(
-            dictionary,
-            compressedColumn,
-            bitmapSerdeFactory,
-            bitmaps,
-            spatialIndex,
-            IndexIO.BYTE_ORDER
+        dimPartBuilder.withCompressedSingleValuedColumn(
+            CompressedVSizeIntsIndexedSupplier.fromList(
+                singleValCol,
+                dictionary.size(),
+                CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
+                IndexIO.BYTE_ORDER,
+                compression
+            )
         );
       } else {
-        VSizeIndexedInts uncompressedColumn = VSizeIndexedInts.fromList(singleValCol, dictionary.size());
-        dimPart = DictionaryEncodedColumnPartSerde.createUncompressedSingleValue(
-            dictionary,
-            uncompressedColumn,
-            bitmapSerdeFactory,
-            bitmaps,
-            spatialIndex,
-            IndexIO.BYTE_ORDER
-        );
+        dimPartBuilder.withSingleValuedColumn(VSizeIndexedInts.fromList(singleValCol, dictionary.size()));
       }
     } else {
-      dimPart = DictionaryEncodedColumnPartSerde.createUncompressedMultiValue(
-          dictionary,
-          multiValCol,
-          bitmapSerdeFactory,
-          bitmaps,
-          spatialIndex,
-          IndexIO.BYTE_ORDER
-      );
+      dimPartBuilder.withMultiValuedColumn(multiValCol);
     }
 
     writeColumn(
         v9Smoosher,
-        dimPart,
+        dimPartBuilder.build(),
         dimBuilder,
         dimension
     );

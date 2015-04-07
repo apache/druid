@@ -502,50 +502,35 @@ public class IndexIO
 
           final CompressedObjectStrategy.CompressionStrategy compression = indexSpec.getDimensionCompression();
 
+          final DictionaryEncodedColumnPartSerde.Builder columnPartBuilder = DictionaryEncodedColumnPartSerde
+              .builder()
+              .withDictionary(dictionary)
+              .withBitmapSerdeFactory(bitmapSerdeFactory)
+              .withBitmaps(bitmaps)
+              .withSpatialIndex(spatialIndex)
+              .withByteOrder(BYTE_ORDER);
+
           if (singleValCol != null) {
             if (compression != null) {
-              builder.addSerde(
-                  DictionaryEncodedColumnPartSerde.createCompressedSingleValue(
-                      dictionary,
-                      CompressedVSizeIntsIndexedSupplier.fromList(
-                          singleValCol,
-                          dictionary.size(),
-                          CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
-                          BYTE_ORDER,
-                          compression
-                      ),
-                      bitmapSerdeFactory,
-                      bitmaps,
-                      spatialIndex,
-                      BYTE_ORDER
+              columnPartBuilder.withCompressedSingleValuedColumn(
+                  CompressedVSizeIntsIndexedSupplier.fromList(
+                      singleValCol,
+                      dictionary.size(),
+                      CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
+                      BYTE_ORDER,
+                      compression
                   )
               );
             } else {
-              builder.addSerde(
-                  DictionaryEncodedColumnPartSerde.createUncompressedSingleValue(
-                      dictionary,
-                      VSizeIndexedInts.fromList(singleValCol, dictionary.size()),
-                      bitmapSerdeFactory,
-                      bitmaps,
-                      spatialIndex,
-                      BYTE_ORDER
-                  )
-              );
+              columnPartBuilder.withSingleValuedColumn(VSizeIndexedInts.fromList(singleValCol, dictionary.size()));
             }
           } else {
-            builder.addSerde(
-                DictionaryEncodedColumnPartSerde.createUncompressedMultiValue(
-                    dictionary,
-                    multiValCol,
-                    bitmapSerdeFactory,
-                    bitmaps,
-                    spatialIndex,
-                    BYTE_ORDER
-                )
-            );
+            columnPartBuilder.withMultiValuedColumn(multiValCol);
           }
 
-          final ColumnDescriptor serdeficator = builder.build();
+          final ColumnDescriptor serdeficator = builder
+              .addSerde(columnPartBuilder.build())
+              .build();
 
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
