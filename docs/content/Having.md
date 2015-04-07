@@ -21,6 +21,7 @@ Here's an example of a having-clause numeric filter:
     "aggregation": "myAggMetric",
     "value": 100
 }
+```
 
 #### Equal To
 
