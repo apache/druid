@@ -68,11 +68,7 @@ public class IndexSpec
       @JsonProperty("metricCompression") CompressedObjectStrategy.CompressionStrategy metricCompression
   )
   {
-    if (bitmapSerdeFactory != null) {
-      this.bitmapSerdeFactory = bitmapSerdeFactory;
-    } else {
-      this.bitmapSerdeFactory = IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY;
-    }
+    this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY;
     this.metricCompression = metricCompression != null ? metricCompression : CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
     this.dimensionCompression = dimensionCompression;
   }
