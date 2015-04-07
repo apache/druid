@@ -822,7 +822,7 @@ public class IndexMaker
       final Map<String, Iterable<String>> dimensionValuesLookup,
       final List<IntBuffer> rowNumConversions,
       final BitmapSerdeFactory bitmapSerdeFactory,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compressionStrategy
   ) throws IOException
   {
     final String section = String.format("make %s", dimension);
@@ -1215,14 +1215,14 @@ public class IndexMaker
         .withByteOrder(IndexIO.BYTE_ORDER);
 
     if (singleValCol != null) {
-      if (compression != null) {
+      if (compressionStrategy != null) {
         dimPartBuilder.withCompressedSingleValuedColumn(
             CompressedVSizeIntsIndexedSupplier.fromList(
                 singleValCol,
                 dictionary.size(),
                 CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
                 IndexIO.BYTE_ORDER,
-                compression
+                compressionStrategy
             )
         );
       } else {
@@ -1283,7 +1283,7 @@ public class IndexMaker
       final Map<String, ValueType> valueTypes,
       final Map<String, String> metricTypeNames,
       final int rowCount,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compressionStrategy
   ) throws IOException
   {
     final String section = String.format("make column[%s]", metric);
@@ -1306,7 +1306,7 @@ public class IndexMaker
         CompressedFloatsIndexedSupplier compressedFloats = CompressedFloatsIndexedSupplier.fromFloatBuffer(
             FloatBuffer.wrap(arr),
             IndexIO.BYTE_ORDER,
-            compression
+            compressionStrategy
         );
 
         writeColumn(
@@ -1330,7 +1330,7 @@ public class IndexMaker
         CompressedLongsIndexedSupplier compressedLongs = CompressedLongsIndexedSupplier.fromLongBuffer(
             LongBuffer.wrap(arr),
             IndexIO.BYTE_ORDER,
-            compression
+            compressionStrategy
         );
 
         writeColumn(
