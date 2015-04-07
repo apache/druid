@@ -28,17 +28,39 @@ import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import java.util.Map;
 
+/**
+ * IndexSpec defines segment storage format options to be used at indexing time,
+ * such as bitmap type, and column compression formats.
+ *
+ * IndexSpec is specified as part of the TuningConfig for the corresponding index task.
+ */
 public class IndexSpec
 {
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final CompressedObjectStrategy.CompressionStrategy dimensionCompression;
   private final CompressedObjectStrategy.CompressionStrategy metricCompression;
 
+  /**
+   * Creates an IndexSpec with default parameters
+   */
   public IndexSpec()
   {
     this(null, null, null);
   }
 
+  /**
+   * Creates an IndexSpec with the given storage format settings.
+   *
+   *
+   * @param bitmapSerdeFactory type of bitmap to use (e.g. roaring or concise), null to use the default.
+   *                           Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type"
+   *                           setting, or, if none was set, uses the default @{link BitmapSerde.DefaultBitmapSerdeFactory}
+   *
+   * @param dimensionCompression compression format for dimension columns. The default, null, means no compression
+   *
+   * @param metricCompression compression format for metric columns, null to use the default.
+   *                          Defaults to @{link CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY}
+   */
   @JsonCreator
   public IndexSpec(
       @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
