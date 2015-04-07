@@ -128,6 +128,12 @@ public class ExtractionDimFilterTest
     {
       return false;
     }
+
+    @Override
+    public ExtractionType getExtractionType()
+    {
+      return ExtractionType.MANY_TO_ONE;
+    }
   };
 
   @Test

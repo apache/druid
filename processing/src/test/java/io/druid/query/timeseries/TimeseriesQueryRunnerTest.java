@@ -67,14 +67,17 @@ public class TimeseriesQueryRunnerTest
   public static final Map<String, Object> CONTEXT = ImmutableMap.of();
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.makeQueryRunners(
-        new TimeseriesQueryRunnerFactory(
-            new TimeseriesQueryQueryToolChest(
-                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-            new TimeseriesQueryEngine(),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    return QueryRunnerTestHelper.transformToConstructionFeeder(
+        QueryRunnerTestHelper.makeQueryRunners(
+            new TimeseriesQueryRunnerFactory(
+                new TimeseriesQueryQueryToolChest(
+                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                ),
+                new TimeseriesQueryEngine(),
+                QueryRunnerTestHelper.NOOP_QUERYWATCHER
+            )
         )
     );
   }

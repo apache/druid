@@ -52,14 +52,18 @@ import java.util.Map;
 public class SelectQueryRunnerTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.makeQueryRunners(
-        new SelectQueryRunnerFactory(
-            new SelectQueryQueryToolChest(new DefaultObjectMapper(),
-                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-            new SelectQueryEngine(),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    return QueryRunnerTestHelper.transformToConstructionFeeder(
+        QueryRunnerTestHelper.makeQueryRunners(
+            new SelectQueryRunnerFactory(
+                new SelectQueryQueryToolChest(
+                    new DefaultObjectMapper(),
+                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                ),
+                new SelectQueryEngine(),
+                QueryRunnerTestHelper.NOOP_QUERYWATCHER
+            )
         )
     );
   }

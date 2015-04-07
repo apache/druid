@@ -112,6 +112,12 @@ public class TimeFormatExtractionFn implements ExtractionFn
   }
 
   @Override
+  public ExtractionType getExtractionType()
+  {
+    return ExtractionType.MANY_TO_ONE;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

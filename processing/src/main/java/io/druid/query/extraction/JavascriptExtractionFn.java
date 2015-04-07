@@ -31,7 +31,8 @@ import java.nio.ByteBuffer;
 
 public class JavascriptExtractionFn implements ExtractionFn
 {
-  private static Function<Object, String> compile(String function) {
+  private static Function<Object, String> compile(String function)
+  {
     final ContextFactory contextFactory = ContextFactory.getGlobal();
     final Context context = contextFactory.enterContext();
     context.setOptimizationLevel(9);
@@ -62,22 +63,31 @@ public class JavascriptExtractionFn implements ExtractionFn
 
   private final String function;
   private final Function<Object, String> fn;
+  private final boolean injective;
 
   @JsonCreator
   public JavascriptExtractionFn(
-      @JsonProperty("function") String function
+      @JsonProperty("function") String function,
+      @JsonProperty("injective") boolean injective
   )
   {
     Preconditions.checkNotNull(function, "function must not be null");
 
     this.function = function;
     this.fn = compile(function);
+    this.injective = injective;
   }
 
   @JsonProperty
   public String getFunction()
   {
     return function;
+  }
+
+  @JsonProperty
+  public boolean isInjective()
+  {
+    return this.injective;
   }
 
   @Override
@@ -99,19 +109,25 @@ public class JavascriptExtractionFn implements ExtractionFn
   @Override
   public String apply(String value)
   {
-    return this.apply((Object)value);
+    return this.apply((Object) value);
   }
 
   @Override
   public String apply(long value)
   {
-    return this.apply((Long)value);
+    return this.apply((Long) value);
   }
 
   @Override
   public boolean preservesOrdering()
   {
     return false;
+  }
+
+  @Override
+  public ExtractionType getExtractionType()
+  {
+    return injective ? ExtractionType.ONE_TO_ONE : ExtractionType.MANY_TO_ONE;
   }
 
   @Override

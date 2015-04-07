@@ -96,7 +96,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.aggregatorSpecs = aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
     this.havingSpec = havingSpec;
-    this.limitSpec = (limitSpec == null) ?  new NoopLimitSpec() : limitSpec;
+    this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Preconditions.checkNotNull(this.aggregatorSpecs, "Must specify at least one aggregator");
@@ -270,6 +270,23 @@ public class GroupByQuery extends BaseQuery<Row>
         postAggregatorSpecs,
         havingSpec,
         limitSpec,
+        limitFn,
+        getContext()
+    );
+  }
+
+  public GroupByQuery withDimensionSpecs(final List<DimensionSpec> dimensionSpecs)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        dimensionSpecs,
+        getAggregatorSpecs(),
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        getLimitSpec(),
         limitFn,
         getContext()
     );

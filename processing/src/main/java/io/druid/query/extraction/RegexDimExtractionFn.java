@@ -76,6 +76,12 @@ public class RegexDimExtractionFn extends DimExtractionFn
   }
 
   @Override
+  public ExtractionType getExtractionType()
+  {
+    return ExtractionType.MANY_TO_ONE;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("regex(%s)", expr);

@@ -60,7 +60,7 @@ public class ApproximateHistogramGroupByQueryTest
   private GroupByQueryRunnerFactory factory;
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
@@ -84,8 +84,10 @@ public class ApproximateHistogramGroupByQueryTest
         engine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         configSupplier,
-        new GroupByQueryQueryToolChest(configSupplier, mapper, engine, pool,
-                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new GroupByQueryQueryToolChest(
+            configSupplier, mapper, engine, pool,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
         pool
     );
 
@@ -106,18 +108,20 @@ public class ApproximateHistogramGroupByQueryTest
         singleThreadEngine,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         singleThreadedConfigSupplier,
-        new GroupByQueryQueryToolChest(singleThreadedConfigSupplier, mapper, singleThreadEngine, pool,
-                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new GroupByQueryQueryToolChest(
+            singleThreadedConfigSupplier, mapper, singleThreadEngine, pool,
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
         pool
     );
 
 
-    Function<Object, Object> function = new Function<Object, Object>()
+    final Function<Object, Object[]> function = new Function<Object, Object[]>()
     {
       @Override
-      public Object apply(@Nullable Object input)
+      public Object[] apply(@Nullable Object input)
       {
-        return new Object[]{factory, ((Object[]) input)[0]};
+        return new Object[]{factory, input};
       }
     };
 
