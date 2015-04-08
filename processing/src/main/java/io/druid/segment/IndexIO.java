@@ -512,7 +512,7 @@ public class IndexIO
 
           if (singleValCol != null) {
             if (compressionStrategy != null) {
-              columnPartBuilder.withCompressedSingleValuedColumn(
+              columnPartBuilder.withSingleValuedColumn(
                   CompressedVSizeIntsIndexedSupplier.fromList(
                       singleValCol,
                       dictionary.size(),

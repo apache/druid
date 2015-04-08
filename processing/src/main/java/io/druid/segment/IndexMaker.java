@@ -1216,7 +1216,7 @@ public class IndexMaker
 
     if (singleValCol != null) {
       if (compressionStrategy != null) {
-        dimPartBuilder.withCompressedSingleValuedColumn(
+        dimPartBuilder.withSingleValuedColumn(
             CompressedVSizeIntsIndexedSupplier.fromList(
                 singleValCol,
                 dictionary.size(),

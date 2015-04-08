@@ -25,7 +25,6 @@ import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
-import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
@@ -76,9 +75,10 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   }
 
   public static class Builder {
+    private VERSION version = null;
+    private int flags = NO_FLAGS;
     private GenericIndexed<String> dictionary = null;
-    private VSizeIndexedInts singleValuedColumn = null;
-    private CompressedVSizeIntsIndexedSupplier compressedSingleValuedColumn = null;
+    private WritableSupplier<IndexedInts> singleValuedColumn = null;
     private VSizeIndexed multiValuedColumn = null;
     private BitmapSerdeFactory bitmapSerdeFactory = null;
     private GenericIndexed<ImmutableBitmap> bitmaps = null;
@@ -121,69 +121,48 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
     public Builder withSingleValuedColumn(VSizeIndexedInts singleValuedColumn)
     {
-      Preconditions.checkState(compressedSingleValuedColumn == null, "Cannot set both singleValuedColumn and compressedSingleValuedColumn");
       Preconditions.checkState(multiValuedColumn == null, "Cannot set both singleValuedColumn and multiValuedColumn");
-      this.singleValuedColumn = singleValuedColumn;
+      this.version = VERSION.UNCOMPRESSED_SINGLE_VALUE;
+      this.singleValuedColumn = singleValuedColumn.asWriteableSupplier();
       return this;
     }
 
-    public Builder withCompressedSingleValuedColumn(CompressedVSizeIntsIndexedSupplier compressedSingleValuedColumn)
+    public Builder withSingleValuedColumn(CompressedVSizeIntsIndexedSupplier singleValuedColumn)
     {
-      Preconditions.checkState(singleValuedColumn == null, "Cannot set both compressedSingleValuedColumn and singleValuedColumn");
-      Preconditions.checkState(multiValuedColumn == null, "Cannot set both compressedSingleValuedColumn and multiValuedColumn");
-      this.compressedSingleValuedColumn = compressedSingleValuedColumn;
+      Preconditions.checkState(multiValuedColumn == null, "Cannot set both singleValuedColumn and multiValuedColumn");
+      this.version = VERSION.COMPRESSED;
+      this.singleValuedColumn = singleValuedColumn;
       return this;
     }
 
     public Builder withMultiValuedColumn(VSizeIndexed multiValuedColumn)
     {
       Preconditions.checkState(singleValuedColumn == null, "Cannot set both multiValuedColumn and singleValuedColumn");
-      Preconditions.checkState(compressedSingleValuedColumn == null, "Cannot set both multiValuedColumn and compressedSingleValuedColumn");
+      this.version = VERSION.UNCOMPRESSED_MULTI_VALUE;
+      this.flags |= Feature.MULTI_VALUE.getMask();
       this.multiValuedColumn = multiValuedColumn;
       return this;
     }
 
     public DictionaryEncodedColumnPartSerde build()
     {
-      if(compressedSingleValuedColumn != null) {
-        return new DictionaryEncodedColumnPartSerde(
-            VERSION.COMPRESSED,
-            NO_FLAGS,
-            dictionary,
-            compressedSingleValuedColumn,
-            null,
-            bitmapSerdeFactory,
-            bitmaps,
-            spatialIndex,
-            byteOrder
-        );
-      } else if(singleValuedColumn != null) {
-        return new DictionaryEncodedColumnPartSerde(
-            VERSION.UNCOMPRESSED_SINGLE_VALUE,
-            NO_FLAGS,
-            dictionary,
-            singleValuedColumn.asWriteableSupplier(),
-            null,
-            bitmapSerdeFactory,
-            bitmaps,
-            spatialIndex,
-            byteOrder
-        );
-      } else if(multiValuedColumn != null) {
-        return new DictionaryEncodedColumnPartSerde(
-            VERSION.UNCOMPRESSED_MULTI_VALUE,
-            Feature.MULTI_VALUE.getMask(),
-            dictionary,
-            null,
-            multiValuedColumn,
-            bitmapSerdeFactory,
-            bitmaps,
-            spatialIndex,
-            byteOrder
-        );
-      } else {
-        throw new ISE("One of singleValuedColumn, compressedSingleValuedColumn, or multiValuedColumn must be set");
-      }
+      Preconditions.checkArgument(
+          singleValuedColumn != null ^ multiValuedColumn != null,
+          "Exactly one of singleValCol[%s] or multiValCol[%s] must be set",
+          singleValuedColumn, multiValuedColumn
+      );
+
+      return new DictionaryEncodedColumnPartSerde(
+          version,
+          flags,
+          dictionary,
+          singleValuedColumn,
+          multiValuedColumn,
+          bitmapSerdeFactory,
+          bitmaps,
+          spatialIndex,
+          byteOrder
+      );
     }
   }
 
@@ -238,26 +217,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       ByteOrder byteOrder
   )
   {
-    Preconditions.checkArgument(singleValuedColumn != null ^ multiValuedColumn != null,
-                                "Exactly one of singleValCol[%s] or multiValCol[%s] must be set",
-                                singleValuedColumn, multiValuedColumn);
-
-    switch (version) {
-      case UNCOMPRESSED_MULTI_VALUE:
-        Preconditions.checkArgument(Feature.MULTI_VALUE.isSet(flags),
-                                    "multi-value flag must be set for version[%s]", version.asByte());
-        break;
-      case UNCOMPRESSED_SINGLE_VALUE:
-        Preconditions.checkArgument(!Feature.MULTI_VALUE.isSet(flags),
-                                    "multi-value flag must not be set for version[%s]", version.asByte());
-        break;
-      case COMPRESSED:
-        Preconditions.checkArgument(!Feature.MULTI_VALUE.isSet(flags),
-                                    "compressed columns currently do not support multi-value columns", version.asByte());
-        break;
-      default:
-        throw new IAE("Unsupported version[%s]", version);
-    }
+    Preconditions.checkArgument(version.compareTo(VERSION.COMPRESSED) <= 0, "Unsupported version[%s]", version);
 
     this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.byteOrder = byteOrder;
