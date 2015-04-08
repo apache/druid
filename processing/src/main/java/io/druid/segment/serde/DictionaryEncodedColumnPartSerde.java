@@ -41,6 +41,8 @@ import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -186,15 +188,18 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
   @JsonCreator
   public DictionaryEncodedColumnPartSerde(
-      @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
-      @JsonProperty("byteOrder") ByteOrder byteOrder
+      @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
+      @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
+    Preconditions.checkArgument(byteOrder != null, "byte order must be specified");
+
     this.bitmapSerdeFactory = bitmapSerdeFactory == null
                               ? new BitmapSerde.LegacyBitmapSerdeFactory()
                               : bitmapSerdeFactory;
     this.byteOrder = byteOrder;
 
+    // dummy values
     this.dictionary = null;
     this.singleValuedColumn = null;
     this.multiValuedColumn = null;

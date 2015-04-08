@@ -83,11 +83,13 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   {
     // when numBytes == 3 we need to pad the buffer to allow reading an extra byte
     // beyond the end of the last value, since we use buffer.getInt() to read values.
-    // for numBytes < 3 we remove the need for padding by reading short or bytes directly.
-    if (numBytes == 3) {
-      return Ints.BYTES - numBytes;
-    } else {
-      return 0;
+    // for numBytes 1, 2 we remove the need for padding by reading bytes or shorts directly.
+    switch (numBytes) {
+      case Shorts.BYTES:
+      case 1:
+        return 0;
+      default:
+        return Ints.BYTES - numBytes;
     }
   }
 
