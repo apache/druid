@@ -220,15 +220,15 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
                     }
 
                     final List<Integer> ints = list.subList(position, position + retVal.remaining() / numBytes);
-                    for(int value : ints) {
-                      if(byteOrder.equals(ByteOrder.BIG_ENDIAN)) {
-                        byte[] intAsBytes = Ints.toByteArray(value);
-                        retVal.put(intAsBytes, intAsBytes.length - numBytes, numBytes);
+                    final ByteBuffer buf = ByteBuffer
+                        .allocate(Ints.BYTES)
+                        .order(byteOrder);
+                    final boolean bigEndian = byteOrder.equals(ByteOrder.BIG_ENDIAN);
+                    for (int value : ints) {
+                      buf.putInt(0, value);
+                      if (bigEndian) {
+                        retVal.put(buf.array(), Ints.BYTES - numBytes, numBytes);
                       } else {
-                        final ByteBuffer buf = ByteBuffer
-                            .allocate(Ints.BYTES)
-                            .order(byteOrder)
-                            .putInt(value);
                         retVal.put(buf.array(), 0, numBytes);
                       }
                     }

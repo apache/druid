@@ -19,6 +19,9 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.guava.CloseQuietly;
@@ -30,6 +33,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,7 +41,9 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,16 +51,51 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(Parameterized.class)
 public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyTest
 {
+  @Parameterized.Parameters
+  public static Iterable<Object[]> compressionStrategies()
+  {
+    final Iterable<CompressedObjectStrategy.CompressionStrategy> compressionStrategies = Iterables.transform(
+        CompressionStrategyTest.compressionStrategies(),
+        new Function<Object[], CompressedObjectStrategy.CompressionStrategy>()
+        {
+          @Override
+          public CompressedObjectStrategy.CompressionStrategy apply(Object[] input)
+          {
+            return (CompressedObjectStrategy.CompressionStrategy) input[0];
+          }
+        }
+    );
+
+    Set<List<Object>> combinations = Sets.cartesianProduct(
+        Sets.newHashSet(compressionStrategies),
+        Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
+    );
+
+    return Iterables.transform(
+        combinations, new Function<List, Object[]>()
+        {
+          @Override
+          public Object[] apply(List input)
+          {
+            return new Object[]{input.get(0), input.get(1)};
+          }
+        }
+    );
+  }
+
   private static final int[] MAX_VALUES = new int[] { 0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF };
 
-  public CompressedVSizeIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressedVSizeIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy, ByteOrder byteOrder)
   {
     super(compressionStrategy);
+    this.byteOrder = byteOrder;
   }
 
   private IndexedInts indexed;
   private CompressedVSizeIntsIndexedSupplier supplier;
   private int[] vals;
+  private final ByteOrder byteOrder;
+
 
   @Before
   public void setUp() throws Exception
@@ -97,14 +138,14 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedVSizeIntsIndexedSupplier theSupplier = CompressedVSizeIntsIndexedSupplier.fromList(
-        Ints.asList(vals), Ints.max(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
+        Ints.asList(vals), Ints.max(vals), chunkSize, byteOrder, compressionStrategy
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
 
-    supplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), ByteOrder.nativeOrder());
+    supplier = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), byteOrder);
     indexed = supplier.get();
   }
 
