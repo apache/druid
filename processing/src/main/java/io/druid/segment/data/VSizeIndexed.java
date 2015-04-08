@@ -186,4 +186,34 @@ public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
   {
     // no-op
   }
+
+  public WritableSupplier<IndexedMultivalue<IndexedInts>> asWriteableSupplier() {
+    return new VSizeIndexedSupplier(this);
+  }
+
+  public static class VSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>> {
+    final VSizeIndexed delegate;
+
+    public VSizeIndexedSupplier(VSizeIndexed delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public long getSerializedSize()
+    {
+      return delegate.getSerializedSize();
+    }
+
+    @Override
+    public void writeToChannel(WritableByteChannel channel) throws IOException
+    {
+      delegate.writeToChannel(channel);
+    }
+
+    @Override
+    public IndexedMultivalue<IndexedInts> get()
+    {
+      return delegate;
+    }
+  }
 }

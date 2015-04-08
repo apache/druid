@@ -20,7 +20,6 @@ package io.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
@@ -81,7 +80,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     private int flags = NO_FLAGS;
     private GenericIndexed<String> dictionary = null;
     private WritableSupplier<IndexedInts> singleValuedColumn = null;
-    private VSizeIndexed multiValuedColumn = null;
+    private WritableSupplier<IndexedMultivalue<IndexedInts>> multiValuedColumn = null;
     private BitmapSerdeFactory bitmapSerdeFactory = null;
     private GenericIndexed<ImmutableBitmap> bitmaps = null;
     private ImmutableRTree spatialIndex = null;
@@ -142,7 +141,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       Preconditions.checkState(singleValuedColumn == null, "Cannot set both multiValuedColumn and singleValuedColumn");
       this.version = VERSION.UNCOMPRESSED_MULTI_VALUE;
       this.flags |= Feature.MULTI_VALUE.getMask();
-      this.multiValuedColumn = multiValuedColumn;
+      this.multiValuedColumn = multiValuedColumn.asWriteableSupplier();
       return this;
     }
 
@@ -178,7 +177,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
   private final GenericIndexed<String> dictionary;
   private final WritableSupplier<IndexedInts> singleValuedColumn;
-  private final VSizeIndexed multiValuedColumn;
+  private final WritableSupplier<IndexedMultivalue<IndexedInts>> multiValuedColumn;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final ImmutableRTree spatialIndex;
   private final int flags;
@@ -215,7 +214,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       int flags,
       GenericIndexed<String> dictionary,
       WritableSupplier<IndexedInts> singleValuedColumn,
-      VSizeIndexed multiValuedColumn,
+      WritableSupplier<IndexedMultivalue<IndexedInts>> multiValuedColumn,
       BitmapSerdeFactory bitmapSerdeFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
       ImmutableRTree spatialIndex,
@@ -324,7 +323,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     builder.setType(ValueType.STRING);
 
     final WritableSupplier<IndexedInts> rSingleValuedColumn;
-    final VSizeIndexed rMultiValuedColumn;
+    final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
 
     if (rVersion.compareTo(VERSION.COMPRESSED) >= 0) {
       rSingleValuedColumn = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
@@ -332,7 +331,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     } else {
       Pair<WritableSupplier<IndexedInts>, VSizeIndexed> cols = readUncompressed(rVersion, buffer);
       rSingleValuedColumn = cols.lhs;
-      rMultiValuedColumn = cols.rhs;
+      rMultiValuedColumn = cols.rhs == null ? null : cols.rhs.asWriteableSupplier();
     }
 
     builder.setHasMultipleValues(hasMultipleValues)
@@ -340,7 +339,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                new DictionaryEncodedColumnSupplier(
                    rDictionary,
                    rSingleValuedColumn,
-                   rMultiValuedColumn == null ? null : Suppliers.<IndexedMultivalue<IndexedInts>>ofInstance(rMultiValuedColumn),
+                   rMultiValuedColumn,
                    columnConfig.columnCacheSizeBytes()
                )
            );
