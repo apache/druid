@@ -17,6 +17,9 @@
 
 package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
@@ -97,6 +100,9 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       return id;
     }
 
+    @JsonValue
+    public String jsonName() { return name().toLowerCase(); }
+
     public abstract Compressor getCompressor();
 
     public abstract Decompressor getDecompressor();
@@ -112,6 +118,12 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     public static CompressionStrategy forId(byte id)
     {
       return idMap.get(id);
+    }
+
+    @JsonCreator
+    public static CompressionStrategy forName(String name)
+    {
+      return CompressionStrategy.valueOf(name.toUpperCase());
     }
   }
 
@@ -220,8 +232,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
 
   public static class LZ4Decompressor implements Decompressor
   {
-    private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestInstance().safeDecompressor();
-    private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestInstance().fastDecompressor();
+    private static final LZ4SafeDecompressor lz4Safe = LZ4Factory.fastestJavaInstance().safeDecompressor();
+    private static final LZ4FastDecompressor lz4Fast = LZ4Factory.fastestJavaInstance().fastDecompressor();
     private static final LZ4Decompressor defaultDecompressor = new LZ4Decompressor();
 
     @Override
@@ -245,7 +257,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   public static class LZ4Compressor implements Compressor
   {
     private static final LZ4Compressor defaultCompressor = new LZ4Compressor();
-    private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestInstance().highCompressor();
+    private static final net.jpountz.lz4.LZ4Compressor lz4High = LZ4Factory.fastestJavaInstance().highCompressor();
 
     @Override
     public byte[] compress(byte[] bytes)

@@ -173,6 +173,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
             null,
+            null,
             false,
             false,
             false,

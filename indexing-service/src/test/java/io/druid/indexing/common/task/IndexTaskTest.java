@@ -35,6 +35,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -54,6 +55,8 @@ import java.util.List;
 
 public class IndexTaskTest
 {
+  private final IndexSpec indexSpec = new IndexSpec();
+
   @Test
   public void testDeterminePartitions() throws Exception
   {
@@ -108,7 +111,8 @@ public class IndexTaskTest
             new IndexTask.IndexTuningConfig(
                 2,
                 0,
-                null
+                null,
+                indexSpec
             )
         ),
         new DefaultObjectMapper()

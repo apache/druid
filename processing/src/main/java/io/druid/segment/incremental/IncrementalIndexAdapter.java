@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -271,6 +272,18 @@ public class IncrementalIndexAdapter implements IndexableAdapter
             throw new UnsupportedOperationException();
           }
         };
+      }
+
+      @Override
+      public void fill(int index, int[] toFill)
+      {
+        throw new UnsupportedOperationException("fill not supported");
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+
       }
     };
   }

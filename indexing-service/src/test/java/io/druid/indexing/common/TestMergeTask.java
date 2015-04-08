@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.task.MergeTask;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -52,7 +53,8 @@ public class TestMergeTask extends MergeTask
                 0
             )
         ),
-        Lists.<AggregatorFactory>newArrayList()
+        Lists.<AggregatorFactory>newArrayList(),
+        new IndexSpec()
     );
   }
 
@@ -63,10 +65,11 @@ public class TestMergeTask extends MergeTask
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
-      @JsonProperty("aggregations") List<AggregatorFactory> aggregators
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
+      @JsonProperty("indexSpec") IndexSpec indexSpec
   )
   {
-    super(id, dataSource, segments, aggregators);
+    super(id, dataSource, segments, aggregators, indexSpec);
     this.id = id;
   }
 

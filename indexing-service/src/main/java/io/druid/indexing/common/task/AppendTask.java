@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
 import io.druid.segment.Rowboat;
@@ -46,14 +47,19 @@ import java.util.Map;
  */
 public class AppendTask extends MergeTaskBase
 {
+
+  private final IndexSpec indexSpec;
+
   @JsonCreator
   public AppendTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("segments") List<DataSegment> segments
+      @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("indexSpec") IndexSpec indexSpec
   )
   {
     super(id, dataSource, segments);
+    this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
   }
 
   @Override
@@ -120,7 +126,7 @@ public class AppendTask extends MergeTaskBase
       );
     }
 
-    return IndexMerger.append(adapters, outDir);
+    return IndexMerger.append(adapters, outDir, indexSpec);
   }
 
   @Override

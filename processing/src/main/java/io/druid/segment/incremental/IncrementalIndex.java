@@ -53,6 +53,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -197,6 +198,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
               public Iterator<Integer> iterator()
               {
                 return vals.iterator();
+              }
+
+              @Override
+              public void close() throws IOException
+              {
+
+              }
+
+              @Override
+              public void fill(int index, int[] toFill)
+              {
+                throw new UnsupportedOperationException("fill not supported");
               }
             };
           }

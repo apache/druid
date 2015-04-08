@@ -25,9 +25,9 @@ public class StupidResourceHolder<T> implements ResourceHolder<T>
 {
   private final T obj;
 
-  public static <T> StupidResourceHolder create(T obj)
+  public static <T> StupidResourceHolder<T> create(T obj)
   {
-    return new StupidResourceHolder(obj);
+    return new StupidResourceHolder<>(obj);
   }
 
   public StupidResourceHolder(

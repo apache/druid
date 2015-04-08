@@ -70,6 +70,7 @@ public class TestIndex
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
+  private static final IndexSpec indexSpec = new IndexSpec();
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
@@ -131,14 +132,15 @@ public class TestIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, DATA_INTERVAL, topFile);
-        IndexMerger.persist(bottom, DATA_INTERVAL, bottomFile);
+        IndexMerger.persist(top, DATA_INTERVAL, topFile, indexSpec);
+        IndexMerger.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec);
 
         mergedRealtime = IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
                 Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
                 METRIC_AGGS,
-                mergedFile
+                mergedFile,
+                indexSpec
             )
         );
 
@@ -243,7 +245,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      IndexMerger.persist(index, someTmpFile);
+      IndexMerger.persist(index, someTmpFile, indexSpec);
       return IndexIO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

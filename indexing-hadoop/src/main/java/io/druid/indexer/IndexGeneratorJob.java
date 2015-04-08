@@ -17,61 +17,6 @@
 
 package io.druid.indexer;
 
-import com.metamx.common.parsers.ParseException;
-import io.druid.collections.StupidPool;
-import io.druid.data.input.InputRow;
-import io.druid.data.input.Rows;
-import io.druid.data.input.impl.InputRowParser;
-import io.druid.offheap.OffheapBufferPool;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
-import io.druid.segment.LoggingProgressIndicator;
-import io.druid.segment.ProgressIndicator;
-import io.druid.segment.QueryableIndex;
-import io.druid.segment.SegmentUtils;
-import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
-import io.druid.segment.incremental.OnheapIncrementalIndex;
-import io.druid.timeline.DataSegment;
-
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapred.InvalidJobConfException;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.Partitioner;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
@@ -89,6 +34,58 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.ParseException;
+import io.druid.collections.StupidPool;
+import io.druid.data.input.InputRow;
+import io.druid.data.input.Rows;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.offheap.OffheapBufferPool;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexSpec;
+import io.druid.segment.LoggingProgressIndicator;
+import io.druid.segment.ProgressIndicator;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.SegmentUtils;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  */
@@ -294,7 +291,7 @@ public class IndexGeneratorJob implements Jobby
 
   public static class IndexGeneratorReducer extends Reducer<BytesWritable, Writable, BytesWritable, Text>
   {
-    private HadoopDruidIndexerConfig config;
+    protected HadoopDruidIndexerConfig config;
     private List<String> metricNames = Lists.newArrayList();
     private InputRowParser parser;
 
@@ -318,7 +315,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       return IndexMaker.persist(
-          index, interval, file, progressIndicator
+          index, interval, file, config.getIndexSpec(), progressIndicator
       );
     }
 
@@ -330,7 +327,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       return IndexMaker.mergeQueryableIndex(
-          indexes, aggs, file, progressIndicator
+          indexes, aggs, file, config.getIndexSpec(), progressIndicator
       );
     }
 

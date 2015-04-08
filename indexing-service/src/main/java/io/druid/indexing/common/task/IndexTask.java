@@ -45,6 +45,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
 import io.druid.segment.indexing.IngestionSpec;
@@ -336,7 +337,20 @@ public class IndexTask extends AbstractFixedIntervalTask
         tmpDir
     ).findPlumber(
         schema,
-        new RealtimeTuningConfig(null, null, null, null, null, null, null, shardSpec, null, null, null),
+        new RealtimeTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            shardSpec,
+            ingestionSchema.getTuningConfig().getIndexSpec(),
+            null,
+            null,
+            null
+        ),
         metrics
     );
 
@@ -416,7 +430,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null) : tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null, null) : tuningConfig;
     }
 
     @Override
@@ -466,21 +480,25 @@ public class IndexTask extends AbstractFixedIntervalTask
   {
     private static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
     private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 500000;
+    private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
 
     private final int targetPartitionSize;
     private final int rowFlushBoundary;
     private final int numShards;
+    private final IndexSpec indexSpec;
 
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
-        @JsonProperty("numShards") @Nullable Integer numShards
+        @JsonProperty("numShards") @Nullable Integer numShards,
+        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec
     )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
       this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
       this.numShards = numShards == null ? -1 : numShards;
+      this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       Preconditions.checkArgument(
           this.targetPartitionSize == -1 || this.numShards == -1,
           "targetPartitionsSize and shardCount both cannot be set"
@@ -503,6 +521,12 @@ public class IndexTask extends AbstractFixedIntervalTask
     public int getNumShards()
     {
       return numShards;
+    }
+
+    @JsonProperty
+    public IndexSpec getIndexSpec()
+    {
+      return indexSpec;
     }
   }
 }

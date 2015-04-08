@@ -20,6 +20,9 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.io.Files;
+import io.druid.segment.IndexSpec;
+import io.druid.segment.data.BitmapSerde;
+import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -42,6 +45,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
+  private static final IndexSpec defaultIndexSpec = new IndexSpec();
   private static final boolean defaultPersistInHeap = false;
   private static final boolean defaultIngestOffheap = false;
   private static final int defaultBufferSize = 128 * 1024* 1024; // 128M
@@ -59,6 +63,7 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultRejectionPolicyFactory,
         defaultMaxPendingPersists,
         defaultShardSpec,
+        defaultIndexSpec,
         defaultPersistInHeap,
         defaultIngestOffheap,
         defaultBufferSize
@@ -73,6 +78,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private final RejectionPolicyFactory rejectionPolicyFactory;
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
+  private final IndexSpec indexSpec;
   private final boolean persistInHeap;
   private final boolean ingestOffheap;
   private final int bufferSize;
@@ -87,6 +93,7 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("persistInHeap") Boolean persistInHeap,
       @JsonProperty("ingestOffheap") Boolean ingestOffheap,
       @JsonProperty("buffersize") Integer bufferSize
@@ -104,6 +111,7 @@ public class RealtimeTuningConfig implements TuningConfig
                                   : rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
+    this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
     this.persistInHeap = persistInHeap == null ? defaultPersistInHeap : persistInHeap;
     this.ingestOffheap = ingestOffheap == null ? defaultIngestOffheap : ingestOffheap;
     this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
@@ -159,6 +167,12 @@ public class RealtimeTuningConfig implements TuningConfig
   }
 
   @JsonProperty
+  public IndexSpec getIndexSpec()
+  {
+    return indexSpec;
+  }
+
+  @JsonProperty
   public boolean isPersistInHeap()
   {
     return persistInHeap;
@@ -185,6 +199,7 @@ public class RealtimeTuningConfig implements TuningConfig
         rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
+        indexSpec,
         persistInHeap,
         ingestOffheap,
         bufferSize
@@ -202,6 +217,7 @@ public class RealtimeTuningConfig implements TuningConfig
         rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
+        indexSpec,
         persistInHeap,
         ingestOffheap,
         bufferSize

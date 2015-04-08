@@ -34,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -124,6 +125,18 @@ public class CardinalityAggregatorTest
         public Iterator<Integer> iterator()
         {
           return Iterators.forArray(column.get(p));
+        }
+
+        @Override
+        public void fill(int index, int[] toFill)
+        {
+          throw new UnsupportedOperationException("fill not supported");
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+
         }
       };
     }

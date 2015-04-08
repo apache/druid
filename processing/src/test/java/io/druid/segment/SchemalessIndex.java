@@ -77,6 +77,8 @@ public class SchemalessIndex
       new CountAggregatorFactory("count")
   };
 
+  private static final IndexSpec indexSpec = new IndexSpec();
+
   private static final List<Map<String, Object>> events = Lists.newArrayList();
 
   private static final Map<Integer, Map<Integer, QueryableIndex>> incrementalIndexes = Maps.newHashMap();
@@ -184,12 +186,12 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, topFile);
-        IndexMerger.persist(bottom, bottomFile);
+        IndexMerger.persist(top, topFile, indexSpec);
+        IndexMerger.persist(bottom, bottomFile, indexSpec);
 
         mergedIndex = io.druid.segment.IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
-                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)), METRIC_AGGS, mergedFile
+                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)), METRIC_AGGS, mergedFile, indexSpec
             )
         );
 
@@ -231,7 +233,7 @@ public class SchemalessIndex
 
         QueryableIndex index = IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
-                Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)), METRIC_AGGS, mergedFile
+                Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)), METRIC_AGGS, mergedFile, indexSpec
             )
         );
 
@@ -267,7 +269,7 @@ public class SchemalessIndex
         }
 
         QueryableIndex index = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile)
+            IndexMerger.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile, indexSpec)
         );
 
         return index;
@@ -348,7 +350,7 @@ public class SchemalessIndex
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          IndexMerger.persist(rowIndex, tmpFile);
+          IndexMerger.persist(rowIndex, tmpFile, indexSpec);
           rowPersistedIndexes.add(IndexIO.loadIndex(tmpFile));
         }
       }
@@ -408,7 +410,7 @@ public class SchemalessIndex
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      IndexMerger.persist(index, theFile);
+      IndexMerger.persist(index, theFile, indexSpec);
     }
 
     return filesToMap;
@@ -482,7 +484,7 @@ public class SchemalessIndex
           )
       );
 
-      return IndexIO.loadIndex(IndexMerger.append(adapters, mergedFile));
+      return IndexIO.loadIndex(IndexMerger.append(adapters, mergedFile, indexSpec));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -521,7 +523,8 @@ public class SchemalessIndex
                   )
               ),
               METRIC_AGGS,
-              mergedFile
+              mergedFile,
+              indexSpec
           )
       );
     }

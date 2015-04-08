@@ -23,6 +23,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import io.druid.segment.data.IndexedInts;
 
+import java.io.IOException;
 import java.util.Iterator;
 
 public class NullDimensionSelector implements DimensionSelector
@@ -42,6 +43,18 @@ public class NullDimensionSelector implements DimensionSelector
     @Override
     public Iterator<Integer> iterator() {
       return Iterators.singletonIterator(0);
+    }
+
+    @Override
+    public void fill(int index, int[] toFill)
+    {
+      throw new UnsupportedOperationException("NullDimensionSelector does not support fill");
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+
     }
   };
 
