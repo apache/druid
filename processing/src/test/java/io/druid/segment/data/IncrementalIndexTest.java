@@ -182,7 +182,7 @@ public class IncrementalIndexTest
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = String.format("Dim_%d", i);
       dimensionList.add(dimName);
-      builder.put(dimName, (Long) 1l);
+      builder.put(dimName, (Long) 1L);
     }
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }

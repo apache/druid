@@ -153,10 +153,10 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(2, results.size());
 
     MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1l), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
 
     row = (MapBasedRow) results.get(1);
-    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1l), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
   }
 
   @Test
@@ -211,10 +211,10 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(2, results.size());
 
     MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1l, "fieldLength", 2.0), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L, "fieldLength", 2.0), row.getEvent());
 
     row = (MapBasedRow) results.get(1);
-    Assert.assertEquals(ImmutableMap.of("billy", "hip", "sally", "hop", "cnt", 1l, "fieldLength", 6.0), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("billy", "hip", "sally", "hop", "cnt", 1L, "fieldLength", 6.0), row.getEvent());
   }
 
   private static GroupByQueryEngine makeGroupByQueryEngine()
@@ -382,6 +382,6 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(1, results.size());
 
     MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1l), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
   }
 }

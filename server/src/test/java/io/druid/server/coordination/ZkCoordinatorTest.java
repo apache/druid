@@ -232,7 +232,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         Arrays.asList("metric1", "metric2"),
         new NoneShardSpec(),
         IndexIO.CURRENT_VERSION_ID,
-        123l
+        123L
     );
   }
 

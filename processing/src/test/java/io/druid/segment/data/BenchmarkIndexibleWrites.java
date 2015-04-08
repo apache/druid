@@ -131,7 +131,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
 
     private static Boolean wasCopying(Long val)
     {
-      return (val & 1l) > 0;
+      return (val & 1L) > 0;
     }
 
     @Override

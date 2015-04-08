@@ -37,7 +37,7 @@ public class LongSumBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, 0l);
+    buf.putLong(position, 0L);
   }
 
   @Override

@@ -1210,8 +1210,8 @@ public class GroupByQueryRunnerTest
   public void testPostAggMergedHavingSpec()
   {
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "index", 4420L, QueryRunnerTestHelper.addRowsIndexConstantMetric,(double) (6l+4420l+1l)),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "index", 4416L, QueryRunnerTestHelper.addRowsIndexConstantMetric, (double) (6l+4416l+1l))
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "index", 4420L, QueryRunnerTestHelper.addRowsIndexConstantMetric,(double) (6L+4420L+1L)),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "index", 4416L, QueryRunnerTestHelper.addRowsIndexConstantMetric, (double) (6L+4416L+1L))
     );
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -1274,7 +1274,7 @@ public class GroupByQueryRunnerTest
             "index",
             4420L,
             QueryRunnerTestHelper.addRowsIndexConstantMetric,
-            (double) (6l + 4420l + 1l)
+            (double) (6L + 4420L + 1L)
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1285,7 +1285,7 @@ public class GroupByQueryRunnerTest
             "index",
             4416L,
             QueryRunnerTestHelper.addRowsIndexConstantMetric,
-            (double) (6l + 4416l + 1l)
+            (double) (6L + 4416L + 1L)
         )
     );
 

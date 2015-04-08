@@ -150,26 +150,26 @@ public class ApproximateHistogramErrorBenchmark
     float err1 = 0;
     float err2 = 0;
     for (int j = 0; j < hcounts.length; j++) {
-      err1 += Math.abs((hcounts[j] - ahcounts1[j]) / numValues);
-      err2 += Math.abs((hcounts[j] - ahcounts2[j]) / numValues);
+      err1 += (float)Math.abs((hcounts[j] - ahcounts1[j]) / numValues);
+      err2 += (float)Math.abs((hcounts[j] - ahcounts2[j]) / numValues);
     }
 
     if (debug) {
       float sum = 0;
       for (double v : hcounts) {
-        sum += v;
+        sum += (float)v;
       }
       System.out.println("Exact Histogram Sum:");
       System.out.println(sum);
       sum = 0;
       for (double v : ahcounts1) {
-        sum += v;
+        sum += (float)v;
       }
       System.out.println("Approximate Histogram Sum:");
       System.out.println(sum);
       sum = 0;
       for (double v : ahcounts2) {
-        sum += v;
+        sum += (float)v;
       }
       System.out.println("Approximate Histogram Rule Fold Sum:");
       System.out.println(sum);

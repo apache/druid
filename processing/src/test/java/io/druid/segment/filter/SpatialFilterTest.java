@@ -136,7 +136,7 @@ public class SpatialFilterTest
                 "dim", "foo",
                 "lat", 0.0f,
                 "long", 0.0f,
-                "val", 17l
+                "val", 17L
             )
         )
     );
@@ -149,7 +149,7 @@ public class SpatialFilterTest
                 "dim", "foo",
                 "lat", 1.0f,
                 "long", 3.0f,
-                "val", 29l
+                "val", 29L
             )
         )
     );
@@ -162,7 +162,7 @@ public class SpatialFilterTest
                 "dim", "foo",
                 "lat", 4.0f,
                 "long", 2.0f,
-                "val", 13l
+                "val", 13L
             )
         )
     );
@@ -175,7 +175,7 @@ public class SpatialFilterTest
                 "dim", "foo",
                 "lat", 7.0f,
                 "long", 3.0f,
-                "val", 91l
+                "val", 91L
             )
         )
     );
@@ -188,7 +188,7 @@ public class SpatialFilterTest
                 "dim", "foo",
                 "lat", 8.0f,
                 "long", 6.0f,
-                "val", 47l
+                "val", 47L
             )
         )
     );
@@ -201,7 +201,7 @@ public class SpatialFilterTest
                 "dim", "foo",
                 "lat", "_mmx.unknown",
                 "long", "_mmx.unknown",
-                "val", 101l
+                "val", 101L
             )
         )
     );
@@ -213,7 +213,7 @@ public class SpatialFilterTest
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
-                "val", 501l
+                "val", 501L
             )
         )
     );
@@ -225,7 +225,7 @@ public class SpatialFilterTest
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "lat2", 0.0f,
                 "long2", 0.0f,
-                "val", 13l
+                "val", 13L
             )
         )
     );
@@ -349,7 +349,7 @@ public class SpatialFilterTest
                   "dim", "foo",
                   "lat", 0.0f,
                   "long", 0.0f,
-                  "val", 17l
+                  "val", 17L
               )
           )
       );
@@ -362,7 +362,7 @@ public class SpatialFilterTest
                   "dim", "foo",
                   "lat", 1.0f,
                   "long", 3.0f,
-                  "val", 29l
+                  "val", 29L
               )
           )
       );
@@ -375,7 +375,7 @@ public class SpatialFilterTest
                   "dim", "foo",
                   "lat", 4.0f,
                   "long", 2.0f,
-                  "val", 13l
+                  "val", 13L
               )
           )
       );
@@ -388,7 +388,7 @@ public class SpatialFilterTest
                   "dim", "foo",
                   "lat", "_mmx.unknown",
                   "long", "_mmx.unknown",
-                  "val", 101l
+                  "val", 101L
               )
           )
       );
@@ -400,7 +400,7 @@ public class SpatialFilterTest
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
-                  "val", 501l
+                  "val", 501L
               )
           )
       );
@@ -413,7 +413,7 @@ public class SpatialFilterTest
                   "dim", "foo",
                   "lat", 7.0f,
                   "long", 3.0f,
-                  "val", 91l
+                  "val", 91L
               )
           )
       );
@@ -426,7 +426,7 @@ public class SpatialFilterTest
                   "dim", "foo",
                   "lat", 8.0f,
                   "long", 6.0f,
-                  "val", 47l
+                  "val", 47L
               )
           )
       );
@@ -438,7 +438,7 @@ public class SpatialFilterTest
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "lat2", 0.0f,
                   "long2", 0.0f,
-                  "val", 13l
+                  "val", 13L
               )
           )
       );
@@ -532,7 +532,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 3L)
-                            .put("val", 59l)
+                            .put("val", 59L)
                             .build()
             )
         )
@@ -585,7 +585,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 13l)
+                            .put("val", 13L)
                             .build()
             )
         )
@@ -637,7 +637,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 17l)
+                            .put("val", 17L)
                             .build()
             )
         ),
@@ -646,7 +646,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 29l)
+                            .put("val", 29L)
                             .build()
             )
         ),
@@ -655,7 +655,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 13l)
+                            .put("val", 13L)
                             .build()
             )
         ),
@@ -664,7 +664,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 91l)
+                            .put("val", 91L)
                             .build()
             )
         ),
@@ -673,7 +673,7 @@ public class SpatialFilterTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 47l)
+                            .put("val", 47L)
                             .build()
             )
         )

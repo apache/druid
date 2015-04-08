@@ -33,7 +33,7 @@ public class StorageLocationTest
   @Test
   public void testStorageLocation() throws Exception
   {
-    long expectedAvail = 1000l;
+    long expectedAvail = 1000L;
     StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail);
 
     verifyLoc(expectedAvail, loc);

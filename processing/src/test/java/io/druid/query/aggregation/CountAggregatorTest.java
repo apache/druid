@@ -33,17 +33,17 @@ public class CountAggregatorTest
 
     Assert.assertEquals("billy", agg.getName());
 
-    Assert.assertEquals(0l, agg.get());
-    Assert.assertEquals(0l, agg.get());
-    Assert.assertEquals(0l, agg.get());
+    Assert.assertEquals(0L, agg.get());
+    Assert.assertEquals(0L, agg.get());
+    Assert.assertEquals(0L, agg.get());
     agg.aggregate();
-    Assert.assertEquals(1l, agg.get());
-    Assert.assertEquals(1l, agg.get());
-    Assert.assertEquals(1l, agg.get());
+    Assert.assertEquals(1L, agg.get());
+    Assert.assertEquals(1L, agg.get());
+    Assert.assertEquals(1L, agg.get());
     agg.aggregate();
-    Assert.assertEquals(2l, agg.get());
-    Assert.assertEquals(2l, agg.get());
-    Assert.assertEquals(2l, agg.get());
+    Assert.assertEquals(2L, agg.get());
+    Assert.assertEquals(2L, agg.get());
+    Assert.assertEquals(2L, agg.get());
   }
 
   @Test
