@@ -24,7 +24,7 @@ import java.io.Closeable;
  */
 public interface IndexedInts extends Iterable<Integer>, Closeable
 {
-  public int size();
-  public int get(int index);
-  public void fill(int index, int[] toFill);
+  int size();
+  int get(int index);
+  void fill(int index, int[] toFill);
 }
