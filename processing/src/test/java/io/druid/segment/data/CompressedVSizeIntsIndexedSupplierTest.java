@@ -123,12 +123,10 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   @Test
   public void testSanity() throws Exception
   {
-    setupSimple(5);
-
-    Assert.assertEquals(4, supplier.getBaseBuffers().size());
+    setupSimple(2);
+    Assert.assertEquals(8, supplier.getBaseBuffers().size());
     assertIndexMatchesVals();
 
-    // test powers of 2
     setupSimple(4);
     Assert.assertEquals(4, supplier.getBaseBuffers().size());
     assertIndexMatchesVals();
@@ -154,7 +152,11 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
       Assert.assertEquals(11, supplier.getBaseBuffers().size());
       assertIndexMatchesVals();
 
-      setupLargeChunks(maxChunkSize - 1, 10 * (maxChunkSize - 1) + 1, maxValue);
+      setupLargeChunks(1, 0xFFFF, maxValue);
+      Assert.assertEquals(0xFFFF, supplier.getBaseBuffers().size());
+      assertIndexMatchesVals();
+
+      setupLargeChunks(maxChunkSize / 2, 10 * (maxChunkSize / 2) + 1, maxValue);
       Assert.assertEquals(11, supplier.getBaseBuffers().size());
       assertIndexMatchesVals();
     }
@@ -179,16 +181,23 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   {
     Assert.assertEquals(CompressedPools.BUFFER_SIZE, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(1));
     Assert.assertEquals(CompressedPools.BUFFER_SIZE / 2, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(2));
-    Assert.assertEquals((CompressedPools.BUFFER_SIZE - 1) / 3, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(3));
     Assert.assertEquals(CompressedPools.BUFFER_SIZE / 4, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(4));
+
+    Assert.assertEquals(CompressedPools.BUFFER_SIZE, 0x10000); // nearest power of 2 is 2^14
+    Assert.assertEquals(1 << 14, CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(3));
   }
 
   @Test
   public void testSanityWithSerde() throws Exception
   {
-    setupSimpleWithSerde(5);
+    setupSimpleWithSerde(4);
 
     Assert.assertEquals(4, supplier.getBaseBuffers().size());
+    assertIndexMatchesVals();
+
+    setupSimpleWithSerde(2);
+
+    Assert.assertEquals(8, supplier.getBaseBuffers().size());
     assertIndexMatchesVals();
   }
 
@@ -198,7 +207,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   @Test
   public void testConcurrentThreadReads() throws Exception
   {
-    setupSimple(5);
+    setupSimple(4);
 
     final AtomicReference<String> reason = new AtomicReference<>("none");
 

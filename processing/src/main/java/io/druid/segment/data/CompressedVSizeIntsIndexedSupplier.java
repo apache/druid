@@ -58,6 +58,11 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
+    Preconditions.checkArgument(
+        sizePer == (1 << Integer.numberOfTrailingZeros(sizePer)),
+        "Number of entries per chunk must be a power of 2"
+    );
+
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseBuffers = baseBuffers;
@@ -69,7 +74,9 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
 
   public static int maxIntsInBufferForBytes(int numBytes)
   {
-    return (CompressedPools.BUFFER_SIZE - bufferPadding(numBytes)) / numBytes;
+    int maxSizePer = (CompressedPools.BUFFER_SIZE - bufferPadding(numBytes)) / numBytes;
+    // round down to the nearest power of 2
+    return 1 << (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(maxSizePer));
   }
 
   private static int bufferPadding(int numBytes)
@@ -97,55 +104,16 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   @Override
   public IndexedInts get()
   {
-    final boolean powerOf2 = sizePer == (1 << Integer.numberOfTrailingZeros(sizePer));
-
-    if(powerOf2) {
-      if(numBytes == Ints.BYTES) {
-        return new CompressedFullSizeIndexedInts() {
-          @Override
-          public int get(int index)
-          {
-            return get2(index);
-          }
-        };
-      } else if(numBytes == Shorts.BYTES) {
-        return new CompressedShortSizeIndexedInts() {
-          @Override
-          public int get(int index)
-          {
-            return get2(index);
-          }
-        };
-      } else if (numBytes == 1) {
-        return new CompressedByteSizeIndexedInts()
-        {
-          @Override
-          public int get(int index)
-          {
-            return get2(index);
-          }
-        };
-      } else {
-        return new CompressedVSizeIndexedInts()
-        {
-          @Override
-          public int get(int index)
-          {
-            return get2(index);
-          }
-        };
-      }
+    // optimized versions for int, short, and byte columns
+    if(numBytes == Ints.BYTES) {
+      return new CompressedFullSizeIndexedInts();
+    } else if (numBytes == Shorts.BYTES) {
+      return new CompressedShortSizeIndexedInts();
+    } else if (numBytes == 1) {
+      return new CompressedByteSizeIndexedInts();
     } else {
-      // optimized versions for 1, 2, and 4 byte indices
-      if(numBytes == Ints.BYTES) {
-        return new CompressedFullSizeIndexedInts();
-      } else if (numBytes == Shorts.BYTES) {
-        return new CompressedShortSizeIndexedInts();
-      } else if (numBytes == 1) {
-        return new CompressedByteSizeIndexedInts();
-      } else {
-        return new CompressedVSizeIndexedInts();
-      }
+      // default version of everything else, i.e. 3-bytes per value
+      return new CompressedVSizeIndexedInts();
     }
   }
 
@@ -346,22 +314,18 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       return totalSize;
     }
 
+    /**
+     * Returns the value at the given index into the column.
+     *
+     * Assumes the number of entries in each decompression buffers is a power of two.
+     *
+     * @param index index of the value in the column
+     * @return the value at the given index
+     */
     @Override
     public int get(int index)
     {
-      final int bufferNum = index / sizePer;
-      final int bufferIndex = index % sizePer;
-
-      if (bufferNum != currIndex) {
-        loadBuffer(bufferNum);
-      }
-
-      return _get(bufferIndex);
-    }
-
-    protected int get2(int index)
-    {
-      // optimize division and remainder for powers of 2
+      // assumes the number of entries in each buffer is a power of 2
       final int bufferNum = index >> div;
 
       if (bufferNum != currIndex) {
@@ -371,6 +335,12 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       return _get(index & rem);
     }
 
+    /**
+     * Returns the value at the given index in the current decompression buffer
+     *
+     * @param index index of the value in the curent buffer
+     * @return the value at the given index
+     */
     protected int _get(final int index)
     {
       final int pos = buffer.position() + index * numBytes;
