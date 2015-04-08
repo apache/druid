@@ -73,7 +73,7 @@
         <dependency>
           <groupId>io.druid</groupId>
           <artifactId>druid-server</artifactId>
-          <version>${parent.version}</version>
+          <version>${project.parent.version}</version>
           <scope>test</scope>
         </dependency>
         <dependency>
