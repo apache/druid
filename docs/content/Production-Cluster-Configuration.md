@@ -323,7 +323,7 @@ druid.service=druid/prod/broker
 druid.broker.http.numConnections=20
 druid.broker.http.readTimeout=PT5M
 
-druid.processing.buffer.sizeBytes=2147483648
+druid.processing.buffer.sizeBytes=2147483647
 druid.processing.numThreads=31
 
 druid.server.http.numThreads=50
