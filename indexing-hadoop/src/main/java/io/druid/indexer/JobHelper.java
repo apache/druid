@@ -112,7 +112,7 @@ public class JobHelper
   {
     // config.addInputPaths() can have side-effects ( boo! :( ), so this stuff needs to be done before anything else
     try {
-      Job job = new Job(
+      Job job = Job.getInstance(
           new Configuration(),
           String.format("%s-determine_partitions-%s", config.getDataSource(), config.getIntervals())
       );

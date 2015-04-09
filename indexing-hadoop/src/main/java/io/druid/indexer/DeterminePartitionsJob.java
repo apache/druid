@@ -121,7 +121,7 @@ public class DeterminePartitionsJob implements Jobby
       }
 
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
-        final Job groupByJob = new Job(
+        final Job groupByJob = Job.getInstance(
             new Configuration(),
             String.format("%s-determine_partitions_groupby-%s", config.getDataSource(), config.getIntervals())
         );
@@ -157,7 +157,7 @@ public class DeterminePartitionsJob implements Jobby
       /*
        * Read grouped data and determine appropriate partitions.
        */
-      final Job dimSelectionJob = new Job(
+      final Job dimSelectionJob = Job.getInstance(
           new Configuration(),
           String.format("%s-determine_partitions_dimselection-%s", config.getDataSource(), config.getIntervals())
       );
