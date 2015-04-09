@@ -46,8 +46,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.joda.time.DateTime;
@@ -84,7 +82,7 @@ public class DetermineHashedPartitionsJob implements Jobby
        * in the final segment.
        */
       long startTime = System.currentTimeMillis();
-      final Job groupByJob = new Job(
+      final Job groupByJob = Job.getInstance(
           new Configuration(),
           String.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );

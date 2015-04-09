@@ -152,7 +152,7 @@ public class IndexGeneratorJob implements Jobby
   public boolean run()
   {
     try {
-      Job job = new Job(
+      Job job = Job.getInstance(
           new Configuration(),
           String.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
       );

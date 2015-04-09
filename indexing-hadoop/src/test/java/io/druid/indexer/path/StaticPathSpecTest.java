@@ -60,7 +60,7 @@ public class StaticPathSpecTest
     StaticPathSpec pathSpec = (StaticPathSpec)jsonMapper.readValue(sb.toString(), PathSpec.class);
     Assert.assertEquals(inputFormat, pathSpec.getInputFormat());
     
-    Job job = new Job();
+    Job job = Job.getInstance();
     pathSpec.addInputPaths(null, job);
     Assert.assertEquals(
         "file:" + path,
