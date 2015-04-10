@@ -22,10 +22,45 @@ import io.druid.segment.Segment;
 import java.util.concurrent.ExecutorService;
 
 /**
+ * An interface that defines the nitty gritty implementation detauls of a Query on a Segment
  */
 public interface QueryRunnerFactory<T, QueryType extends Query<T>>
 {
+  /**
+   * Given a specific segment, this method will create a QueryRunner.
+   *
+   * The QueryRunner, when asked, will generate a Sequence of results based on the given segment.  This
+   * is the meat of the query processing and is where the results are actually generated.  Everything else
+   * is just merging and reduction logic.
+   *
+   * @param segment The segment to process
+   * @return A QueryRunner that, when asked, will generate a Sequence of results based on the given segment
+   */
   public QueryRunner<T> createRunner(Segment segment);
+
+  /**
+   * Runners generated with createRunner() and combined into an Iterable in (time,shardId) order are passed
+   * along to this method with an ExecutorService.  The method should then return a QueryRunner that, when
+   * asked, will use the ExecutorService to run the base QueryRunners in some fashion.
+   *
+   * The vast majority of the time, this should be implemented with
+   *
+   *     return new ChainedExecutionQueryRunner<>(
+   *         queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
+   *     );
+   *
+   * Which will allow for parallel execution up to the maximum number of processing threads allowed.
+   *
+   * @param queryExecutor ExecutorService to be used for parallel processing
+   * @param queryRunners Individual QueryRunner objects that produce some results
+   * @return a QueryRunner that, when asked, will use the ExecutorService to runt he base QueryRunners
+   */
   public QueryRunner<T> mergeRunners(ExecutorService queryExecutor, Iterable<QueryRunner<T>> queryRunners);
+
+  /**
+   * Provides access to the toolchest for this specific query type.
+   *
+   * @return an instance of the toolchest for this specific query type.
+   */
   public QueryToolChest<T, QueryType> getToolchest();
 }
