@@ -193,7 +193,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         + prunedAggs.size()
                         + 1
                     );
-                    // JVM couldn't optimize this too well, so this is helping it out a bit.
+
                     for (int i = 0; i < aggregatorFactories.length; ++i) {
                       final String aggName = aggFactoryNames[i];
                       values.put(aggName, fn.manipulate(aggregatorFactories[i], input.getMetric(aggName)));
@@ -253,8 +253,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         + query.getPostAggregatorSpecs().size()
                         + 1
                     );
-                    // put non finalized aggregators for calculating dependent post Aggregators
-                    // JVM is dumb about optimization
+
                     for( int i = 0; i < aggFactoryNames.length; ++i){
                       final String name = aggFactoryNames[i];
                       values.put(name, input.getMetric(name));
