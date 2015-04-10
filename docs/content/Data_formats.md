@@ -7,7 +7,7 @@ Data Formats for Ingestion
 Druid can ingest data in JSON, CSV, or custom delimited data such as TSV. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest CSV or other delimited data.
 
 ## Formatting the Data
-The following are three samples of the data used in the [Wikipedia example](Tutorial:-Loading-Streaming-Data.html).
+The following are three samples of the data used in the [Wikipedia example](Tutorial%3A-Loading-Streaming-Data.html).
 
 _JSON_
 

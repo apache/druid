@@ -39,7 +39,7 @@ Metrics (things to aggregate over):
 Batch Ingestion
 ---------------
 
-For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Your-Data-Part-1.html).
+For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Streaming-Data.html).
 
 Our data is located at:
 

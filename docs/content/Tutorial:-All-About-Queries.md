@@ -37,7 +37,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_commo
 Querying Your Data
 ------------------
 
-Make sure you've completed [Loading Your Data](Loading-Your-Data-Part-1.html) so we have some data to query. Having done that, it's time to query our data! For a complete specification of queries, see [Querying](Querying.html).
+Make sure you've completed [Loading Your Data](Tutorial%3A-Loading-Streaming-Data.html) so we have some data to query. Having done that, it's time to query our data! For a complete specification of queries, see [Querying](Querying.html).
 
 #### Construct a Query
 ```json
