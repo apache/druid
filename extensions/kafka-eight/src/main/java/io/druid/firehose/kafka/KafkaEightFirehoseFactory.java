@@ -26,6 +26,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.FirehoseV2;
+import io.druid.data.input.FirehoseFactoryV2;
 import io.druid.data.input.InputRow;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -34,6 +36,7 @@ import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 
 import java.io.IOException;
+import java.lang.Override;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +45,7 @@ import java.util.Set;
 
 /**
  */
-public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
+public class KafkaEightFirehoseFactory implements FirehoseFactoryV2<ByteBufferInputRowParser>
 {
   private static final Logger log = new Logger(KafkaEightFirehoseFactory.class);
 
@@ -52,19 +55,24 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   @JsonProperty
   private final String feed;
 
+  @JsonProperty
+  private final String realtimeV2;
+
   @JsonCreator
   public KafkaEightFirehoseFactory(
       @JsonProperty("consumerProps") Properties consumerProps,
-      @JsonProperty("feed") String feed
+      @JsonProperty("feed") String feed,
+      @JsonProperty("realtimeV2") String realtimeV2
 
   )
   {
     this.consumerProps = consumerProps;
     this.feed = feed;
+    this.realtimeV2 = realtimeV2;
   }
 
   @Override
-  public Firehose connect(final ByteBufferInputRowParser firehoseParser) throws IOException
+  public FirehoseV2 connect(final ByteBufferInputRowParser firehoseParser, Object lastCommit) throws IOException
   {
     Set<String> newDimExclus = Sets.union(
         firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
@@ -98,7 +106,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
     final KafkaStream<byte[], byte[]> stream = streamList.get(0);
     final ConsumerIterator<byte[], byte[]> iter = stream.iterator();
 
-    return new Firehose()
+    return new FirehoseV2()
     {
       @Override
       public boolean hasMore()
@@ -119,10 +127,15 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
       }
 
       @Override
-      public Runnable commit()
+      public Committer makeCommitter()
       {
-        return new Runnable()
+        return new Committer()
         {
+          private Object metaData = lastCommit;
+          @Override
+          public Object getMetadata() {
+              return metaData;
+          }
           @Override
           public void run()
           {
