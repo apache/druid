@@ -98,4 +98,22 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
       return roaringComparator.compare((WrappedImmutableRoaringBitmap) o1, (WrappedImmutableRoaringBitmap) o2);
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "RoaringBitmapSerdeFactory{}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    return this == o || o instanceof RoaringBitmapSerdeFactory;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
+  }
 }
