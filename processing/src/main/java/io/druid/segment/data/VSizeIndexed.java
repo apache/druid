@@ -29,7 +29,7 @@ import java.util.Iterator;
 
 /**
  */
-public class VSizeIndexed implements Indexed<VSizeIndexedInts>
+public class VSizeIndexed implements IndexedMultivalue<IndexedInts>
 {
   private static final byte version = 0x1;
 
@@ -140,7 +140,7 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
   }
 
   @Override
-  public int indexOf(VSizeIndexedInts value)
+  public int indexOf(IndexedInts value)
   {
     throw new UnsupportedOperationException("Reverse lookup not allowed.");
   }
@@ -176,8 +176,44 @@ public class VSizeIndexed implements Indexed<VSizeIndexedInts>
   }
 
   @Override
-  public Iterator<VSizeIndexedInts> iterator()
+  public Iterator<IndexedInts> iterator()
   {
     return IndexedIterable.create(this).iterator();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // no-op
+  }
+
+  public WritableSupplier<IndexedMultivalue<IndexedInts>> asWritableSupplier() {
+    return new VSizeIndexedSupplier(this);
+  }
+
+  public static class VSizeIndexedSupplier implements WritableSupplier<IndexedMultivalue<IndexedInts>> {
+    final VSizeIndexed delegate;
+
+    public VSizeIndexedSupplier(VSizeIndexed delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public long getSerializedSize()
+    {
+      return delegate.getSerializedSize();
+    }
+
+    @Override
+    public void writeToChannel(WritableByteChannel channel) throws IOException
+    {
+      delegate.writeToChannel(channel);
+    }
+
+    @Override
+    public IndexedMultivalue<IndexedInts> get()
+    {
+      return delegate;
+    }
   }
 }
