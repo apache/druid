@@ -8,6 +8,7 @@ var ruleTypes = [
   "dropByPeriod",
   "loadForever",
   "dropForever",
+  "dropByRetentionPeriod",
   "JSON"
 ];
 
@@ -68,6 +69,9 @@ function makeRuleBody(rule) {
         break;
       case "dropForever":
         retVal += "";
+        break;
+      case "dropByRetentionPeriod":
+          retVal += makeDropByRetentionPeriod(rule);
         break;
       case "JSON":
         retVal += makeJSON();
@@ -131,6 +135,10 @@ function makeDropByInterval(rule) {
 
 function makeDropByPeriod(rule) {
   return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
+}
+
+function makeDropByRetentionPeriod(rule) {
+	   return "<span class='rule_label'>period</span><input type='text' name='period' " + "value='" + rule.period + "'/>";
 }
 
 function makeJSON() {

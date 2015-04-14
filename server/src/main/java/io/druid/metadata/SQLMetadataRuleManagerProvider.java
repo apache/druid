@@ -22,8 +22,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.lifecycle.Lifecycle;
-import io.druid.audit.AuditManager;
-import io.druid.server.audit.SQLAuditManager;
 import org.skife.jdbi.v2.IDBI;
 
 /**
@@ -36,7 +34,6 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
   private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
   private final IDBI dbi;
-  private final AuditManager auditManager;
 
   @Inject
   public SQLMetadataRuleManagerProvider(
@@ -44,8 +41,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       Supplier<MetadataRuleManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector,
-      Lifecycle lifecycle,
-      SQLAuditManager auditManager
+      Lifecycle lifecycle
   )
   {
     this.jsonMapper = jsonMapper;
@@ -54,7 +50,6 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
     this.connector = connector;
     this.dbi = connector.getDBI();
     this.lifecycle = lifecycle;
-    this.auditManager = auditManager;
   }
 
   @Override
@@ -85,6 +80,6 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       throw Throwables.propagate(e);
     }
 
-    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, connector, auditManager);
+    return new SQLMetadataRuleManager(jsonMapper, config, dbTables, connector);
   }
 }

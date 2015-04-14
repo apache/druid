@@ -64,433 +64,472 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
-  private static final Logger log = new Logger(SQLMetadataSegmentManager.class);
+	private static final Logger log = new Logger(SQLMetadataSegmentManager.class);
 
-  private final Object lock = new Object();
+	private final Object lock = new Object();
 
-  private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataSegmentManagerConfig> config;
-  private final Supplier<MetadataStorageTablesConfig> dbTables;
-  private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
-  private final IDBI dbi;
+	private final ObjectMapper jsonMapper;
+	private final Supplier<MetadataSegmentManagerConfig> config;
+	private final Supplier<MetadataStorageTablesConfig> dbTables;
+	private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
+	private final IDBI dbi;
 
-  private volatile ScheduledExecutorService exec;
+	private volatile ScheduledExecutorService exec;
 
-  private volatile boolean started = false;
+	private volatile boolean started = false;
 
-  @Inject
-  public SQLMetadataSegmentManager(
-      ObjectMapper jsonMapper,
-      Supplier<MetadataSegmentManagerConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables,
-      SQLMetadataConnector connector
-  )
-  {
-    this.jsonMapper = jsonMapper;
-    this.config = config;
-    this.dbTables = dbTables;
-    this.dataSources = new AtomicReference<>(
-        new ConcurrentHashMap<String, DruidDataSource>()
-    );
-    this.dbi = connector.getDBI();
-  }
+	@Inject
+	public SQLMetadataSegmentManager(
+			ObjectMapper jsonMapper,
+			Supplier<MetadataSegmentManagerConfig> config,
+			Supplier<MetadataStorageTablesConfig> dbTables,
+			SQLMetadataConnector connector
+			)
+	{
+		this.jsonMapper = jsonMapper;
+		this.config = config;
+		this.dbTables = dbTables;
+		this.dataSources = new AtomicReference<>(
+				new ConcurrentHashMap<String, DruidDataSource>()
+				);
+		this.dbi = connector.getDBI();
+	}
 
-  @LifecycleStart
-  public void start()
-  {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
+	@LifecycleStart
+	public void start()
+	{
+		synchronized (lock) {
+			if (started) {
+				return;
+			}
 
-      this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
+			this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
 
-      final Duration delay = config.get().getPollDuration().toStandardDuration();
-      ScheduledExecutors.scheduleWithFixedDelay(
-          exec,
-          new Duration(0),
-          delay,
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              poll();
-            }
-          }
-      );
+			final Duration delay = config.get().getPollDuration().toStandardDuration();
+			ScheduledExecutors.scheduleWithFixedDelay(
+					exec,
+					new Duration(0),
+					delay,
+					new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							poll();
+						}
+					}
+					);
 
-      started = true;
-    }
-  }
+			started = true;
+		}
+	}
 
-  @LifecycleStop
-  public void stop()
-  {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
+	@LifecycleStop
+	public void stop()
+	{
+		synchronized (lock) {
+			if (!started) {
+				return;
+			}
 
-      started = false;
-      dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
-      exec.shutdownNow();
-      exec = null;
-    }
-  }
+			started = false;
+			dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
+			exec.shutdownNow();
+			exec = null;
+		}
+	}
 
-  @Override
-  public boolean enableDatasource(final String ds)
-  {
-    try {
-      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = dbi.withHandle(
-          new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
-          {
-            @Override
-            public VersionedIntervalTimeline<String, DataSegment> withHandle(Handle handle) throws Exception
-            {
-              return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE dataSource = :dataSource", getSegmentsTable())
-              )
-                           .bind("dataSource", ds)
-                           .map(ByteArrayMapper.FIRST)
-                           .fold(
-                               new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
-                               new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
-                               {
-                                 @Override
-                                 public VersionedIntervalTimeline<String, DataSegment> fold(
-                                     VersionedIntervalTimeline<String, DataSegment> timeline,
-                                     byte[] payload,
-                                     FoldController foldController,
-                                     StatementContext statementContext
-                                 ) throws SQLException
-                                 {
-                                   try {
-                                     DataSegment segment = jsonMapper.readValue(
-                                         payload,
-                                         DataSegment.class
-                                     );
+	@Override
+	public boolean enableDatasource(final String ds)
+	{
+		try {
+			VersionedIntervalTimeline<String, DataSegment> segmentTimeline = dbi.withHandle(
+					new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
+					{
+						@Override
+						public VersionedIntervalTimeline<String, DataSegment> withHandle(Handle handle) throws Exception
+						{
+							return handle.createQuery(
+									String.format("SELECT payload FROM %s WHERE dataSource = :dataSource", getSegmentsTable())
+									)
+									.bind("dataSource", ds)
+									.map(ByteArrayMapper.FIRST)
+									.fold(
+											new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
+											new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
+											{
+												@Override
+												public VersionedIntervalTimeline<String, DataSegment> fold(
+														VersionedIntervalTimeline<String, DataSegment> timeline,
+														byte[] payload,
+														FoldController foldController,
+														StatementContext statementContext
+														) throws SQLException
+														{
+													try {
+														DataSegment segment = jsonMapper.readValue(
+																payload,
+																DataSegment.class
+																);
 
-                                     timeline.add(
-                                         segment.getInterval(),
-                                         segment.getVersion(),
-                                         segment.getShardSpec().createChunk(segment)
-                                     );
+														timeline.add(
+																segment.getInterval(),
+																segment.getVersion(),
+																segment.getShardSpec().createChunk(segment)
+																);
 
-                                     return timeline;
-                                   }
-                                   catch (Exception e) {
-                                     throw new SQLException(e.toString());
-                                   }
-                                 }
-                               }
-                           );
-            }
-          }
-      );
+														return timeline;
+													}
+													catch (Exception e) {
+														throw new SQLException(e.toString());
+													}
+														}
+											}
+											);
+						}
+					}
+					);
 
-      final List<DataSegment> segments = Lists.newArrayList();
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : segmentTimeline.lookup(
-          new Interval(
-              "0000-01-01/3000-01-01"
-          )
-      )) {
-        for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
-          segments.add(partitionChunk.getObject());
-        }
-      }
+			final List<DataSegment> segments = Lists.newArrayList();
+			for (TimelineObjectHolder<String, DataSegment> objectHolder : segmentTimeline.lookup(
+					new Interval(
+							"0000-01-01/3000-01-01"
+							)
+					)) {
+				for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
+					segments.add(partitionChunk.getObject());
+				}
+			}
 
-      if (segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return false;
-      }
+			if (segments.isEmpty()) {
+				log.warn("No segments found in the database!");
+				return false;
+			}
 
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              Batch batch = handle.createBatch();
+			dbi.withHandle(
+					new HandleCallback<Void>()
+					{
+						@Override
+						public Void withHandle(Handle handle) throws Exception
+						{
+							Batch batch = handle.createBatch();
 
-              for (DataSegment segment : segments) {
-                batch.add(
-                    String.format(
-                        "UPDATE %s SET used=true WHERE id = '%s'",
-                        getSegmentsTable(),
-                        segment.getIdentifier()
-                    )
-                );
-              }
-              batch.execute();
+							String query = "";
 
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Exception enabling datasource %s", ds);
-      return false;
-    }
+							if(!SQLMetadataConnector.isSQLServer(dbi)){
+								query = "UPDATE %s SET used=true WHERE id = '%s'";
+							}else{
+								query = "UPDATE %s SET used=1 WHERE id = '%s'";
+							}
+							
+							for (DataSegment segment : segments) {
+								batch.add(
+										String.format(
+												query,
+												getSegmentsTable(),
+												segment.getIdentifier()
+												)
+										);
+							}
+							batch.execute();
 
-    return true;
-  }
+							return null;
+						}
+					}
+					);
+		}
+		catch (Exception e) {
+			log.error(e, "Exception enabling datasource %s", ds);
+			return false;
+		}
 
-  @Override
-  public boolean enableSegment(final String segmentId)
-  {
-    try {
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
-              )
-                    .bind("id", segmentId)
-                    .execute();
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Exception enabling segment %s", segmentId);
-      return false;
-    }
+		return true;
+	}
 
-    return true;
-  }
+	@Override
+	public boolean enableSegment(final String segmentId)
+	{
+		try {
+			dbi.withHandle(
+					new HandleCallback<Void>()
+					{
+						@Override
+						public Void withHandle(Handle handle) throws Exception
+						{
+							String query = "";
 
-  @Override
-  public boolean removeDatasource(final String ds)
-  {
-    try {
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
+							if(!SQLMetadataConnector.isSQLServer(dbi)){
+								query = "UPDATE %s SET used=true WHERE id = :id";
+							}else{
+								query = "UPDATE %s SET used=1 WHERE id = :id";
+							}
+							
+							handle.createStatement(
+									String.format(query, getSegmentsTable())
+									)
+									.bind("id", segmentId)
+									.execute();
+							return null;
+						}
+					}
+					);
+		}
+		catch (Exception e) {
+			log.error(e, "Exception enabling segment %s", segmentId);
+			return false;
+		}
 
-      if (!dataSourceMap.containsKey(ds)) {
-        log.warn("Cannot delete datasource %s, does not exist", ds);
-        return false;
-      }
+		return true;
+	}
 
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
-              )
-                    .bind("dataSource", ds)
-                    .execute();
+	@Override
+	public boolean removeDatasource(final String ds)
+	{
+		try {
+			ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
 
-              return null;
-            }
-          }
-      );
+			if (!dataSourceMap.containsKey(ds)) {
+				log.warn("Cannot delete datasource %s, does not exist", ds);
+				return false;
+			}
 
-      dataSourceMap.remove(ds);
-    }
-    catch (Exception e) {
-      log.error(e, "Error removing datasource %s", ds);
-      return false;
-    }
+			dbi.withHandle(
+					new HandleCallback<Void>()
+					{
+						@Override
+						public Void withHandle(Handle handle) throws Exception
+						{
+							String query = "";
 
-    return true;
-  }
+							if(!SQLMetadataConnector.isSQLServer(dbi)){
+								query = "UPDATE %s SET used=false WHERE dataSource = :dataSource";
+							}else{
+								query = "UPDATE %s SET used=0 WHERE dataSource = :dataSource";
+							}
+							handle.createStatement(
+									String.format(query, getSegmentsTable())
+									)
+									.bind("dataSource", ds)
+									.execute();
 
-  @Override
-  public boolean removeSegment(String ds, final String segmentID)
-  {
-    try {
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(
-                  String.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
-              ).bind("segmentID", segmentID)
-                    .execute();
+							return null;
+						}
+					}
+					);
 
-              return null;
-            }
-          }
-      );
+			dataSourceMap.remove(ds);
+		}
+		catch (Exception e) {
+			log.error(e, "Error removing datasource %s", ds);
+			return false;
+		}
 
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
+		return true;
+	}
 
-      if (!dataSourceMap.containsKey(ds)) {
-        log.warn("Cannot find datasource %s", ds);
-        return false;
-      }
+	@Override
+	public boolean removeSegment(String ds, final String segmentID)
+	{
+		try {
+			dbi.withHandle(
+					new HandleCallback<Void>()
+					{
+						@Override
+						public Void withHandle(Handle handle) throws Exception
+						{
+							String query = "";
 
-      DruidDataSource dataSource = dataSourceMap.get(ds);
-      dataSource.removePartition(segmentID);
+							if(!SQLMetadataConnector.isSQLServer(dbi)){
+								query = "UPDATE %s SET used=false WHERE id = :segmentID";
+							}else{
+								query = "UPDATE %s SET used=0 WHERE id = :segmentID";
+							}
+							
+							handle.createStatement(
+									String.format(query, getSegmentsTable())
+									).bind("segmentID", segmentID)
+									.execute();
 
-      if (dataSource.isEmpty()) {
-        dataSourceMap.remove(ds);
-      }
-    }
-    catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
-    }
+							return null;
+						}
+					}
+					);
 
-    return true;
-  }
+			ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSources.get();
 
-  @Override
-  public boolean isStarted()
-  {
-    return started;
-  }
+			if (!dataSourceMap.containsKey(ds)) {
+				log.warn("Cannot find datasource %s", ds);
+				return false;
+			}
 
-  @Override
-  public DruidDataSource getInventoryValue(String key)
-  {
-    return dataSources.get().get(key);
-  }
+			DruidDataSource dataSource = dataSourceMap.get(ds);
+			dataSource.removePartition(segmentID);
 
-  @Override
-  public Collection<DruidDataSource> getInventory()
-  {
-    return dataSources.get().values();
-  }
+			if (dataSource.isEmpty()) {
+				dataSourceMap.remove(ds);
+			}
+		}
+		catch (Exception e) {
+			log.error(e, e.toString());
+			return false;
+		}
 
-  @Override
-  public Collection<String> getAllDatasourceNames()
-  {
-    synchronized (lock) {
-      return dbi.withHandle(
-          new HandleCallback<List<String>>()
-          {
-            @Override
-            public List<String> withHandle(Handle handle) throws Exception
-            {
-              return handle.createQuery(
-                  String.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
-              )
-                           .fold(
-                               Lists.<String>newArrayList(),
-                               new Folder3<ArrayList<String>, Map<String, Object>>()
-                               {
-                                 @Override
-                                 public ArrayList<String> fold(
-                                     ArrayList<String> druidDataSources,
-                                     Map<String, Object> stringObjectMap,
-                                     FoldController foldController,
-                                     StatementContext statementContext
-                                 ) throws SQLException
-                                 {
-                                   druidDataSources.add(
-                                       MapUtils.getString(stringObjectMap, "datasource")
-                                   );
-                                   return druidDataSources;
-                                 }
-                               }
-                           );
+		return true;
+	}
 
-            }
-          }
-      );
-    }
-  }
+	@Override
+	public boolean isStarted()
+	{
+		return started;
+	}
 
-  @Override
-  public void poll()
-  {
-    try {
-      if (!started) {
-        return;
-      }
+	@Override
+	public DruidDataSource getInventoryValue(String key)
+	{
+		return dataSources.get().get(key);
+	}
 
-      ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<String, DruidDataSource>();
+	@Override
+	public Collection<DruidDataSource> getInventory()
+	{
+		return dataSources.get().values();
+	}
 
-      List<DataSegment> segments = dbi.withHandle(
-          new HandleCallback<List<DataSegment>>()
-          {
-            @Override
-            public List<DataSegment> withHandle(Handle handle) throws Exception
-            {
-              return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable())
-              )
-                           .map(
-                               new ResultSetMapper<DataSegment>()
-                               {
-                                 @Override
-                                 public DataSegment map(int index, ResultSet r, StatementContext ctx)
-                                     throws SQLException
-                                 {
-                                   try {
-                                     return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                                   }
-                                   catch (IOException e) {
-                                     throw new SQLException(e);
-                                   }
-                                 }
-                               }
-                           )
-                           .list();
-            }
-          }
-      );
+	@Override
+	public Collection<String> getAllDatasourceNames()
+	{
+		synchronized (lock) {
+			return dbi.withHandle(
+					new HandleCallback<List<String>>()
+					{
+						@Override
+						public List<String> withHandle(Handle handle) throws Exception
+						{
+							return handle.createQuery(
+									String.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
+									)
+									.fold(
+											Lists.<String>newArrayList(),
+											new Folder3<ArrayList<String>, Map<String, Object>>()
+											{
+												@Override
+												public ArrayList<String> fold(
+														ArrayList<String> druidDataSources,
+														Map<String, Object> stringObjectMap,
+														FoldController foldController,
+														StatementContext statementContext
+														) throws SQLException
+														{
+													druidDataSources.add(
+															MapUtils.getString(stringObjectMap, "datasource")
+															);
+													return druidDataSources;
+														}
+											}
+											);
 
-      if (segments == null || segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return;
-      }
+						}
+					}
+					);
+		}
+	}
 
-      log.info("Polled and found %,d segments in the database", segments.size());
+	@Override
+	public void poll()
+	{
+		try {
+			if (!started) {
+				return;
+			}
 
-      for (final DataSegment segment : segments) {
-        String datasourceName = segment.getDataSource();
+			ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<String, DruidDataSource>();
 
-        DruidDataSource dataSource = newDataSources.get(datasourceName);
-        if (dataSource == null) {
-          dataSource = new DruidDataSource(
-              datasourceName,
-              ImmutableMap.of("created", new DateTime().toString())
-          );
+			List<DataSegment> segments = dbi.withHandle(
+					new HandleCallback<List<DataSegment>>()
+					{
+						@Override
+						public List<DataSegment> withHandle(Handle handle) throws Exception
+						{
+							String query = "";
 
-          Object shouldBeNull = newDataSources.put(
-              datasourceName,
-              dataSource
-          );
-          if (shouldBeNull != null) {
-            log.warn(
-                "Just put key[%s] into dataSources and what was there wasn't null!?  It was[%s]",
-                datasourceName,
-                shouldBeNull
-            );
-          }
-        }
+							if(!SQLMetadataConnector.isSQLServer(dbi)){
+								query = "SELECT payload FROM %s WHERE used=true";
+							}else{
+								query = "SELECT payload FROM %s WHERE used=1";
+							}
+							
+							return handle.createQuery(
+									String.format("SELECT payload FROM %s WHERE used=1", getSegmentsTable())
+									)
+									.map(
+											new ResultSetMapper<DataSegment>()
+											{
+												@Override
+												public DataSegment map(int index, ResultSet r, StatementContext ctx)
+														throws SQLException
+												{
+													try {
+														return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+													}
+													catch (IOException e) {
+														throw new SQLException(e);
+													}
+												}
+											}
+											)
+											.list();
+						}
+					}
+					);
 
-        if (!dataSource.getSegments().contains(segment)) {
-          dataSource.addSegment(segment.getIdentifier(), segment);
-        }
-      }
+			if (segments == null || segments.isEmpty()) {
+				log.warn("No segments found in the database!");
+				return;
+			}
 
-      synchronized (lock) {
-        if (started) {
-          dataSources.set(newDataSources);
-        }
-      }
-    }
-    catch (Exception e) {
-      log.error(e, "Problem polling DB.");
-    }
-  }
+			log.info("Polled and found %,d segments in the database", segments.size());
 
-  private String getSegmentsTable()
-  {
-    return dbTables.get().getSegmentsTable();
-  }
+			for (final DataSegment segment : segments) {
+				String datasourceName = segment.getDataSource();
+
+				DruidDataSource dataSource = newDataSources.get(datasourceName);
+				if (dataSource == null) {
+					dataSource = new DruidDataSource(
+							datasourceName,
+							ImmutableMap.of("created", new DateTime().toString())
+							);
+
+					Object shouldBeNull = newDataSources.put(
+							datasourceName,
+							dataSource
+							);
+					if (shouldBeNull != null) {
+						log.warn(
+								"Just put key[%s] into dataSources and what was there wasn't null!?  It was[%s]",
+								datasourceName,
+								shouldBeNull
+								);
+					}
+				}
+
+				if (!dataSource.getSegments().contains(segment)) {
+					dataSource.addSegment(segment.getIdentifier(), segment);
+				}
+			}
+
+			synchronized (lock) {
+				if (started) {
+					dataSources.set(newDataSources);
+				}
+			}
+		}
+		catch (Exception e) {
+			log.error(e, "Problem polling DB.");
+		}
+	}
+
+	private String getSegmentsTable()
+	{
+		return dbTables.get().getSegmentsTable();
+	}
 }

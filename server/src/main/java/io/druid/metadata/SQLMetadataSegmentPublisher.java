@@ -22,8 +22,10 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -35,81 +37,92 @@ import java.util.Map;
 
 public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
 {
-  private static final Logger log = new Logger(SQLMetadataSegmentPublisher.class);
+	private static final Logger log = new Logger(SQLMetadataSegmentPublisher.class);
 
-  private final ObjectMapper jsonMapper;
-  private final MetadataStorageTablesConfig config;
-  private final SQLMetadataConnector connector;
-  private final String statement;
+	private final ObjectMapper jsonMapper;
+	private final MetadataStorageTablesConfig config;
+	private final SQLMetadataConnector connector;
+	private final String statement;
 
-  @Inject
-  public SQLMetadataSegmentPublisher(
-      ObjectMapper jsonMapper,
-      MetadataStorageTablesConfig config,
-      SQLMetadataConnector connector
-  )
-  {
-    this.jsonMapper = jsonMapper;
-    this.config = config;
-    this.connector = connector;
-    this.statement = String.format(
-        "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-        config.getSegmentsTable()
-    );
-  }
+	@Inject
+	public SQLMetadataSegmentPublisher(
+			ObjectMapper jsonMapper,
+			MetadataStorageTablesConfig config,
+			SQLMetadataConnector connector
+			)
+	{
+		this.jsonMapper = jsonMapper;
+		this.config = config;
+		this.connector = connector;
 
-  @Override
-  public void publishSegment(final DataSegment segment) throws IOException
-  {
-    try {
-      final DBI dbi = connector.getDBI();
-      List<Map<String, Object>> exists = dbi.withHandle(
-          new HandleCallback<List<Map<String, Object>>>()
-          {
-            @Override
-            public List<Map<String, Object>> withHandle(Handle handle) throws Exception
-            {
-              return handle.createQuery(
-                  String.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
-              )
-                           .bind("id", segment.getIdentifier())
-                           .list();
-            }
-          }
-      );
+		if(!SQLMetadataConnector.isSQLServer(connector.getDBI())){
 
-      if (!exists.isEmpty()) {
-        log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
-        return;
-      }
+			this.statement = String.format(
+					"INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+							+ "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+							config.getSegmentsTable()
+					);
 
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle) throws Exception
-            {
-              handle.createStatement(statement)
-                    .bind("id", segment.getIdentifier())
-                    .bind("dataSource", segment.getDataSource())
-                    .bind("created_date", new DateTime().toString())
-                    .bind("start", segment.getInterval().getStart().toString())
-                    .bind("end", segment.getInterval().getEnd().toString())
-                    .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-                    .bind("version", segment.getVersion())
-                    .bind("used", true)
-                    .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                    .execute();
+		}else{
+			this.statement = String.format(
+					"INSERT INTO %s (id, dataSource, created_date, start, [end], partitioned, version, used, payload) "
+							+ "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+							config.getSegmentsTable()
+					);
+		}
+	}
 
-              return null;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Exception inserting into DB");
-      throw new RuntimeException(e);
-    }
-  }
+	@Override
+	public void publishSegment(final DataSegment segment) throws IOException
+	{
+		try {
+			final DBI dbi = connector.getDBI();
+			List<Map<String, Object>> exists = dbi.withHandle(
+					new HandleCallback<List<Map<String, Object>>>()
+					{
+						@Override
+						public List<Map<String, Object>> withHandle(Handle handle) throws Exception
+						{
+							return handle.createQuery(
+									String.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
+									)
+									.bind("id", segment.getIdentifier())
+									.list();
+						}
+					}
+					);
+
+			if (!exists.isEmpty()) {
+				log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
+				return;
+			}
+
+			dbi.withHandle(
+					new HandleCallback<Void>()
+					{
+						@Override
+						public Void withHandle(Handle handle) throws Exception
+						{
+							handle.createStatement(statement)
+							.bind("id", segment.getIdentifier())
+							.bind("dataSource", segment.getDataSource())
+							.bind("created_date", new DateTime().toString())
+							.bind("start", segment.getInterval().getStart().toString())
+							.bind("end", segment.getInterval().getEnd().toString())
+							.bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? (!SQLMetadataConnector.isSQLServer(dbi) ? false : 0) :(!SQLMetadataConnector.isSQLServer(dbi) ? true : 1))
+							.bind("version", segment.getVersion())
+							.bind("used", !SQLMetadataConnector.isSQLServer(dbi) ? true : 1)
+							.bind("payload", jsonMapper.writeValueAsBytes(segment))
+							.execute();
+
+							return null;
+						}
+					}
+					);
+		}
+		catch (Exception e) {
+			log.error(e, "Exception inserting into DB");
+			throw new RuntimeException(e);
+		}
+	}
 }

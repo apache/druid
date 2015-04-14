@@ -35,7 +35,8 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "loadForever", value = ForeverLoadRule.class),
     @JsonSubTypes.Type(name = "dropByPeriod", value = PeriodDropRule.class),
     @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class),
-    @JsonSubTypes.Type(name = "dropForever", value = ForeverDropRule.class)
+    @JsonSubTypes.Type(name = "dropForever", value = ForeverDropRule.class),
+    @JsonSubTypes.Type(name = "dropByRetentionPeriod", value = RetentionPeriodDropRule.class)
 })
 
 public interface Rule

@@ -31,9 +31,6 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import io.druid.audit.AuditEntry;
-import io.druid.audit.AuditInfo;
-import io.druid.audit.AuditManager;
 import io.druid.client.DruidServer;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
@@ -47,8 +44,6 @@ import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.TransactionCallback;
-import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
@@ -132,7 +127,6 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final IDBI dbi;
   private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
-  private final AuditManager auditManager;
 
   private volatile ScheduledExecutorService exec;
 
@@ -145,15 +139,13 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       @Json ObjectMapper jsonMapper,
       Supplier<MetadataRuleManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      SQLMetadataConnector connector,
-      AuditManager auditManager
+      SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
     this.dbi = connector.getDBI();
-    this.auditManager = auditManager;
 
     this.rules = new AtomicReference<>(
         ImmutableMap.<String, List<Rule>>of()
@@ -306,28 +298,17 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     return retVal;
   }
 
-  public boolean overrideRule(final String dataSource, final List<Rule> newRules, final AuditInfo auditInfo)
+  public boolean overrideRule(final String dataSource, final List<Rule> newRules)
   {
     synchronized (lock) {
       try {
-        dbi.inTransaction(
-            new TransactionCallback<Void>()
+        dbi.withHandle(
+            new HandleCallback<Void>()
             {
               @Override
-              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+              public Void withHandle(Handle handle) throws Exception
               {
-                final DateTime auditTime = DateTime.now();
-                auditManager.doAudit(
-                    AuditEntry.builder()
-                              .key(dataSource)
-                              .type("rules")
-                              .auditInfo(auditInfo)
-                              .payload(jsonMapper.writeValueAsString(newRules))
-                              .auditTime(auditTime)
-                              .build(),
-                    handle
-                );
-                String version = auditTime.toString();
+                final String version = new DateTime().toString();
                 handle.createStatement(
                     String.format(
                         "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",

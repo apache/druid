@@ -17,18 +17,21 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
+import io.druid.indexing.overlord.autoscaling.ec2spot.EC2SpotAutoScaler;
 
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * The AutoScaler has the actual methods to provision and terminate worker nodes.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopAutoScaler.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "ec2", value = EC2AutoScaler.class)
+    @JsonSubTypes.Type(name = "ec2", value = EC2AutoScaler.class),
+    @JsonSubTypes.Type(name = "ec2spot", value = EC2SpotAutoScaler.class)
 })
 public interface AutoScaler<T>
 {
