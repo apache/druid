@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.data.IndexedInts;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -108,6 +109,18 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       public Iterator<Integer> iterator()
       {
         return Iterators.singletonIterator(dimensionValueIndex);
+      }
+
+      @Override
+      public void fill(int index, int[] toFill)
+      {
+        throw new UnsupportedOperationException("fill not supported");
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+
       }
     };
   }
