@@ -19,6 +19,7 @@ package io.druid.segment.data;
 
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Floats;
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.segment.CompressedPools;
 import org.junit.After;
 import org.junit.Assert;
@@ -69,6 +70,8 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 
   private void setupSimple(final int chunkSize)
   {
+    CloseQuietly.close(indexed);
+
     vals = new float[]{
         0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f
     };
@@ -94,6 +97,8 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 
   private void makeWithSerde(int chunkSize) throws IOException
   {
+    CloseQuietly.close(indexed);
+
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedFloatsIndexedSupplier theSupplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
         FloatBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
