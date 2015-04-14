@@ -215,6 +215,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
                   CloseQuietly.close((Closeable) metric);
                 }
               }
+              for (Object dimension : dimensions.values()) {
+                if(dimension instanceof Closeable) {
+                  CloseQuietly.close((Closeable) dimension);
+                }
+              }
               done = true;
             }
             return hasNext;

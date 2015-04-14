@@ -43,6 +43,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
@@ -86,9 +87,10 @@ public class SpatialFilterBonusTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
+    final IndexSpec indexSpec = new IndexSpec();
     final IncrementalIndex rtIndex = makeIncrementalIndex();
-    final QueryableIndex mMappedTestIndex = makeQueryableIndex();
-    final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex();
+    final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec);
+    final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec);
     return Arrays.asList(
         new Object[][]{
             {
@@ -222,7 +224,7 @@ public class SpatialFilterBonusTest
     return theIndex;
   }
 
-  private static QueryableIndex makeQueryableIndex() throws IOException
+  private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec) throws IOException
   {
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
@@ -230,11 +232,11 @@ public class SpatialFilterBonusTest
     tmpFile.mkdirs();
     tmpFile.deleteOnExit();
 
-    IndexMerger.persist(theIndex, tmpFile);
+    IndexMerger.persist(theIndex, tmpFile, indexSpec);
     return IndexIO.loadIndex(tmpFile);
   }
 
-  private static QueryableIndex makeMergedQueryableIndex()
+  private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec)
   {
     try {
       IncrementalIndex first = new OnheapIncrementalIndex(
@@ -410,15 +412,16 @@ public class SpatialFilterBonusTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      IndexMerger.persist(first, DATA_INTERVAL, firstFile);
-      IndexMerger.persist(second, DATA_INTERVAL, secondFile);
-      IndexMerger.persist(third, DATA_INTERVAL, thirdFile);
+      IndexMerger.persist(first, DATA_INTERVAL, firstFile, indexSpec);
+      IndexMerger.persist(second, DATA_INTERVAL, secondFile, indexSpec);
+      IndexMerger.persist(third, DATA_INTERVAL, thirdFile, indexSpec);
 
       QueryableIndex mergedRealtime = IndexIO.loadIndex(
           IndexMerger.mergeQueryableIndex(
               Arrays.asList(IndexIO.loadIndex(firstFile), IndexIO.loadIndex(secondFile), IndexIO.loadIndex(thirdFile)),
               METRIC_AGGS,
-              mergedFile
+              mergedFile,
+              indexSpec
           )
       );
 

@@ -1,27 +1,27 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.segment.data;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
@@ -31,35 +31,32 @@ import io.druid.segment.CompressedPools;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
+import java.nio.IntBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- */
-public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
+public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
-  public static final byte LZF_VERSION = 0x1;
   public static final byte version = 0x2;
-  public static final int MAX_LONGS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Longs.BYTES;
+  public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Ints.BYTES;
 
 
   private final int totalSize;
   private final int sizePer;
-  private final GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers;
+  private final GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers;
   private final CompressedObjectStrategy.CompressionStrategy compression;
 
-  CompressedLongsIndexedSupplier(
+  CompressedIntsIndexedSupplier(
       int totalSize,
       int sizePer,
-      GenericIndexed<ResourceHolder<LongBuffer>> baseLongBuffers,
+      GenericIndexed<ResourceHolder<IntBuffer>> baseIntBuffers,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.totalSize = totalSize;
     this.sizePer = sizePer;
-    this.baseLongBuffers = baseLongBuffers;
+    this.baseIntBuffers = baseIntBuffers;
     this.compression = compression;
   }
 
@@ -69,15 +66,15 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
   }
 
   @Override
-  public IndexedLongs get()
+  public IndexedInts get()
   {
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
     if(powerOf2) {
-      return new CompressedIndexedLongs() {
+      return new CompressedIndexedInts() {
         @Override
-        public long get(int index)
+        public int get(int index)
         {
           // optimize division and remainder for powers of 2
           final int bufferNum = index >> div;
@@ -91,13 +88,17 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
         }
       };
     } else {
-      return new CompressedIndexedLongs();
+      return new CompressedIndexedInts();
     }
   }
 
   public long getSerializedSize()
   {
-    return baseLongBuffers.getSerializedSize() + 1 + 4 + 4 + 1;
+    return 1 + // version
+           4 + // totalSize
+           4 + // sizePer
+           1 + // compressionId
+           baseIntBuffers.getSerializedSize(); // data
   }
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
@@ -106,15 +107,15 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    baseLongBuffers.writeToChannel(channel);
+    baseIntBuffers.writeToChannel(channel);
   }
 
-  public CompressedLongsIndexedSupplier convertByteOrder(ByteOrder order)
+  public CompressedIntsIndexedSupplier convertByteOrder(ByteOrder order)
   {
-    return new CompressedLongsIndexedSupplier(
+    return new CompressedIntsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseLongBuffers, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        GenericIndexed.fromIterable(baseIntBuffers, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
         compression
     );
   }
@@ -122,12 +123,12 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
   /**
    * For testing.  Do not use unless you like things breaking
    */
-  GenericIndexed<ResourceHolder<LongBuffer>> getBaseLongBuffers()
+  GenericIndexed<ResourceHolder<IntBuffer>> getBaseIntBuffers()
   {
-    return baseLongBuffers;
+    return baseIntBuffers;
   }
 
-  public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedIntsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     byte versionFromBuffer = buffer.get();
 
@@ -135,20 +136,10 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
-      return new CompressedLongsIndexedSupplier(
+      return new CompressedIntsIndexedSupplier(
           totalSize,
           sizePer,
-        GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
-        compression
-      );
-    } else if (versionFromBuffer == LZF_VERSION) {
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
-      return new CompressedLongsIndexedSupplier(
-          totalSize,
-          sizePer,
-          GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          GenericIndexed.read(buffer, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
           compression
       );
     }
@@ -156,31 +147,31 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedLongsIndexedSupplier fromLongBuffer(LongBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
+  public static CompressedIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
   {
-    return fromLongBuffer(buffer, MAX_LONGS_IN_BUFFER, byteOrder, compression);
+    return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression);
   }
 
-  public static CompressedLongsIndexedSupplier fromLongBuffer(
-      final LongBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+  public static CompressedIntsIndexedSupplier fromIntBuffer(
+      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
-        chunkFactor <= MAX_LONGS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
+        chunkFactor <= MAX_INTS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
     );
 
-    return new CompressedLongsIndexedSupplier(
+    return new CompressedIntsIndexedSupplier(
         buffer.remaining(),
         chunkFactor,
         GenericIndexed.fromIterable(
-            new Iterable<ResourceHolder<LongBuffer>>()
+            new Iterable<ResourceHolder<IntBuffer>>()
             {
               @Override
-              public Iterator<ResourceHolder<LongBuffer>> iterator()
+              public Iterator<ResourceHolder<IntBuffer>> iterator()
               {
-                return new Iterator<ResourceHolder<LongBuffer>>()
+                return new Iterator<ResourceHolder<IntBuffer>>()
                 {
-                  LongBuffer myBuffer = buffer.asReadOnlyBuffer();
+                  IntBuffer myBuffer = buffer.asReadOnlyBuffer();
 
                   @Override
                   public boolean hasNext()
@@ -189,9 +180,9 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
                   }
 
                   @Override
-                  public ResourceHolder<LongBuffer> next()
+                  public ResourceHolder<IntBuffer> next()
                   {
-                    LongBuffer retVal = myBuffer.asReadOnlyBuffer();
+                    IntBuffer retVal = myBuffer.asReadOnlyBuffer();
 
                     if (chunkFactor < myBuffer.remaining()) {
                       retVal.limit(retVal.position() + chunkFactor);
@@ -209,30 +200,30 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
                 };
               }
             },
-            CompressedLongBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+            CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
         ),
         compression
     );
   }
 
-  public static CompressedLongsIndexedSupplier fromList(
-      final List<Long> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+  public static CompressedIntsIndexedSupplier fromList(
+      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     Preconditions.checkArgument(
-        chunkFactor <= MAX_LONGS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
+        chunkFactor <= MAX_INTS_IN_BUFFER, "Chunks must be <= 64k bytes. chunkFactor was[%s]", chunkFactor
     );
 
-    return new CompressedLongsIndexedSupplier(
+    return new CompressedIntsIndexedSupplier(
         list.size(),
         chunkFactor,
         GenericIndexed.fromIterable(
-            new Iterable<ResourceHolder<LongBuffer>>()
+            new Iterable<ResourceHolder<IntBuffer>>()
             {
               @Override
-              public Iterator<ResourceHolder<LongBuffer>> iterator()
+              public Iterator<ResourceHolder<IntBuffer>> iterator()
               {
-                return new Iterator<ResourceHolder<LongBuffer>>()
+                return new Iterator<ResourceHolder<IntBuffer>>()
                 {
                   int position = 0;
 
@@ -243,15 +234,15 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
                   }
 
                   @Override
-                  public ResourceHolder<LongBuffer> next()
+                  public ResourceHolder<IntBuffer> next()
                   {
-                    LongBuffer retVal = LongBuffer.allocate(chunkFactor);
+                    IntBuffer retVal = IntBuffer.allocate(chunkFactor);
 
                     if (chunkFactor > list.size() - position) {
                       retVal.limit(list.size() - position);
                     }
-                    final List<Long> longs = list.subList(position, position + retVal.remaining());
-                    for (long value : longs) {
+                    final List<Integer> ints = list.subList(position, position + retVal.remaining());
+                    for(int value : ints) {
                       retVal.put(value);
                     }
                     retVal.rewind();
@@ -268,19 +259,19 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
                 };
               }
             },
-            CompressedLongBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
+            CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
         ),
         compression
     );
   }
 
-  private class CompressedIndexedLongs implements IndexedLongs
+  private class CompressedIndexedInts implements IndexedInts
   {
-    final Indexed<ResourceHolder<LongBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
+    final Indexed<ResourceHolder<IntBuffer>> singleThreadedIntBuffers = baseIntBuffers.singleThreaded();
 
     int currIndex = -1;
-    ResourceHolder<LongBuffer> holder;
-    LongBuffer buffer;
+    ResourceHolder<IntBuffer> holder;
+    IntBuffer buffer;
 
     @Override
     public int size()
@@ -289,7 +280,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     }
 
     @Override
-    public long get(int index)
+    public int get(int index)
     {
       final int bufferNum = index / sizePer;
       final int bufferIndex = index % sizePer;
@@ -302,7 +293,13 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     }
 
     @Override
-    public void fill(int index, long[] toFill)
+    public Iterator<Integer> iterator()
+    {
+      return new IndexedIntsIterator(this);
+    }
+
+    @Override
+    public void fill(int index, int[] toFill)
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
@@ -335,30 +332,18 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     protected void loadBuffer(int bufferNum)
     {
       CloseQuietly.close(holder);
-      holder = singleThreadedLongBuffers.get(bufferNum);
+      holder = singleThreadedIntBuffers.get(bufferNum);
       buffer = holder.get();
       currIndex = bufferNum;
     }
 
     @Override
-    public int binarySearch(long key)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int binarySearch(long key, int from, int to)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public String toString()
     {
-      return "CompressedLongsIndexedSupplier_Anonymous{" +
+      return "CompressedIntsIndexedSupplier_Anonymous{" +
              "currIndex=" + currIndex +
              ", sizePer=" + sizePer +
-             ", numChunks=" + singleThreadedLongBuffers.size() +
+             ", numChunks=" + singleThreadedIntBuffers.size() +
              ", totalSize=" + totalSize +
              '}';
     }

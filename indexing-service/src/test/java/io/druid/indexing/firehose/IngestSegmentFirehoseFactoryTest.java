@@ -61,6 +61,7 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.loading.DataSegmentArchiver;
@@ -100,9 +101,11 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class IngestSegmentFirehoseFactoryTest
 {
+
   @Parameterized.Parameters(name = "{1}")
   public static Collection<Object[]> constructorFeeder() throws IOException
   {
+    final IndexSpec indexSpec = new IndexSpec();
 
     final HeapMemoryTaskStorage ts = new HeapMemoryTaskStorage(
         new TaskStorageConfig(null)
@@ -132,7 +135,7 @@ public class IngestSegmentFirehoseFactoryTest
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOException(String.format("Could not create directory at [%s]", persistDir.getAbsolutePath()));
     }
-    IndexMerger.persist(index, persistDir);
+    IndexMerger.persist(index, persistDir, indexSpec);
 
     final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)

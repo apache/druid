@@ -35,6 +35,7 @@ import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexSpec;
 import io.druid.timeline.DataSegment;
 import junit.framework.Assert;
 import org.easymock.EasyMock;
@@ -64,6 +65,8 @@ public class SimpleResourceManagementStrategyTest
   {
     autoScaler = EasyMock.createMock(AutoScaler.class);
 
+    final IndexSpec indexSpec = new IndexSpec();
+
     testTask = new TestMergeTask(
         "task1",
         "dummyDs",
@@ -80,7 +83,8 @@ public class SimpleResourceManagementStrategyTest
                 0
             )
         ),
-        Lists.<AggregatorFactory>newArrayList()
+        Lists.<AggregatorFactory>newArrayList(),
+        indexSpec
     );
 
     simpleResourceManagementConfig = new SimpleResourceManagementConfig()

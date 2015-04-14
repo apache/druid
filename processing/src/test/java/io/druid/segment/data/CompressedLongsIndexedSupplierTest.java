@@ -69,6 +69,8 @@ public class CompressedLongsIndexedSupplierTest extends CompressionStrategyTest
 
   private void setupSimple(final int chunkSize)
   {
+    CloseQuietly.close(indexed);
+
     vals = new long[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16};
 
     supplier = CompressedLongsIndexedSupplier.fromLongBuffer(
@@ -90,6 +92,8 @@ public class CompressedLongsIndexedSupplierTest extends CompressionStrategyTest
 
   private void makeWithSerde(final int chunkSize) throws IOException
   {
+    CloseQuietly.close(indexed);
+
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedLongsIndexedSupplier theSupplier = CompressedLongsIndexedSupplier.fromLongBuffer(
         LongBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy

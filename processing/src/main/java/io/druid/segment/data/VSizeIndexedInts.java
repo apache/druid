@@ -151,7 +151,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return numBytes;
   }
 
-  public int getSerializedSize()
+  public long getSerializedSize()
   {
     // version, numBytes, size, remaining
     return 1 + 1 + 4 + buffer.remaining();
@@ -190,4 +190,45 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
+  @Override
+  public void fill(int index, int[] toFill)
+  {
+    throw new UnsupportedOperationException("fill not supported");
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+
+  }
+
+  public WritableSupplier<IndexedInts> asWritableSupplier() {
+    return new VSizeIndexedIntsSupplier(this);
+  }
+
+  public static class VSizeIndexedIntsSupplier implements WritableSupplier<IndexedInts> {
+    final VSizeIndexedInts delegate;
+
+    public VSizeIndexedIntsSupplier(VSizeIndexedInts delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public long getSerializedSize()
+    {
+      return delegate.getSerializedSize();
+    }
+
+    @Override
+    public void writeToChannel(WritableByteChannel channel) throws IOException
+    {
+      delegate.writeToChannel(channel);
+    }
+
+    @Override
+    public IndexedInts get()
+    {
+      return delegate;
+    }
+  }
 }

@@ -104,10 +104,24 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|The task type, this should always be "index".|None.||yes|
+|type|The task type, this should always be "index".|None.|yes|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment. Set this to -1 to use numShards instead for sharding.|5000000|no|
 |rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|500000|no|
 |numShards|Directly specify the number of shards to create. You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
+|indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
+
+#### IndexSpec
+
+The indexSpec defines segment storage format options to be used at indexing
+time, such as bitmap type, and column compression formats.
+
+The indexSpec is optional and default parameters will be used if not specified.
+
+|property|description|possible values|default|required?|
+|--------|-----------|---------------|-------|---------|
+|bitmap|type of bitmap compression to use for inverted indices.|`"concise"`, `"roaring"`|`"concise"` or the value of `druid.processing.bitmap.type`, if specified|no|
+|dimensionCompression|compression format for dimension columns (currently only affects single-value dimensions, multi-value dimensions are always uncompressed)|`"uncompressed"`, `"lz4"`, `"lzf"`|`"lz4"`|no|
+|metricCompression|compression format for metric columns, defaults to LZ4|`"lz4"`, `"lzf"`|`"lz4"`|no|
 
 ### Index Hadoop Task
 

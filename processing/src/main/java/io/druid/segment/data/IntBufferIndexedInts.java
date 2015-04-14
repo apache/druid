@@ -21,6 +21,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import io.druid.collections.IntList;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Iterator;
@@ -119,5 +120,17 @@ public class IntBufferIndexedInts implements IndexedInts, Comparable<IntBufferIn
     {
       return Ordering.natural().nullsFirst().compare(o1, o2);
     }
+  }
+
+  @Override
+  public void fill(int index, int[] toFill)
+  {
+    throw new UnsupportedOperationException("fill not supported");
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+
   }
 }
