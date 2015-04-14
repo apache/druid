@@ -20,6 +20,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -61,8 +62,12 @@ import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
+import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
@@ -121,9 +126,11 @@ public class IndexIO
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
   private static final ObjectMapper mapper;
-  private static final BitmapSerdeFactory bitmapSerdeFactory;
 
   protected static final ColumnConfig columnConfig;
+
+  @Deprecated // specify bitmap type in IndexSpec instead
+  protected static final BitmapSerdeFactory CONFIGURED_BITMAP_SERDE_FACTORY;
 
   static {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
@@ -140,6 +147,7 @@ public class IndexIO
                 );
                 binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
 
+                // this property is deprecated, use IndexSpec instead
                 JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
               }
             }
@@ -147,7 +155,7 @@ public class IndexIO
     );
     mapper = injector.getInstance(ObjectMapper.class);
     columnConfig = injector.getInstance(ColumnConfig.class);
-    bitmapSerdeFactory = injector.getInstance(BitmapSerdeFactory.class);
+    CONFIGURED_BITMAP_SERDE_FACTORY = injector.getInstance(BitmapSerdeFactory.class);
   }
 
   public static QueryableIndex loadIndex(File inDir) throws IOException
@@ -186,7 +194,7 @@ public class IndexIO
     }
   }
 
-  public static boolean convertSegment(File toConvert, File converted) throws IOException
+  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
 
@@ -205,11 +213,12 @@ public class IndexIO
         log.info("Old version, re-persisting.");
         IndexMerger.append(
             Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
-            converted
+            converted,
+            indexSpec
         );
         return true;
       case 8:
-        DefaultIndexIOHandler.convertV8toV9(toConvert, converted);
+        DefaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec);
         return true;
       default:
         log.info("Version[%s], skipping.", version);
@@ -328,7 +337,7 @@ public class IndexIO
       return retVal;
     }
 
-    public static void convertV8toV9(File v8Dir, File v9Dir) throws IOException
+    public static void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec) throws IOException
     {
       log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
 
@@ -353,6 +362,8 @@ public class IndexIO
 
       Map<String, GenericIndexed<ImmutableBitmap>> bitmapIndexes = Maps.newHashMap();
       final ByteBuffer invertedBuffer = v8SmooshedFiles.mapFile("inverted.drd");
+      BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
+
       while (invertedBuffer.hasRemaining()) {
         final String dimName = serializerUtils.readString(invertedBuffer);
         bitmapIndexes.put(
@@ -404,7 +415,7 @@ public class IndexIO
             continue;
           }
 
-          VSizeIndexedInts singleValCol = null;
+          List<Integer> singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
           ImmutableRTree spatialIndex = spatialIndexes.get(dimension);
@@ -468,41 +479,61 @@ public class IndexIO
             }
 
             final VSizeIndexed finalMultiValCol = multiValCol;
-            singleValCol = VSizeIndexedInts.fromList(
-                new AbstractList<Integer>()
-                {
-                  @Override
-                  public Integer get(int index)
-                  {
-                    final VSizeIndexedInts ints = finalMultiValCol.get(index);
-                    return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
-                  }
+            singleValCol = new AbstractList<Integer>()
+            {
+              @Override
+              public Integer get(int index)
+              {
+                final VSizeIndexedInts ints = finalMultiValCol.get(index);
+                return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
+              }
 
-                  @Override
-                  public int size()
-                  {
-                    return finalMultiValCol.size();
-                  }
-                },
-                dictionary.size()
-            );
+              @Override
+              public int size()
+              {
+                return finalMultiValCol.size();
+              }
+            };
+
             multiValCol = null;
           } else {
             builder.setHasMultipleValues(true);
           }
 
-          builder.addSerde(
-              new DictionaryEncodedColumnPartSerde(
-                  dictionary,
-                  singleValCol,
-                  multiValCol,
-                  bitmapSerdeFactory,
-                  bitmaps,
-                  spatialIndex
-              )
-          );
+          final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompressionStrategy();
 
-          final ColumnDescriptor serdeficator = builder.build();
+          final DictionaryEncodedColumnPartSerde.Builder columnPartBuilder = DictionaryEncodedColumnPartSerde
+              .builder()
+              .withDictionary(dictionary)
+              .withBitmapSerdeFactory(bitmapSerdeFactory)
+              .withBitmaps(bitmaps)
+              .withSpatialIndex(spatialIndex)
+              .withByteOrder(BYTE_ORDER);
+
+          if (singleValCol != null) {
+            if (compressionStrategy != null) {
+              columnPartBuilder.withSingleValuedColumn(
+                  CompressedVSizeIntsIndexedSupplier.fromList(
+                      singleValCol,
+                      dictionary.size(),
+                      CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
+                      BYTE_ORDER,
+                      compressionStrategy
+                  )
+              );
+            } else {
+              columnPartBuilder.withSingleValuedColumn(VSizeIndexedInts.fromList(singleValCol, dictionary.size()));
+            }
+          } else {
+            if(compressionStrategy != null) {
+              log.info("Compression not supported for multi-value dimensions, defaulting to `uncompressed` for dimension[%s]", dimension);
+            }
+            columnPartBuilder.withMultiValuedColumn(multiValCol);
+          }
+
+          final ColumnDescriptor serdeficator = builder
+              .addSerde(columnPartBuilder.build())
+              .build();
 
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           serializerUtils.writeString(baos, mapper.writeValueAsString(serdeficator));
@@ -663,7 +694,9 @@ public class IndexIO
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
                     null,
-                    index.getDimColumn(dimension),
+                    Suppliers.<IndexedMultivalue<IndexedInts>>ofInstance(
+                        index.getDimColumn(dimension)
+                    ),
                     columnConfig.columnCacheSizeBytes()
                 )
             )

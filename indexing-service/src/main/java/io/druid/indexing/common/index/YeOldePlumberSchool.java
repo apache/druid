@@ -158,7 +158,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            IndexMaker.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload);
+            IndexMaker.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
           }
 
           // Map merged segment so we can extract dimensions
@@ -205,7 +205,8 @@ public class YeOldePlumberSchool implements PlumberSchool
           try {
             IndexMaker.persist(
                 indexToPersist.getIndex(),
-                dirToPersist
+                dirToPersist,
+                config.getIndexSpec()
             );
 
             indexToPersist.swapSegment(null);

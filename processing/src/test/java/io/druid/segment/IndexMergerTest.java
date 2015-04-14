@@ -26,22 +26,61 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.column.Column;
+import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
+import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import junit.framework.Assert;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 
-/**
- */
+@RunWith(Parameterized.class)
 public class IndexMergerTest
 {
-  static {
+  @Parameterized.Parameters(name = "{index}: bitmap={0}, compression={1}")
+  public static Collection<Object[]> data()
+  {
+    return Arrays.asList(
+        new Object[][]{
+            { null, null },
+            { new RoaringBitmapSerdeFactory(), CompressedObjectStrategy.CompressionStrategy.LZ4 },
+            { new ConciseBitmapSerdeFactory(), CompressedObjectStrategy.CompressionStrategy.LZ4 },
+            { new RoaringBitmapSerdeFactory(), CompressedObjectStrategy.CompressionStrategy.LZF},
+            { new ConciseBitmapSerdeFactory(), CompressedObjectStrategy.CompressionStrategy.LZF},
+        }
+    );
+  }
 
+  static IndexSpec makeIndexSpec(
+      BitmapSerdeFactory bitmapSerdeFactory,
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy
+  )
+  {
+    if(bitmapSerdeFactory != null || compressionStrategy != null) {
+      return new IndexSpec(
+          bitmapSerdeFactory,
+          compressionStrategy.name().toLowerCase(),
+          null
+      );
+    } else {
+      return new IndexSpec();
+    }
+  }
+
+  private final IndexSpec indexSpec;
+
+  public IndexMergerTest(BitmapSerdeFactory bitmapSerdeFactory, CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  {
+    this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy);
   }
 
   @Test
@@ -54,7 +93,7 @@ public class IndexMergerTest
 
     final File tempDir = Files.createTempDir();
     try {
-      QueryableIndex index = IndexIO.loadIndex(IndexMerger.persist(toPersist, tempDir));
+      QueryableIndex index = IndexIO.loadIndex(IndexMerger.persist(toPersist, tempDir, indexSpec));
 
       Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
@@ -94,13 +133,13 @@ public class IndexMergerTest
     final File tempDir2 = Files.createTempDir();
     final File mergedDir = Files.createTempDir();
     try {
-      QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tempDir1));
+      QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tempDir1, indexSpec));
 
       Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
       Assert.assertEquals(3, index1.getColumnNames().size());
 
-      QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2));
+      QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist2, tempDir2, indexSpec));
 
       Assert.assertEquals(2, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
       Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
@@ -110,7 +149,8 @@ public class IndexMergerTest
           IndexMerger.mergeQueryableIndex(
               Arrays.asList(index1, index2),
               new AggregatorFactory[]{new CountAggregatorFactory("count")},
-              mergedDir
+              mergedDir,
+              indexSpec
           )
       );
 
@@ -151,10 +191,10 @@ public class IndexMergerTest
           )
       );
 
-      final QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir1));
-      final QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir2));
+      final QueryableIndex index1 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir1, indexSpec));
+      final QueryableIndex index2 = IndexIO.loadIndex(IndexMerger.persist(toPersist1, tmpDir2, indexSpec));
       final QueryableIndex merged = IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3)
+          IndexMerger.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3, indexSpec)
       );
 
       Assert.assertEquals(1, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());

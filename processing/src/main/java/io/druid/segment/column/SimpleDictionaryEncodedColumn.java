@@ -17,24 +17,25 @@
 
 package io.druid.segment.column;
 
+import com.metamx.common.guava.CloseQuietly;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.VSizeIndexed;
-import io.druid.segment.data.VSizeIndexedInts;
+import io.druid.segment.data.IndexedMultivalue;
 
 import java.io.IOException;
 
 /**
 */
-public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
+public class SimpleDictionaryEncodedColumn
+    implements DictionaryEncodedColumn
 {
-  private final VSizeIndexedInts column;
-  private final VSizeIndexed multiValueColumn;
+  private final IndexedInts column;
+  private final IndexedMultivalue<IndexedInts> multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
-      VSizeIndexedInts singleValueColumn,
-      VSizeIndexed multiValueColumn,
+      IndexedInts singleValueColumn,
+      IndexedMultivalue<IndexedInts> multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {
@@ -88,6 +89,13 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn
   @Override
   public void close() throws IOException
   {
-    cachedLookups.close();
+    CloseQuietly.close(cachedLookups);
+
+    if(column != null) {
+      column.close();
+    }
+    if(multiValueColumn != null) {
+      multiValueColumn.close();
+    }
   }
 }

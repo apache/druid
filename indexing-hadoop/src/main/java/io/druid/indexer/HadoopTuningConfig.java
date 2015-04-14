@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
+import io.druid.segment.IndexSpec;
+import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.indexing.TuningConfig;
 import org.joda.time.DateTime;
 
@@ -36,6 +38,7 @@ public class HadoopTuningConfig implements TuningConfig
 {
   private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
+  private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
   private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
   private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
@@ -47,6 +50,7 @@ public class HadoopTuningConfig implements TuningConfig
         new DateTime().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
+        DEFAULT_INDEX_SPEC,
         DEFAULT_ROW_FLUSH_BOUNDARY,
         false,
         true,
@@ -65,6 +69,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final String version;
   private final PartitionsSpec partitionsSpec;
   private final Map<DateTime, List<HadoopyShardSpec>> shardSpecs;
+  private final IndexSpec indexSpec;
   private final int rowFlushBoundary;
   private final boolean leaveIntermediate;
   private final Boolean cleanupOnFailure;
@@ -83,6 +88,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("version") String version,
       final @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
       final @JsonProperty("shardSpecs") Map<DateTime, List<HadoopyShardSpec>> shardSpecs,
+      final @JsonProperty("indexSpec") IndexSpec indexSpec,
       final @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
@@ -100,6 +106,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.version = version == null ? new DateTime().toString() : version;
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
+    this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.rowFlushBoundary = maxRowsInMemory == null ? DEFAULT_ROW_FLUSH_BOUNDARY : maxRowsInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
@@ -137,6 +144,12 @@ public class HadoopTuningConfig implements TuningConfig
   public Map<DateTime, List<HadoopyShardSpec>> getShardSpecs()
   {
     return shardSpecs;
+  }
+
+  @JsonProperty
+  public IndexSpec getIndexSpec()
+  {
+    return indexSpec;
   }
 
   @JsonProperty
@@ -210,6 +223,7 @@ public class HadoopTuningConfig implements TuningConfig
         version,
         partitionsSpec,
         shardSpecs,
+        indexSpec,
         rowFlushBoundary,
         leaveIntermediate,
         cleanupOnFailure,
@@ -231,6 +245,7 @@ public class HadoopTuningConfig implements TuningConfig
         ver,
         partitionsSpec,
         shardSpecs,
+        indexSpec,
         rowFlushBoundary,
         leaveIntermediate,
         cleanupOnFailure,
@@ -252,6 +267,7 @@ public class HadoopTuningConfig implements TuningConfig
         version,
         partitionsSpec,
         specs,
+        indexSpec,
         rowFlushBoundary,
         leaveIntermediate,
         cleanupOnFailure,

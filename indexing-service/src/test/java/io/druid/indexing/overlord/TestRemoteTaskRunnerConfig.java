@@ -33,7 +33,8 @@ public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   @Override
   public long getMaxZnodeBytes()
   {
-    return 1000;
+    // make sure this is large enough, otherwise RemoteTaskRunnerTest might fail unexpectedly
+    return 10 * 1024;
   }
 
   @Override
