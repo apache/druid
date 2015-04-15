@@ -40,17 +40,17 @@ public class LongSumAggregatorTest
 
     Assert.assertEquals("billy", agg.getName());
 
-    Assert.assertEquals(0l, agg.get());
-    Assert.assertEquals(0l, agg.get());
-    Assert.assertEquals(0l, agg.get());
+    Assert.assertEquals(0L, agg.get());
+    Assert.assertEquals(0L, agg.get());
+    Assert.assertEquals(0L, agg.get());
     aggregate(selector, agg);
-    Assert.assertEquals(24l, agg.get());
-    Assert.assertEquals(24l, agg.get());
-    Assert.assertEquals(24l, agg.get());
+    Assert.assertEquals(24L, agg.get());
+    Assert.assertEquals(24L, agg.get());
+    Assert.assertEquals(24L, agg.get());
     aggregate(selector, agg);
-    Assert.assertEquals(44l, agg.get());
-    Assert.assertEquals(44l, agg.get());
-    Assert.assertEquals(44l, agg.get());
+    Assert.assertEquals(44L, agg.get());
+    Assert.assertEquals(44L, agg.get());
+    Assert.assertEquals(44L, agg.get());
   }
 
   @Test

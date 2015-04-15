@@ -135,7 +135,7 @@ public class SpatialFilterBonusTest
                 "timestamp", new DateTime("2013-01-01").toString(),
                 "dim", "foo",
                 "dim.geo", "0.0,0.0",
-                "val", 17l
+                "val", 17L
             )
         )
     );
@@ -147,7 +147,7 @@ public class SpatialFilterBonusTest
                 "timestamp", new DateTime("2013-01-02").toString(),
                 "dim", "foo",
                 "dim.geo", "1.0,3.0",
-                "val", 29l
+                "val", 29L
             )
         )
     );
@@ -159,7 +159,7 @@ public class SpatialFilterBonusTest
                 "timestamp", new DateTime("2013-01-03").toString(),
                 "dim", "foo",
                 "dim.geo", "4.0,2.0",
-                "val", 13l
+                "val", 13L
             )
         )
     );
@@ -171,7 +171,7 @@ public class SpatialFilterBonusTest
                 "timestamp", new DateTime("2013-01-04").toString(),
                 "dim", "foo",
                 "dim.geo", "7.0,3.0",
-                "val", 91l
+                "val", 91L
             )
         )
     );
@@ -183,7 +183,7 @@ public class SpatialFilterBonusTest
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "8.0,6.0",
-                "val", 47l
+                "val", 47L
             )
         )
     );
@@ -195,7 +195,7 @@ public class SpatialFilterBonusTest
                 "timestamp", new DateTime("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
-                "val", 501l
+                "val", 501L
             )
         )
     );
@@ -308,7 +308,7 @@ public class SpatialFilterBonusTest
                   "timestamp", new DateTime("2013-01-01").toString(),
                   "dim", "foo",
                   "dim.geo", "0.0,0.0",
-                  "val", 17l
+                  "val", 17L
               )
           )
       );
@@ -320,7 +320,7 @@ public class SpatialFilterBonusTest
                   "timestamp", new DateTime("2013-01-02").toString(),
                   "dim", "foo",
                   "dim.geo", "1.0,3.0",
-                  "val", 29l
+                  "val", 29L
               )
           )
       );
@@ -332,7 +332,7 @@ public class SpatialFilterBonusTest
                   "timestamp", new DateTime("2013-01-03").toString(),
                   "dim", "foo",
                   "dim.geo", "4.0,2.0",
-                  "val", 13l
+                  "val", 13L
               )
           )
       );
@@ -344,7 +344,7 @@ public class SpatialFilterBonusTest
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
-                  "val", 501l
+                  "val", 501L
               )
           )
       );
@@ -356,7 +356,7 @@ public class SpatialFilterBonusTest
                   "timestamp", new DateTime("2013-01-04").toString(),
                   "dim", "foo",
                   "dim.geo", "7.0,3.0",
-                  "val", 91l
+                  "val", 91L
               )
           )
       );
@@ -368,7 +368,7 @@ public class SpatialFilterBonusTest
                   "timestamp", new DateTime("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "8.0,6.0",
-                  "val", 47l
+                  "val", 47L
               )
           )
       );
@@ -459,7 +459,7 @@ public class SpatialFilterBonusTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 3L)
-                            .put("val", 59l)
+                            .put("val", 59L)
                             .build()
             )
         )
@@ -511,7 +511,7 @@ public class SpatialFilterBonusTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 17l)
+                            .put("val", 17L)
                             .build()
             )
         ),
@@ -520,7 +520,7 @@ public class SpatialFilterBonusTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 29l)
+                            .put("val", 29L)
                             .build()
             )
         ),
@@ -529,7 +529,7 @@ public class SpatialFilterBonusTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 13l)
+                            .put("val", 13L)
                             .build()
             )
         ),
@@ -538,7 +538,7 @@ public class SpatialFilterBonusTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 91l)
+                            .put("val", 91L)
                             .build()
             )
         ),
@@ -547,7 +547,7 @@ public class SpatialFilterBonusTest
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                             .put("rows", 1L)
-                            .put("val", 47l)
+                            .put("val", 47L)
                             .build()
             )
         )

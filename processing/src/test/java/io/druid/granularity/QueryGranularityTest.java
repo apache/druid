@@ -501,7 +501,7 @@ public class QueryGranularityTest
     json =   "{ \"type\": \"period\", \"period\": \"P1D\","
            + "\"timeZone\": \"America/Los_Angeles\", \"origin\": \"1970-01-01T00:00:00Z\"}";
     gran = mapper.readValue(json, QueryGranularity.class);
-    Assert.assertEquals(new PeriodGranularity(new Period("P1D"), new DateTime(0l), DateTimeZone.forID("America/Los_Angeles")), gran);
+    Assert.assertEquals(new PeriodGranularity(new Period("P1D"), new DateTime(0L), DateTimeZone.forID("America/Los_Angeles")), gran);
 
     QueryGranularity expected = new PeriodGranularity(
         new Period("P1D"),

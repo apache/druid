@@ -352,7 +352,7 @@ public class IngestSegmentFirehoseFactoryTest
   private static final String DIM_FLOAT_NAME = "testDimFloatName";
   private static final String METRIC_LONG_NAME = "testLongMetric";
   private static final String METRIC_FLOAT_NAME = "testFloatMetric";
-  private static final Long METRIC_LONG_VALUE = 1l;
+  private static final Long METRIC_LONG_VALUE = 1L;
   private static final Float METRIC_FLOAT_VALUE = 1.0f;
   private static final String TIME_COLUMN = "ts";
   private static final Integer MAX_SHARD_NUMBER = 10;
@@ -404,7 +404,7 @@ public class IngestSegmentFirehoseFactoryTest
             MAX_SHARD_NUMBER
         ),
         BINARY_VERSION,
-        0l
+        0L
     );
   }
 

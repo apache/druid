@@ -464,7 +464,7 @@ public class ServerManagerTest
               Arrays.asList("metric1", "metric2"),
               new NoneShardSpec(),
               IndexIO.CURRENT_VERSION_ID,
-              123l
+              123L
           )
       );
     }
@@ -486,7 +486,7 @@ public class ServerManagerTest
               Arrays.asList("metric1", "metric2"),
               new NoneShardSpec(),
               IndexIO.CURRENT_VERSION_ID,
-              123l
+              123L
           )
       );
     }

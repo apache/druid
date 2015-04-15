@@ -279,7 +279,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       byte lookupVal = ByteBitLookup.lookup[UnsignedBytes.toInt(hashedValue[i])];
       switch (lookupVal) {
         case 0:
-          positionOf1 += 8;
+          positionOf1 += (byte)8;
           continue;
         default:
           positionOf1 += lookupVal;
@@ -640,7 +640,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
    * @param offsetDiff The difference in offset between the byteToAdd and the current HyperLogLogCollector
    * @param byteToAdd  The byte to merge into the current HyperLogLogCollector
    */
-  private static int mergeAndStoreByteRegister(
+  private static short mergeAndStoreByteRegister(
       final ByteBuffer storageBuffer,
       final int position,
       final int offsetDiff,
@@ -665,7 +665,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     storageBuffer.put(position, (byte) ((newUpper | newLower) & 0xff));
 
-    int numNoLongerZero = 0;
+    short numNoLongerZero = 0;
     if (upperNibble == 0 && newUpper > 0) {
       ++numNoLongerZero;
     }

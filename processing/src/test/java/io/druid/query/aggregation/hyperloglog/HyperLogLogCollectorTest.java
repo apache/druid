@@ -482,7 +482,7 @@ public class HyperLogLogCollectorTest
     }
 
     final short numNonZeroInRemaining = computeNumNonZero((byte) remainingBytes);
-    numNonZero += (HyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining;
+    numNonZero += (short)((HyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining);
 
     ByteBuffer biggerOffset = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
     biggerOffset.put(HLLCV1.VERSION);
@@ -577,7 +577,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testEstimation() throws Exception
   {
-    Random random = new Random(0l);
+    Random random = new Random(0L);
 
     final int[] valsToCheck = {10, 20, 50, 100, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 1000000, 2000000};
     final double[] expectedVals = {
@@ -603,7 +603,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testEstimationReadOnlyByteBuffers() throws Exception
   {
-    Random random = new Random(0l);
+    Random random = new Random(0L);
 
     final int[] valsToCheck = {10, 20, 50, 100, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 1000000, 2000000};
     final double[] expectedVals = {
@@ -633,7 +633,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testEstimationLimitDifferentFromCapacity() throws Exception
   {
-    Random random = new Random(0l);
+    Random random = new Random(0L);
 
     final int[] valsToCheck = {10, 20, 50, 100, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 1000000, 2000000};
     final double[] expectedVals = {
