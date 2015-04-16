@@ -191,8 +191,6 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
-    Preconditions.checkArgument(byteOrder != null, "byte order must be specified");
-
     this.bitmapSerdeFactory = bitmapSerdeFactory == null
                               ? new BitmapSerde.LegacyBitmapSerdeFactory()
                               : bitmapSerdeFactory;
