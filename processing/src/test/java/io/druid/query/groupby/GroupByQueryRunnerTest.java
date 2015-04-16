@@ -89,11 +89,7 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -1205,6 +1201,60 @@ public class GroupByQueryRunnerTest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
+
+    @Test
+    public void testGroupByWithOrderLimit5()
+    {
+        GroupByQuery query = new GroupByQuery.Builder()
+                .setDataSource(QueryRunnerTestHelper.dataSource)
+                .setGranularity(QueryRunnerTestHelper.dayGran)
+                .setDimensions(
+                        Arrays.<DimensionSpec>asList(
+                                new DefaultDimensionSpec(
+                                        QueryRunnerTestHelper.marketDimension,
+                                        QueryRunnerTestHelper.marketDimension
+                                )
+                        )
+                )
+                .setInterval(QueryRunnerTestHelper.firstToThird)
+                .setLimitSpec(
+                        new DefaultLimitSpec(
+                                Lists.newArrayList(
+                                        new OrderByColumnSpec(
+                                                "rows",
+                                                OrderByColumnSpec.Direction.DESCENDING
+                                        )
+                                ), 2
+                        )
+                )
+                .setAggregatorSpecs(
+                        Lists.<AggregatorFactory>newArrayList(
+                                QueryRunnerTestHelper.rowsCount
+                        )
+                )
+                .build();
+
+        List<Row> expectedResults = Arrays.asList(
+                GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01T00:00:00.000Z", "market", "spot", "rows", 9L),
+                GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02T00:00:00.000Z", "market", "spot", "rows", 9L)
+        );
+
+        Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+        Iterator resultsIter = results.iterator();
+        Iterator expectedResultsIter = expectedResults.iterator();
+
+        final Object next1 = resultsIter.next();
+        Object expectedNext1 = expectedResultsIter.next();
+        Assert.assertEquals("order-limit", expectedNext1, next1);
+
+        final Object next2 = resultsIter.next();
+        Object expectedNext2 = expectedResultsIter.next();
+        Assert.assertNotEquals("order-limit", expectedNext2, next2);
+
+        Row incorrectResultRow = GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01T00:00:00.000Z", "market", "upfront", "rows", 2L);
+        Assert.assertEquals("order-limit", incorrectResultRow, next2);
+
+    }
 
   @Test
   public void testPostAggMergedHavingSpec()
