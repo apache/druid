@@ -81,7 +81,8 @@ public class IndexTaskTest
                     new CSVParseSpec(
                         new TimestampSpec(
                             "ts",
-                            "auto"
+                            "auto",
+                            null
                         ),
                         new DimensionsSpec(
                             Arrays.asList("ts"),
@@ -147,7 +148,8 @@ public class IndexTaskTest
                     new CSVParseSpec(
                         new TimestampSpec(
                             "ts",
-                            "auto"
+                            "auto",
+                            null
                         ),
                         new DimensionsSpec(
                             Arrays.asList("ts"),
@@ -254,7 +256,8 @@ public class IndexTaskTest
                       new CSVParseSpec(
                           new TimestampSpec(
                               "ts",
-                              "auto"
+                              "auto",
+                              null
                           ),
                           new DimensionsSpec(
                               Arrays.asList("dim"),

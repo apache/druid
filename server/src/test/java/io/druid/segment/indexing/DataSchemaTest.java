@@ -40,7 +40,7 @@ public class DataSchemaTest
         "test",
         new StringInputRowParser(
             new JSONParseSpec(
-                new TimestampSpec("time", "auto"),
+                new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(ImmutableList.of("dimB", "dimA"), null, null)
             )
         ),
@@ -64,7 +64,7 @@ public class DataSchemaTest
         "test",
         new StringInputRowParser(
             new JSONParseSpec(
-                new TimestampSpec("time", "auto"),
+                new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "col2"), ImmutableList.of("dimC"), null)
             )
         ),

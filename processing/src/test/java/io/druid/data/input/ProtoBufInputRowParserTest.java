@@ -56,7 +56,7 @@ public class ProtoBufInputRowParserTest
     //configure parser with desc file
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(
         new JSONParseSpec(
-            new TimestampSpec("timestamp", "iso"),
+            new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(Arrays.asList(DIMENSIONS), Arrays.<String>asList(), null)
         ),
         "prototest.desc"

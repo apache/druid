@@ -283,7 +283,7 @@ public class IngestSegmentFirehoseFactoryTest
         ROW_PARSER,
         new MapInputRowParser(
             new JSONParseSpec(
-                new TimestampSpec(TIME_COLUMN, "auto"),
+                new TimestampSpec(TIME_COLUMN, "auto", null),
                 new DimensionsSpec(
                     ImmutableList.<String>of(),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
@@ -366,7 +366,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
       new JSONParseSpec(
-          new TimestampSpec(TIME_COLUMN, "auto"),
+          new TimestampSpec(TIME_COLUMN, "auto", null),
           new DimensionsSpec(
               ImmutableList.of(DIM_NAME),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
