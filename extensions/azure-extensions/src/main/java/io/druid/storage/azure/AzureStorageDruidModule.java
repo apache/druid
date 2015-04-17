@@ -23,9 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -90,10 +88,10 @@ public class AzureStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public CloudStorageAccount getCloudStorageAccount(final AzureAccountConfig config)
+  public CloudBlobClient getCloudBlobClient(final AzureAccountConfig config)
       throws URISyntaxException, InvalidKeyException
   {
-    return CloudStorageAccount.parse(
+    CloudStorageAccount account = CloudStorageAccount.parse(
         String.format(
             STORAGE_CONNECTION_STRING,
             config.getProtocol(),
@@ -101,30 +99,16 @@ public class AzureStorageDruidModule implements DruidModule
             config.getKey()
         )
     );
+
+    return account.createCloudBlobClient();
   }
 
   @Provides
   @LazySingleton
-  public CloudBlobContainer getCloudBlobContainer(
-      final AzureAccountConfig config,
-      final CloudStorageAccount cloudStorageAccount
-  )
-      throws URISyntaxException, StorageException
-  {
-    CloudBlobClient blobClient = cloudStorageAccount.createCloudBlobClient();
-    CloudBlobContainer cloudBlobContainer = blobClient.getContainerReference(config.getContainer());
-
-    cloudBlobContainer.createIfNotExists();
-
-    return cloudBlobContainer;
-  }
-
-  @Provides
-  @LazySingleton
-  public AzureStorageContainer getAzureStorageContainer(
-      final CloudBlobContainer cloudBlobContainer
+  public AzureStorage getAzureStorageContainer(
+      final CloudBlobClient cloudBlobClient
   )
   {
-    return new AzureStorageContainer(cloudBlobContainer);
+    return new AzureStorage(cloudBlobClient);
   }
 }

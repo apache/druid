@@ -20,8 +20,8 @@ package io.druid.storage.azure;
 import com.metamx.common.logger.Logger;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
-import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 
@@ -33,27 +33,36 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AzureStorageContainer
+public class AzureStorage
 {
 
-  private final Logger log = new Logger(AzureStorageContainer.class);
+  private final Logger log = new Logger(AzureStorage.class);
 
-  private final CloudBlobContainer cloudBlobContainer;
+  private final CloudBlobClient cloudBlobClient;
 
-  public AzureStorageContainer(
-      CloudBlobContainer cloudBlobContainer
+  public AzureStorage(
+      CloudBlobClient cloudBlobClient
   )
   {
-    this.cloudBlobContainer = cloudBlobContainer;
+    this.cloudBlobClient = cloudBlobClient;
   }
 
-  public List<String> emptyCloudBlobDirectory(final String path)
+  public CloudBlobContainer getCloudBlobContainer(final String containerName)
+      throws StorageException, URISyntaxException
+  {
+    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
+    cloudBlobContainer.createIfNotExists();
+
+    return cloudBlobContainer;
+  }
+
+  public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
       throws StorageException, URISyntaxException
   {
     List<String> deletedFiles = new ArrayList<>();
+    CloudBlobContainer container = getCloudBlobContainer(containerName);
 
-    for (ListBlobItem blobItem : cloudBlobContainer.listBlobs(path, true, null, null, null))
-    {
+    for (ListBlobItem blobItem : container.listBlobs(virtualDirPath, true, null, null, null)) {
       CloudBlob cloudBlob = (CloudBlob) blobItem;
       log.info("Removing file[%s] from Azure.", cloudBlob.getName());
       if (cloudBlob.deleteIfExists()) {
@@ -61,27 +70,30 @@ public class AzureStorageContainer
       }
     }
 
-    if (deletedFiles.isEmpty())
-    {
-      log.warn("No files were deleted on the following Azure path: [%s]", path);
+    if (deletedFiles.isEmpty()) {
+      log.warn("No files were deleted on the following Azure path: [%s]", virtualDirPath);
     }
 
     return deletedFiles;
 
   }
 
-  public void uploadBlob(final File file, final String destination)
+  public void uploadBlob(final File file, final String containerName, final String blobPath)
       throws IOException, StorageException, URISyntaxException
 
   {
+    CloudBlobContainer container = getCloudBlobContainer(containerName);
     try (FileInputStream stream = new FileInputStream(file)) {
-      CloudBlockBlob blob = cloudBlobContainer.getBlockBlobReference(destination);
+      CloudBlockBlob blob = container.getBlockBlobReference(blobPath);
       blob.upload(stream, file.length());
     }
   }
 
-  public InputStream getBlobInputStream(final String filePath) throws URISyntaxException, StorageException
+  public InputStream getBlobInputStream(final String containerName, final String blobPath)
+      throws URISyntaxException, StorageException
   {
-    return cloudBlobContainer.getBlockBlobReference(filePath).openInputStream();
+    CloudBlobContainer container = getCloudBlobContainer(containerName);
+    return container.getBlockBlobReference(blobPath).openInputStream();
   }
+
 }

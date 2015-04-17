@@ -36,25 +36,28 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
-  private final AzureStorageContainer azureStorageContainer;
+  private final AzureStorage azureStorage;
 
   @Inject
   public AzureDataSegmentPuller(
-      AzureStorageContainer azureStorageContainer
+      AzureStorage azureStorage
   )
   {
-    this.azureStorageContainer = azureStorageContainer;
+    this.azureStorage = azureStorage;
   }
 
-  public com.metamx.common.FileUtils.FileCopyResult getSegmentFiles(final String storageDir, final File outDir)
+  public com.metamx.common.FileUtils.FileCopyResult getSegmentFiles(
+      final String containerName,
+      final String blobPath,
+      final File outDir
+  )
       throws SegmentLoadingException
   {
     prepareOutDir(outDir);
 
     try {
 
-      final String filePath = String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME);
-      final ByteSource byteSource = new AzureByteSource(azureStorageContainer, filePath);
+      final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
       final com.metamx.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
@@ -62,7 +65,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
           true
       );
 
-      log.info("Loaded %d bytes from [%s] to [%s]", result.size(), filePath, outDir.getAbsolutePath());
+      log.info("Loaded %d bytes from [%s] to [%s]", result.size(), blobPath, outDir.getAbsolutePath());
       return result;
     }
     catch (IOException e) {
@@ -74,7 +77,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
             ioe,
             "Failed to remove output directory [%s] for segment pulled from [%s]",
             outDir.getAbsolutePath(),
-            storageDir
+            blobPath
         );
       }
       throw new SegmentLoadingException(e, e.getMessage());
@@ -87,9 +90,10 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
   {
 
     final Map<String, Object> loadSpec = segment.getLoadSpec();
-    final String storageDir = MapUtils.getString(loadSpec, "storageDir");
+    final String containerName = MapUtils.getString(loadSpec, "containerName");
+    final String blobPath = MapUtils.getString(loadSpec, "blobPath");
 
-    getSegmentFiles(storageDir, outDir);
+    getSegmentFiles(containerName, blobPath, outDir);
   }
 
   public void prepareOutDir(final File outDir) throws ISE

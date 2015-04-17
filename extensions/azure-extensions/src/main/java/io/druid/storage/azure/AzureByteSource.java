@@ -28,23 +28,26 @@ import java.net.URISyntaxException;
 public class AzureByteSource extends ByteSource
 {
 
-  final private AzureStorageContainer azureStorageContainer;
-  final private String filePath;
+  final private AzureStorage azureStorage;
+  final private String containerName;
+  final private String blobPath;
 
   public AzureByteSource(
-      AzureStorageContainer azureStorageContainer,
-      String filePath
+      AzureStorage azureStorage,
+      String containerName,
+      String blobPath
   )
   {
-    this.azureStorageContainer = azureStorageContainer;
-    this.filePath = filePath;
+    this.azureStorage = azureStorage;
+    this.containerName = containerName;
+    this.blobPath = blobPath;
   }
 
   @Override
   public InputStream openStream() throws IOException
   {
     try {
-      return azureStorageContainer.getBlobInputStream(filePath);
+      return azureStorage.getBlobInputStream(containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {
       if (AzureUtils.AZURE_RETRY.apply(e)) {

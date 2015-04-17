@@ -29,18 +29,20 @@ import static org.easymock.EasyMock.*;
 
 public class AzureByteSourceTest extends EasyMockSupport
 {
+
   @Test
   public void openStreamTest() throws IOException, URISyntaxException, StorageException
   {
-    final String filePath = "/path/to/file";
-    AzureStorageContainer azureStorageContainer = createMock(AzureStorageContainer.class);
+    final String containerName = "container";
+    final String blobPath = "/path/to/file";
+    AzureStorage azureStorage = createMock(AzureStorage.class);
     InputStream stream = createMock(InputStream.class);
 
-    expect(azureStorageContainer.getBlobInputStream(filePath)).andReturn(stream);
+    expect(azureStorage.getBlobInputStream(containerName, blobPath)).andReturn(stream);
 
     replayAll();
 
-    AzureByteSource byteSource = new AzureByteSource(azureStorageContainer, filePath);
+    AzureByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
 
     byteSource.openStream();
 
@@ -50,14 +52,23 @@ public class AzureByteSourceTest extends EasyMockSupport
   @Test(expected = IOException.class)
   public void openStreamWithRecoverableErrorTest() throws URISyntaxException, StorageException, IOException
   {
-    final String filePath = "/path/to/file";
-    AzureStorageContainer azureStorageContainer = createMock(AzureStorageContainer.class);
+    final String containerName = "container";
+    final String blobPath = "/path/to/file";
+    AzureStorage azureStorage = createMock(AzureStorage.class);
 
-    expect(azureStorageContainer.getBlobInputStream(filePath)).andThrow(new StorageException("", "", 500, null, null));
+    expect(azureStorage.getBlobInputStream(containerName, blobPath)).andThrow(
+        new StorageException(
+            "",
+            "",
+            500,
+            null,
+            null
+        )
+    );
 
     replayAll();
 
-    AzureByteSource byteSource = new AzureByteSource(azureStorageContainer, filePath);
+    AzureByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
 
     byteSource.openStream();
 
