@@ -159,14 +159,16 @@ public class TaskSerdeTest
   @Test
   public void testVersionConverterTaskSerde() throws Exception
   {
-    final VersionConverterTask task = VersionConverterTask.create(
-        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+    final IndexReprocessTask task = IndexReprocessTask.create(
+        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
+        null,
+        false
     );
 
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final VersionConverterTask task2 = (VersionConverterTask) jsonMapper.readValue(json, Task.class);
+    final IndexReprocessTask task2 = (IndexReprocessTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
@@ -181,16 +183,17 @@ public class TaskSerdeTest
   @Test
   public void testVersionConverterSubTaskSerde() throws Exception
   {
-    final VersionConverterTask.SubTask task = new VersionConverterTask.SubTask(
+    final IndexReprocessTask.SubTask task = new IndexReprocessTask.SubTask(
         "myGroupId",
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
-        indexSpec
+        indexSpec,
+        false
     );
 
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final VersionConverterTask.SubTask task2 = (VersionConverterTask.SubTask) jsonMapper.readValue(json, Task.class);
+    final IndexReprocessTask.SubTask task2 = (IndexReprocessTask.SubTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals("myGroupId", task.getGroupId());

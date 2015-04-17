@@ -49,8 +49,9 @@ import io.druid.query.QueryRunner;
     @JsonSubTypes.Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
-    @JsonSubTypes.Type(name = "version_converter", value = VersionConverterTask.class),
-    @JsonSubTypes.Type(name = "version_converter_sub", value = VersionConverterTask.SubTask.class)
+    @JsonSubTypes.Type(name = "version_converter", value = IndexReprocessTask.class), // Backwards compat
+    @JsonSubTypes.Type(name = "index_reprocess", value = IndexReprocessTask.class),
+    @JsonSubTypes.Type(name = "version_converter_sub", value = IndexReprocessTask.SubTask.class)
 })
 public interface Task
 {
