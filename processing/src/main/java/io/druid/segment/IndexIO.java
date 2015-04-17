@@ -71,6 +71,7 @@ import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
+import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
@@ -81,6 +82,7 @@ import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
@@ -92,6 +94,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -196,6 +200,11 @@ public class IndexIO
 
   public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
   {
+    return convertSegment(toConvert, converted, indexSpec, false);
+  }
+
+  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec, boolean forceIfCurrent) throws IOException
+  {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
 
     switch (version) {
@@ -221,8 +230,19 @@ public class IndexIO
         DefaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec);
         return true;
       default:
-        log.info("Version[%s], skipping.", version);
-        return false;
+        if(forceIfCurrent){
+          final QueryableIndexIndexableAdapter indexIndexableAdapter = new QueryableIndexIndexableAdapter(loadIndex(toConvert));
+          IndexMaker.append(
+              Collections.<IndexableAdapter>singletonList(indexIndexableAdapter),
+              converted,
+              indexSpec
+          );
+          DefaultIndexIOHandler.validateTwoSegments(toConvert, converted);
+          return true;
+        } else {
+          log.info("Version[%s], skipping.", version);
+          return false;
+        }
     }
   }
 
@@ -335,6 +355,35 @@ public class IndexIO
       log.debug("Mapped v8 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 
       return retVal;
+    }
+
+    public static void validateTwoSegments(File dir1, File dir2) throws IOException
+    {
+      final QueryableIndexIndexableAdapter adapter1 = new QueryableIndexIndexableAdapter(loadIndex(dir1));
+      final QueryableIndexIndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(loadIndex(dir2));
+      if(adapter1.getNumRows() != adapter2.getNumRows()){
+        throw new IOException("Validation failure - Row count mismatch");
+      }
+      final Iterator<Rowboat> it1 = adapter1.getRows().iterator();
+      final Iterator<Rowboat> it2 = adapter2.getRows().iterator();
+      long row = 0L;
+      while(it1.hasNext()){
+        if(it1.hasNext() ^ it2.hasNext()){
+          throw new IOException("Validation failure - Iterator doesn't have enough");
+        }
+        final Rowboat rb1 = it1.next();
+        final Rowboat rb2 = it2.next();
+        ++row;
+        if(rb1.compareTo(rb2) != 0){
+          throw new IOException(String.format("Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2));
+        }
+      }
+      if(it2.hasNext()){
+        throw new IOException("Validation failure - Iterator still has more");
+      }
+      if(row != adapter1.getNumRows()){
+        throw new IOException("Validation failure - Actual Row count mismatch");
+      }
     }
 
     public static void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec) throws IOException
