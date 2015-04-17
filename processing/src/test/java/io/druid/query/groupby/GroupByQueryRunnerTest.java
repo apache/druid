@@ -1511,6 +1511,92 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testMergedPostAggHavingSpec()
+  {
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L, "rows_times_10", 20.0),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L, "rows_times_10", 60.0),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L, "rows_times_10", 60.0)
+    );
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Arrays.<PostAggregator>asList(
+                new ArithmeticPostAggregator(
+                    "rows_times_10",
+                    "*",
+                    Arrays.<PostAggregator>asList(
+                        new FieldAccessPostAggregator(
+                            "rows",
+                            "rows"
+                        ),
+                        new ConstantPostAggregator(
+                            "const",
+                            10L
+                        )
+                    )
+                )
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setHavingSpec(
+            new OrHavingSpec(
+                ImmutableList.of(
+                    new GreaterThanHavingSpec("rows_times_10", 20L),
+                    new EqualToHavingSpec("idx", 217L)
+                )
+            )
+        );
+
+    final GroupByQuery fullQuery = builder.build();
+
+    QueryRunner mergedRunner = factory.getToolchest().mergeResults(
+        new QueryRunner<Row>()
+        {
+          @Override
+          public Sequence<Row> run(
+              Query<Row> query, Map<String, Object> responseContext
+          )
+          {
+            // simulate two daily segments
+            final Query query1 = query.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-02/2011-04-03")))
+            );
+            final Query query2 = query.withQuerySegmentSpec(
+                new MultipleIntervalSegmentSpec(Lists.newArrayList(new Interval("2011-04-03/2011-04-04")))
+            );
+            return Sequences.concat(
+                runner.run(query1, responseContext),
+                runner.run(query2, responseContext)
+            );
+          }
+        }
+    );
+
+    Map<String, Object> context = Maps.newHashMap();
+    // add an extra layer of merging, simulate broker forwarding query to historical
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        factory.getToolchest().postMergeQueryDecoration(
+            factory.getToolchest().mergeResults(
+                factory.getToolchest().preMergeQueryDecoration(mergedRunner)
+            )
+        ).run(fullQuery, context),
+        "merged"
+    );
+  }
+
+  @Test
   public void testGroupByWithRegEx() throws Exception
   {
     GroupByQuery.Builder builder = GroupByQuery
