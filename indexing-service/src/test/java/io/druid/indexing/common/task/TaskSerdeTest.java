@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -43,12 +44,13 @@ import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import junit.framework.Assert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 public class TaskSerdeTest
 {
@@ -159,14 +161,16 @@ public class TaskSerdeTest
   @Test
   public void testVersionConverterTaskSerde() throws Exception
   {
-    final VersionConverterTask task = VersionConverterTask.create(
-        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
+    final ConvertSegmentTask task = ConvertSegmentTask.create(
+        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
+        null,
+        false
     );
 
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final VersionConverterTask task2 = (VersionConverterTask) jsonMapper.readValue(json, Task.class);
+    final ConvertSegmentTask task2 = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
@@ -181,16 +185,17 @@ public class TaskSerdeTest
   @Test
   public void testVersionConverterSubTaskSerde() throws Exception
   {
-    final VersionConverterTask.SubTask task = new VersionConverterTask.SubTask(
+    final ConvertSegmentTask.SubTask task = new ConvertSegmentTask.SubTask(
         "myGroupId",
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
-        indexSpec
+        indexSpec,
+        false
     );
 
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final VersionConverterTask.SubTask task2 = (VersionConverterTask.SubTask) jsonMapper.readValue(json, Task.class);
+    final ConvertSegmentTask.SubTask task2 = (ConvertSegmentTask.SubTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals("myGroupId", task.getGroupId());
@@ -215,7 +220,8 @@ public class TaskSerdeTest
                 new AggregatorFactory[0],
                 new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
             ),
-            new RealtimeIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
+            new RealtimeIOConfig(
+                new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
             {
               @Override
               public Plumber findPlumber(
@@ -224,7 +230,8 @@ public class TaskSerdeTest
               {
                 return null;
               }
-            }),
+            }
+            ),
             new RealtimeTuningConfig(
                 1,
                 new Period("PT10M"),
@@ -346,6 +353,73 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
+  }
+
+  @Test
+  public void testSegmentConvetSerdeReflection() throws IOException
+  {
+    final ConvertSegmentTask task = ConvertSegmentTask.create(
+        new DataSegment(
+            "dataSource",
+            Interval.parse("1990-01-01/1999-12-31"),
+            "version",
+            ImmutableMap.<String, Object>of(),
+            ImmutableList.of("dim1", "dim2"),
+            ImmutableList.of("metric1", "metric2"),
+            new NoneShardSpec(),
+            0,
+            12345L
+        ),
+        indexSpec
+        , false
+    );
+    final String json = jsonMapper.writeValueAsString(task);
+    final ConvertSegmentTask taskFromJson = jsonMapper.readValue(json, ConvertSegmentTask.class);
+    Assert.assertEquals(json, jsonMapper.writeValueAsString(taskFromJson));
+  }
+
+  @Test
+  public void testSegmentConvertSerde() throws IOException
+  {
+    final DataSegment segment = new DataSegment(
+        "dataSource",
+        Interval.parse("1990-01-01/1999-12-31"),
+        "version",
+        ImmutableMap.<String, Object>of(),
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("metric1", "metric2"),
+        new NoneShardSpec(),
+        0,
+        12345L
+    );
+    final ConvertSegmentTask convertSegmentTaskOriginal = ConvertSegmentTask.create(
+        segment,
+        new IndexSpec(new RoaringBitmapSerdeFactory(), "lzf", "uncompressed")
+        , false
+    );
+    final String json = jsonMapper.writeValueAsString(convertSegmentTaskOriginal);
+    final Task task = jsonMapper.readValue(json, Task.class);
+    Assert.assertTrue(task instanceof ConvertSegmentTask);
+    final ConvertSegmentTask convertSegmentTask = (ConvertSegmentTask) task;
+    Assert.assertEquals(convertSegmentTaskOriginal.getDataSource(), convertSegmentTask.getDataSource());
+    Assert.assertEquals(convertSegmentTaskOriginal.getInterval(), convertSegmentTask.getInterval());
+    Assert.assertEquals(
+        convertSegmentTaskOriginal.getIndexSpec().getBitmapSerdeFactory().getClass().getCanonicalName(),
+        convertSegmentTask.getIndexSpec()
+                            .getBitmapSerdeFactory()
+                            .getClass()
+                            .getCanonicalName()
+    );
+    Assert.assertEquals(
+        convertSegmentTaskOriginal.getIndexSpec().getDimensionCompression(),
+        convertSegmentTask.getIndexSpec().getDimensionCompression()
+    );
+    Assert.assertEquals(
+        convertSegmentTaskOriginal.getIndexSpec().getMetricCompression(),
+        convertSegmentTask.getIndexSpec().getMetricCompression()
+    );
+    Assert.assertEquals(false, convertSegmentTask.isForce());
+    Assert.assertEquals(segment, convertSegmentTask.getSegment());
   }
 
   @Test
