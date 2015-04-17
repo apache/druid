@@ -195,7 +195,7 @@ public class TestIndex
           {
             StringInputRowParser parser = new StringInputRowParser(
                 new DelimitedParseSpec(
-                    new TimestampSpec("ts", "iso"),
+                    new TimestampSpec("ts", "iso", null),
                     new DimensionsSpec(Arrays.asList(DIMENSIONS), null, null),
                     "\t",
                     "\u0001",

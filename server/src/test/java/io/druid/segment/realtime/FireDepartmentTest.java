@@ -53,7 +53,8 @@ public class FireDepartmentTest
                 new JSONParseSpec(
                     new TimestampSpec(
                         "timestamp",
-                        "auto"
+                        "auto",
+                        null
                     ),
                     new DimensionsSpec(
                         Arrays.asList("dim1", "dim2"),
