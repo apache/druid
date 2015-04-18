@@ -54,28 +54,26 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
     // Drop segments that no longer exist in the available segments configuration, if it has been populated. (It might
     // not have been loaded yet since it's filled asynchronously. But it's also filled atomically, so if there are any
     // segments at all, we should have all of them.)
-    if (!availableSegments.isEmpty()) {
-      for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
-        for (ServerHolder serverHolder : serverHolders) {
-          ImmutableDruidServer server = serverHolder.getServer();
+    for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
+      for (ServerHolder serverHolder : serverHolders) {
+        ImmutableDruidServer server = serverHolder.getServer();
 
-          for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-            for (DataSegment segment : dataSource.getSegments()) {
-              if (!availableSegments.contains(segment)) {
-                LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
+        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+          for (DataSegment segment : dataSource.getSegments()) {
+            if (!availableSegments.contains(segment)) {
+              LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
-                if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-                  queuePeon.dropSegment(
-                      segment, new LoadPeonCallback()
+              if (!queuePeon.getSegmentsToDrop().contains(segment)) {
+                queuePeon.dropSegment(
+                    segment, new LoadPeonCallback()
+                    {
+                      @Override
+                      public void execute()
                       {
-                        @Override
-                        public void execute()
-                        {
-                        }
                       }
-                  );
-                  stats.addToTieredStat("unneededCount", server.getTier(), 1);
-                }
+                    }
+                );
+                stats.addToTieredStat("unneededCount", server.getTier(), 1);
               }
             }
           }
@@ -84,8 +82,8 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
     }
 
     return params.buildFromExisting()
-                 .withCoordinatorStats(stats)
-                 .build();
+        .withCoordinatorStats(stats)
+        .build();
   }
 
 
