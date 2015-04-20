@@ -22,14 +22,14 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
  */
-public class VersionConverterTaskTest
+public class ConvertSegmentTaskTest
 {
   @Test
   public void testSerializationSimple() throws Exception
@@ -39,7 +39,7 @@ public class VersionConverterTaskTest
 
     DefaultObjectMapper jsonMapper = new DefaultObjectMapper();
 
-    VersionConverterTask task = VersionConverterTask.create(dataSource, interval);
+    ConvertSegmentTask task = ConvertSegmentTask.create(dataSource, interval, null, false);
 
     Task task2 = jsonMapper.readValue(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task), Task.class);
     Assert.assertEquals(task, task2);
@@ -56,7 +56,7 @@ public class VersionConverterTaskTest
         102937
     );
 
-    task = VersionConverterTask.create(segment);
+    task = ConvertSegmentTask.create(segment, null, false);
 
     task2 = jsonMapper.readValue(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task), Task.class);
     Assert.assertEquals(task, task2);
