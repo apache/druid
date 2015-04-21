@@ -10,7 +10,7 @@ h2. Getting Started
 * "Evaluate Druid":./Evaluate.html
 
 h2. Data Ingestion
-* "Overview":./Ingestion-Overview.html
+* "Overview":./Ingestion-overview.html
 * "Data Formats":./Data_formats.html
 * "Realtime Ingestion":./Realtime-ingestion.html
 * "Batch Ingestion":./Batch-ingestion.html
