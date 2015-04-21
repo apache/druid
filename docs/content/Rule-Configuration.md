@@ -1,12 +1,15 @@
 ---
 layout: doc_page
 ---
-# Configuring Rules for Coordinator Nodes
+# Retaining or Automatically Dropping Data
+
+Coordinator nodes use rules to determine what data should be loaded or dropped from the cluster. Rules are used for data retention and are set on the coordinator console (http://coordinator_ip:port).
 
 Rules indicate how segments should be assigned to different historical node tiers and how many replicas of a segment should exist in each tier. Rules may also indicate when segments should be dropped entirely from the cluster. The coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
 
 Note: It is recommended that the coordinator console is used to configure rules. However, the coordinator node does have HTTP endpoints to programmatically configure rules.
 
+When a rule is updated, the change may not be reflected until the next time the coordinator runs. This will be fixed in the near future.
 
 Load Rules
 ----------

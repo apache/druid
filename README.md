@@ -11,7 +11,7 @@ petabyte sized data sets. Druid supports a variety of flexible filters, exact
 calculations, approximate algorithms, and other useful calculations.
 
 Druid can load both streaming and batch data and integrates with
-Samza, Kafka, Storm, and Hadoop among others.
+Samza, Kafka, Storm, and Hadoop.
 
 ### License
 
@@ -41,8 +41,10 @@ If you find any bugs, please file a [GitHub issue](https://github.com/druid-io/d
 
 ### Community
 
-Community support is available on our [mailing
-list](https://groups.google.com/forum/#!forum/druid-development)(druid-development@googlegroups.com).
+Community support is available on the [druid-user mailing
+list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com).
+
+Development discussions occur on the [druid-development list](https://groups.google.com/forum/#!forum/druid-development)(druid-development@googlegroups.com).
 
 We also have a couple people hanging out on IRC in `#druid-dev` on
 `irc.freenode.net`.

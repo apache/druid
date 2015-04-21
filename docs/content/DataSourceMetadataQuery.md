@@ -2,7 +2,11 @@
 layout: doc_page
 ---
 # Data Source Metadata Queries
-Data Source Metadata queries return metadata information for a dataSource. It returns the timestamp of latest ingested event for the datasource. The grammar is:
+Data Source Metadata queries return metadata information for a dataSource.  These queries return information about:
+
+* The timestamp of latest ingested event for the dataSource. This is the ingested event without any consideration of rollup.
+
+The grammar for these queries is:
 
 ```json
 {
@@ -16,8 +20,8 @@ There are 2 main parts to a Data Source Metadata query:
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "dataSourceMetadata"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
-|dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
-|context|An additional JSON Object which can be used to specify certain flags.|no|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](DataSource.html) for more information.|yes|
+|context|See [Context](Context.html)|no|
 
 The format of the result is:
 

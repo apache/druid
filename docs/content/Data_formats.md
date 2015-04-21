@@ -4,7 +4,8 @@ layout: doc_page
 Data Formats for Ingestion
 ==========================
 
-Druid can ingest data in JSON, CSV, or custom delimited data such as TSV. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest CSV or other delimited data.
+Druid can ingest denormalized data in JSON, CSV, or a custom delimited form such as TSV. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest CSV or other delimited data.
+We also welcome any contributions to new formats.
 
 ## Formatting the Data
 The following are three samples of the data used in the [Wikipedia example](Tutorial%3A-Loading-Streaming-Data.html).
@@ -29,7 +30,7 @@ _CSV_
 2013-08-31T12:41:27Z,"Coyote Tango","ja","cancer","true","false","true","false","wikipedia","Asia","Japan","Kanto","Tokyo",1,10,-9
 ```
 
-_TSV_
+_TSV (Delimited)_
 
 ```
 2013-08-31T01:02:33Z	"Gypsy Danger"	"en"	"nuclear"	"true"	"true"	"false"	"false"	"article"	"North America"	"United States"	"Bay Area"	"San Francisco"	57	200	-143
@@ -43,94 +44,53 @@ Note that the CSV and TSV data do not contain column heads. This becomes importa
 
 ## Configuration
 
+All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the`parseSpec` entry in your `dataSchema`.
+
 ### JSON
-All forms of Druid ingestion require some form of schema object. An example blob of json pertaining to the data format may look something like this:
 
 ```json
-    "firehose" : {
-      "type" : "local",
-      "baseDir" : "examples/indexing",
-      "filter" : "wikipedia_data.json"
+  "parseSpec":{
+    "format" : "json",
+    "timestampSpec" : {
+      "column" : "timestamp"
+    },
+    "dimensionSpec" : {
+      "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
     }
+  }
 ```
-
-The `parser` entry for the `dataSchema` should be changed to describe the json format as per
-
-```json
-      "parser" : {
-        "type":"string",
-        "parseSpec":{
-          "timestampSpec" : {
-            "column" : "timestamp"
-          },
-          "format" : "json",
-          "dimensionSpec" : {
-            "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
-          }
-        }
-      }
-```
-
-Specified here are the location of the datafile, the timestamp column, the format of the data, and the columns that will become dimensions in Druid.
 
 ### CSV
 Since the CSV data cannot contain the column names (no header is allowed), these must be added before that data can be processed:
 
 ```json
-    "firehose" : {
-      "type" : "local",
-      "baseDir" : "examples/indexing/",
-      "filter" : "wikipedia_data.csv"
+  "parseSpec":{
+    "format" : "csv",
+    "timestampSpec" : {
+      "column" : "timestamp"
+    },
+    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+    "dimensionsSpec" : {
+      "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
     }
+  }
 ```
-
-The `parser` entry for the `dataSchema` should be changed to describe the csv format as per
-
-```json
-      "parser" : {
-        "type":"string",
-        "parseSpec":{
-          "timestampSpec" : {
-            "column" : "timestamp"
-          },
-          "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
-          "type" : "csv",
-          "dimensionsSpec" : {
-            "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
-          }
-        }
-      }
-```
-
-Note also that the filename extension and the data type were changed to "csv". Note that dimensions is a subset of columns and indicates which dimensions are desired to be indexed.
 
 ### TSV
-For the TSV data, the same changes are made but with "tsv" for the filename extension and the data type.
 ```json
-    "firehose" : {
-      "type" : "local",
-      "baseDir" : "examples/indexing/",
-      "filter" : "wikipedia_data.tsv"
+  "parseSpec":{
+    "format" : "tsv",
+    "timestampSpec" : {
+      "column" : "timestamp"
+    },
+    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+    "delimiter":"|",
+    "dimensionsSpec" : {
+      "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
     }
-```
-The `parser` entry for the `dataSchema` should be changed to describe the tsv format as per
-```json
-      "parser" : {
-        "type":"string",
-        "parseSpec":{
-          "timestampSpec" : {
-            "column" : "timestamp"
-          },
-          "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
-          "type" : "tsv",
-          "delimiter":"|",
-          "dimensionsSpec" : {
-            "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
-          }
-        }
-      }
+  }
 ```
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
 ### Multi-value dimensions
-Dimensions can have multiple values for TSV and CSV data. To specify the delimiter for a multi-value dimension, set the `listDelimiter`
+Dimensions can have multiple values for TSV and CSV data. To specify the delimiter for a multi-value dimension, set the `listDelimiter` in the `parseSpec`.

@@ -23,7 +23,7 @@ There are several main parts to a select query:
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "select"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
-|dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](DataSource.html) for more information.|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |filter|See [Filters](Filters.html)|no|
 |dimensions|A String array of dimensions to select. If left empty, all dimensions are returned.|no|

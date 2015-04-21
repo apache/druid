@@ -17,6 +17,7 @@ The table data source is the most common type. It's represented by a string, or 
 ```
 
 ### Union Data Source
+
 This data source unions two or more table data sources.
 
 ```json
@@ -28,8 +29,10 @@ This data source unions two or more table data sources.
 
 Note that the data sources being unioned should have the same schema.
 
-
 ### Query Data Source
+
+This is used for nested groupBys and is only currently supported for groupBys.
+
 ```json
 {
 	"type": "query",

@@ -31,14 +31,14 @@ There are several main parts to a search query:
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "search"; this is the first thing Druid looks at to figure out how to interpret the query.|yes|
-|dataSource|A String defining the data source to query, very similar to a table in a relational database.|yes|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](DataSource.html) for more information.|yes|
 |granularity|Defines the granularity of the query. See [Granularities](Granularities.html).|yes|
 |filter|See [Filters](Filters.html).|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
 |query|See [SearchQuerySpec](SearchQuerySpec.html).|yes|
 |sort|An object specifying how the results of the search should be sorted. Two possible types here are "lexicographic" (the default sort) and "strlen".|no|
-|context|An additional JSON Object which can be used to specify certain flags.|no|
+|context|See [Context](Context.html)|no|
 
 The format of the result is:
 
