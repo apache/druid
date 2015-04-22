@@ -13,36 +13,40 @@ An example groupBy query object is shown below:
   "queryType": "groupBy",
   "dataSource": "sample_datasource",
   "granularity": "day",
-  "dimensions": ["dim1", "dim2"],
-  "limitSpec": { "type": "default", "limit": 5000, "columns": ["dim1", "metric1"] },
+  "dimensions": ["country", "device"],
+  "limitSpec": { "type": "default", "limit": 5000, "columns": ["country", "data_transfer"] },
   "filter": {
     "type": "and",
     "fields": [
-      { "type": "selector", "dimension": "sample_dimension1", "value": "sample_value1" },
+      { "type": "selector", "dimension": "carrier", "value": "AT&T" },
       { "type": "or", 
         "fields": [
-          { "type": "selector", "dimension": "sample_dimension2", "value": "sample_value2" },
-          { "type": "selector", "dimension": "sample_dimension3", "value": "sample_value3" }
+          { "type": "selector", "dimension": "make", "value": "Apple" },
+          { "type": "selector", "dimension": "make", "value": "Samsung" }
         ]
       }
     ]
   },
   "aggregations": [
-    { "type": "longSum", "name": "sample_name1", "fieldName": "sample_fieldName1" },
-    { "type": "doubleSum", "name": "sample_name2", "fieldName": "sample_fieldName2" }
+    { "type": "longSum", "name": "total_usage", "fieldName": "user_count" },
+    { "type": "doubleSum", "name": "data_transfer", "fieldName": "data_transfer" }
   ],
   "postAggregations": [
     { "type": "arithmetic",
-      "name": "sample_divide",
+      "name": "avg_usage",
       "fn": "/",
       "fields": [
-        { "type": "fieldAccess", "name": "sample_name1", "fieldName": "sample_fieldName1" },
-        { "type": "fieldAccess", "name": "sample_name2", "fieldName": "sample_fieldName2" }
+        { "type": "fieldAccess", "fieldName": "data_transfer" },
+        { "type": "fieldAccess", "fieldName": "total_usage" }
       ]
     }
   ],
   "intervals": [ "2012-01-01T00:00:00.000/2012-01-03T00:00:00.000" ],
-  "having": { "type": "greaterThan", "aggregation": "sample_name1", "value": 0 }
+  "having": {
+  	"type": "greaterThan",
+  	"aggregation": "total_usage",
+  	"value": 100
+  }
 }
 ```
 
@@ -62,7 +66,7 @@ There are 11 main parts to a groupBy query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
-To pull it all together, the above query would return *n\*m* data points, up to a maximum of 5000 points, where n is the cardinality of the "dim1" dimension, m is the cardinality of the "dim2" dimension, each day between 2012-01-01 and 2012-01-03, from the "sample_datasource" table. Each data point contains the (long) sum of sample_fieldName1 if the value of the data point is greater than 0, the (double) sum of sample_fieldName2 and the (double) the result of sample_fieldName1 divided by sample_fieldName2 for the filter set for a particular grouping of "dim1" and "dim2". The output looks like this:
+To pull it all together, the above query would return *n\*m* data points, up to a maximum of 5000 points, where n is the cardinality of the `country` dimension, m is the cardinality of the `device` dimension, each day between 2012-01-01 and 2012-01-03, from the `sample_datasource` table. Each data point contains the (long) sum of `total_usage` if the value of the data point is greater than 100, the (double) sum of `data_transfer` and the (double) result of `total_usage` divided by `data_transfer` for the filter set for a particular grouping of `country` and `device`. The output looks like this:
 
 ```json
 [ 
@@ -70,22 +74,22 @@ To pull it all together, the above query would return *n\*m* data points, up to 
     "version" : "v1",
     "timestamp" : "2012-01-01T00:00:00.000Z",
     "event" : {
-      "dim1" : <some_dim_value_one>,
-      "dim2" : <some_dim_value_two>,
-      "sample_name1" : <some_sample_name_value_one>,
-      "sample_name2" :<some_sample_name_value_two>,
-      "sample_divide" : <some_sample_divide_value>
+      "country" : <some_dim_value_one>,
+      "device" : <some_dim_value_two>,
+      "total_usage" : <some_value_one>,
+      "data_transfer" :<some_value_two>,
+      "avg_usage" : <some_avg_usage_value>
     }
   }, 
   {
     "version" : "v1",
-    "timestamp" : "2012-01-01T00:00:00.000Z",
+    "timestamp" : "2012-01-01T00:00:12.000Z",
     "event" : {
       "dim1" : <some_other_dim_value_one>,
       "dim2" : <some_other_dim_value_two>,
-      "sample_name1" : <some_other_sample_name_value_one>,
-      "sample_name2" :<some_other_sample_name_value_two>,
-      "sample_divide" : <some_other_sample_divide_value>
+      "sample_name1" : <some_other_value_one>,
+      "sample_name2" :<some_other_value_two>,
+      "avg_usage" : <some_other_avg_usage_value>
     }
   },
 ...
