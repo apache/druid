@@ -187,7 +187,7 @@ public class TimeBoundaryQueryQueryToolChest
             List<Object> result = (List<Object>) input;
 
             return new Result<>(
-                new DateTime(result.get(0)),
+                new DateTime(((Number)result.get(0)).longValue()),
                 new TimeBoundaryResultValue(result.get(1))
             );
           }
