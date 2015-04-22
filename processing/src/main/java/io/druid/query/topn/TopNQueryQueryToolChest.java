@@ -380,7 +380,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             List<Map<String, Object>> retVal = Lists.newArrayListWithCapacity(results.size());
 
             Iterator<Object> inputIter = results.iterator();
-            DateTime timestamp = granularity.toDateTime(new DateTime(inputIter.next()).getMillis());
+            DateTime timestamp = granularity.toDateTime(((Number) inputIter.next()).longValue());
 
             while (inputIter.hasNext()) {
               List<Object> result = (List<Object>) inputIter.next();

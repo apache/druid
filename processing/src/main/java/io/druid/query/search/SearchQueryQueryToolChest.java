@@ -214,8 +214,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           {
             List<Object> result = (List<Object>) input;
 
-            return new Result<SearchResultValue>(
-                new DateTime(result.get(0)),
+            return new Result<>(
+                new DateTime(((Number)result.get(0)).longValue()),
                 new SearchResultValue(
                     Lists.transform(
                         (List) result.get(1),
