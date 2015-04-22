@@ -2295,4 +2295,70 @@ public class CachingClusteredClientTest
       return expectations.iterator();
     }
   }
+
+  @Test
+  public void testTimeBoundaryCachingWhenTimeIsInteger() throws Exception
+  {
+    testQueryCaching(
+        client,
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource(CachingClusteredClientTest.DATA_SOURCE)
+              .intervals(CachingClusteredClientTest.SEG_SPEC)
+              .context(CachingClusteredClientTest.CONTEXT)
+              .build(),
+        new Interval("1970-01-01/1970-01-02"),
+        makeTimeBoundaryResult(new DateTime("1970-01-01"), new DateTime("1970-01-01"), new DateTime("1970-01-02")),
+
+        new Interval("1970-01-01/2011-01-03"),
+        makeTimeBoundaryResult(new DateTime("1970-01-02"), new DateTime("1970-01-02"), new DateTime("1970-01-03")),
+
+        new Interval("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("1970-01-05"), new DateTime("1970-01-05"), new DateTime("1970-01-10")),
+
+        new Interval("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("1970-01-05T01"), new DateTime("1970-01-05T01"), new DateTime("1970-01-10"))
+    );
+
+    testQueryCaching(
+        client,
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource(CachingClusteredClientTest.DATA_SOURCE)
+              .intervals(CachingClusteredClientTest.SEG_SPEC)
+              .context(CachingClusteredClientTest.CONTEXT)
+              .bound(TimeBoundaryQuery.MAX_TIME)
+              .build(),
+        new Interval("1970-01-01/2011-01-02"),
+        makeTimeBoundaryResult(new DateTime("1970-01-01"), null, new DateTime("1970-01-02")),
+
+        new Interval("1970-01-01/2011-01-03"),
+        makeTimeBoundaryResult(new DateTime("1970-01-02"), null, new DateTime("1970-01-03")),
+
+        new Interval("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("1970-01-05"), null, new DateTime("1970-01-10")),
+
+        new Interval("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("1970-01-05T01"), null, new DateTime("1970-01-10"))
+    );
+
+    testQueryCaching(
+        client,
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource(CachingClusteredClientTest.DATA_SOURCE)
+              .intervals(CachingClusteredClientTest.SEG_SPEC)
+              .context(CachingClusteredClientTest.CONTEXT)
+              .bound(TimeBoundaryQuery.MIN_TIME)
+              .build(),
+        new Interval("1970-01-01/2011-01-02"),
+        makeTimeBoundaryResult(new DateTime("1970-01-01"), new DateTime("1970-01-01"), null),
+
+        new Interval("1970-01-01/2011-01-03"),
+        makeTimeBoundaryResult(new DateTime("1970-01-02"), new DateTime("1970-01-02"), null),
+
+        new Interval("1970-01-01/1970-01-10"),
+        makeTimeBoundaryResult(new DateTime("1970-01-05"), new DateTime("1970-01-05"), null),
+
+        new Interval("1970-01-01/2011-01-10"),
+        makeTimeBoundaryResult(new DateTime("1970-01-05T01"), new DateTime("1970-01-05T01"), null)
+    );
+  }
 }
