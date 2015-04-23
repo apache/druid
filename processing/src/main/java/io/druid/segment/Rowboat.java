@@ -17,13 +17,19 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
@@ -129,8 +135,8 @@ public class Rowboat implements Comparable<Rowboat>
   {
     return "Rowboat{" +
            "timestamp=" + new DateTime(timestamp).toString() +
-           ", dims=" + (dims == null ? null : Arrays.asList(dims)) +
-           ", metrics=" + (metrics == null ? null : Arrays.asList(metrics)) +
+           ", dims=" + Arrays.deepToString(dims) +
+           ", metrics=" + Arrays.toString(metrics) +
            ", comprisedRows=" + comprisedRows +
            '}';
   }

@@ -17,16 +17,291 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.metamx.common.UOE;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexAdapter;
+import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * This is mostly a test of the validator
+ */
+@RunWith(Parameterized.class)
 public class IndexIOTest
 {
-  @Test @Ignore // this test depends on static fields, so it has to be tested independently
-  public void testInjector() throws Exception
+  private static Interval DEFAULT_INTERVAL = Interval.parse("1970-01-01/2000-01-01");
+  private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
+      new ConciseBitmapSerdeFactory(),
+      CompressedObjectStrategy.CompressionStrategy.LZ4
+  );
+
+  private static <T> List<T> filterByBitset(List<T> list, BitSet bitSet)
   {
-    System.setProperty("druid.processing.columnCache.sizeBytes", "1234");
-    Assert.assertEquals(1234, IndexIO.columnConfig.columnCacheSizeBytes());
+    final ArrayList<T> outList = new ArrayList<>(bitSet.cardinality());
+    for (int i = 0; i < list.size(); ++i) {
+      if (bitSet.get(i)) {
+        outList.add(list.get(i));
+      }
+    }
+    return outList;
+  }
+
+  @Parameterized.Parameters
+  public static Iterable<Object[]> constructionFeeder()
+  {
+
+    final Map<String, Object> map = ImmutableMap.<String, Object>of();
+
+    final Map<String, Object> map00 = ImmutableMap.<String, Object>of(
+        "dim0", ImmutableList.<String>of("dim00", "dim01")
+    );
+    final Map<String, Object> map10 = ImmutableMap.<String, Object>of(
+        "dim1", "dim10"
+    );
+    final Map<String, Object> map0null = new HashMap<>();
+    map0null.put("dim0", null);
+
+    final Map<String, Object> map1null = new HashMap<>();
+    map1null.put("dim1", null);
+
+    final Map<String, Object> mapAll = ImmutableMap.<String, Object>of(
+        "dim0", ImmutableList.<String>of("dim00", "dim01"),
+        "dim1", "dim10"
+    );
+
+    final List<Map<String, Object>> maps = ImmutableList.of(
+        map, map00, map10, map0null, map1null, mapAll
+    );
+
+    return Iterables.<Object[]>concat(
+        // First iterable tests permutations of the maps which are expected to be equal
+        Iterables.<Object[]>concat(
+            new Iterable<Iterable<Object[]>>()
+            {
+              @Override
+              public Iterator<Iterable<Object[]>> iterator()
+              {
+                return new Iterator<Iterable<Object[]>>()
+                {
+                  long nextBitset = 1L;
+
+                  @Override
+                  public boolean hasNext()
+                  {
+                    return nextBitset < (1L << maps.size());
+                  }
+
+                  @Override
+                  public Iterable<Object[]> next()
+                  {
+                    final BitSet bitset = BitSet.valueOf(new long[]{nextBitset++});
+                    final List<Map<String, Object>> myMaps = filterByBitset(maps, bitset);
+                    return Collections2.transform(
+                        Collections2.permutations(myMaps), new Function<List<Map<String, Object>>, Object[]>()
+                        {
+                          @Nullable
+                          @Override
+                          public Object[] apply(List<Map<String, Object>> input)
+                          {
+                            return new Object[]{input, input, null};
+                          }
+                        }
+                    );
+                  }
+
+                  @Override
+                  public void remove()
+                  {
+                    throw new UOE("Remove not suported");
+                  }
+                };
+              }
+            }
+        ),
+        // Second iterable tests combinations of the maps which may or may not be equal
+        Iterables.<Object[]>concat(
+            new Iterable<Iterable<Object[]>>()
+            {
+              @Override
+              public Iterator<Iterable<Object[]>> iterator()
+              {
+                return new Iterator<Iterable<Object[]>>()
+                {
+                  long nextMap1Bits = 1L;
+
+                  @Override
+                  public boolean hasNext()
+                  {
+                    return nextMap1Bits < (1L << maps.size());
+                  }
+
+                  @Override
+                  public Iterable<Object[]> next()
+                  {
+                    final BitSet bitset1 = BitSet.valueOf(new long[]{nextMap1Bits++});
+                    final List<Map<String, Object>> maplist1 = filterByBitset(maps, bitset1);
+                    return new Iterable<Object[]>()
+                    {
+                      @Override
+                      public Iterator<Object[]> iterator()
+                      {
+                        return new Iterator<Object[]>()
+                        {
+                          long nextMap2Bits = 1L;
+
+                          @Override
+                          public boolean hasNext()
+                          {
+                            return nextMap2Bits < (1L << maps.size());
+                          }
+
+                          @Override
+                          public Object[] next()
+                          {
+
+                            final BitSet bitset2 = BitSet.valueOf(new long[]{nextMap2Bits++});
+                            return new Object[]{
+                                maplist1,
+                                filterByBitset(maps, bitset2),
+                                nextMap2Bits == nextMap1Bits ? null : SegmentValidationException.class
+                            };
+                          }
+
+                          @Override
+                          public void remove()
+                          {
+                            throw new UOE("remove not supported");
+                          }
+                        };
+                      }
+                    };
+                  }
+
+                  @Override
+                  public void remove()
+                  {
+                    throw new UOE("Remove not supported");
+                  }
+                };
+              }
+            }
+        )
+    );
+  }
+
+  private final Collection<Map<String, Object>> events1;
+  private final Collection<Map<String, Object>> events2;
+  private final Class<? extends Exception> exception;
+
+  public IndexIOTest(
+      Collection<Map<String, Object>> events1,
+      Collection<Map<String, Object>> events2,
+      Class<? extends Exception> exception
+  )
+  {
+    this.events1 = events1;
+    this.events2 = events2;
+    this.exception = exception;
+  }
+
+  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex(
+      DEFAULT_INTERVAL.getStart().getMillis(),
+      QueryGranularity.NONE,
+      new AggregatorFactory[]{
+          new CountAggregatorFactory(
+              "count"
+          )
+      },
+      1000000
+  );
+
+  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex(
+      DEFAULT_INTERVAL.getStart().getMillis(),
+      QueryGranularity.NONE,
+      new AggregatorFactory[]{
+          new CountAggregatorFactory(
+              "count"
+          )
+      },
+      1000000
+  );
+
+  IndexableAdapter adapter1;
+  IndexableAdapter adapter2;
+
+  @Before
+  public void setUp() throws IndexSizeExceededException
+  {
+    long timestamp = 0L;
+    for (Map<String, Object> event : events1) {
+      incrementalIndex1.add(new MapBasedInputRow(timestamp++, Lists.newArrayList(event.keySet()), event));
+    }
+
+    timestamp = 0L;
+    for (Map<String, Object> event : events2) {
+      incrementalIndex2.add(new MapBasedInputRow(timestamp++, Lists.newArrayList(event.keySet()), event));
+    }
+
+    adapter2 = new IncrementalIndexAdapter(
+        DEFAULT_INTERVAL,
+        incrementalIndex2,
+        INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
+    );
+
+    adapter1 = new IncrementalIndexAdapter(
+        DEFAULT_INTERVAL,
+        incrementalIndex1,
+        INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
+    );
+  }
+
+  @Test
+  public void testRowValidatorEquals() throws Exception
+  {
+    Exception ex = null;
+    try {
+      IndexIO.DefaultIndexIOHandler.validateTwoSegments(adapter1, adapter2);
+    }
+    catch (Exception e) {
+      ex = e;
+    }
+    if (exception != null) {
+      Assert.assertNotNull("Exception was not thrown", ex);
+      if (!exception.isAssignableFrom(ex.getClass())) {
+        throw ex;
+      }
+    } else {
+      if (ex != null) {
+        throw ex;
+      }
+    }
   }
 }
