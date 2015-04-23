@@ -22,6 +22,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -1566,6 +1567,7 @@ public class IndexMaker
     private final Map<String, IntBuffer> converters;
     private final int indexNumber;
 
+
     MMappedIndexRowIterable(
         Iterable<Rowboat> index,
         List<String> convertedDims,
@@ -1602,6 +1604,18 @@ public class IndexMaker
     @Override
     public Iterator<Rowboat> iterator()
     {
+      final IntBuffer[] converterArray = FluentIterable
+          .from(convertedDims)
+          .transform(
+              new Function<String, IntBuffer>()
+              {
+                @Override
+                public IntBuffer apply(String input)
+                {
+                  return converters.get(input);
+                }
+              }
+          ).toArray(IntBuffer.class);
       return Iterators.transform(
           index.iterator(),
           new Function<Rowboat, Rowboat>()
@@ -1609,10 +1623,10 @@ public class IndexMaker
             @Override
             public Rowboat apply(Rowboat input)
             {
-              int[][] dims = input.getDims();
-              int[][] newDims = new int[convertedDims.size()][];
+              final int[][] dims = input.getDims();
+              final int[][] newDims = new int[convertedDims.size()][];
               for (int i = 0; i < newDims.length; ++i) {
-                IntBuffer converter = converters.get(convertedDims.get(i));
+                final IntBuffer converter = converterArray[i];
 
                 if (converter == null) {
                   continue;
