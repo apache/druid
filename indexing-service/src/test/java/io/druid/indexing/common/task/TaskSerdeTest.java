@@ -164,7 +164,8 @@ public class TaskSerdeTest
     final ConvertSegmentTask task = ConvertSegmentTask.create(
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
         null,
-        false
+        false,
+        true
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -189,7 +190,8 @@ public class TaskSerdeTest
         "myGroupId",
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
         indexSpec,
-        false
+        false,
+        true
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -370,8 +372,9 @@ public class TaskSerdeTest
             0,
             12345L
         ),
-        indexSpec
-        , false
+        indexSpec,
+        false,
+        true
     );
     final String json = jsonMapper.writeValueAsString(task);
     final ConvertSegmentTask taskFromJson = jsonMapper.readValue(json, ConvertSegmentTask.class);
@@ -394,8 +397,9 @@ public class TaskSerdeTest
     );
     final ConvertSegmentTask convertSegmentTaskOriginal = ConvertSegmentTask.create(
         segment,
-        new IndexSpec(new RoaringBitmapSerdeFactory(), "lzf", "uncompressed")
-        , false
+        new IndexSpec(new RoaringBitmapSerdeFactory(), "lzf", "uncompressed"),
+        false,
+        true
     );
     final String json = jsonMapper.writeValueAsString(convertSegmentTaskOriginal);
     final Task task = jsonMapper.readValue(json, Task.class);

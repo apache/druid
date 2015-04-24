@@ -198,14 +198,13 @@ public class IndexIO
 
   public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
   {
-    return convertSegment(toConvert, converted, indexSpec, false);
+    return convertSegment(toConvert, converted, indexSpec, false, true);
   }
 
-  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec, boolean forceIfCurrent)
+  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec, boolean forceIfCurrent, boolean validate)
       throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
-
     switch (version) {
       case 1:
       case 2:
@@ -231,7 +230,9 @@ public class IndexIO
       default:
         if (forceIfCurrent) {
           IndexMaker.convert(toConvert, converted, indexSpec);
-          DefaultIndexIOHandler.validateTwoSegments(toConvert, converted);
+          if(validate){
+            DefaultIndexIOHandler.validateTwoSegments(toConvert, converted);
+          }
           return true;
         } else {
           log.info("Version[%s], skipping.", version);
