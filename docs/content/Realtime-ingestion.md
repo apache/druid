@@ -166,7 +166,9 @@ In small-data scenarios, sharding is unnecessary and can be set to none (the def
 However, in scenarios with multiple realtime nodes, `none` is less useful as it cannot help with scaling data volume (see below). Note that for the batch indexing service, no explicit configuration is required; sharding is provided automatically.
 
 Druid uses sharding based on the `shardSpec` setting you configure. The recommended choices, `linear` and `numbered`, are discussed below; other types have been useful for internal Druid development but are not appropriate for production setups.
- 
+
+Keep in mind, that sharding configuration has nothing to do with configured firehose. For example, if you set partition number to 0, it doesn't mean that Kafka firehose will consume only from 0 topic partition.
+
 ##### Linear
 This strategy provides following advantages:
 
