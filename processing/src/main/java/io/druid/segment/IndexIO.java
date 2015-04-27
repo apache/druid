@@ -253,6 +253,12 @@ public class IndexIO
       IndexableAdapter adapter2
   )
   {
+    if(rb1.getTimestamp() != rb2.getTimestamp()){
+      throw new SegmentValidationException(
+          "Timestamp mismatch. Expected %d found %d",
+          rb1.getTimestamp(), rb2.getTimestamp()
+      );
+    }
     final int[][] dims1 = rb1.getDims();
     final int[][] dims2 = rb2.getDims();
     if (dims1.length != dims2.length) {
