@@ -34,7 +34,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryMetricUtil;
+import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -121,7 +121,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(SelectQuery query)
   {
-    return QueryMetricUtil.makeQueryTimeMetric(query);
+    return DruidMetrics.makePartialQueryTimeMetric(query);
   }
 
   @Override

@@ -67,7 +67,7 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
   private void emitMetrics()
   {
     if (delegate instanceof PrioritizedExecutorService) {
-      emitter.emit(metricBuilder.build("exec/backlog", ((PrioritizedExecutorService) delegate).getQueueSize()));
+      emitter.emit(metricBuilder.build("segment/scan/pending", ((PrioritizedExecutorService) delegate).getQueueSize()));
     }
   }
 }

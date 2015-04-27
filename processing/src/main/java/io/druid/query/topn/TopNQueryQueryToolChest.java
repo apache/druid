@@ -38,7 +38,7 @@ import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
-import io.druid.query.QueryMetricUtil;
+import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
@@ -82,7 +82,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
   }
 
-  protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories){
+  protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories)
+  {
     return Lists.transform(
         aggregatorFactories, new Function<AggregatorFactory, String>()
         {
@@ -153,15 +154,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TopNQuery query)
   {
-    return QueryMetricUtil.makeQueryTimeMetric(query)
-                          .setUser4(
-                              String.format(
-                                  "topN/%s/%s",
-                                  query.getThreshold(),
-                                  query.getDimensionSpec().getDimension()
-                              )
-                          )
-                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
+    return DruidMetrics.makePartialQueryTimeMetric(query)
+                       .setDimension(
+                           "threshold",
+                           String.valueOf(query.getThreshold())
+                       )
+                       .setDimension("dimension", query.getDimensionSpec().getDimension())
+                       .setDimension(
+                           "numMetrics",
+                           String.valueOf(query.getAggregatorSpecs().size())
+                       )
+                       .setDimension(
+                           "numComplexMetrics",
+                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
+                       );
   }
 
   @Override
@@ -254,7 +260,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         + 1
                     );
 
-                    for( int i = 0; i < aggFactoryNames.length; ++i){
+                    for (int i = 0; i < aggFactoryNames.length; ++i) {
                       final String name = aggFactoryNames[i];
                       values.put(name, input.getMetric(name));
                     }
@@ -267,7 +273,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                         values.put(postAgg.getName(), postAgg.compute(values));
                       }
                     }
-                    for( int i = 0; i < aggFactoryNames.length; ++i){
+                    for (int i = 0; i < aggFactoryNames.length; ++i) {
                       final String name = aggFactoryNames[i];
                       values.put(name, fn.manipulate(aggregatorFactories[i], input.getMetric(name)));
                     }

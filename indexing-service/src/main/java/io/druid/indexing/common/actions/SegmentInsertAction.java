@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
+import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -83,12 +84,12 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setUser2(task.getDataSource())
-        .setUser4(task.getType());
+        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
+        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
 
     for (DataSegment segment : segments) {
-      metricBuilder.setUser5(segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("indexer/segment/bytes", segment.getSize()));
+      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
     }
 
     return retVal;
