@@ -39,6 +39,14 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time nodes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|5|
 |`druid.broker.http.readTimeout`|The timeout for data reads.|PT15M|
 
+#### Retry Policy
+
+Druid broker can optionally retry queries internally for transient errors.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.broker.retryPolicy.numTries`|Number of tries.|1|
+
 #### Processing
 
 The broker uses processing configs for nested groupBy queries. And, optionally, Long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Querying](Querying.html) doc.
