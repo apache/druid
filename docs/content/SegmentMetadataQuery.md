@@ -24,11 +24,11 @@ There are several main parts to a segment metadata query:
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "segmentMetadata"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
-|dataSource|A String defining the data source to query, very similar to a table in a relational database|yes|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](DataSource.html) for more information.|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
-|context|An additional JSON Object which can be used to specify certain flags.|no|
+|context|See [Context](Context.html)|no|
 
 The format of the result is:
 

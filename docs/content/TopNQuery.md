@@ -6,6 +6,8 @@ TopN queries
 
 TopN queries return a sorted set of results for the values in a given dimension according to some criteria. Conceptually, they can be thought of as an approximate [GroupByQuery](GroupByQuery.html) over a single dimension with an [Ordering](LimitSpec.html) spec. TopNs are much faster and resource efficient than GroupBys for this use case. These types of queries take a topN query object and return an array of JSON objects where each object represents a value asked for by the topN query.
 
+TopNs are approximate in that each node will rank their top K results and only return those top K results to the broker. K, by default in Druid, is `max(1000, threshold)`. In practice, this means that if you ask for the top 1000 items ordered, the correctness of the first ~900 items will be 100%, and the ordering of the results after that is not guaranteed. TopNs can be made more accurate by increasing the threshold.
+
 A topN query object looks like:
 
 ```json
@@ -68,13 +70,21 @@ A topN query object looks like:
 }
 ```
 
-There are 10 parts to a topN query, but 7 of them are shared with [TimeseriesQuery](TimeseriesQuery.html). Please review [TimeseriesQuery](TimeseriesQuery.html) for meanings of fields not defined below.
+There are 10 parts to a topN query.
 
 |property|description|required?|
 |--------|-----------|---------|
+|queryType|This String should always be "topN"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](DataSource.html) for more information.|yes|
+|intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
+|granularity|Defines the granularity to bucket query results. See [Granularities](Granularities.html)|yes|
+|filter|See [Filters](Filters.html)|no|
+|aggregations|See [Aggregations](Aggregations.html)|yes|
+|postAggregations|See [Post Aggregations](Post-aggregations.html)|no|
 |dimension|A String or JSON object defining the dimension that you want the top taken for. For more info, see [DimensionSpecs](DimensionSpecs.html)|yes|
-|threshold|An integer defining the N in the topN (i.e. how many you want in the top list)|yes|
+|threshold|An integer defining the N in the topN (i.e. how many results you want in the top list)|yes|
 |metric|A String or JSON object specifying the metric to sort by for the top list. For more info, see [TopNMetricSpec](TopNMetricSpec.html).|yes|
+|context|See [Context](Context.html)|no|
 
 Please note the context JSON object is also available for topN queries and should be used with the same caution as the timeseries case.
 The format of the results would look like so:

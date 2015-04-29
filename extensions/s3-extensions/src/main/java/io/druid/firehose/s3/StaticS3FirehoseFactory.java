@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.metamx.common.CompressionUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -113,7 +114,7 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
                                                            .getDataInputStream();
 
               final InputStream outerInputStream = s3Object.getKey().endsWith(".gz")
-                                                   ? new GZIPInputStream(innerInputStream)
+                                                   ? CompressionUtils.gzipInputStream(innerInputStream)
                                                    : innerInputStream;
 
               return IOUtils.lineIterator(

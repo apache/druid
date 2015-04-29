@@ -58,7 +58,6 @@ public class DataSourceQueryQueryToolChest
       return segments;
     }
 
-    final T min = segments.get(0);
     final T max = segments.get(segments.size() - 1);
 
     return Lists.newArrayList(
@@ -69,8 +68,7 @@ public class DataSourceQueryQueryToolChest
               @Override
               public boolean apply(T input)
               {
-                return (min != null && input.getInterval().overlaps(min.getInterval())) ||
-                       (max != null && input.getInterval().overlaps(max.getInterval()));
+                return max != null && input.getInterval().overlaps(max.getInterval());
               }
             }
         )
@@ -120,9 +118,8 @@ public class DataSourceQueryQueryToolChest
   public ServiceMetricEvent.Builder makeMetricBuilder(DataSourceMetadataQuery query)
   {
     return new ServiceMetricEvent.Builder()
-        .setUser2(DataSourceUtil.getMetricName(query.getDataSource()))
-        .setUser4(query.getType())
-        .setUser6("false");
+        .setDimension("dataSource", DataSourceUtil.getMetricName(query.getDataSource()))
+        .setDimension("type", query.getType());
   }
 
   @Override

@@ -317,7 +317,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       throw new IAE("Compressed dictionary encoded columns currently do not support multi-value columns");
     }
 
-    final GenericIndexed<String> rDictionary = GenericIndexed.read(buffer, GenericIndexed.stringStrategy);
+    final GenericIndexed<String> rDictionary = GenericIndexed.read(buffer, GenericIndexed.STRING_STRATEGY);
     builder.setType(ValueType.STRING);
 
     final WritableSupplier<IndexedInts> rSingleValuedColumn;

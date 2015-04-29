@@ -21,13 +21,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -49,7 +47,7 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryCacheHelper;
 import io.druid.query.QueryDataSource;
-import io.druid.query.QueryMetricUtil;
+import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
@@ -62,12 +60,10 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  */
@@ -123,7 +119,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           return mergeGroupByResults(
               (GroupByQuery) input,
               runner,
-              responseContext);
+              responseContext
+          );
         }
         return runner.run(input, responseContext);
       }
@@ -258,9 +255,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(GroupByQuery query)
   {
-    return QueryMetricUtil.makeQueryTimeMetric(query)
-                          .setUser3(String.format("%,d dims", query.getDimensions().size()))
-                          .setUser7(String.format("%,d aggs", query.getAggregatorSpecs().size()));
+    return DruidMetrics.makePartialQueryTimeMetric(query)
+                          .setDimension("numDimensions", String.valueOf(query.getDimensions().size()))
+                          .setDimension("numMetrics", String.valueOf(query.getAggregatorSpecs().size()))
+                          .setDimension(
+                              "numComplexMetrics",
+                              String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
+                          );
   }
 
   @Override

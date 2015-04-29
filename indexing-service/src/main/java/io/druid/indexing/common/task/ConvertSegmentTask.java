@@ -39,35 +39,68 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
+ * This task takes a segment and attempts to reindex it in the latest version with the specified indexSpec.
+ *
+ * Only datasource must be specified. `indexSpec` and `force` are highly suggested but optional. The rest get
+ * auto-configured and should only be modified with great care
  */
-public class VersionConverterTask extends AbstractFixedIntervalTask
+public class ConvertSegmentTask extends AbstractFixedIntervalTask
 {
-  private static final String TYPE = "version_converter";
+  private static final String TYPE = "convert_segment";
   private static final Integer CURR_VERSION_INTEGER = IndexIO.CURRENT_VERSION_ID;
 
-  private static final Logger log = new Logger(VersionConverterTask.class);
+  private static final Logger log = new Logger(ConvertSegmentTask.class);
 
   @JsonIgnore
   private final DataSegment segment;
   private final IndexSpec indexSpec;
+  private final boolean force;
+  private final boolean validate;
 
-  public static VersionConverterTask create(String dataSource, Interval interval)
+  /**
+   * Create a segment converter task to convert a segment to the most recent version including the specified indexSpec
+   *
+   * @param dataSource The datasource to which this update should be applied
+   * @param interval   The interval in the datasource which to apply the update to
+   * @param indexSpec  The IndexSpec to use in the updated segments
+   * @param force      Force an update, even if the task thinks it doesn't need to update.
+   * @param validate   Validate the new segment compared to the old segment on a row by row basis
+   *
+   * @return A SegmentConverterTask for the datasource's interval with the indexSpec specified.
+   */
+  public static ConvertSegmentTask create(
+      String dataSource,
+      Interval interval,
+      IndexSpec indexSpec,
+      boolean force,
+      boolean validate
+  )
   {
     final String id = makeId(dataSource, interval);
-    return new VersionConverterTask(id, id, dataSource, interval, null, null);
+    return new ConvertSegmentTask(id, id, dataSource, interval, null, indexSpec, force, validate);
   }
 
-  public static VersionConverterTask create(DataSegment segment)
+  /**
+   * Create a task to update the segment specified to the most recent binary version with the specified indexSpec
+   *
+   * @param segment   The segment to which this update should be applied
+   * @param indexSpec The IndexSpec to use in the updated segments
+   * @param force     Force an update, even if the task thinks it doesn't need to update.
+   * @param validate  Validate the new segment compared to the old segment on a row by row basis
+   *
+   * @return A SegmentConverterTask for the segment with the indexSpec specified.
+   */
+  public static ConvertSegmentTask create(DataSegment segment, IndexSpec indexSpec, boolean force, boolean validate)
   {
     final Interval interval = segment.getInterval();
     final String dataSource = segment.getDataSource();
     final String id = makeId(dataSource, interval);
-    return new VersionConverterTask(id, id, dataSource, interval, segment, null);
+    return new ConvertSegmentTask(id, id, dataSource, interval, segment, indexSpec, force, validate);
   }
 
   private static String makeId(String dataSource, Interval interval)
@@ -78,37 +111,63 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
   }
 
   @JsonCreator
-  private static VersionConverterTask createFromJson(
+  private static ConvertSegmentTask createFromJson(
       @JsonProperty("id") String id,
       @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("segment") DataSegment segment,
-      @JsonProperty("indexSpec") IndexSpec indexSpec
+      @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("force") Boolean force,
+      @JsonProperty("validate") Boolean validate
   )
   {
+    final boolean isForce = force == null ? false : force;
+    final boolean isValidate = validate == null ? true : validate;
     if (id == null) {
       if (segment == null) {
-        return create(dataSource, interval);
+        return create(dataSource, interval, indexSpec, isForce, isValidate);
       } else {
-        return create(segment);
+        return create(segment, indexSpec, isForce, isValidate);
       }
     }
-    return new VersionConverterTask(id, groupId, dataSource, interval, segment, indexSpec);
+    return new ConvertSegmentTask(id, groupId, dataSource, interval, segment, indexSpec, isForce, isValidate);
   }
 
-  private VersionConverterTask(
+  private ConvertSegmentTask(
       String id,
       String groupId,
       String dataSource,
       Interval interval,
       DataSegment segment,
-      IndexSpec indexSpec
+      IndexSpec indexSpec,
+      boolean force,
+      boolean validate
   )
   {
     super(id, groupId, dataSource, interval);
     this.segment = segment;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
+    this.force = force;
+    this.validate = validate;
+  }
+
+  @JsonProperty
+  public boolean isForce()
+  {
+    return force;
+  }
+
+  @JsonProperty
+  public boolean isValidate()
+  {
+    return validate;
+  }
+
+  @JsonProperty
+  public IndexSpec getIndexSpec()
+  {
+    return indexSpec;
   }
 
   @Override
@@ -143,11 +202,18 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
                 {
                   final Integer segmentVersion = segment.getBinaryVersion();
                   if (!CURR_VERSION_INTEGER.equals(segmentVersion)) {
-                    return new SubTask(getGroupId(), segment, indexSpec);
+                    return new SubTask(getGroupId(), segment, indexSpec, force, validate);
+                  } else if (force) {
+                    log.info(
+                        "Segment[%s] already at version[%s], forcing conversion",
+                        segment.getIdentifier(),
+                        segmentVersion
+                    );
+                    return new SubTask(getGroupId(), segment, indexSpec, force, validate);
+                  } else {
+                    log.info("Skipping[%s], already version[%s]", segment.getIdentifier(), segmentVersion);
+                    return null;
                   }
-
-                  log.info("Skipping[%s], already version[%s]", segment.getIdentifier(), segmentVersion);
-                  return null;
                 }
               }
           );
@@ -161,7 +227,7 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
       }
     } else {
       log.info("I'm in a subless mood.");
-      convertSegment(toolbox, segment, indexSpec);
+      convertSegment(toolbox, segment, indexSpec, force, validate);
     }
     return success();
   }
@@ -176,7 +242,7 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
       return false;
     }
 
-    VersionConverterTask that = (VersionConverterTask) o;
+    ConvertSegmentTask that = (ConvertSegmentTask) o;
 
     if (segment != null ? !segment.equals(that.segment) : that.segment != null) {
       return false;
@@ -190,12 +256,16 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
     @JsonIgnore
     private final DataSegment segment;
     private final IndexSpec indexSpec;
+    private final boolean force;
+    private final boolean validate;
 
     @JsonCreator
     public SubTask(
         @JsonProperty("groupId") String groupId,
         @JsonProperty("segment") DataSegment segment,
-        @JsonProperty("indexSpec") IndexSpec indexSpec
+        @JsonProperty("indexSpec") IndexSpec indexSpec,
+        @JsonProperty("force") Boolean force,
+        @JsonProperty("validate") Boolean validate
     )
     {
       super(
@@ -212,6 +282,20 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
       );
       this.segment = segment;
       this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
+      this.force = force == null ? false : force;
+      this.validate = validate == null ? true : validate;
+    }
+
+    @JsonProperty
+    public boolean isValidate()
+    {
+      return validate;
+    }
+
+    @JsonProperty
+    public boolean isForce()
+    {
+      return force;
     }
 
     @JsonProperty
@@ -230,12 +314,18 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       log.info("Subs are good!  Italian BMT and Meatball are probably my favorite.");
-      convertSegment(toolbox, segment, indexSpec);
+      convertSegment(toolbox, segment, indexSpec, force, validate);
       return success();
     }
   }
 
-  private static void convertSegment(TaskToolbox toolbox, final DataSegment segment, IndexSpec indexSpec)
+  private static void convertSegment(
+      TaskToolbox toolbox,
+      final DataSegment segment,
+      IndexSpec indexSpec,
+      boolean force,
+      boolean validate
+  )
       throws SegmentLoadingException, IOException
   {
     log.info("Converting segment[%s]", segment);
@@ -248,17 +338,17 @@ public class VersionConverterTask extends AbstractFixedIntervalTask
       final String version = currentSegment.getVersion();
       final Integer binaryVersion = currentSegment.getBinaryVersion();
 
-      if (version.startsWith(segment.getVersion()) && CURR_VERSION_INTEGER.equals(binaryVersion)) {
+      if (!force && (version.startsWith(segment.getVersion()) && CURR_VERSION_INTEGER.equals(binaryVersion))) {
         log.info("Skipping already updated segment[%s].", segment);
         return;
       }
     }
 
-    final Map<DataSegment, File> localSegments = toolbox.fetchSegments(Arrays.asList(segment));
+    final Map<DataSegment, File> localSegments = toolbox.fetchSegments(Collections.singletonList(segment));
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");
-    if (IndexIO.convertSegment(location, outLocation, indexSpec)) {
+    if (IndexIO.convertSegment(location, outLocation, indexSpec, force, validate)) {
       final int outVersion = IndexIO.getVersionFromDir(outLocation);
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original

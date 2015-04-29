@@ -28,6 +28,8 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import org.joda.time.DateTime;
 
+import java.util.UUID;
+
 /**
  */
 public class NoopTask extends AbstractTask
@@ -66,7 +68,7 @@ public class NoopTask extends AbstractTask
   )
   {
     super(
-        id == null ? String.format("noop_%s", new DateTime()) : id,
+        id == null ? String.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
         "none"
     );
 

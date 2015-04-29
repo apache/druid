@@ -49,6 +49,21 @@ If you are using the Hadoop indexer, set your output directory to be a location 
 
 ## Community Contributed Deep Stores
 
+### Azure
+
+[Microsoft Azure Storage](http://azure.microsoft.com/en-us/services/storage/) is another option for deep storage. This requires some additional druid configuration.
+
+```
+druid.storage.type=azure
+druid.azure.account=<azure storage account>
+druid.azure.key=<azure storage account key>
+druid.azure.container=<azure storage container>
+druid.azure.protocol=<optional; valid options: https or http; default: https>
+druid.azure.maxTries=<optional; number of tries before give up an Azure operation; default: 3; min: 1>
+```
+
+Please note that this is a community contributed module. See [Azure Services](http://azure.microsoft.com/en-us/pricing/free-trial/) for more information.
+
 ### Cassandra
 
 [Apache Cassandra](http://www.datastax.com/what-we-offer/products-services/datastax-enterprise/apache-cassandra) can also be leveraged for deep storage.  This requires some additional druid configuration as well as setting up the necessary schema within a Cassandra keystore.

@@ -19,6 +19,7 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -324,7 +325,7 @@ public class ServerManager implements QuerySegmentWalker
   private TimelineLookup<String, ReferenceCountingSegment> getTimelineLookup(DataSource dataSource)
   {
     final List<String> names = dataSource.getNames();
-    if(names.size() == 1){
+    if (names.size() == 1) {
       return dataSources.get(names.get(0));
     } else {
       return new UnionTimeLineLookup<>(
@@ -438,12 +439,15 @@ public class ServerManager implements QuerySegmentWalker
                           }
                         },
                         new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
-                        "scan/time"
+                        "query/segment/time",
+                        ImmutableMap.of("segment", adapter.getIdentifier())
                     ),
                     cachingExec,
                     cacheConfig
                 )
-            )
+            ),
+            "query/segmentAndCache/time",
+            ImmutableMap.of("segment", adapter.getIdentifier())
         ).withWaitMeasuredFromNow(),
         segmentSpec
     );

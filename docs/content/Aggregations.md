@@ -104,7 +104,7 @@ When setting `byRow` to `false` (the default) it computes the cardinality of the
 * For a single dimension, this is equivalent to
 
 ```sql
-SELECT COUNT(DISCTINCT(dimension)) FROM <datasource>
+SELECT COUNT(DISTINCT(dimension)) FROM <datasource>
 ```
 
 * For multiple dimensions, this is equivalent to something akin to

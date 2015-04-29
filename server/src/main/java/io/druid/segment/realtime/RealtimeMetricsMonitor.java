@@ -23,6 +23,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
+import io.druid.query.DruidMetrics;
 
 import java.util.List;
 import java.util.Map;
@@ -55,30 +56,30 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       }
 
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-          .setUser2(fireDepartment.getDataSchema().getDataSource());
+          .setDimension(DruidMetrics.DATASOURCE, fireDepartment.getDataSchema().getDataSource());
 
       final long thrownAway = metrics.thrownAway() - previous.thrownAway();
       if (thrownAway > 0) {
         log.warn("[%,d] events thrown away because they are outside the window period!", thrownAway);
       }
-      emitter.emit(builder.build("events/thrownAway", thrownAway));
+      emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
       final long unparseable = metrics.unparseable() - previous.unparseable();
       if (unparseable > 0) {
         log.error("[%,d] Unparseable events! Turn on debug logging to see exception stack trace.", unparseable);
       }
-      emitter.emit(builder.build("events/unparseable", unparseable));
-      emitter.emit(builder.build("events/processed", metrics.processed() - previous.processed()));
-      emitter.emit(builder.build("rows/output", metrics.rowOutput() - previous.rowOutput()));
-      emitter.emit(builder.build("persists/num", metrics.numPersists() - previous.numPersists()));
-      emitter.emit(builder.build("persists/time", metrics.persistTimeMillis() - previous.persistTimeMillis()));
+      emitter.emit(builder.build("ingest/events/unparseable", unparseable));
+      emitter.emit(builder.build("ingest/events/processed", metrics.processed() - previous.processed()));
+      emitter.emit(builder.build("ingest/rows/output", metrics.rowOutput() - previous.rowOutput()));
+      emitter.emit(builder.build("ingest/persists/count", metrics.numPersists() - previous.numPersists()));
+      emitter.emit(builder.build("ingest/persists/time", metrics.persistTimeMillis() - previous.persistTimeMillis()));
       emitter.emit(
           builder.build(
-              "persists/backPressure",
+              "ingest/persists/backPressure",
               metrics.persistBackPressureMillis() - previous.persistBackPressureMillis()
           )
       );
-      emitter.emit(builder.build("failed/persists", metrics.failedPersists() - previous.failedPersists()));
-      emitter.emit(builder.build("failed/handoff", metrics.failedHandoffs() - previous.failedHandoffs()));
+      emitter.emit(builder.build("ingest/persists/failed", metrics.failedPersists() - previous.failedPersists()));
+      emitter.emit(builder.build("ingest/handoff/failed", metrics.failedHandoffs() - previous.failedHandoffs()));
 
       previousValues.put(fireDepartment, metrics);
     }

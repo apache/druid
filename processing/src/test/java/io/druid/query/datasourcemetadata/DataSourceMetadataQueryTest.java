@@ -35,7 +35,6 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -142,9 +141,25 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testFilterSegments()
   {
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
+    List<LogicalSegment> segments = new DataSourceQueryQueryToolChest().filterSegments(
         null,
         Arrays.asList(
+            new LogicalSegment()
+            {
+              @Override
+              public Interval getInterval()
+              {
+                return new Interval("2012-01-01/P1D");
+              }
+            },
+            new LogicalSegment()
+            {
+              @Override
+              public Interval getInterval()
+              {
+                return new Interval("2012-01-01T01/PT1H");
+              }
+            },
             new LogicalSegment()
             {
               @Override
@@ -172,8 +187,8 @@ public class DataSourceMetadataQueryTest
         )
     );
 
-    Assert.assertEquals(segments.size(), 3);
-
+    Assert.assertEquals(segments.size(), 2);
+    // should only have the latest segments. 
     List<LogicalSegment> expected = Arrays.asList(
         new LogicalSegment()
         {
@@ -188,21 +203,13 @@ public class DataSourceMetadataQueryTest
           @Override
           public Interval getInterval()
           {
-            return new Interval("2013-01-01T01/PT1H");
-          }
-        },
-        new LogicalSegment()
-        {
-          @Override
-          public Interval getInterval()
-          {
             return new Interval("2013-01-01T02/PT1H");
           }
         }
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getInterval(),segments.get(i).getInterval());
     }
   }
 

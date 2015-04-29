@@ -45,8 +45,8 @@ public class CacheMonitor extends AbstractMonitor
     final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
 
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    emitStats(emitter, "cache/delta", deltaCacheStats, builder);
-    emitStats(emitter, "cache/total", currCacheStats, builder);
+    emitStats(emitter, "query/cache/delta", deltaCacheStats, builder);
+    emitStats(emitter, "query/cache/total", currCacheStats, builder);
 
     prevCacheStats = currCacheStats;
     return true;

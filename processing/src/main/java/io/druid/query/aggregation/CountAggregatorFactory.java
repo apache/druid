@@ -115,7 +115,7 @@ public class CountAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "long";
   }
 
   @Override

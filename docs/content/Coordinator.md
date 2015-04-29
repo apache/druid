@@ -52,7 +52,7 @@ Returns the Druid version, loaded extensions, memory used, total memory and othe
 
 * `/druid/coordinator/v1/leader`
 
-Returns the current leader coordinator of the cluster as a JSON object.
+Returns the current leader coordinator of the cluster.
 
 * `/druid/coordinator/v1/loadstatus`
 
@@ -84,7 +84,7 @@ Returns a list of the names of enabled datasources in the cluster.
 
 * `/druid/coordinator/v1/metadata/datasources?includeDisabled`
 
-Returns a list of the names of enabled and enabled datasources in the cluster.
+Returns a list of the names of enabled and disabled datasources in the cluster.
 
 * `/druid/coordinator/v1/metadata/datasources?full`
 

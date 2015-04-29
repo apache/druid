@@ -42,6 +42,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.metadata.EntryExistsException;
+import io.druid.query.DruidMetrics;
 
 import java.util.List;
 import java.util.Map;
@@ -55,11 +56,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Interface between task producers and the task runner.
- * 
+ * <p/>
  * This object accepts tasks from producers using {@link #add} and manages delivery of these tasks to a
  * {@link TaskRunner}. Tasks will run in a mostly-FIFO order, with deviations when the natural next task is not ready
  * in time (based on its {@link Task#isReady} method).
- * 
+ * <p/>
  * For persistence, we save all new tasks and task status changes using a {@link TaskStorage} object.
  */
 public class TaskQueue
@@ -270,7 +271,8 @@ public class TaskQueue
           for (final String taskId : tasksToKill) {
             try {
               taskRunner.shutdown(taskId);
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
               log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
             }
           }
@@ -291,6 +293,7 @@ public class TaskQueue
    * @param task task to add
    *
    * @return true
+   *
    * @throws io.druid.metadata.EntryExistsException if the task already exists
    */
   public boolean add(final Task task) throws EntryExistsException
@@ -316,6 +319,7 @@ public class TaskQueue
 
   /**
    * Shuts down a task if it has not yet finished.
+   *
    * @param taskId task to kill
    */
   public void shutdown(final String taskId)
@@ -330,7 +334,8 @@ public class TaskQueue
           break;
         }
       }
-    } finally {
+    }
+    finally {
       giant.unlock();
     }
   }
@@ -364,14 +369,15 @@ public class TaskQueue
       // Inform taskRunner that this task can be shut down
       try {
         taskRunner.shutdown(task.getId());
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
       }
       // Remove from running tasks
       int removed = 0;
-      for (int i = tasks.size() - 1 ; i >= 0 ; i--) {
+      for (int i = tasks.size() - 1; i >= 0; i--) {
         if (tasks.get(i).getId().equals(task.getId())) {
-          removed ++;
+          removed++;
           tasks.remove(i);
           break;
         }
@@ -420,8 +426,9 @@ public class TaskQueue
   private ListenableFuture<TaskStatus> attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setUser2(task.getDataSource())
-        .setUser4(task.getType());
+        .setDimension("dataSource", task.getDataSource())
+        .setDimension("taskType", task.getType());
+
     Futures.addCallback(
         statusFuture,
         new FutureCallback<TaskStatus>()
@@ -458,8 +465,8 @@ public class TaskQueue
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {
-                metricBuilder.setUser3(status.getStatusCode().toString());
-                emitter.emit(metricBuilder.build("indexer/time/run/millis", status.getDuration()));
+                metricBuilder.setDimension(DruidMetrics.TASK_STATUS, status.getStatusCode().toString());
+                emitter.emit(metricBuilder.build("task/run/time", status.getDuration()));
 
                 log.info(
                     "Task %s: %s (%d run duration)",

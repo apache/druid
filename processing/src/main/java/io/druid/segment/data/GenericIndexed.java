@@ -319,7 +319,7 @@ public class GenericIndexed<T> implements Indexed<T>
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static ObjectStrategy<String> stringStrategy = new CacheableObjectStrategy<String>()
+  public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
   {
     @Override
     public Class<? extends String> getClazz()
