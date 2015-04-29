@@ -397,7 +397,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 tableName, getSerialType(), getPayloadType()
             ),
             String.format("CREATE INDEX idx_%1$s_key_time ON %1$s(audit_key, created_date)", tableName),
-            String.format("CREATE INDEX idx_%1$s_type_time ON %1$s(audit_key, created_date)", tableName),
+            String.format("CREATE INDEX idx_%1$s_type_time ON %1$s(type, created_date)", tableName),
             String.format("CREATE INDEX idx_%1$s_audit_time ON %1$s(created_date)", tableName)
         )
     );
