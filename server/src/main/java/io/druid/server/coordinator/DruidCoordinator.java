@@ -507,6 +507,7 @@ public class DruidCoordinator
       }
 
       log.info("I am the leader of the coordinators, all must bow!");
+      log.info("Starting coordination in [%s]", config.getCoordinatorStartDelay());
       try {
         leaderCounter++;
         leader = true;
