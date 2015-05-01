@@ -84,7 +84,6 @@
     "type": "realtime",
     "firehose": {
       "type": "irc",
-      "nick": "wiki1234567890",
       "host": "irc.wikimedia.org",
       "channels": [
         "#en.wikipedia",
