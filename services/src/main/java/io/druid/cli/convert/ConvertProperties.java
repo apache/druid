@@ -68,7 +68,16 @@ public class ConvertProperties implements Runnable
       new Rename("druid.db.connector.connectURI", "druid.metadata.storage.connector.connectURI"),
       new Rename("druid.db.connector.user", "druid.metadata.storage.connector.user"),
       new Rename("druid.db.connector.password", "druid.metadata.storage.connector.password"),
+      new Remove("druid.db.connector.validationQuery"),
+      new Remove("druid.db.connector.useValidationQuery"),
+      new Rename("druid.db.connector.createTables", "druid.metadata.storage.connector.createTables"),
       new Rename("druid.db.tables.base", "druid.metadata.storage.tables.base"),
+      new Rename("druid.db.tables.configTable", "druid.metadata.storage.tables.configTable"),
+      new Rename("druid.db.tables.segmentTable", "druid.metadata.storage.tables.segmentTable"),
+      new Rename("druid.db.tables.ruleTable", "druid.metadata.storage.tables.ruleTable"),
+      new Rename("druid.db.tables.taskLock", "druid.metadata.storage.tables.taskLock"),
+      new Rename("druid.db.tables.tasks", "druid.metadata.storage.tables.tasks"),
+      new Rename("druid.db.tables.taskLog", "druid.metadata.storage.tables.taskLog"),
       new PropertyConverter()
       {
         // Add a new config for metadata storage type, and update property name
@@ -124,7 +133,7 @@ public class ConvertProperties implements Runnable
             );
           }
           catch (IOException e) {
-            throw com.google.api.client.repackaged.com.google.common.base.Throwables.propagate(e);
+            throw Throwables.propagate(e);
           }
           coordinates.addAll(oldCoordinates);
           coordinates.add(String.format("io.druid.extensions:%s-metadata-storage", parseJdbcUrl(jdbcUrl)));
