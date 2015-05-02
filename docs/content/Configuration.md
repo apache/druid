@@ -246,7 +246,7 @@ This config is used to find the [Indexing Service](Indexing-Service.html) using 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |overlord|
+|`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |druid/overlord|
 
 ### Announcing Segments
 
