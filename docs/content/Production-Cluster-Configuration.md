@@ -99,7 +99,7 @@ JVM Configuration:
 Runtime.properties:
 
 ```
-druid.host=#{IP_ADDR}:8080
+druid.host=#{IP_ADDR}
 druid.port=8080
 druid.service=druid/prod/overlord
 
@@ -155,7 +155,7 @@ JVM Configuration:
 Runtime.properties:
 
 ```
-druid.host=#{IP_ADDR}:8080
+druid.host=#{IP_ADDR}
 druid.port=8080
 druid.service=druid/prod/middlemanager
 
@@ -219,7 +219,7 @@ JVM Configuration:
 Runtime.properties:
 
 ```
-druid.host=#{IP_ADDR}:8080
+druid.host=#{IP_ADDR}
 druid.port=8080
 druid.service=druid/prod/coordinator
 ```
@@ -259,7 +259,7 @@ JVM Configuration:
 Runtime.properties:
 
 ```
-druid.host=#{IP_ADDR}:8080
+druid.host=#{IP_ADDR}
 druid.port=8080
 druid.service=druid/prod/historical
 
@@ -316,7 +316,7 @@ JVM Configuration:
 Runtime.properties:
 
 ```
-druid.host=#{IP_ADDR}:8080
+druid.host=#{IP_ADDR}
 druid.port=8080
 druid.service=druid/prod/broker
 
