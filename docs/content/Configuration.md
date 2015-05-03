@@ -151,8 +151,6 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
 |`druid.metadata.storage.connector.password`|The password to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
-|`druid.metadata.storage.connector.useValidationQuery`|Validate a table with a query.|false|
-|`druid.metadata.storage.connector.validationQuery`|The query to validate with.|SELECT 1|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
 |`druid.metadata.storage.tables.segmentTable`|The table to use to look for segments.|druid_segments|
 |`druid.metadata.storage.tables.ruleTable`|The table to use to look for segment load/drop rules.|druid_rules|
