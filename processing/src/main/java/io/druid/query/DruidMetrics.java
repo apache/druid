@@ -76,7 +76,7 @@ public class DruidMetrics
             ).toArray(new String[query.getIntervals().size()])
         )
         .setDimension("hasFilters", String.valueOf(query.hasFilters()))
-        .setDimension("duration", query.getDuration().toPeriod().toStandardMinutes().toString());
+        .setDimension("duration", query.getDuration().toString());
   }
 
   public static <T> ServiceMetricEvent.Builder makeQueryTimeMetric(
