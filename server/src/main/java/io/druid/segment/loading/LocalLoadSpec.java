@@ -25,6 +25,7 @@ import com.google.api.client.util.Preconditions;
 import io.druid.guice.LocalDataStorageDruidModule;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,7 +34,7 @@ import java.nio.file.Paths;
  *
  */
 @JsonTypeName(LocalDataStorageDruidModule.SCHEME)
-public class LocalLoadSpec implements LoadSpec
+public class LocalLoadSpec implements LoadSpec, URISupplier
 {
   private final Path path;
   private final LocalDataSegmentPuller puller;
@@ -60,5 +61,11 @@ public class LocalLoadSpec implements LoadSpec
   public LoadSpecResult loadSegment(final File outDir) throws SegmentLoadingException
   {
     return new LoadSpecResult(puller.getSegmentFiles(path.toFile(), outDir).size());
+  }
+
+  @Override
+  public URI getURI()
+  {
+    return path.toUri();
   }
 }

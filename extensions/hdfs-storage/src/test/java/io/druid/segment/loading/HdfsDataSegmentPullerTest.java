@@ -19,8 +19,10 @@ package io.druid.segment.loading;
 
 import com.google.common.io.ByteStreams;
 import com.metamx.common.CompressionUtils;
+import com.metamx.common.FileUtils;
 import com.metamx.common.StringUtils;
 import io.druid.storage.hdfs.HdfsDataSegmentPuller;
+import io.druid.storage.hdfs.HdfsLoadSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -28,7 +30,9 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -90,6 +94,8 @@ public class HdfsDataSegmentPullerTest
 
 
   private HdfsDataSegmentPuller puller;
+  @Rule
+  public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Before
   public void setUp()
@@ -100,50 +106,37 @@ public class HdfsDataSegmentPullerTest
   @Test
   public void testZip() throws IOException, SegmentLoadingException
   {
-    final File tmpDir = com.google.common.io.Files.createTempDir();
-    tmpDir.deleteOnExit();
+    final File tmpDir = tmpFolder.newFolder();
     final File tmpFile = File.createTempFile("zipContents", ".txt", tmpDir);
-    tmpFile.deleteOnExit();
 
-    final Path zipPath = new Path("/tmp/testZip.zip");
+    final Path zipPath = new Path("/tmp", tmpFile.getName() + ".zip");
 
-    final File outTmpDir = com.google.common.io.Files.createTempDir();
-    outTmpDir.deleteOnExit();
+    final File outTmpDir = tmpFolder.newFolder();
 
     final URI uri = URI.create(uriBase.toString() + zipPath.toString());
 
-    tmpFile.deleteOnExit();
     try (final OutputStream stream = new FileOutputStream(tmpFile)) {
       ByteStreams.copy(new ByteArrayInputStream(pathByteContents), stream);
     }
     Assert.assertTrue(tmpFile.exists());
 
-    final File outFile = new File(outTmpDir, tmpFile.getName());
-    outFile.delete();
+    final File expectedOutFile = new File(outTmpDir, tmpFile.getName());
+    expectedOutFile.delete();
 
-    try (final OutputStream stream = miniCluster.getFileSystem().create(zipPath)) {
-      CompressionUtils.zip(tmpDir, stream);
-    }
     try {
-      Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
-      Assert.assertTrue(outFile.exists());
+      final long byteCount;
+      try (final OutputStream stream = miniCluster.getFileSystem().create(zipPath)) {
+         byteCount = CompressionUtils.zip(tmpDir, stream);
+      }
+      Assert.assertEquals(pathByteContents.length, byteCount);
+      Assert.assertFalse(expectedOutFile.exists());
+      final FileUtils.FileCopyResult fileCopyResult = puller.getSegmentFiles(uri, outTmpDir);
+      Assert.assertEquals(pathByteContents.length, fileCopyResult.size());
+      Assert.assertTrue(expectedOutFile.exists());
 
-      Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
-    }
-    finally {
-      if (tmpFile.exists()) {
-        tmpFile.delete();
-      }
-      if (outFile.exists()) {
-        outFile.delete();
-      }
-      if (outTmpDir.exists()) {
-        outTmpDir.delete();
-      }
-      if (tmpDir.exists()) {
-        tmpDir.delete();
-      }
+      Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(expectedOutFile.toPath()));
+    }finally {
+      miniCluster.getFileSystem().delete(zipPath, true);
     }
   }
 
@@ -152,34 +145,27 @@ public class HdfsDataSegmentPullerTest
   {
     final Path zipPath = new Path("/tmp/testZip.gz");
 
-    final File outTmpDir = com.google.common.io.Files.createTempDir();
-    outTmpDir.deleteOnExit();
+    final File outTmpDir = tmpFolder.newFolder();
     final File outFile = new File(outTmpDir, "testZip");
     outFile.delete();
 
     final URI uri = URI.create(uriBase.toString() + zipPath.toString());
 
-    try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
-      try (final OutputStream gzStream = new GZIPOutputStream(outputStream)) {
-        try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-          ByteStreams.copy(inputStream, gzStream);
+    try {
+      try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
+        try (final OutputStream gzStream = new GZIPOutputStream(outputStream)) {
+          try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+            ByteStreams.copy(inputStream, gzStream);
+          }
         }
       }
-    }
-    try {
       Assert.assertFalse(outFile.exists());
       puller.getSegmentFiles(uri, outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
-    }
-    finally {
-      if (outFile.exists()) {
-        outFile.delete();
-      }
-      if (outTmpDir.exists()) {
-        outTmpDir.delete();
-      }
+    } finally {
+      miniCluster.getFileSystem().delete(zipPath, true);
     }
   }
 
@@ -189,8 +175,7 @@ public class HdfsDataSegmentPullerTest
 
     final Path zipPath = new Path("/tmp/tmp2/test.txt");
 
-    final File outTmpDir = com.google.common.io.Files.createTempDir();
-    outTmpDir.deleteOnExit();
+    final File outTmpDir = tmpFolder.newFolder();
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 
@@ -201,20 +186,40 @@ public class HdfsDataSegmentPullerTest
         ByteStreams.copy(inputStream, outputStream);
       }
     }
+    Assert.assertFalse(outFile.exists());
+    puller.getSegmentFiles(uri, outTmpDir);
+    Assert.assertTrue(outFile.exists());
+
+    Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
+  }
+
+  @Test
+  public void testURISupplier() throws IOException, SegmentLoadingException
+  {
+    final Path zipPath = new Path("/tmp/testZip.gz");
+
+    final File outTmpDir = tmpFolder.newFolder();
+    final File outFile = new File(outTmpDir, "testZip");
+    outFile.delete();
+    URISupplier uriSupplier = new HdfsLoadSpec(puller, zipPath.toString());
+    final URI uri = uriSupplier.getURI();
+
+
     try {
+      try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
+        try (final OutputStream gzStream = new GZIPOutputStream(outputStream)) {
+          try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+            ByteStreams.copy(inputStream, gzStream);
+          }
+        }
+      }
       Assert.assertFalse(outFile.exists());
       puller.getSegmentFiles(uri, outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
-    }
-    finally {
-      if (outFile.exists()) {
-        outFile.delete();
-      }
-      if (outTmpDir.exists()) {
-        outTmpDir.delete();
-      }
+    }finally{
+      miniCluster.getFileSystem().delete(zipPath, true);
     }
   }
 }

@@ -18,6 +18,7 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -36,12 +37,15 @@ import com.metamx.common.IAE;
 import io.druid.guice.GuiceInjectors;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 
 /**
@@ -104,5 +108,14 @@ public class LoadSpecTest
   {
     LoadSpec loadSpec = mapper.readValue(value, LoadSpec.class);
     Assert.assertEquals(expectedId, loadSpec.getClass().getAnnotation(JsonTypeName.class).value());
+  }
+
+  @Test
+  public void testURISupplier() throws IOException, URISyntaxException
+  {
+    LoadSpec loadSpec = mapper.readValue(value, LoadSpec.class);
+    Assume.assumeTrue(loadSpec instanceof URISupplier);
+    URISupplier uriSupplier = (URISupplier)loadSpec;
+    Assert.assertEquals(new URI("file:/"),uriSupplier.getURI());
   }
 }
