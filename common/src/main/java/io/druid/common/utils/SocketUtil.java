@@ -20,34 +20,27 @@ package io.druid.common.utils;
 import com.metamx.common.ISE;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 
 /**
  */
 public class SocketUtil
 {
-  public static int findOpenPort(int startPort)
+  public static int findOpenPort(int startPort){
+    return findOpenPort(startPort, null);
+  }
+
+  public static int findOpenPort(int startPort, String inetAddr)
   {
     int currPort = startPort;
 
     while (currPort < 0xffff) {
-      ServerSocket socket = null;
-      try {
-        socket = new ServerSocket(currPort);
+      try(ServerSocket socket = new ServerSocket(currPort, 50, InetAddress.getByName(inetAddr))) {
         return currPort;
       }
       catch (IOException e) {
         ++currPort;
-      }
-      finally {
-        if (socket != null) {
-          try {
-            socket.close();
-          }
-          catch (IOException e) {
-
-          }
-        }
       }
     }
 

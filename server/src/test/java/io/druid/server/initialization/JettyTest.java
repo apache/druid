@@ -74,7 +74,7 @@ public class JettyTest extends BaseJettyTest
                       try {
                         ListenableFuture<StatusResponseHolder> go =
                             client.go(
-                                new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/slow/hello")),
+                                new Request(HttpMethod.GET, new URL("http://" + host + ":" + port + "/slow/hello")),
                                 new StatusResponseHandler(Charset.defaultCharset())
                             );
                         startTime2 = System.currentTimeMillis();
@@ -109,7 +109,7 @@ public class JettyTest extends BaseJettyTest
   @Test
   public void testGzipCompression() throws Exception
   {
-    final URL url = new URL("http://localhost:" + port + "/default");
+    final URL url = new URL("http://" + host + ":" + port + "/default");
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
@@ -136,7 +136,7 @@ public class JettyTest extends BaseJettyTest
   {
     ListenableFuture<InputStream> go =
         client.go(
-            new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/exception/exception")),
+            new Request(HttpMethod.GET, new URL("http://" + host + ":" + port + "/exception/exception")),
             new InputStreamResponseHandler()
         );
     try {
@@ -162,7 +162,7 @@ public class JettyTest extends BaseJettyTest
           {
             try {
               ListenableFuture<InputStream> go = client.go(
-                  new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/exception/exception")),
+                  new Request(HttpMethod.GET, new URL("http://" + host + ":" + port + "/exception/exception")),
                   new InputStreamResponseHandler()
               );
               StringWriter writer = new StringWriter();
@@ -185,7 +185,7 @@ public class JettyTest extends BaseJettyTest
   @Test
   public void testExtensionAuthFilter() throws Exception
   {
-    URL url = new URL("http://localhost:" + port + "/default");
+    URL url = new URL("http://" + host + ":" + port + "/default");
     HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty(DummyAuthFilter.AUTH_HDR, DummyAuthFilter.SECRET_USER);
     Assert.assertEquals(HttpServletResponse.SC_OK, get.getResponseCode());

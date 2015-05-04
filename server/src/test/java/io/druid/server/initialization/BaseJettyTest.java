@@ -82,6 +82,7 @@ public class BaseJettyTest
   protected Lifecycle lifecycle;
   protected HttpClient client;
   protected int port = -1;
+  protected String host = null;
 
   public static void setProperties()
   {
@@ -97,6 +98,7 @@ public class BaseJettyTest
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPort();
+    host = node.getHost();
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);
@@ -113,7 +115,7 @@ public class BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", null, null)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
                 
