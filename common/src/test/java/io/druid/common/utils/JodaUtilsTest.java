@@ -17,12 +17,16 @@
 
 package io.druid.common.utils;
 
+import org.joda.time.DateTimeConstants;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -124,4 +128,23 @@ public class JodaUtilsTest
     final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
     Assert.assertEquals(Long.MAX_VALUE, interval.toDuration().getMillis());
   }
+
+  @Test
+  public void testMinMaxDuration()
+  {
+    final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
+    final Duration duration = interval.toDuration();
+    Assert.assertEquals(Long.MAX_VALUE, duration.getMillis());
+    Assert.assertEquals("PT9223372036854775.807S", duration.toString());
+  }
+
+  // new Period(Long.MAX_VALUE) throws ArithmeticException
+  @Test(expected = ArithmeticException.class)
+  public void testMinMaxPeriod()
+  {
+    final Interval interval = new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
+    final Period period = interval.toDuration().toPeriod();
+    Assert.assertEquals(Long.MAX_VALUE, period.getMinutes());
+  }
+
 }
