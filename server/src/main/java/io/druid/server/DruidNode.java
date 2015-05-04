@@ -83,7 +83,7 @@ public class DruidNode
 
     if(host == null && port == null) {
       host = getDefaultHost();
-      port = -1;
+      port = SocketUtil.findOpenPort(8080, host);
     }
     else {
       final HostAndPort hostAndPort;
@@ -103,7 +103,7 @@ public class DruidNode
       }
 
       if (port == null) {
-        port = SocketUtil.findOpenPort(8080);
+        port = SocketUtil.findOpenPort(8080, host);
       }
     }
 
