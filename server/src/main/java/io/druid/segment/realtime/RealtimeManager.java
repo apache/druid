@@ -104,7 +104,13 @@ public class RealtimeManager implements QuerySegmentWalker
       }
       chiefs.add(chief);
 
-      chief.setName(String.format("chief-%s", schema.getDataSource()));
+      chief.setName(
+          String.format(
+              "chief-%s[%s]",
+              schema.getDataSource(),
+              fireDepartment.getTuningConfig().getShardSpec().getPartitionNum()
+          )
+      );
       chief.setDaemon(true);
       chief.init();
       chief.start();
