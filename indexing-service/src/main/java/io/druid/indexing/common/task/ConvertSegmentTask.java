@@ -22,6 +22,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
@@ -37,6 +39,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -45,7 +48,7 @@ import java.util.Map;
 
 /**
  * This task takes a segment and attempts to reindex it in the latest version with the specified indexSpec.
- *
+ * <p/>
  * Only datasource must be specified. `indexSpec` and `force` are highly suggested but optional. The rest get
  * auto-configured and should only be modified with great care
  */
@@ -82,7 +85,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   )
   {
     final String id = makeId(dataSource, interval);
-    return new ConvertSegmentTask(id, id, dataSource, interval, null, indexSpec, force, validate);
+    return new ConvertSegmentTask(id, dataSource, interval, null, indexSpec, force, validate);
   }
 
   /**
@@ -100,7 +103,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     final Interval interval = segment.getInterval();
     final String dataSource = segment.getDataSource();
     final String id = makeId(dataSource, interval);
-    return new ConvertSegmentTask(id, id, dataSource, interval, segment, indexSpec, force, validate);
+    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, force, validate);
   }
 
   private static String makeId(String dataSource, Interval interval)
@@ -113,7 +116,6 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   @JsonCreator
   private static ConvertSegmentTask createFromJson(
       @JsonProperty("id") String id,
-      @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("segment") DataSegment segment,
@@ -131,12 +133,11 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         return create(segment, indexSpec, isForce, isValidate);
       }
     }
-    return new ConvertSegmentTask(id, groupId, dataSource, interval, segment, indexSpec, isForce, isValidate);
+    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, isForce, isValidate);
   }
 
-  private ConvertSegmentTask(
+  protected ConvertSegmentTask(
       String id,
-      String groupId,
       String dataSource,
       Interval interval,
       DataSegment segment,
@@ -145,7 +146,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       boolean validate
   )
   {
-    super(id, groupId, dataSource, interval);
+    super(id, dataSource, interval);
     this.segment = segment;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
     this.force = force;
@@ -185,6 +186,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    final Iterable<DataSegment> segmentsToUpdate;
     if (segment == null) {
       final List<DataSegment> segments = toolbox.getTaskActionClient().submit(
           new SegmentListUsedAction(
@@ -192,44 +194,64 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
               getInterval()
           )
       );
-      final FunctionalIterable<Task> tasks = FunctionalIterable
+      segmentsToUpdate = FunctionalIterable
           .create(segments)
-          .keep(
-              new Function<DataSegment, Task>()
+          .filter(
+              new Predicate<DataSegment>()
               {
                 @Override
-                public Task apply(DataSegment segment)
+                public boolean apply(DataSegment segment)
                 {
                   final Integer segmentVersion = segment.getBinaryVersion();
                   if (!CURR_VERSION_INTEGER.equals(segmentVersion)) {
-                    return new SubTask(getGroupId(), segment, indexSpec, force, validate);
+                    return true;
                   } else if (force) {
                     log.info(
                         "Segment[%s] already at version[%s], forcing conversion",
                         segment.getIdentifier(),
                         segmentVersion
                     );
-                    return new SubTask(getGroupId(), segment, indexSpec, force, validate);
+                    return true;
                   } else {
                     log.info("Skipping[%s], already version[%s]", segment.getIdentifier(), segmentVersion);
-                    return null;
+                    return false;
                   }
                 }
               }
           );
-
-      // Vestigial from a past time when this task spawned subtasks.
-      for (final Task subTask : tasks) {
-        final TaskStatus status = subTask.run(toolbox);
-        if (!status.isSuccess()) {
-          return status;
-        }
-      }
     } else {
       log.info("I'm in a subless mood.");
-      convertSegment(toolbox, segment, indexSpec, force, validate);
+      segmentsToUpdate = Collections.singleton(segment);
+    }
+    // Vestigial from a past time when this task spawned subtasks.
+    for (final Task subTask : generateSubTasks(getGroupId(), segmentsToUpdate, indexSpec, force, validate)) {
+      final TaskStatus status = subTask.run(toolbox);
+      if (!status.isSuccess()) {
+        return TaskStatus.fromCode(getId(), status.getStatusCode());
+      }
     }
     return success();
+  }
+
+  protected Iterable<Task> generateSubTasks(
+      final String groupId,
+      final Iterable<DataSegment> segments,
+      final IndexSpec indexSpec,
+      final boolean force,
+      final boolean validate
+  )
+  {
+    return Iterables.transform(
+        segments,
+        new Function<DataSegment, Task>()
+        {
+          @Override
+          public Task apply(DataSegment input)
+          {
+            return new SubTask(groupId, segment, indexSpec, force, validate);
+          }
+        }
+    );
   }
 
   @Override
