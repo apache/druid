@@ -22,34 +22,39 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.metamx.common.ISE;
-import io.druid.segment.loading.DataSegmentPuller;
+import com.google.common.base.Throwables;
 import io.druid.segment.loading.LoadSpec;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.loading.URISupplier;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
-import java.util.Map;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  *
  */
 @JsonTypeName(HdfsStorageDruidModule.SCHEME)
-public class HdfsLoadSpec implements LoadSpec
+public class HdfsLoadSpec implements LoadSpec, URISupplier
 {
   private final Path path;
   final HdfsDataSegmentPuller puller;
+
   @JsonCreator
   public HdfsLoadSpec(
       @JacksonInject HdfsDataSegmentPuller puller,
       @JsonProperty(value = "path", required = true) String path
-  ){
+  )
+  {
     Preconditions.checkNotNull(path);
     this.path = new Path(path);
     this.puller = puller;
   }
+
   @JsonProperty("path")
-  public final String getPathString(){
+  public final String getPathString()
+  {
     return path.toString();
   }
 
@@ -57,5 +62,16 @@ public class HdfsLoadSpec implements LoadSpec
   public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
   {
     return new LoadSpecResult(puller.getSegmentFiles(path, outDir).size());
+  }
+
+  @Override
+  public URI getURI()
+  {
+    try {
+      return new URI("hdfs", null, getPathString(), null);
+    }
+    catch (URISyntaxException e) {
+      throw Throwables.propagate(e);
+    }
   }
 }
