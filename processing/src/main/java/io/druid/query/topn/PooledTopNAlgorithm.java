@@ -311,12 +311,14 @@ public class PooledTopNAlgorithm
   @Override
   public void cleanup(PooledTopNParams params)
   {
-    ResourceHolder<ByteBuffer> resultsBufHolder = params.getResultsBufHolder();
+    if (params != null) {
+      ResourceHolder<ByteBuffer> resultsBufHolder = params.getResultsBufHolder();
 
-    if (resultsBufHolder != null) {
-      resultsBufHolder.get().clear();
+      if (resultsBufHolder != null) {
+        resultsBufHolder.get().clear();
+      }
+      CloseQuietly.close(resultsBufHolder);
     }
-    CloseQuietly.close(resultsBufHolder);
   }
 
   public static class PooledTopNParams extends TopNParams
