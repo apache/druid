@@ -41,19 +41,19 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 {
 
   private static final Logger log = new Logger(AzureDataSegmentPusher.class);
-  private final AzureStorageContainer azureStorageContainer;
-  private final AzureAccountConfig azureAccountConfig;
+  private final AzureStorage azureStorage;
+  private final AzureAccountConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public AzureDataSegmentPusher(
-      AzureStorageContainer azureStorageContainer,
-      AzureAccountConfig azureAccountConfig,
+      AzureStorage azureStorage,
+      AzureAccountConfig config,
       ObjectMapper jsonMapper
   )
   {
-    this.azureStorageContainer = azureStorageContainer;
-    this.azureAccountConfig = azureAccountConfig;
+    this.azureStorage = azureStorage;
+    this.config = config;
     this.jsonMapper = jsonMapper;
   }
 
@@ -88,7 +88,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final String storageDir = DataSegmentPusherUtil.getStorageDir(segment);
 
     return ImmutableMap.of(
-        "storage", storageDir,
         "index", String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
         "descriptor", String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME)
     );
@@ -100,14 +99,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     return RetryUtils.retry(f, AzureUtils.AZURE_RETRY, maxTries);
   }
 
-  public void uploadThenDelete(final File file, final String azurePath)
-      throws StorageException, IOException, URISyntaxException
-  {
-    azureStorageContainer.uploadBlob(file, azurePath);
-    log.info("Deleting file [%s]", file);
-    file.delete();
-  }
-
   public DataSegment uploadDataSegment(
       DataSegment segment,
       final int version,
@@ -117,20 +108,30 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   )
       throws StorageException, IOException, URISyntaxException
   {
-    uploadThenDelete(compressedSegmentData, azurePaths.get("index"));
-    uploadThenDelete(descriptorFile, azurePaths.get("descriptor"));
+    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"));
+    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"));
 
-    return segment
+    final DataSegment outSegment = segment
         .withSize(compressedSegmentData.length())
         .withLoadSpec(
             ImmutableMap.<String, Object>of(
                 "type",
                 AzureStorageDruidModule.SCHEME,
-                "storageDir",
-                azurePaths.get("storage")
+                "containerName",
+                config.getContainer(),
+                "blobPath",
+                azurePaths.get("index")
             )
         )
         .withBinaryVersion(version);
+
+    log.info("Deleting file [%s]", compressedSegmentData);
+    compressedSegmentData.delete();
+
+    log.info("Deleting file [%s]", descriptorFile);
+    descriptorFile.delete();
+
+    return outSegment;
   }
 
   @Override
@@ -154,7 +155,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
               return uploadDataSegment(segment, version, compressedSegmentData, descriptorFile, azurePaths);
             }
           },
-          azureAccountConfig.getMaxTries()
+          config.getMaxTries()
       );
     }
     catch (Exception e) {
