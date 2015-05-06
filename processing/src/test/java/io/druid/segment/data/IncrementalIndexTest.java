@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -36,6 +37,7 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -48,6 +50,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -456,5 +459,31 @@ public class IncrementalIndexTest
     }
 
     Assert.assertTrue("rowCount : " + rowCount, rowCount > 200 && rowCount < 600);
+  }
+
+  @Test
+  public void testgetDimensions()
+  {
+    final IncrementalIndex<Aggregator> incrementalIndex = new OnheapIncrementalIndex(
+        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularity.NONE)
+                                            .withMetrics(
+                                                new AggregatorFactory[]{
+                                                    new CountAggregatorFactory(
+                                                        "count"
+                                                    )
+                                                }
+                                            )
+                                            .withDimensionsSpec(
+                                                new DimensionsSpec(
+                                                    Arrays.asList("dim0", "dim1"),
+                                                    null,
+                                                    null
+                                                )
+                                            )
+                                            .build(),
+        true,
+        1000000
+    );
+    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensions());
   }
 }

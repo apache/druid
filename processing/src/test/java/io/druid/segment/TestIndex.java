@@ -60,9 +60,18 @@ public class TestIndex
       "placement",
       "placementish",
       "index",
+      "partial_null_column",
+      "null_column",
       "quality_uniques"
   };
-  public static final String[] DIMENSIONS = new String[]{"market", "quality", "placement", "placementish"};
+  public static final String[] DIMENSIONS = new String[]{
+      "market",
+      "quality",
+      "placement",
+      "placementish",
+      "partial_null_column",
+      "null_column",
+  };
   public static final String[] METRICS = new String[]{"index"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
@@ -212,7 +221,6 @@ public class TestIndex
                 startTime.set(System.currentTimeMillis());
                 runOnce = true;
               }
-
               retVal.add(parser.parse(line));
 
               ++lineCount;

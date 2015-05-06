@@ -309,6 +309,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         }
                       }
                     }
+                    // check for null entry
+                    if(vals.isEmpty() && dimValLookup.contains(null)){
+                      int id = dimValLookup.getId(null);
+                      if (id < maxId) {
+                        vals.add(id);
+                      }
+                    }
 
                     return new IndexedInts()
                     {
@@ -568,7 +575,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, String value)
+    public ValueMatcher makeValueMatcher(String dimension, final String value)
     {
       Integer dimIndexObject = index.getDimensionIndex(dimension);
       if (dimIndexObject == null) {
@@ -576,7 +583,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       }
       final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
       if (!dimDim.contains(value)) {
-        if (value == null || "".equals(value)) {
+        if (Strings.isNullOrEmpty(value)) {
           final int dimIndex = dimIndexObject;
 
           return new ValueMatcher()
@@ -605,7 +612,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         {
           String[][] dims = holder.getKey().getDims();
           if (dimIndex >= dims.length || dims[dimIndex] == null) {
-            return false;
+            return Strings.isNullOrEmpty(value);
           }
 
           for (String dimVal : dims[dimIndex]) {
@@ -634,7 +641,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         {
           String[][] dims = holder.getKey().getDims();
           if (dimIndex >= dims.length || dims[dimIndex] == null) {
-            return false;
+            return predicate.apply(null);
           }
 
           for (String dimVal : dims[dimIndex]) {
