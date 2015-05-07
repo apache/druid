@@ -101,9 +101,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       dimValSelector = getDimValSelectorForTopNMetric(singleMetricParam, singleMetricResultBuilder);
     }
     finally {
-      if (singleMetricParam != null) {
-        singleMetricAlgo.cleanup(singleMetricParam);
-      }
+      singleMetricAlgo.cleanup(singleMetricParam);
     }
 
     PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(capabilities, query, bufferPool);
@@ -118,9 +116,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       );
     }
     finally {
-      if (allMetricsParam != null) {
-        allMetricAlgo.cleanup(allMetricsParam);
-      }
+      allMetricAlgo.cleanup(allMetricsParam);
     }
   }
 

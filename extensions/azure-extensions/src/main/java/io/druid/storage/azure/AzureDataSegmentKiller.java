@@ -26,20 +26,21 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 
 import java.net.URISyntaxException;
+import java.nio.file.Paths;
 import java.util.Map;
 
 public class AzureDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(AzureDataSegmentKiller.class);
 
-  private final AzureStorageContainer azureStorageContainer;
+  private final AzureStorage azureStorage;
 
   @Inject
   public AzureDataSegmentKiller(
-      final AzureStorageContainer azureStorageContainer
+      final AzureStorage azureStorage
   )
   {
-    this.azureStorageContainer = azureStorageContainer;
+    this.azureStorage = azureStorage;
   }
 
   @Override
@@ -48,10 +49,12 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     log.info("Killing segment [%s]", segment);
 
     Map<String, Object> loadSpec = segment.getLoadSpec();
-    String storageDir = MapUtils.getString(loadSpec, "storageDir");
+    final String containerName = MapUtils.getString(loadSpec, "containerName");
+    final String blobPath = MapUtils.getString(loadSpec, "blobPath");
+    final String dirPath = Paths.get(blobPath).getParent().toString();
 
     try {
-      azureStorageContainer.emptyCloudBlobDirectory(storageDir);
+      azureStorage.emptyCloudBlobDirectory(containerName, dirPath);
     }
     catch (StorageException | URISyntaxException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]", segment.getIdentifier());

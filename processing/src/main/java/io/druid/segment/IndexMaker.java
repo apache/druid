@@ -584,7 +584,7 @@ public class IndexMaker
 
       for (int i = 0; i < adapters.size(); i++) {
         Indexed<String> dimValues = adapters.get(i).getDimValueLookup(dimension);
-        if (dimValues != null) {
+        if (!IndexMerger.isNullColumn(dimValues)) {
           dimValueLookups.add(dimValues);
           converters[i] = new DimValueConverter(dimValues);
         }

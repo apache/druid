@@ -167,10 +167,6 @@ public class RealtimeIndexTask extends AbstractTask
 
     boolean normalExit = true;
 
-    // Set up firehose
-    final Period intermediatePersistPeriod = spec.getTuningConfig().getIntermediatePersistPeriod();
-    final Firehose firehose = spec.getIOConfig().getFirehoseFactory().connect(spec.getDataSchema().getParser());
-
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
 
@@ -280,11 +276,18 @@ public class RealtimeIndexTask extends AbstractTask
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());
 
+    // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
+    Firehose firehose = null;
+
     try {
       plumber.startJob();
 
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
+
+      // Set up firehose
+      final Period intermediatePersistPeriod = spec.getTuningConfig().getIntermediatePersistPeriod();
+      firehose = spec.getIOConfig().getFirehoseFactory().connect(spec.getDataSchema().getParser());
 
       // Time to read data!
       long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
@@ -338,6 +341,7 @@ public class RealtimeIndexTask extends AbstractTask
           log.makeAlert(e, "Failed to finish realtime task").emit();
         }
         finally {
+          // firehose will be non-null since normalExit is true
           CloseQuietly.close(firehose);
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }

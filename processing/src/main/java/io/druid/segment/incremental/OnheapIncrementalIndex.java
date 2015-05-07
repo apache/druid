@@ -265,9 +265,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     public int getId(String value)
     {
-      if (value == null) {
-        value = "";
-      }
       final Integer id = falseIds.get(value);
       return id == null ? -1 : id;
     }

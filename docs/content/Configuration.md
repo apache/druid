@@ -151,8 +151,6 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
 |`druid.metadata.storage.connector.password`|The password to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
-|`druid.metadata.storage.connector.useValidationQuery`|Validate a table with a query.|false|
-|`druid.metadata.storage.connector.validationQuery`|The query to validate with.|SELECT 1|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
 |`druid.metadata.storage.tables.segmentTable`|The table to use to look for segments.|druid_segments|
 |`druid.metadata.storage.tables.ruleTable`|The table to use to look for segment load/drop rules.|druid_rules|
@@ -160,6 +158,7 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|druid_tasks|
 |`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|druid_taskLog|
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|
+|`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes e.g. Coordinator rules.|druid_audit|
 
 ### Deep Storage
 
@@ -245,7 +244,7 @@ This config is used to find the [Indexing Service](Indexing-Service.html) using 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |overlord|
+|`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |druid/overlord|
 
 ### Announcing Segments
 

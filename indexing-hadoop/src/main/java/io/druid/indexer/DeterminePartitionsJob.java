@@ -61,7 +61,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.joda.time.DateTime;
@@ -79,13 +78,13 @@ import java.util.Map;
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
  * choosing the best dimension that satisfies the criteria:
- * 
+ * <p/>
  * <ul>
  * <li>Must have exactly one value per row.</li>
  * <li>Must not generate oversized partitions. A dimension with N rows having the same value will necessarily
  * put all those rows in the same partition, and that partition may be much larger than the target size.</li>
  * </ul>
- * 
+ * <p/>
  * "Best" means a very high cardinality dimension, or, if none exist, the dimension that minimizes variation of
  * segment size relative to the target.
  */
@@ -221,8 +220,8 @@ public class DeterminePartitionsJob implements Jobby
         if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
           List<ShardSpec> specs = config.jsonMapper.readValue(
               Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
-          {
-          }
+              {
+              }
           );
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
@@ -461,7 +460,7 @@ public class DeterminePartitionsJob implements Jobby
   private static abstract class DeterminePartitionsDimSelectionBaseReducer
       extends Reducer<BytesWritable, Text, BytesWritable, Text>
   {
-    protected static volatile HadoopDruidIndexerConfig config = null;
+    protected volatile HadoopDruidIndexerConfig config = null;
 
     @Override
     protected void setup(Context context)
@@ -756,13 +755,13 @@ public class DeterminePartitionsJob implements Jobby
 
       final List<ShardSpec> chosenShardSpecs = Lists.transform(
           chosenPartitions.partitions, new Function<DimPartition, ShardSpec>()
-      {
-        @Override
-        public ShardSpec apply(DimPartition dimPartition)
-        {
-          return dimPartition.shardSpec;
-        }
-      }
+          {
+            @Override
+            public ShardSpec apply(DimPartition dimPartition)
+            {
+              return dimPartition.shardSpec;
+            }
+          }
       );
 
       log.info("Chosen partitions:");
@@ -772,12 +771,12 @@ public class DeterminePartitionsJob implements Jobby
 
       try {
         HadoopDruidIndexerConfig.jsonMapper
-                                .writerWithType(
-                                    new TypeReference<List<ShardSpec>>()
-                                    {
-                                    }
-                                )
-                                .writeValue(out, chosenShardSpecs);
+            .writerWithType(
+                new TypeReference<List<ShardSpec>>()
+                {
+                }
+            )
+            .writeValue(out, chosenShardSpecs);
       }
       finally {
         Closeables.close(out, false);

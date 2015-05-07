@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -517,7 +518,7 @@ public class IndexMerger
       DimValueConverter[] converters = new DimValueConverter[indexes.size()];
       for (int i = 0; i < indexes.size(); i++) {
         Indexed<String> dimValues = indexes.get(i).getDimValueLookup(dimension);
-        if (dimValues != null) {
+        if (!isNullColumn(dimValues)) {
           dimValueLookups.add(dimValues);
           converters[i] = new DimValueConverter(dimValues);
         }
@@ -1227,5 +1228,18 @@ public class IndexMerger
 
       return retVal;
     }
+  }
+
+  static boolean isNullColumn(Iterable<String> dimValues)
+  {
+    if (dimValues == null) {
+      return true;
+    }
+    for (String val : dimValues) {
+      if (val != null) {
+        return false;
+      }
+    }
+    return true;
   }
 }

@@ -30,25 +30,32 @@ import java.io.File;
 @JsonTypeName(AzureStorageDruidModule.SCHEME)
 public class AzureLoadSpec implements LoadSpec
 {
+
   @JsonProperty
-  private final String storageDir;
+  private final String containerName;
+
+  @JsonProperty
+  private final String blobPath;
 
   private final AzureDataSegmentPuller puller;
 
   @JsonCreator
   public AzureLoadSpec(
-      @JacksonInject AzureDataSegmentPuller puller,
-      @JsonProperty("storageDir") String storageDir
+      @JsonProperty("containerName") String containerName,
+      @JsonProperty("blobPath") String blobPath,
+      @JacksonInject AzureDataSegmentPuller puller
   )
   {
-    Preconditions.checkNotNull(storageDir);
-    this.storageDir = storageDir;
+    Preconditions.checkNotNull(blobPath);
+    Preconditions.checkNotNull(containerName);
+    this.containerName = containerName;
+    this.blobPath = blobPath;
     this.puller = puller;
   }
 
   @Override
   public LoadSpecResult loadSegment(File file) throws SegmentLoadingException
   {
-    return new LoadSpecResult(puller.getSegmentFiles(storageDir, file).size());
+    return new LoadSpecResult(puller.getSegmentFiles(containerName, blobPath, file).size());
   }
 }

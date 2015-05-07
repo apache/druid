@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URISyntaxException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,11 +37,14 @@ import static org.easymock.EasyMock.*;
 public class AzureDataSegmentKillerTest extends EasyMockSupport
 {
 
+  private static final String containerName = "container";
+  private static final String blobPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+
   private static final DataSegment dataSegment = new DataSegment(
       "test",
       new Interval("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.<String, Object>of("storageDir", "/path/to/storage/"),
+      ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
       null,
       null,
       new NoneShardSpec(),
@@ -48,12 +52,12 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       1
   );
 
-  private AzureStorageContainer azureStorageContainer;
+  private AzureStorage azureStorage;
 
   @Before
   public void before()
   {
-    azureStorageContainer = createMock(AzureStorageContainer.class);
+    azureStorage = createMock(AzureStorage.class);
   }
 
   @Test
@@ -61,12 +65,13 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   {
 
     List<String> deletedFiles = new ArrayList<>();
+    final String dirPath = Paths.get(blobPath).getParent().toString();
 
-    expect(azureStorageContainer.emptyCloudBlobDirectory("/path/to/storage/")).andReturn(deletedFiles);
+    expect(azureStorage.emptyCloudBlobDirectory(containerName, dirPath)).andReturn(deletedFiles);
 
     replayAll();
 
-    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(azureStorageContainer);
+    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(azureStorage);
 
     killer.kill(dataSegment);
 
@@ -77,7 +82,9 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   public void killWithErrorTest() throws SegmentLoadingException, URISyntaxException, StorageException
   {
 
-    expect(azureStorageContainer.emptyCloudBlobDirectory("/path/to/storage/")).andThrow(
+    String dirPath = Paths.get(blobPath).getParent().toString();
+
+    expect(azureStorage.emptyCloudBlobDirectory(containerName, dirPath)).andThrow(
         new StorageException(
             "",
             "",
@@ -89,7 +96,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
 
     replayAll();
 
-    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(azureStorageContainer);
+    AzureDataSegmentKiller killer = new AzureDataSegmentKiller(azureStorage);
 
     killer.kill(dataSegment);
 

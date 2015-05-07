@@ -32,9 +32,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,11 +40,13 @@ import static org.easymock.EasyMock.*;
 
 public class AzureDataSegmentPusherTest extends EasyMockSupport
 {
+  private static final String containerName = "container";
+  private static final String blobPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final DataSegment dataSegment = new DataSegment(
       "test",
       new Interval("2015-04-12/2015-04-13"),
       "1",
-      ImmutableMap.<String, Object>of("storageDir", "/path/to/storage/"),
+      ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
       null,
       null,
       new NoneShardSpec(),
@@ -54,14 +54,14 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
       1
   );
 
-  private AzureStorageContainer azureStorageContainer;
+  private AzureStorage azureStorage;
   private AzureAccountConfig azureAccountConfig;
   private ObjectMapper jsonMapper;
 
   @Before
   public void before()
   {
-    azureStorageContainer = createMock(AzureStorageContainer.class);
+    azureStorage = createMock(AzureStorage.class);
     azureAccountConfig = createMock(AzureAccountConfig.class);
     jsonMapper = createMock(ObjectMapper.class);
 
@@ -71,11 +71,10 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void getAzurePathsTest()
   {
     final String storageDir = DataSegmentPusherUtil.getStorageDir(dataSegment);
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorageContainer, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
 
     Map<String, String> paths = pusher.getAzurePaths(dataSegment);
 
-    assertEquals(storageDir, paths.get("storage"));
     assertEquals(String.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
     assertEquals(
         String.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
@@ -84,48 +83,21 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   }
 
   @Test
-  public void uploadThenDeleteTest() throws StorageException, IOException, URISyntaxException
-  {
-    final File file = AzureTestUtils.createZipTempFile("segment", "bucket");
-    file.deleteOnExit();
-    final String azureDestPath = "/azure/path/";
-    azureStorageContainer.uploadBlob(file, azureDestPath);
-    expectLastCall();
-
-    replayAll();
-
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorageContainer, azureAccountConfig, jsonMapper);
-
-    pusher.uploadThenDelete(file, azureDestPath);
-
-    verifyAll();
-  }
-
-  @Test
   public void uploadDataSegmentTest() throws StorageException, IOException, URISyntaxException
   {
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
     final int version = 9;
-    final File compressedSegmentData = AzureTestUtils.createZipTempFile("segment", "bucket");
-    compressedSegmentData.deleteOnExit();
-    final File descriptorFile = Files.createTempFile("descriptor", ".json").toFile();
-    descriptorFile.deleteOnExit();
-    final Map<String, String> azurePaths = ImmutableMap.of(
-        "index",
-        "/path/to/azure/storage",
-        "descriptor",
-        "/path/to/azure/storage",
-        "storage",
-        "/path/to/azure/storage"
-    );
+    final File compressedSegmentData = new File("index.zip");
+    final File descriptorFile = new File("descriptor.json");
+    final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment);
 
-    azureStorageContainer.uploadBlob(compressedSegmentData, azurePaths.get("index"));
+    expect(azureAccountConfig.getContainer()).andReturn(containerName).times(3);
+    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
     expectLastCall();
-    azureStorageContainer.uploadBlob(descriptorFile, azurePaths.get("descriptor"));
+    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
     expectLastCall();
 
     replayAll();
-
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorageContainer, azureAccountConfig, jsonMapper);
 
     DataSegment pushedDataSegment = pusher.uploadDataSegment(
         dataSegment,
@@ -139,23 +111,10 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     assertEquals(version, (int) pushedDataSegment.getBinaryVersion());
     Map<String, Object> loadSpec = pushedDataSegment.getLoadSpec();
     assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
-    assertEquals(azurePaths.get("storage"), MapUtils.getString(loadSpec, "storageDir"));
+    assertEquals(azurePaths.get("index"), MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
 
-  }
-
-  @Test
-  public void t() throws IOException
-  {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorageContainer, azureAccountConfig, jsonMapper);
-
-    File dir = Files.createTempDirectory("druid").toFile();
-    dir.deleteOnExit();
-
-    File x = pusher.createCompressedSegmentDataFile(dir);
-
-    System.out.println(x);
   }
 
 }
