@@ -41,13 +41,11 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/task
 ```
 this will return the taskId of the submitted task.
 
-Tasks can be cancelled via POST requests to:
+Tasks can be shut down via POST requests to:
 
 ```
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/task/{taskId}/shutdown
 ```
-
-Issuing the cancel request will kill –9 the task.
 
 Task statuses can be retrieved via GET requests to:
 
