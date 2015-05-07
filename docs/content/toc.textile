@@ -25,8 +25,15 @@ h2. Querying
 * "Segment Metadata":./SegmentMetadataQuery.html
 * "DataSource Metadata":./DataSourceMetadataQuery.html
 * "Search":./SearchQuery.html
+* Components
+** "Filters":./Filters.html
+** "Aggregations":./Aggregations.html
+** "Post Aggregations":./Post-aggregations.html
+** "Granularities":./Granularities.html
+** "DimensionSpecs":./DimensionSpecs.html
 
 h2. Design
+* "Overview":./Design.html
 * Storage
 ** "Segments":./Segments.html
 * Node Types
