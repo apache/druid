@@ -126,13 +126,13 @@ This field is required.
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |type|String|This should always be 'hadoop'.|yes|
-|pathSpec|Object|a specification of where to pull the data in from|yes|
+|inputSpec|Object|a specification of where to pull the data in from. See below.|yes|
 |segmentOutputPath|String|the path to dump segments into.|yes|
 |metadataUpdateSpec|Object|a specification of how to update the metadata for the druid cluster these segments belong to.|yes|
 
-#### Path specification
+#### InputSpec specification
 
-There are multiple types of path specification:
+There are multiple types of inputSpecs:
 
 ##### `static`
 
