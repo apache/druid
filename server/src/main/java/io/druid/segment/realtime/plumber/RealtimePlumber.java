@@ -741,17 +741,18 @@ public class RealtimePlumber implements Plumber
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
-    log.info("Found [%,d] sinks. minTimestamp [%s]", sinks.size(), minTimestampAsDate);
+    log.info("Found [%,d] segments. Attempting to hand off segments that start before [%s].", sinks.size(), minTimestampAsDate);
 
     List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
       final Long intervalStart = entry.getKey();
       if (intervalStart < minTimestamp) {
-        log.info("Adding entry[%s] for merge and push.", entry);
+        log.info("Adding entry [%s] for merge and push.", entry);
         sinksToPush.add(entry);
       } else {
-        log.warn(
-            "[%s] < [%s] Skipping persist and merge.",
+        log.info(
+            "Skipping persist and merge for entry [%s] : Start time [%s] >= [%s] min timestamp required in this run. Segment will be picked up in a future run.",
+            entry,
             new DateTime(intervalStart),
             minTimestampAsDate
         );
