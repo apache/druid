@@ -26,7 +26,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.7.2</version>
+    <version>0.7.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -61,7 +61,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>druid-0.7.2</tag>
+        <tag>druid-0.7.1-SNAPSHOT</tag>
     </scm>
 
     <properties>
