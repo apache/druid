@@ -52,6 +52,7 @@ h2. Operations
 * "Including Extensions":./Including-Extensions.html
 * "Data Retention":./Rule-Configuration.html
 * "Metrics and Monitoring":./Metrics.html
+* "Alerts":./alerts.html
 * "Updating the Cluster":./Rolling-Updates.html
 * "Different Hadoop Versions":./Other-Hadoop.html
 * "Performance FAQ":./Performance-FAQ.html
