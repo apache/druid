@@ -1188,15 +1188,19 @@ public class IndexMaker
       } else {
         dimPartBuilder.withSingleValuedColumn(VSizeIndexedInts.fromList(singleValCol, dictionary.size()));
       }
+    } else if (compressionStrategy != null) {
+      dimPartBuilder.withMultiValuedColumn(
+          CompressedVSizeIndexedSupplier.fromIterable(
+              multiValCol,
+              dictionary.size(),
+              IndexIO.BYTE_ORDER,
+              compressionStrategy
+          )
+      );
     } else {
-      if (compressionStrategy != null) {
-        log.info(
-            "Compression not supported for multi-value dimensions, defaulting to `uncompressed` for dimension[%s]",
-            dimension
-        );
-      }
       dimPartBuilder.withMultiValuedColumn(multiValCol);
     }
+
 
     writeColumn(
         v9Smoosher,
