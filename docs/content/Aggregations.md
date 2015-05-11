@@ -36,20 +36,36 @@ Computes the sum of values as 64-bit floating point value. Similar to `longSum`
 
 ### Min / Max aggregators
 
-#### `min` aggregator
+#### `doubleMin` aggregator
 
-`min` computes the minimum metric value
+`doubleMin` computes the minimum of all metric values and Double.POSITIVE_INFINITY
 
 ```json
-{ "type" : "min", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "doubleMin", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
-#### `max` aggregator
+#### `doubleMax` aggregator
 
-`max` computes the maximum metric value
+`doubleMax` computes the maximum of all metric values and Double.NEGATIVE_INFINITY
 
 ```json
-{ "type" : "max", "name" : <output_name>, "fieldName" : <metric_name> }
+{ "type" : "doubleMax", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `longMin` aggregator
+
+`longMin` computes the minimum of all metric values and Long.MAX_VALUE
+
+```json
+{ "type" : "longMin", "name" : <output_name>, "fieldName" : <metric_name> }
+```
+
+#### `longMax` aggregator
+
+`longMax` computes the maximum of all metric values and Long.MIN_VALUE
+
+```json
+{ "type" : "longMax", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
 ### JavaScript aggregator
