@@ -22,9 +22,9 @@ import org.junit.Test;
 
 /**
  */
-public class MinAggregatorTest
+public class DoubleMaxAggregatorTest
 {
-  private void aggregate(TestFloatColumnSelector selector, MinAggregator agg)
+  private void aggregate(TestFloatColumnSelector selector, DoubleMaxAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -35,7 +35,7 @@ public class MinAggregatorTest
   {
     final float[] values = {0.15f, 0.27f, 0.0f, 0.93f};
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
-    MinAggregator agg = new MinAggregator("billy", selector);
+    DoubleMaxAggregator agg = new DoubleMaxAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());
 
@@ -44,6 +44,6 @@ public class MinAggregatorTest
     aggregate(selector, agg);
     aggregate(selector, agg);
 
-    Assert.assertEquals(new Float(values[2]).doubleValue(), agg.get());
+    Assert.assertEquals(new Float(values[3]).doubleValue(), agg.get());
   }
 }

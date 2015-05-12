@@ -35,9 +35,8 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -54,7 +53,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -66,11 +64,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
@@ -139,8 +135,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )
@@ -203,8 +199,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )
@@ -268,8 +264,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )
@@ -2069,8 +2065,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )
@@ -2154,8 +2150,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )
@@ -2347,8 +2343,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )
@@ -2396,8 +2392,8 @@ public class TopNQueryRunnerTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )

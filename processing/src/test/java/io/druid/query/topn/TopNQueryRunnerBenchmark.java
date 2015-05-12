@@ -28,8 +28,8 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndexSegment;
@@ -71,8 +71,8 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               Iterables.concat(
                   QueryRunnerTestHelper.commonAggregators,
                   Lists.newArrayList(
-                      new MaxAggregatorFactory("maxIndex", "index"),
-                      new MinAggregatorFactory("minIndex", "index")
+                      new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                      new DoubleMinAggregatorFactory("minIndex", "index")
                   )
               )
           )

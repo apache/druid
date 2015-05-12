@@ -19,72 +19,47 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.FloatColumnSelector;
 
-import java.util.Comparator;
+import java.nio.ByteBuffer;
 
 /**
  */
-public class MinAggregator implements Aggregator
+public class DoubleMaxBufferAggregator implements BufferAggregator
 {
-  static final Comparator COMPARATOR = DoubleSumAggregator.COMPARATOR;
-
-  static double combineValues(Object lhs, Object rhs)
-  {
-    return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
-  }
-
   private final FloatColumnSelector selector;
-  private final String name;
 
-  private double min;
-
-  public MinAggregator(String name, FloatColumnSelector selector)
+  public DoubleMaxBufferAggregator(FloatColumnSelector selector)
   {
-    this.name = name;
     this.selector = selector;
-
-    reset();
   }
 
   @Override
-  public void aggregate()
+  public void init(ByteBuffer buf, int position)
   {
-    min = Math.min(min, (double) selector.get());
+    buf.putDouble(position, Double.NEGATIVE_INFINITY);
   }
 
   @Override
-  public void reset()
+  public void aggregate(ByteBuffer buf, int position)
   {
-    min = Double.POSITIVE_INFINITY;
+    buf.putDouble(position, Math.max(buf.getDouble(position), (double) selector.get()));
   }
 
   @Override
-  public Object get()
+  public Object get(ByteBuffer buf, int position)
   {
-    return min;
+    return buf.getDouble(position);
   }
 
   @Override
-  public float getFloat()
+  public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) min;
+    return (float) buf.getDouble(position);
   }
 
   @Override
-  public long getLong()
+  public long getLong(ByteBuffer buf, int position)
   {
-    return (long) min;
-  }
-
-  @Override
-  public String getName()
-  {
-    return this.name;
-  }
-
-  @Override
-  public Aggregator clone()
-  {
-    return new MinAggregator(name, selector);
+    return (long) buf.getDouble(position);
   }
 
   @Override

@@ -27,8 +27,8 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
@@ -121,8 +121,8 @@ public class ApproximateHistogramTopNQueryTest
                 Iterables.concat(
                     QueryRunnerTestHelper.commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index"),
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index"),
                         factory
                     )
                 )

@@ -27,9 +27,9 @@ import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -138,8 +138,8 @@ public class SchemalessTestSimple
                                           Iterables.concat(
                                               commonAggregators,
                                               Lists.newArrayList(
-                                                  new MaxAggregatorFactory("maxIndex", "index"),
-                                                  new MinAggregatorFactory("minIndex", "index")
+                                                  new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                                                  new DoubleMinAggregatorFactory("minIndex", "index")
                                               )
                                           )
                                       )
@@ -184,8 +184,8 @@ public class SchemalessTestSimple
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
-                        new MaxAggregatorFactory("maxIndex", "index"),
-                        new MinAggregatorFactory("minIndex", "index")
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
                     )
                 )
             )

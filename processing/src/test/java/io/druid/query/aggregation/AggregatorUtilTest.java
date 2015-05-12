@@ -114,8 +114,8 @@ public class AggregatorUtilTest
         Iterables.concat(
             QueryRunnerTestHelper.commonAggregators,
             Lists.newArrayList(
-                new MaxAggregatorFactory("maxIndex", "index"),
-                new MinAggregatorFactory("minIndex", "index")
+                new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                new DoubleMinAggregatorFactory("minIndex", "index")
             )
         )
     );
