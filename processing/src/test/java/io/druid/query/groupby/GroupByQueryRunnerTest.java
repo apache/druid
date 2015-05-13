@@ -1407,6 +1407,91 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByWithOrderLimitHavingSpec()
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-01-25/2011-01-28")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new DoubleSumAggregatorFactory("index", "index")
+            )
+        )
+        .setGranularity(QueryGranularity.ALL)
+        .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                Lists.newArrayList(
+                    new OrderByColumnSpec(
+                        "index",
+                        OrderByColumnSpec.Direction.ASCENDING
+                    )
+                ),
+                5
+            )
+        );
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-01-25",
+            "alias",
+            "business",
+            "rows",
+            3L,
+            "index",
+            312.38165283203125
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-01-25",
+            "alias",
+            "news",
+            "rows",
+            3L,
+            "index",
+            312.7834167480469
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-01-25",
+            "alias",
+            "technology",
+            "rows",
+            3L,
+            "index",
+            324.6412353515625
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-01-25",
+            "alias",
+            "travel",
+            "rows",
+            3L,
+            "index",
+            393.36322021484375
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-01-25",
+            "alias",
+            "health",
+            "rows",
+            3L,
+            "index",
+            511.2996826171875
+        )
+    );
+
+    GroupByQuery fullQuery = builder.build();
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        results,
+        ""
+    );
+  }
+
+  @Test
   public void testPostAggHavingSpec()
   {
     List<Row> expectedResults = Arrays.asList(
