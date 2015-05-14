@@ -72,7 +72,8 @@ public class FireDepartmentTest
             null,
             new RealtimePlumberSchool(
                 null, null, null, null, null, null, null
-            )
+            ),
+            null
         ),
         new RealtimeTuningConfig(
             null, null, null, null, null, null, null, null, null, false, false, null

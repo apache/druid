@@ -63,7 +63,7 @@ public class TestRealtimeTask extends RealtimeIndexTask
           {
             return null;
           }
-        }
+        }, null
         ), null
         )
     );

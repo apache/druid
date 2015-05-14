@@ -36,11 +36,15 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
+import io.druid.data.input.Committer;
+import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
@@ -72,6 +76,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
+
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -79,10 +84,14 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -122,7 +131,7 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService persistExecutor = null;
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
-
+  private volatile Object metaData = null;
 
   public RealtimePlumber(
       DataSchema schema,
@@ -335,6 +344,7 @@ public class RealtimePlumber implements Plumber
   @Override
   public void persist(final Runnable commitRunnable)
   {
+
     final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
     for (Sink sink : sinks.values()) {
       if (sink.swappable()) {
@@ -354,7 +364,54 @@ public class RealtimePlumber implements Plumber
           {
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
-                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs));
+                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs, null));
+              }
+              commitRunnable.run();
+            }
+            catch (Exception e) {
+              metrics.incrementFailedPersists();
+              throw e;
+            }
+            finally {
+              metrics.incrementNumPersists();
+              metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
+              persistStopwatch.stop();
+            }
+          }
+        }
+    );
+
+    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    metrics.incrementPersistBackPressureMillis(startDelay);
+    if (startDelay > WARN_DELAY) {
+      log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
+    }
+    runExecStopwatch.stop();
+  
+  }
+  @Override
+  public void persist(final Committer commitRunnable)
+  {
+    final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
+    for (Sink sink : sinks.values()) {
+      if (sink.swappable()) {
+        indexesToPersist.add(Pair.of(sink.swap(), sink.getInterval()));
+      }
+    }
+
+    log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
+
+    final Stopwatch runExecStopwatch = Stopwatch.createStarted();
+    final Stopwatch persistStopwatch = Stopwatch.createStarted();
+    persistExecutor.execute(
+        new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
+        {
+          @Override
+          public void doRun()
+          {
+            try {
+              for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
+                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs, commitRunnable.getMetadata()));
               }
               commitRunnable.run();
             }
@@ -419,7 +476,7 @@ public class RealtimePlumber implements Plumber
               synchronized (hydrant) {
                 if (!hydrant.hasSwapped()) {
                   log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                  final int rowCount = persistHydrant(hydrant, schema, interval);
+                  final int rowCount = persistHydrant(hydrant, schema, interval, null);
                   metrics.incrementRowOutputCount(rowCount);
                 }
               }
@@ -452,21 +509,29 @@ public class RealtimePlumber implements Plumber
               }
 
               QueryableIndex index = IndexIO.loadIndex(mergedFile);
-
-              DataSegment segment = dataSegmentPusher.push(
-                  mergedFile,
-                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
-              );
-
-              segmentPublisher.publishSegment(segment);
-
-              if (!isPushedMarker.createNewFile()) {
-                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
-                   .addData("interval", sink.getInterval())
-                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
-                   .addData("marker", isPushedMarker)
-                   .emit();
+              log.info("i am going pubshing [%s] to hdfs", sink.getSegment().getIdentifier());
+              try{
+	              DataSegment segment = dataSegmentPusher.push(
+	                  mergedFile,
+	                  sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
+	              );
+	              log.info("i am going to Inserting [%s] in DB", sink.getSegment().getIdentifier());
+	              segmentPublisher.publishSegment(segment);
+	
+	              if (!isPushedMarker.createNewFile()) {
+	                log.makeAlert("Failed to create marker file for [%s]", schema.getDataSource())
+	                   .addData("interval", sink.getInterval())
+	                   .addData("partitionNum", segment.getShardSpec().getPartitionNum())
+	                   .addData("marker", isPushedMarker)
+	                   .emit();
+	              }
+              }catch(Throwable  e){
+            	  log.info("exception happen when pubshing to hdfs");
+            	  log.makeAlert(e, "Failed to persist merged index[%s]", schema.getDataSource())
+                  .addData("interval", interval)
+                  .emit();
               }
+              
             }
             catch (Exception e) {
               metrics.incrementFailedHandoffs();
@@ -576,7 +641,6 @@ public class RealtimePlumber implements Plumber
   protected void bootstrapSinksFromDisk()
   {
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
-
     File baseDir = computeBaseDir(schema);
     if (baseDir == null || !baseDir.exists()) {
       return;
@@ -620,6 +684,7 @@ public class RealtimePlumber implements Plumber
           }
       );
 
+      long latestCommitTime = 0;
       try {
         List<FireHydrant> hydrants = Lists.newArrayList();
         for (File segmentDir : sinkFiles) {
@@ -631,7 +696,13 @@ public class RealtimePlumber implements Plumber
           if (Ints.tryParse(segmentDir.getName()) == null) {
             continue;
           }
-
+          QueryableIndex queryableIndex = IndexIO.loadIndex(segmentDir);
+      		BasicFileAttributes attr = Files.readAttributes(segmentDir.toPath(), BasicFileAttributes.class);
+      		if (attr.creationTime().toMillis() > latestCommitTime) {
+      			latestCommitTime = attr.creationTime().toMillis();
+      			metaData = queryableIndex.getMetaData();
+      			log.info("Found metaData [%s] with latestCommitTime [%s]", metaData, latestCommitTime);
+      		}
           hydrants.add(
               new FireHydrant(
                   new QueryableIndexSegment(
@@ -642,7 +713,7 @@ public class RealtimePlumber implements Plumber
                           versioningPolicy.getVersion(sinkInterval),
                           config.getShardSpec()
                       ),
-                      IndexIO.loadIndex(segmentDir)
+                      queryableIndex
                   ),
                   Integer.parseInt(segmentDir.getName())
               )
@@ -742,7 +813,6 @@ public class RealtimePlumber implements Plumber
     long minTimestamp = minTimestampAsDate.getMillis();
 
     log.info("Found [%,d] segments. Attempting to hand off segments that start before [%s].", sinks.size(), minTimestampAsDate);
-
     List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
       final Long intervalStart = entry.getKey();
@@ -816,7 +886,7 @@ public class RealtimePlumber implements Plumber
    *
    * @return the number of rows persisted
    */
-  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval)
+  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval, Object commitMetaData)
   {
     synchronized (indexToPersist) {
       if (indexToPersist.hasSwapped()) {
@@ -828,9 +898,10 @@ public class RealtimePlumber implements Plumber
       }
 
       log.info(
-          "DataSource[%s], Interval[%s], persisting Hydrant[%s]",
+          "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
+          commitMetaData,
           indexToPersist
       );
       try {
@@ -842,6 +913,7 @@ public class RealtimePlumber implements Plumber
           persistedFile = IndexMaker.persist(
               indexToPersist.getIndex(),
               new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
+              commitMetaData,
               indexSpec
           );
         } else {
@@ -951,5 +1023,11 @@ public class RealtimePlumber implements Plumber
            .emit();
       }
     }
+  }
+
+	@Override
+  public Object getMetaData()
+  {
+		return metaData;
   }
 }

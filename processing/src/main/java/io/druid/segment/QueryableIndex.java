@@ -32,6 +32,7 @@ public interface QueryableIndex extends ColumnSelector
   public Indexed<String> getColumnNames();
   public Indexed<String> getAvailableDimensions();
   public BitmapFactory getBitmapFactoryForDimensions();
+  public Object getMetaData();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

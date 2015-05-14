@@ -62,7 +62,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
   @Override
   public void publishSegment(final DataSegment segment) throws IOException
   {
-    try {
+  	try {
       final DBI dbi = connector.getDBI();
       List<Map<String, Object>> exists = dbi.withHandle(
           new HandleCallback<List<Map<String, Object>>>()

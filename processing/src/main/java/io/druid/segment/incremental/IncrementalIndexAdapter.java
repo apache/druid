@@ -99,6 +99,12 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
+  public Object getMetaData()
+  {
+  	return null;
+  }
+  
+  @Override
   public Interval getDataInterval()
   {
     return dataInterval;

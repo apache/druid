@@ -56,7 +56,6 @@ public class Sink implements Iterable<FireHydrant>
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
   private volatile FireHydrant currHydrant;
-
   public Sink(
       Interval interval,
       DataSchema schema,
