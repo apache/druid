@@ -25,9 +25,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -41,7 +43,6 @@ import io.druid.guice.annotations.Json;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -58,7 +59,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -134,11 +135,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
   private final AuditManager auditManager;
 
-  private volatile ScheduledExecutorService exec;
-
   private final Object lock = new Object();
 
   private volatile boolean started = false;
+
+  private volatile ListeningScheduledExecutorService exec = null;
+  private volatile ListenableFuture<?> future = null;
 
   @Inject
   public SQLMetadataRuleManager(
@@ -168,21 +170,26 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         return;
       }
 
-      this.exec = Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d");
+      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseRuleManager-Exec--%d"));
 
       createDefaultRule(dbi, getRulesTable(), config.get().getDefaultRule(), jsonMapper);
-      ScheduledExecutors.scheduleWithFixedDelay(
-          exec,
-          new Duration(0),
-          config.get().getPollDuration().toStandardDuration(),
+      future = exec.scheduleWithFixedDelay(
           new Runnable()
           {
             @Override
             public void run()
             {
-              poll();
+              try {
+                poll();
+              }
+              catch (Exception e) {
+                log.error(e, "uncaught exception in rule manager polling thread");
+              }
             }
-          }
+          },
+          0,
+          config.get().getPollDuration().toStandardDuration().getMillis(),
+          TimeUnit.MILLISECONDS
       );
 
       started = true;
@@ -199,6 +206,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
       rules.set(ImmutableMap.<String, List<Rule>>of());
 
+      future.cancel(false);
+      future = null;
       started = false;
       exec.shutdownNow();
       exec = null;
@@ -235,7 +244,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                             return Pair.of(
                                 r.getString("dataSource"),
                                 jsonMapper.<List<Rule>>readValue(
-                                    r.getBytes("payload"), new TypeReference<List<Rule>>(){}
+                                    r.getBytes("payload"), new TypeReference<List<Rule>>()
+                                    {
+                                    }
                                 )
                             );
                           }
@@ -245,29 +256,29 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                         }
                       }
                   )
-                   .fold(
-                       Maps.<String, List<Rule>>newHashMap(),
-                       new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
-                       {
-                         @Override
-                         public Map<String, List<Rule>> fold(
-                             Map<String, List<Rule>> retVal,
-                             Pair<String, List<Rule>> stringObjectMap,
-                             FoldController foldController,
-                             StatementContext statementContext
-                         ) throws SQLException
-                         {
-                           try {
-                             String dataSource = stringObjectMap.lhs;
-                             retVal.put(dataSource, stringObjectMap.rhs);
-                             return retVal;
-                           }
-                           catch (Exception e) {
-                             throw Throwables.propagate(e);
-                           }
-                         }
-                       }
-                   );
+                               .fold(
+                                   Maps.<String, List<Rule>>newHashMap(),
+                                   new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
+                                   {
+                                     @Override
+                                     public Map<String, List<Rule>> fold(
+                                         Map<String, List<Rule>> retVal,
+                                         Pair<String, List<Rule>> stringObjectMap,
+                                         FoldController foldController,
+                                         StatementContext statementContext
+                                     ) throws SQLException
+                                     {
+                                       try {
+                                         String dataSource = stringObjectMap.lhs;
+                                         retVal.put(dataSource, stringObjectMap.rhs);
+                                         return retVal;
+                                       }
+                                       catch (Exception e) {
+                                         throw Throwables.propagate(e);
+                                       }
+                                     }
+                                   }
+                               );
                 }
               }
           )

@@ -22,9 +22,11 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -56,7 +58,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -74,7 +76,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
   private final IDBI dbi;
 
-  private volatile ScheduledExecutorService exec;
+  private volatile ListeningScheduledExecutorService exec = null;
+  private volatile ListenableFuture<?> future = null;
 
   private volatile boolean started = false;
 
@@ -103,23 +106,27 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return;
       }
 
-      this.exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
+      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d"));
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
-      ScheduledExecutors.scheduleWithFixedDelay(
-          exec,
-          new Duration(0),
-          delay,
+      future = exec.scheduleWithFixedDelay(
           new Runnable()
           {
             @Override
             public void run()
             {
-              poll();
+              try {
+                poll();
+              }
+              catch (Exception e) {
+                log.error(e, "uncaught exception in segment manager polling thread");
+              }
             }
-          }
+          },
+          0,
+          delay.getMillis(),
+          TimeUnit.MILLISECONDS
       );
-
       started = true;
     }
   }
@@ -134,6 +141,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       started = false;
       dataSources.set(new ConcurrentHashMap<String, DruidDataSource>());
+      future.cancel(false);
+      future = null;
       exec.shutdownNow();
       exec = null;
     }
