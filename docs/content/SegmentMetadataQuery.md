@@ -5,10 +5,10 @@ layout: doc_page
 Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment
-* Estimated byte size for the segment columns in TSV format
+* Estimated byte size for the segment columns if they were stored in a flat format
 * Interval the segment covers
 * Column type of all the columns in the segment
-* Estimated total segment byte size in TSV format
+* Estimated total segment byte size in if it was stored in a flat format
 * Segment id
 
 ```json
