@@ -12,6 +12,7 @@ h2. Getting Started
 h2. Data Ingestion
 * "Overview":./Ingestion-overview.html
 * "Data Formats":./Data_formats.html
+* "Data Schema":./Ingestion.html
 * "Realtime Ingestion":./Realtime-ingestion.html
 * "Batch Ingestion":./Batch-ingestion.html
 * "FAQ":./Ingestion-FAQ.html
