@@ -47,7 +47,7 @@ The format of the result is:
 ```
 
 Dimension columns will have type `STRING`.  
-Metric columns will have type `FLOAT`.  
+Metric columns will have type `FLOAT` or `LONG` or name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
 Timestamp column will have type `LONG`.
 
 Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
