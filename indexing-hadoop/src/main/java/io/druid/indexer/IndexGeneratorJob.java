@@ -140,8 +140,6 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
 
-      JobHelper.setInputFormat(job, config);
-
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
 

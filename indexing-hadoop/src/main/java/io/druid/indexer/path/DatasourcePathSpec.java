@@ -35,7 +35,6 @@ import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 
@@ -146,13 +145,9 @@ public class DatasourcePathSpec implements PathSpec
     job.getConfiguration().set(DatasourceInputFormat.CONF_DRUID_SCHEMA, mapper.writeValueAsString(ingestionSpec));
     job.getConfiguration().set(DatasourceInputFormat.CONF_INPUT_SEGMENTS, mapper.writeValueAsString(segments));
     job.getConfiguration().set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, String.valueOf(maxSplitSize));
+    MultipleInputs.addInputPath(job, new Path("/dummy/tobe/ignored"), DatasourceInputFormat.class);
 
     return job;
-  }
-
-  public Class<? extends InputFormat> getInputFormat()
-  {
-    return DatasourceInputFormat.class;
   }
 
   @Override

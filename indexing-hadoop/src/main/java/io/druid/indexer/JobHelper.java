@@ -44,8 +44,6 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.util.Progressable;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -205,17 +203,6 @@ public class JobHelper
     }
 
     return true;
-  }
-
-  public static void setInputFormat(Job job, HadoopDruidIndexerConfig indexerConfig)
-  {
-    if (indexerConfig.getInputFormatClass() != null) {
-      job.setInputFormatClass(indexerConfig.getInputFormatClass());
-    } else if (indexerConfig.isCombineText()) {
-      job.setInputFormatClass(CombineTextInputFormat.class);
-    } else {
-      job.setInputFormatClass(TextInputFormat.class);
-    }
   }
 
   public static DataSegment serializeOutIndex(

@@ -126,7 +126,6 @@ public class DeterminePartitionsJob implements Jobby
         );
 
         JobHelper.injectSystemProperties(groupByJob);
-        JobHelper.setInputFormat(groupByJob, config);
         groupByJob.setMapperClass(DeterminePartitionsGroupByMapper.class);
         groupByJob.setMapOutputKeyClass(BytesWritable.class);
         groupByJob.setMapOutputValueClass(NullWritable.class);
@@ -173,7 +172,6 @@ public class DeterminePartitionsJob implements Jobby
       } else {
         // Directly read the source data, since we assume it's already grouped.
         dimSelectionJob.setMapperClass(DeterminePartitionsDimSelectionAssumeGroupedMapper.class);
-        JobHelper.setInputFormat(dimSelectionJob, config);
         config.addInputPaths(dimSelectionJob);
       }
 

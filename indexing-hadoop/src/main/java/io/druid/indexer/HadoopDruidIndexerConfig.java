@@ -55,7 +55,6 @@ import io.druid.timeline.partition.ShardSpecLookup;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -352,11 +351,6 @@ public class HadoopDruidIndexerConfig
   public Job addInputPaths(Job job) throws IOException
   {
     return pathSpec.addInputPaths(this, job);
-  }
-
-  public Class<? extends InputFormat> getInputFormatClass()
-  {
-    return pathSpec.getInputFormat();
   }
 
   /********************************************
