@@ -57,7 +57,8 @@ public class ForkingTaskRunnerConfig
       "io.druid",
       "user.timezone",
       "file.encoding",
-      "java.io.tmpdir"
+      "java.io.tmpdir",
+      "hadoop"
   );
 
   public String getJavaCommand()

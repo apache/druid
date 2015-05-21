@@ -100,12 +100,16 @@ public class JobHelper
 
   public static void injectSystemProperties(Job job)
   {
-    final Configuration conf = job.getConfiguration();
+    injectSystemProperties(job.getConfiguration());
+  }
+
+  public static Configuration injectSystemProperties(Configuration conf) {
     for (String propName : System.getProperties().stringPropertyNames()) {
       if (propName.startsWith("hadoop.")) {
         conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
       }
     }
+    return conf;
   }
 
   public static void ensurePaths(HadoopDruidIndexerConfig config)
@@ -143,7 +147,7 @@ public class JobHelper
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          workingPath.getFileSystem(new Configuration()).delete(workingPath, true);
+          workingPath.getFileSystem(injectSystemProperties(new Configuration())).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);

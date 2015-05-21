@@ -95,16 +95,10 @@ public class IndexGeneratorJob implements Jobby
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
-    final Configuration conf = new Configuration();
+    final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
 
     ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
-
-    for (String propName : System.getProperties().stringPropertyNames()) {
-      if (propName.startsWith("hadoop.")) {
-        conf.set(propName.substring("hadoop.".length()), System.getProperty(propName));
-      }
-    }
 
     final Path descriptorInfoDir = config.makeDescriptorInfoDir();
 
