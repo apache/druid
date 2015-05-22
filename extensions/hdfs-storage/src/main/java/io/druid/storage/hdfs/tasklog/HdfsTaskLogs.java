@@ -40,11 +40,13 @@ public class HdfsTaskLogs implements TaskLogs
   private static final Logger log = new Logger(HdfsTaskLogs.class);
 
   private final HdfsTaskLogsConfig config;
+  private final Configuration hadoopConfig;
 
   @Inject
-  public HdfsTaskLogs(HdfsTaskLogsConfig config)
+  public HdfsTaskLogs(HdfsTaskLogsConfig config, Configuration hadoopConfig)
   {
     this.config = config;
+    this.hadoopConfig = hadoopConfig;
   }
 
   @Override
@@ -52,9 +54,8 @@ public class HdfsTaskLogs implements TaskLogs
   {
     final Path path = getTaskLogFileFromId(taskId);
     log.info("Writing task log to: %s", path);
-    Configuration conf = new Configuration();
-    final FileSystem fs = path.getFileSystem(conf);
-    FileUtil.copy(logFile, fs, path, false, conf);
+    final FileSystem fs = path.getFileSystem(hadoopConfig);
+    FileUtil.copy(logFile, fs, path, false, hadoopConfig);
     log.info("Wrote task log to: %s", path);
   }
 
@@ -62,7 +63,7 @@ public class HdfsTaskLogs implements TaskLogs
   public Optional<ByteSource> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final Path path = getTaskLogFileFromId(taskId);
-    final FileSystem fs = path.getFileSystem(new Configuration());
+    final FileSystem fs = path.getFileSystem(hadoopConfig);
     if (fs.exists(path)) {
       return Optional.<ByteSource>of(
           new ByteSource()
