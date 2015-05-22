@@ -72,7 +72,7 @@
         <druid.api.version>0.3.13</druid.api.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
-        <log4j.version>2.3</log4j.version>
+        <log4j.version>2.4.1</log4j.version>
         <slf4j.version>1.7.12</slf4j.version>
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
     </properties>
