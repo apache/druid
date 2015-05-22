@@ -26,6 +26,8 @@ import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DimFilters;
+import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.Indexed;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
@@ -47,16 +49,19 @@ public class ExtractionDimFilterTest
   );
 
   private static final Map<String, String> EXTRACTION_VALUES = ImmutableMap.of(
-      "foo1","extractDimVal"
+      "foo1", "extractDimVal"
   );
 
   private static ImmutableBitmap foo1BitMap;
+
   @BeforeClass
-  public static void setupStatic(){
+  public static void setupStatic()
+  {
     final ConciseSet conciseSet = new ConciseSet();
     conciseSet.add(1);
     foo1BitMap = new WrappedConciseBitmap(conciseSet);
   }
+
   private static final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
   {
     @Override
@@ -113,7 +118,8 @@ public class ExtractionDimFilterTest
   };
 
   @Test
-  public void testEmpty(){
+  public void testEmpty()
+  {
     ExtractionFilter extractionFilter = new ExtractionFilter(
         "foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN
     );
@@ -122,7 +128,8 @@ public class ExtractionDimFilterTest
   }
 
   @Test
-  public void testNull(){
+  public void testNull()
+  {
     ExtractionFilter extractionFilter = new ExtractionFilter(
         "FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN
     );
@@ -131,11 +138,49 @@ public class ExtractionDimFilterTest
   }
 
   @Test
-  public void testNormal(){
+  public void testNormal()
+  {
     ExtractionFilter extractionFilter = new ExtractionFilter(
         "foo", "extractDimVal", DIM_EXTRACTION_FN
     );
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(1, immutableBitmap.size());
+  }
+
+  @Test
+  public void testOr()
+  {
+    Assert.assertEquals(
+        1, Filters.convertDimensionFilters(
+            DimFilters.or(
+                new ExtractionDimFilter(
+                    "foo",
+                    "extractDimVal",
+                    DIM_EXTRACTION_FN,
+                    null
+                )
+            )
+        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+    );
+
+    Assert.assertEquals(
+        1,
+        Filters.convertDimensionFilters(
+            DimFilters.or(
+                new ExtractionDimFilter(
+                    "foo",
+                    "extractDimVal",
+                    DIM_EXTRACTION_FN,
+                    null
+                ),
+                new ExtractionDimFilter(
+                    "foo",
+                    "DOES NOT EXIST",
+                    DIM_EXTRACTION_FN,
+                    null
+                )
+            )
+        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+    );
   }
 }
