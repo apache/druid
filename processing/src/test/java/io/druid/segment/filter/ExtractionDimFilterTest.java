@@ -22,6 +22,7 @@ import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.WrappedConciseBitmap;
+import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
@@ -31,6 +32,7 @@ import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.Indexed;
 import it.uniroma3.mat.extendedset.intset.ConciseSet;
+import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,11 +61,12 @@ public class ExtractionDimFilterTest
   {
     final ConciseSet conciseSet = new ConciseSet();
     conciseSet.add(1);
-    foo1BitMap = new WrappedConciseBitmap(conciseSet);
+    foo1BitMap = new WrappedImmutableConciseBitmap(ImmutableConciseSet.newImmutableFromMutable(conciseSet));
   }
 
   private static final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
   {
+    private final ConciseBitmapFactory factory = new ConciseBitmapFactory();
     @Override
     public Indexed<String> getDimensionValues(String dimension)
     {
@@ -80,7 +83,7 @@ public class ExtractionDimFilterTest
     @Override
     public BitmapFactory getBitmapFactory()
     {
-      return new ConciseBitmapFactory();
+      return factory;
     }
 
     @Override
@@ -173,6 +176,74 @@ public class ExtractionDimFilterTest
                     DIM_EXTRACTION_FN,
                     null
                 ),
+                new ExtractionDimFilter(
+                    "foo",
+                    "DOES NOT EXIST",
+                    DIM_EXTRACTION_FN,
+                    null
+                )
+            )
+        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+    );
+  }
+
+  @Test
+  public void testAnd()
+  {
+    Assert.assertEquals(
+        1, Filters.convertDimensionFilters(
+            DimFilters.or(
+                new ExtractionDimFilter(
+                    "foo",
+                    "extractDimVal",
+                    DIM_EXTRACTION_FN,
+                    null
+                )
+            )
+        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+    );
+
+    Assert.assertEquals(
+        1,
+        Filters.convertDimensionFilters(
+            DimFilters.and(
+                new ExtractionDimFilter(
+                    "foo",
+                    "extractDimVal",
+                    DIM_EXTRACTION_FN,
+                    null
+                ),
+                new ExtractionDimFilter(
+                    "foo",
+                    "extractDimVal",
+                    DIM_EXTRACTION_FN,
+                    null
+                )
+            )
+        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+    );
+  }
+
+  @Test
+  public void testNot(){
+
+    Assert.assertEquals(
+        1, Filters.convertDimensionFilters(
+            DimFilters.or(
+                new ExtractionDimFilter(
+                    "foo",
+                    "extractDimVal",
+                    DIM_EXTRACTION_FN,
+                    null
+                )
+            )
+        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+    );
+
+    Assert.assertEquals(
+        1,
+        Filters.convertDimensionFilters(
+            DimFilters.not(
                 new ExtractionDimFilter(
                     "foo",
                     "DOES NOT EXIST",
