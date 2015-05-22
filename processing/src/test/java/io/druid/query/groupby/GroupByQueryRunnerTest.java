@@ -289,7 +289,7 @@ public class GroupByQueryRunnerTest
         )
         .setPostAggregatorSpecs(
             Arrays.<PostAggregator>asList(
-                new HyperUniqueFinalizingPostAggregator("quality_uniques")
+                new HyperUniqueFinalizingPostAggregator("quality_uniques", "quality_uniques")
             )
         )
         .setGranularity(QueryRunnerTestHelper.allGran)

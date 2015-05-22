@@ -152,7 +152,7 @@ public class QueryRunnerTestHelper
   public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
       hyperUniqueFinalizingPostAggMetric,
       "+",
-      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric), new ConstantPostAggregator(null, 1))
+      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric, uniqueMetric), new ConstantPostAggregator(null, 1))
   );
 
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(

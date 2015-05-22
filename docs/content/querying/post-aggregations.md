@@ -82,7 +82,7 @@ Example JavaScript aggregator:
 The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object such that it can be used in post aggregations.
 
 ```json
-{ "type"  : "hyperUniqueCardinality", "fieldName"  : <the name field value of the hyperUnique aggregator>}
+{ "type"  : "hyperUniqueCardinality", "name": <output name>, "fieldName"  : <the name field value of the hyperUnique aggregator>}
 ```
 
 It can be used in a sample calculation as so:
