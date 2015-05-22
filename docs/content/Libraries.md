@@ -15,6 +15,10 @@ Some great folks have written their own libraries to interact with Druid
 
 * [7eggs/node-druid-query](https://github.com/7eggs/node-druid-query) - A Node.js client for Druid
 
+#### Clojure
+
+* [y42/clj-druid](https://github.com/y42/clj-druid) - A Clojure client for Druid
+
 #### Python
 
 * [metamx/pydruid](https://github.com/metamx/pydruid) - A python client for Druid
