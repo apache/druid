@@ -21,39 +21,45 @@ package io.druid.query.aggregation;
  */
 public class MetricManipulatorFns
 {
+  private static final MetricManipulationFn IDENTITY_INSTANCE = new MetricManipulationFn()
+  {
+    @Override
+    public Object manipulate(final AggregatorFactory factory, final Object object)
+    {
+      return object;
+    }
+  };
+
   public static MetricManipulationFn identity()
   {
-    return new MetricManipulationFn()
-    {
-      @Override
-      public Object manipulate(AggregatorFactory factory, Object object)
-      {
-        return object;
-      }
-    };
+    return IDENTITY_INSTANCE;
   }
+
+  private static final MetricManipulationFn FINALIZING_INSTANCE = new MetricManipulationFn()
+  {
+    @Override
+    public Object manipulate(final AggregatorFactory factory, final Object object)
+    {
+      return factory.finalizeComputation(object);
+    }
+  };
 
   public static MetricManipulationFn finalizing()
   {
-    return new MetricManipulationFn()
-    {
-      @Override
-      public Object manipulate(AggregatorFactory factory, Object object)
-      {
-        return factory.finalizeComputation(object);
-      }
-    };
+    return FINALIZING_INSTANCE;
   }
+
+  private static final MetricManipulationFn DESERIALIZING_INSTANCE = new MetricManipulationFn()
+  {
+    @Override
+    public Object manipulate(final AggregatorFactory factory, final Object object)
+    {
+      return factory.deserialize(object);
+    }
+  };
 
   public static MetricManipulationFn deserializing()
   {
-    return new MetricManipulationFn()
-    {
-      @Override
-      public Object manipulate(AggregatorFactory factory, Object object)
-      {
-        return factory.deserialize(object);
-      }
-    };
+    return DESERIALIZING_INSTANCE;
   }
 }
