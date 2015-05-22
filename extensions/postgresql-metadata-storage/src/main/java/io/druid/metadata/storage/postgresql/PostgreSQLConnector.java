@@ -29,6 +29,8 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import java.sql.SQLException;
+
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
   private static final Logger log = new Logger(PostgreSQLConnector.class);
@@ -112,4 +114,17 @@ public class PostgreSQLConnector extends SQLMetadataConnector
 
   @Override
   public DBI getDBI() { return dbi; }
+
+  @Override
+  protected boolean isTransientException(Throwable e)
+  {
+    if(e instanceof SQLException) {
+      final String sqlState = ((SQLException) e).getSQLState();
+      // limited to errors that are likely to be resolved within a few retries
+      // retry on connection errors and insufficient resources
+      // see http://www.postgresql.org/docs/current/static/errcodes-appendix.html for details
+      return sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("53"));
+    }
+    return false;
+  }
 }
