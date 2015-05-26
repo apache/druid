@@ -17,12 +17,13 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedConciseBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
+import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
@@ -31,21 +32,21 @@ import io.druid.query.filter.DimFilters;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.Indexed;
-import it.uniroma3.mat.extendedset.intset.ConciseSet;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Map;
 
 /**
  *
  */
+@RunWith(Parameterized.class)
 public class ExtractionDimFilterTest
 {
   private static final Map<String, String[]> DIM_VALS = ImmutableMap.<String, String[]>of(
-      "foo", new String[]{"foo1","foo2","foo3"},
+      "foo", new String[]{"foo1", "foo2", "foo3"},
       "bar", new String[]{"bar1"},
       "baz", new String[]{"foo1"}
   );
@@ -54,19 +55,28 @@ public class ExtractionDimFilterTest
       "foo1", "extractDimVal"
   );
 
-  private static ImmutableBitmap foo1BitMap;
-
-  @BeforeClass
-  public static void setupStatic()
+  @Parameterized.Parameters
+  public static Iterable<Object[]> constructorFeeder()
   {
-    final ConciseSet conciseSet = new ConciseSet();
-    conciseSet.add(1);
-    foo1BitMap = new WrappedImmutableConciseBitmap(ImmutableConciseSet.newImmutableFromMutable(conciseSet));
+    return ImmutableList.of(
+        new Object[]{new ConciseBitmapFactory()},
+        new Object[]{new RoaringBitmapFactory()}
+    );
   }
 
-  private static final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
+  public ExtractionDimFilterTest(BitmapFactory bitmapFactory)
   {
-    private final ConciseBitmapFactory factory = new ConciseBitmapFactory();
+    final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
+    mutableBitmap.add(1);
+    this.foo1BitMap = bitmapFactory.makeImmutableBitmap(mutableBitmap);
+    this.factory = bitmapFactory;
+  }
+
+  private final BitmapFactory factory;
+  private final ImmutableBitmap foo1BitMap;
+
+  private final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
+  {
     @Override
     public Indexed<String> getDimensionValues(String dimension)
     {
@@ -225,7 +235,8 @@ public class ExtractionDimFilterTest
   }
 
   @Test
-  public void testNot(){
+  public void testNot()
+  {
 
     Assert.assertEquals(
         1, Filters.convertDimensionFilters(
