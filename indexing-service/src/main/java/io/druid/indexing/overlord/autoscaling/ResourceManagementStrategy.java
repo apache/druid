@@ -17,6 +17,7 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
+import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
 
@@ -28,9 +29,9 @@ import java.util.Collection;
  */
 public interface ResourceManagementStrategy
 {
-  public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
+  public boolean doProvision(RemoteTaskRunner runner);
 
-  public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> runningTasks, Collection<ZkWorker> zkWorkers);
+  public boolean doTerminate(RemoteTaskRunner runner);
 
   public ScalingStats getStats();
 }
