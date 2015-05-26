@@ -92,6 +92,7 @@ public class ColumnAnalysis
     Integer cardinality = getCardinality();
     final Integer rhsCardinality = rhs.getCardinality();
     if (cardinality == null) {
+
       cardinality = rhsCardinality;
     }
     else {
@@ -112,5 +113,40 @@ public class ColumnAnalysis
            ", cardinality=" + cardinality +
            ", errorMessage='" + errorMessage + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ColumnAnalysis that = (ColumnAnalysis) o;
+
+    if (size != that.size) {
+      return false;
+    }
+    if (type != null ? !type.equals(that.type) : that.type != null) {
+      return false;
+    }
+    if (cardinality != null ? !cardinality.equals(that.cardinality) : that.cardinality != null) {
+      return false;
+    }
+    return !(errorMessage != null ? !errorMessage.equals(that.errorMessage) : that.errorMessage != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = type != null ? type.hashCode() : 0;
+    result = 31 * result + (int) (size ^ (size >>> 32));
+    result = 31 * result + (cardinality != null ? cardinality.hashCode() : 0);
+    result = 31 * result + (errorMessage != null ? errorMessage.hashCode() : 0);
+    return result;
   }
 }
