@@ -20,6 +20,8 @@ For general purposes of high availability, there should be at least 2 of every n
 
 To setup a local Druid cluster, see [Simple Cluster Configuration](Simple-Cluster-Configuration.html).
 
+<img src="../img/druid-production.png" width="800"/>
+
 ### Common Configuration (common.runtime.properties)
 
 ```
