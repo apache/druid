@@ -104,6 +104,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     if (havingSpec != null) {
       postProcFn = Functions.compose(
+          postProcFn,
           new Function<Sequence<Row>, Sequence<Row>>()
           {
             @Override
@@ -121,8 +122,7 @@ public class GroupByQuery extends BaseQuery<Row>
                   }
               );
             }
-          },
-          postProcFn
+          }
       );
     }
 
