@@ -66,14 +66,12 @@ public class ExtractionFilter implements Filter
     return filters;
   }
 
-  private static final WrappedImmutableConciseBitmap ZERO_LENGTH_SET = new WrappedImmutableConciseBitmap(new ImmutableConciseSet());
-
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
     final List<Filter> filters = makeFilters(selector);
     if (filters.isEmpty()) {
-      return ZERO_LENGTH_SET;
+      return selector.getBitmapFactory().makeEmptyImmutableBitmap();
     }
     return new OrFilter(makeFilters(selector)).getBitmapIndex(selector);
   }

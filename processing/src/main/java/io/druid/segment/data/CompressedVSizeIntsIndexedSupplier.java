@@ -69,7 +69,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     this.compression = compression;
     this.numBytes = numBytes;
     this.bigEndianShift = Integer.SIZE - (numBytes << 3); // numBytes * 8
-    this.littleEndianMask = (int)((1L << (numBytes << 3)) - 1); // set numBytes * 8 lower bits to 1
+    this.littleEndianMask = (int) ((1L << (numBytes << 3)) - 1); // set numBytes * 8 lower bits to 1
   }
 
   public static int maxIntsInBufferForBytes(int numBytes)
@@ -107,7 +107,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   public IndexedInts get()
   {
     // optimized versions for int, short, and byte columns
-    if(numBytes == Ints.BYTES) {
+    if (numBytes == Ints.BYTES) {
       return new CompressedFullSizeIndexedInts();
     } else if (numBytes == Shorts.BYTES) {
       return new CompressedShortSizeIndexedInts();
@@ -157,7 +157,9 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       final int sizePer = buffer.getInt();
       final int chunkBytes = sizePer * numBytes + bufferPadding(numBytes);
 
-      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
+          buffer.get()
+      );
 
       return new CompressedVSizeIntsIndexedSupplier(
           totalSize,
@@ -176,7 +178,11 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   }
 
   public static CompressedVSizeIntsIndexedSupplier fromList(
-      final List<Integer> list, final int maxValue, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final List<Integer> list,
+      final int maxValue,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     final int numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
@@ -254,7 +260,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     );
   }
 
-  private class CompressedFullSizeIndexedInts extends CompressedVSizeIndexedInts {
+  private class CompressedFullSizeIndexedInts extends CompressedVSizeIndexedInts
+  {
     IntBuffer intBuffer;
 
     @Override
@@ -271,7 +278,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     }
   }
 
-  private class CompressedShortSizeIndexedInts extends CompressedVSizeIndexedInts {
+  private class CompressedShortSizeIndexedInts extends CompressedVSizeIndexedInts
+  {
     ShortBuffer shortBuffer;
 
     @Override
@@ -289,7 +297,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     }
   }
 
-  private class CompressedByteSizeIndexedInts extends CompressedVSizeIndexedInts {
+  private class CompressedByteSizeIndexedInts extends CompressedVSizeIndexedInts
+  {
     @Override
     protected int _get(int index)
     {
@@ -318,10 +327,11 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
 
     /**
      * Returns the value at the given index into the column.
-     *
+     * <p/>
      * Assumes the number of entries in each decompression buffers is a power of two.
      *
      * @param index index of the value in the column
+     *
      * @return the value at the given index
      */
     @Override
@@ -341,6 +351,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
      * Returns the value at the given index in the current decompression buffer
      *
      * @param index index of the value in the curent buffer
+     *
      * @return the value at the given index
      */
     protected int _get(final int index)
