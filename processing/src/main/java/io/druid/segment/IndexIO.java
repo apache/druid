@@ -718,13 +718,16 @@ public class IndexIO
             } else {
               columnPartBuilder.withSingleValuedColumn(VSizeIndexedInts.fromList(singleValCol, dictionary.size()));
             }
+          } else if (compressionStrategy != null) {
+            columnPartBuilder.withMultiValuedColumn(
+                CompressedVSizeIndexedSupplier.fromIterable(
+                    multiValCol,
+                    dictionary.size(),
+                    BYTE_ORDER,
+                    compressionStrategy
+                )
+            );
           } else {
-            if (compressionStrategy != null) {
-              log.info(
-                  "Compression not supported for multi-value dimensions, defaulting to `uncompressed` for dimension[%s]",
-                  dimension
-              );
-            }
             columnPartBuilder.withMultiValuedColumn(multiValCol);
           }
 

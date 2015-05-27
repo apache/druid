@@ -24,7 +24,7 @@ import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
-import com.metamx.common.Pair;
+import io.druid.segment.CompressedVSizeIndexedSupplier;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
@@ -52,9 +52,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
   private static final int NO_FLAGS = 0;
 
-  enum Feature {
+  enum Feature
+  {
     MULTI_VALUE;
+
     public boolean isSet(int flags) { return (getMask() & flags) != 0; }
+
     public int getMask() { return (1 << ordinal()); }
   }
 
@@ -64,18 +67,22 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     UNCOMPRESSED_MULTI_VALUE,   // 0x1
     COMPRESSED;                 // 0x2
 
-    public static VERSION fromByte(byte b) {
+
+    public static VERSION fromByte(byte b)
+    {
       final VERSION[] values = VERSION.values();
       Preconditions.checkArgument(b < values.length, "Unsupported dictionary column version[%s]", b);
       return values[b];
     }
 
-    public byte asByte() {
-      return (byte)this.ordinal();
+    public byte asByte()
+    {
+      return (byte) this.ordinal();
     }
   }
 
-  public static class Builder {
+  public static class Builder
+  {
     private VERSION version = null;
     private int flags = NO_FLAGS;
     private GenericIndexed<String> dictionary = null;
@@ -145,6 +152,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
+    public Builder withMultiValuedColumn(CompressedVSizeIndexedSupplier multiValuedColumn)
+    {
+      Preconditions.checkState(singleValuedColumn == null, "Cannot set both singleValuedColumn and multiValuedColumn");
+      this.version = VERSION.COMPRESSED;
+      this.flags |= Feature.MULTI_VALUE.getMask();
+      this.multiValuedColumn = multiValuedColumn;
+      return this;
+    }
+
     public DictionaryEncodedColumnPartSerde build()
     {
       Preconditions.checkArgument(
@@ -165,6 +181,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           byteOrder
       );
     }
+
+
   }
 
   public static Builder builder()
@@ -265,7 +283,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   public void write(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{version.asByte()}));
-    if(version.compareTo(VERSION.COMPRESSED) >= 0) {
+    if (version.compareTo(VERSION.COMPRESSED) >= 0) {
       channel.write(ByteBuffer.wrap(Ints.toByteArray(flags)));
     }
 
@@ -304,18 +322,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     final VERSION rVersion = VERSION.fromByte(buffer.get());
     final int rFlags;
 
-    if(rVersion.compareTo(VERSION.COMPRESSED) >= 0 ) {
+    if (rVersion.compareTo(VERSION.COMPRESSED) >= 0) {
       rFlags = buffer.getInt();
     } else {
       rFlags = rVersion.equals(VERSION.UNCOMPRESSED_MULTI_VALUE) ?
-              Feature.MULTI_VALUE.getMask() :
-              NO_FLAGS;
+               Feature.MULTI_VALUE.getMask() :
+               NO_FLAGS;
     }
 
     final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags);
-    if(rVersion.equals(VERSION.COMPRESSED) && hasMultipleValues) {
-      throw new IAE("Compressed dictionary encoded columns currently do not support multi-value columns");
-    }
 
     final GenericIndexed<String> rDictionary = GenericIndexed.read(buffer, GenericIndexed.STRING_STRATEGY);
     builder.setType(ValueType.STRING);
@@ -323,13 +338,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     final WritableSupplier<IndexedInts> rSingleValuedColumn;
     final WritableSupplier<IndexedMultivalue<IndexedInts>> rMultiValuedColumn;
 
-    if (rVersion.compareTo(VERSION.COMPRESSED) >= 0) {
-      rSingleValuedColumn = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
-      rMultiValuedColumn = null;
+    if (hasMultipleValues) {
+      rMultiValuedColumn = readMultiValuedColum(rVersion, buffer);
+      rSingleValuedColumn = null;
     } else {
-      Pair<WritableSupplier<IndexedInts>, VSizeIndexed> cols = readUncompressed(rVersion, buffer);
-      rSingleValuedColumn = cols.lhs;
-      rMultiValuedColumn = cols.rhs == null ? null : cols.rhs.asWritableSupplier();
+      rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
+      rMultiValuedColumn = null;
     }
 
     builder.setHasMultipleValues(hasMultipleValues)
@@ -374,30 +388,26 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     );
   }
 
-  private static Pair<WritableSupplier<IndexedInts>, VSizeIndexed> readUncompressed(
-      VERSION version,
-      ByteBuffer buffer
-  )
+  private WritableSupplier<IndexedInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
   {
-    final WritableSupplier<IndexedInts> singleValuedColumn;
-    final VSizeIndexed multiValuedColumn;
-
     switch (version) {
       case UNCOMPRESSED_SINGLE_VALUE:
-        singleValuedColumn = VSizeIndexedInts.readFromByteBuffer(buffer).asWritableSupplier();
-        multiValuedColumn = null;
-        break;
-
-      case UNCOMPRESSED_MULTI_VALUE:
-        singleValuedColumn = null;
-        multiValuedColumn = VSizeIndexed.readFromByteBuffer(buffer);
-        break;
-
-      default:
-        throw new IAE("Unsupported version[%s]", version);
+        return VSizeIndexedInts.readFromByteBuffer(buffer).asWritableSupplier();
+      case COMPRESSED:
+        return CompressedVSizeIntsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
     }
+    throw new IAE("Unsupported single-value version[%s]", version);
+  }
 
-    return Pair.of(singleValuedColumn, multiValuedColumn);
+  private WritableSupplier<IndexedMultivalue<IndexedInts>> readMultiValuedColum(VERSION version, ByteBuffer buffer)
+  {
+    switch (version) {
+      case UNCOMPRESSED_MULTI_VALUE:
+        return VSizeIndexed.readFromByteBuffer(buffer).asWritableSupplier();
+      case COMPRESSED:
+        return CompressedVSizeIndexedSupplier.fromByteBuffer(buffer, byteOrder);
+    }
+    throw new IAE("Unsupported multi-value version[%s]", version);
   }
 
   @Override
