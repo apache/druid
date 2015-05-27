@@ -92,6 +92,7 @@ h2. Development
 * "Versioning":./Versioning.html
 * "Build From Source":./Build-from-source.html
 * "Libraries":./Libraries.html
+* "Integration":./Integrating-Druid-With-Other-Technologies.html 
 
 h2. Misc
 * "Thanks":/thanks.html
