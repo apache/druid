@@ -18,6 +18,7 @@
 package io.druid.curator.announcement;
 
 import com.google.common.collect.Sets;
+import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import org.apache.curator.framework.CuratorFramework;
@@ -32,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -40,7 +42,7 @@ import java.util.concurrent.ExecutorService;
  */
 public class AnnouncerTest extends CuratorTestBase
 {
-
+  private static final Logger log = new Logger(AnnouncerTest.class);
   private ExecutorService exec;
 
   @Before
@@ -135,11 +137,30 @@ public class AnnouncerTest extends CuratorTestBase
             @Override
             public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
             {
-              if (event.getType() == CuratorEventType.CREATE) {
-                paths.remove(event.getPath());
-                if (paths.isEmpty()) {
+              log.info("Event [%s] recieved", event.getType());
+              switch(event.getType()){
+                case CREATE:
+                case SYNC:
                   latch.countDown();
-                }
+                  break;
+                case DELETE:
+                  break;
+                case EXISTS:
+                  break;
+                case GET_DATA:
+                  break;
+                case SET_DATA:
+                  break;
+                case CHILDREN:
+                  break;
+                case GET_ACL:
+                  break;
+                case SET_ACL:
+                  break;
+                case WATCHED:
+                  break;
+                case CLOSING:
+                  break;
               }
             }
           }

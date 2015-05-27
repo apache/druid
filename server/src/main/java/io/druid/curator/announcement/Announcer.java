@@ -32,6 +32,8 @@ import io.druid.curator.ShutdownNowIgnoringExecutorService;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.transaction.CuratorTransaction;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -316,7 +318,26 @@ public class Announcer
 
   private String createAnnouncement(final String path, byte[] value) throws Exception
   {
-    return curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
+    return curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground(
+        new BackgroundCallback()
+        {
+          @Override
+          public void processResult(CuratorFramework client, CuratorEvent event) throws Exception
+          {
+            PathChildrenCache pathChildrenCache = listeners.get(
+                ZKPaths.getPathAndNode(event.getPath()).getPath()
+            );
+            if (pathChildrenCache == null) {
+              log.wtf(
+                  "Somehow I just got an event for a path I'm not listening to! [%s]",
+                  ZKPaths.getPathAndNode(event.getPath()).getPath()
+              );
+              return;
+            }
+            pathChildrenCache.clearAndRefresh();
+          }
+        }
+    ).forPath(path, value);
   }
 
   private Stat updateAnnouncement(final String path, final byte[] value) throws Exception
@@ -327,7 +348,7 @@ public class Announcer
   /**
    * Unannounces an announcement created at path.  Note that if all announcements get removed, the Announcer
    * will continue to have ZK watches on paths because clearing them out is a source of ugly race conditions.
-   *
+   * <p/>
    * If you need to completely clear all the state of what is being watched and announced, stop() the Announcer.
    *
    * @param path the path to unannounce
