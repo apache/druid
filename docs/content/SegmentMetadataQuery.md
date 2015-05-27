@@ -5,10 +5,10 @@ layout: doc_page
 Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment
-* Estimated byte size for the segment columns in TSV format
+* Estimated byte size for the segment columns if they were stored in a flat format
 * Interval the segment covers
 * Column type of all the columns in the segment
-* Estimated total segment byte size in TSV format
+* Estimated total segment byte size in if it was stored in a flat format
 * Segment id
 
 ```json
@@ -47,7 +47,7 @@ The format of the result is:
 ```
 
 Dimension columns will have type `STRING`.  
-Metric columns will have type `FLOAT`.  
+Metric columns will have type `FLOAT` or `LONG` or name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
 Timestamp column will have type `LONG`.
 
 Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.

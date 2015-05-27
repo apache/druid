@@ -143,7 +143,7 @@ public class SegmentAnalyzer
 
     final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
     if (inputSizeFn == null) {
-      return ColumnAnalysis.error("noSizeFn");
+      return new ColumnAnalysis(typeName, 0, null, null);
     }
 
     final int length = column.getLength();
@@ -152,6 +152,6 @@ public class SegmentAnalyzer
       size += inputSizeFn.apply(complexColumn.getRowValue(i));
     }
 
-    return new ColumnAnalysis(capabilities.getType().name(), size, null, null);
+    return new ColumnAnalysis(typeName, size, null, null);
   }
 }

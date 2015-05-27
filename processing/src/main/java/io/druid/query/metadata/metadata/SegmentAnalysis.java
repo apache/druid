@@ -89,4 +89,39 @@ public class SegmentAnalysis
            ", size=" + size +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SegmentAnalysis that = (SegmentAnalysis) o;
+
+    if (size != that.size) {
+      return false;
+    }
+    if (id != null ? !id.equals(that.id) : that.id != null) {
+      return false;
+    }
+    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
+      return false;
+    }
+    return !(columns != null ? !columns.equals(that.columns) : that.columns != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = id != null ? id.hashCode() : 0;
+    result = 31 * result + (interval != null ? interval.hashCode() : 0);
+    result = 31 * result + (columns != null ? columns.hashCode() : 0);
+    result = 31 * result + (int) (size ^ (size >>> 32));
+    return result;
+  }
 }

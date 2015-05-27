@@ -25,6 +25,7 @@ import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,7 @@ public class HdfsTaskLogsTest
       final File logDir = new File(tmpDir, "logs");
       final File logFile = new File(tmpDir, "log");
       Files.write("blah", logFile, Charsets.UTF_8);
-      final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()));
+      final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
       taskLogs.pushTaskLog("foo", logFile);
 
       final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
