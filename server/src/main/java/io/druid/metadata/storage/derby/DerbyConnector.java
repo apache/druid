@@ -19,6 +19,7 @@ package io.druid.metadata.storage.derby;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import com.metamx.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
@@ -28,6 +29,7 @@ import org.skife.jdbi.v2.Handle;
 
 public class DerbyConnector extends SQLMetadataConnector
 {
+  private static final Logger log = new Logger(DerbyConnector.class);
   private static final String SERIAL_TYPE = "BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)";
   private final DBI dbi;
 
@@ -41,6 +43,8 @@ public class DerbyConnector extends SQLMetadataConnector
     datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
 
     this.dbi = new DBI(datasource);
+
+    log.info("Configured Derby as metadata storage");
   }
 
   public DerbyConnector(

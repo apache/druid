@@ -57,6 +57,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
+
+    log.info("Configured HDFS as deep storage");
   }
 
   @Override
@@ -69,6 +71,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(File inDir, DataSegment segment) throws IOException
   {
     final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
+
+    log.info(
+        "Copying segment[%s] to HDFS at location[%s/%s]",
+        segment.getIdentifier(),
+        config.getStorageDirectory(),
+        storageDir
+    );
+
     Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
     FileSystem fs = outFile.getFileSystem(hadoopConfig);
 

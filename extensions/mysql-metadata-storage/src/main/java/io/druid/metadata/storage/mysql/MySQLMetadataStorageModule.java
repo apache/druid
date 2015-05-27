@@ -31,7 +31,6 @@ import java.util.List;
 
 public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule
 {
-
   public static final String TYPE = "mysql";
 
   public MySQLMetadataStorageModule()
