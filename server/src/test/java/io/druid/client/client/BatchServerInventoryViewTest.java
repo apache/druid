@@ -109,7 +109,7 @@ public class BatchServerInventoryViewTest
 
     announcer = new Announcer(
         cf,
-        MoreExecutors.sameThreadExecutor()
+        "batchServerInventoryViewTestAnnouncer-%s"
     );
     announcer.start();
 

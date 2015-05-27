@@ -80,7 +80,7 @@ public class BatchDataSegmentAnnouncerTest
 
     announcer = new Announcer(
         cf,
-        MoreExecutors.sameThreadExecutor()
+        "BatchDataAnnouncerTest-%s"
     );
     announcer.start();
 
