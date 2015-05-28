@@ -17,40 +17,35 @@
 
 package io.druid.curator.announcement;
 
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import com.metamx.common.Pair;
-import com.metamx.common.guava.CloseQuietly;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import io.druid.curator.ShutdownNowIgnoringExecutorService;
-import io.druid.curator.cache.PathChildrenCacheFactory;
-import io.druid.curator.cache.SimplePathChildrenCacheFactory;
+import io.druid.concurrent.Execs;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.transaction.CuratorTransaction;
-import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
+import org.apache.curator.framework.recipes.nodes.PersistentEphemeralNode;
 
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Announces things on Zookeeper.
@@ -60,87 +55,151 @@ public class Announcer
   private static final Logger log = new Logger(Announcer.class);
 
   private final CuratorFramework curator;
-  private final PathChildrenCacheFactory factory;
 
-  private final List<Pair<String, byte[]>> toAnnounce = Lists.newArrayList();
-  private final List<Pair<String, byte[]>> toUpdate = Lists.newArrayList();
-  private final ConcurrentMap<String, PathChildrenCache> listeners = new MapMaker().makeMap();
-  private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new MapMaker().makeMap();
-  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
+  private final ConcurrentMap<String, PersistentEphemeralNode> buggers = new MapMaker().makeMap();
+  private final ConcurrentMap<String, byte[]> announcements = new MapMaker().makeMap();
+  private final ListeningExecutorService announceActionExecutor;
+  private final AtomicBoolean started = new AtomicBoolean(false);
+  private final Lock canLeaveEOS = new ReentrantLock(false);
+  private final Runnable eosRunnable = new Runnable()
+  {
+    @Override
+    public void run()
+    {
+      canLeaveEOS.lock();
+      canLeaveEOS.unlock();
+    }
+  };
 
-  private boolean started = false;
 
   public Announcer(
       CuratorFramework curator,
-      ExecutorService exec
+      String nameFormat
   )
   {
     this.curator = curator;
-    this.factory = new SimplePathChildrenCacheFactory(false, true, new ShutdownNowIgnoringExecutorService(exec));
+    this.announceActionExecutor = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded(Preconditions.checkNotNull(nameFormat, "nameFormat"))
+    );
+    canLeaveEOS.lock();
+    announceActionExecutor.submit(eosRunnable);
   }
 
   @LifecycleStart
-  public void start()
+  public synchronized void start()
   {
-    synchronized (toAnnounce) {
-      if (started) {
-        return;
-      }
-
-      started = true;
-
-      for (Pair<String, byte[]> pair : toAnnounce) {
-        announce(pair.lhs, pair.rhs);
-      }
-      toAnnounce.clear();
-
-      for (Pair<String, byte[]> pair : toUpdate) {
-        update(pair.lhs, pair.rhs);
-      }
-      toUpdate.clear();
+    if (started.get()) {
+      return;
+    }
+    if (!started.compareAndSet(false, true)) {
+      // Lost a race
+      return;
+    }
+    log.debug("Starting");
+    final ListenableFuture future = announceActionExecutor.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            // NOOP
+          }
+        }
+    );
+    canLeaveEOS.unlock();
+    try {
+      future.get();
+    }
+    catch (InterruptedException e) {
+      log.info("Interrupted while waiting for start notification");
+      Thread.currentThread().interrupt();
+    }
+    catch (ExecutionException e) {
+      throw Throwables.propagate(e);
     }
   }
 
   @LifecycleStop
-  public void stop()
+  public synchronized void stop()
   {
-    synchronized (toAnnounce) {
-      if (!started) {
-        return;
-      }
-
-      started = false;
-
-      for (Map.Entry<String, PathChildrenCache> entry : listeners.entrySet()) {
-        CloseQuietly.close(entry.getValue());
-      }
-
-      for (Map.Entry<String, ConcurrentMap<String, byte[]>> entry : announcements.entrySet()) {
-        String basePath = entry.getKey();
-
-        for (String announcementPath : entry.getValue().keySet()) {
-          unannounce(ZKPaths.makePath(basePath, announcementPath));
-        }
-      }
-
-      if (!parentsIBuilt.isEmpty()) {
-        CuratorTransaction transaction = curator.inTransaction();
-        for (String parent : parentsIBuilt) {
-          try {
-            transaction = transaction.delete().forPath(parent).and();
-          }
-          catch (Exception e) {
-            log.info(e, "Unable to delete parent[%s], boooo.", parent);
-          }
-        }
-        try {
-          ((CuratorTransactionFinal) transaction).commit();
-        }
-        catch (Exception e) {
-          log.info(e, "Unable to commit transaction. Please feed the hamsters");
-        }
-      }
+    if (!started.get()) {
+      return;
     }
+
+    if (!started.compareAndSet(true, false)) {
+      // lost a race
+      return;
+    }
+
+    log.debug("Stopping");
+
+    for (String path : announcements.keySet()) {
+      unannounce(path);
+    }
+
+    canLeaveEOS.lock();
+    final CountDownLatch exitGate = new CountDownLatch(1);
+    announceActionExecutor.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            exitGate.countDown();
+            eosRunnable.run();
+          }
+        }
+    );
+    try {
+      exitGate.await();
+    }
+    catch (InterruptedException e) {
+      log.info("Interrupted while waiting for exit signal");
+      Thread.currentThread().interrupt();
+    }
+  }
+
+
+  public void announce(final String path, final byte[] bytes, boolean atomic)
+  {
+
+    addEventToQueue(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            final byte[] priorAnnouncement = announcements.putIfAbsent(path, bytes);
+            if (priorAnnouncement == null) {
+              // A new announcement
+              final PersistentEphemeralNode persistentEphemeralNode = new PersistentEphemeralNode(
+                  curator,
+                  PersistentEphemeralNode.Mode.EPHEMERAL,
+                  path,
+                  bytes
+              );
+              if (buggers.putIfAbsent(path, persistentEphemeralNode) != null) {
+                throw new ISE("Bad state, [%s] found in persistent ephemeral node list but not in announcements");
+              }
+              persistentEphemeralNode.start();
+              try {
+                persistentEphemeralNode.waitForInitialCreate(1_000, TimeUnit.MILLISECONDS);
+              }
+              catch (InterruptedException e) {
+                log.info(e, "Interrupted while waiting for initial node at path [%s]", path);
+                Thread.currentThread().interrupt();
+              }
+            } else {
+              if (Arrays.equals(priorAnnouncement, bytes)) {
+                log.debug("Asked to announce [%s] with the data it already has! Silently ignoring", path);
+              } else {
+                log.error("Cannot re-announce different values under the same path at [%s]", path);
+              }
+            }
+          }
+        },
+        atomic
+    );
   }
 
   /**
@@ -150,231 +209,139 @@ public class Announcer
    * @param path  The path to announce at
    * @param bytes The payload to announce
    */
-  public void announce(String path, byte[] bytes)
+  public void announce(final String path, final byte[] bytes)
   {
-    synchronized (toAnnounce) {
-      if (!started) {
-        toAnnounce.add(Pair.of(path, bytes));
-        return;
-      }
-    }
-
-    final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
-
-    final String parentPath = pathAndNode.getPath();
-    boolean buildParentPath = false;
-
-    ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
-
-    if (subPaths == null) {
-      try {
-        if (curator.checkExists().forPath(parentPath) == null) {
-          buildParentPath = true;
-        }
-      }
-      catch (Exception e) {
-        log.debug(e, "Problem checking if the parent existed, ignoring.");
-      }
-
-      // I don't have a watcher on this path yet, create a Map and start watching.
-      announcements.putIfAbsent(parentPath, new MapMaker().<String, byte[]>makeMap());
-
-      // Guaranteed to be non-null, but might be a map put in there by another thread.
-      final ConcurrentMap<String, byte[]> finalSubPaths = announcements.get(parentPath);
-
-      // Synchronize to make sure that I only create a listener once.
-      synchronized (finalSubPaths) {
-        if (!listeners.containsKey(parentPath)) {
-          final PathChildrenCache cache = factory.make(curator, parentPath);
-          cache.getListenable().addListener(
-              new PathChildrenCacheListener()
-              {
-                private final AtomicReference<Set<String>> pathsLost = new AtomicReference<Set<String>>(null);
-
-                @Override
-                public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
-                {
-                  log.debug("Path[%s] got event[%s]", parentPath, event);
-                  switch (event.getType()) {
-                    case CHILD_REMOVED:
-                      final ChildData child = event.getData();
-                      final ZKPaths.PathAndNode childPath = ZKPaths.getPathAndNode(child.getPath());
-                      final byte[] value = finalSubPaths.get(childPath.getNode());
-                      if (value != null) {
-                        log.info("Node[%s] dropped, reinstating.", child.getPath());
-                        createAnnouncement(child.getPath(), value);
-                      }
-                      break;
-                    case CONNECTION_LOST:
-                      // Lost connection, which means session is broken, take inventory of what has been seen.
-                      // This is to protect from a race condition in which the ephemeral node could have been
-                      // created but not actually seen by the PathChildrenCache, which means that it won't know
-                      // that it disappeared and thus will not generate a CHILD_REMOVED event for us.  Under normal
-                      // circumstances, this can only happen upon connection loss; but technically if you have
-                      // an adversary in the system, they could also delete the ephemeral node before the cache sees
-                      // it.  This does not protect from that case, so don't have adversaries.
-
-                      Set<String> pathsToReinstate = Sets.newHashSet();
-                      for (String node : finalSubPaths.keySet()) {
-                        String path = ZKPaths.makePath(parentPath, node);
-                        log.info("Node[%s] is added to reinstate.", path);
-                        pathsToReinstate.add(path);
-                      }
-
-                      if (!pathsToReinstate.isEmpty() && !pathsLost.compareAndSet(null, pathsToReinstate)) {
-                        log.info("Already had a pathsLost set!?[%s]", parentPath);
-                      }
-                      break;
-                    case CONNECTION_RECONNECTED:
-                      final Set<String> thePathsLost = pathsLost.getAndSet(null);
-
-                      if (thePathsLost != null) {
-                        for (String path : thePathsLost) {
-                          log.info("Reinstating [%s]", path);
-                          final ZKPaths.PathAndNode split = ZKPaths.getPathAndNode(path);
-                          createAnnouncement(path, announcements.get(split.getPath()).get(split.getNode()));
-                        }
-                      }
-                      break;
-                  }
-                }
-              }
-          );
-
-          synchronized (toAnnounce) {
-            if (started) {
-              if (buildParentPath) {
-                createPath(parentPath);
-              }
-              startCache(cache);
-              listeners.put(parentPath, cache);
-            }
-          }
-        }
-      }
-
-      subPaths = finalSubPaths;
-    }
-
-    boolean created = false;
-    synchronized (toAnnounce) {
-      if (started) {
-        byte[] oldBytes = subPaths.putIfAbsent(pathAndNode.getNode(), bytes);
-
-        if (oldBytes == null) {
-          created = true;
-        } else if (!Arrays.equals(oldBytes, bytes)) {
-          throw new IAE("Cannot reannounce different values under the same path");
-        }
-      }
-    }
-
-    if (created) {
-      try {
-        createAnnouncement(path, bytes);
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-    }
+    announce(path, bytes, false);
   }
 
   public void update(final String path, final byte[] bytes)
   {
-    synchronized (toAnnounce) {
-      if (!started) {
-        toUpdate.add(Pair.of(path, bytes));
-        return;
-      }
-    }
+    update(path, bytes, false);
+  }
 
-    final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
+  public void update(final String path, final byte[] bytes, boolean atomic)
+  {
+    addEventToQueue(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            final PersistentEphemeralNode persistentEphemeralNode = buggers.get(path);
 
-    final String parentPath = pathAndNode.getPath();
-    final String nodePath = pathAndNode.getNode();
+            if (persistentEphemeralNode == null) {
+              throw new IAE("Cannot update a path[%s] that hasn't been announced!", path);
+            }
+            final byte[] oldBytes = announcements.get(path);
+            if (!Arrays.equals(oldBytes, bytes)) {
+              log.debug("Updating path [%s] with %,d bytes", path, bytes.length);
+              try {
+                persistentEphemeralNode.setData(bytes);
+              }
+              catch (Exception e) {
+                throw Throwables.propagate(e);
+              }
+            } else {
+              log.debug("Path [%s] already has the latest bytes, ignoring update request", path);
+            }
+          }
+        }, atomic
+    );
+  }
 
-    ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
-
-    if (subPaths == null || subPaths.get(nodePath) == null) {
-      throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
-    }
-
-    synchronized (toAnnounce) {
+  private void addEventToQueue(final Runnable runnable, boolean waitForComplete)
+  {
+    final ListenableFuture future = announceActionExecutor.submit(runnable);
+    if (waitForComplete) {
       try {
-        byte[] oldBytes = subPaths.get(nodePath);
-
-        if (!Arrays.equals(oldBytes, bytes)) {
-          subPaths.put(nodePath, bytes);
-          updateAnnouncement(path, bytes);
-        }
+        future.get();
       }
-      catch (Exception e) {
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw Throwables.propagate(e);
       }
+      catch (ExecutionException e) {
+        throw Throwables.propagate(e);
+      }
+    } else {
+      Futures.addCallback(
+          future, new FutureCallback()
+          {
+            @Override
+            public void onSuccess(Object result)
+            {
+              log.debug("Successfully completed task");
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              log.error(t, "Error in task completion");
+            }
+          }
+      );
     }
   }
 
-  private String createAnnouncement(final String path, byte[] value) throws Exception
+  public void unannounce(final String path)
   {
-    return curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
-  }
-
-  private Stat updateAnnouncement(final String path, final byte[] value) throws Exception
-  {
-    return curator.setData().compressed().inBackground().forPath(path, value);
+    unannounce(path, false);
   }
 
   /**
    * Unannounces an announcement created at path.  Note that if all announcements get removed, the Announcer
    * will continue to have ZK watches on paths because clearing them out is a source of ugly race conditions.
-   *
+   * <p/>
    * If you need to completely clear all the state of what is being watched and announced, stop() the Announcer.
    *
    * @param path the path to unannounce
    */
-  public void unannounce(String path)
+  public void unannounce(final String path, boolean atomic)
   {
-    log.info("unannouncing [%s]", path);
-    final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
-    final String parentPath = pathAndNode.getPath();
+    addEventToQueue(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            log.info("unannouncing [%s]", path);
 
-    final ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
+            final PersistentEphemeralNode priorEphemeralNode = buggers.get(path);
 
-    if (subPaths == null || subPaths.remove(pathAndNode.getNode()) == null) {
-      log.error("Path[%s] not announced, cannot unannounce.", path);
-      return;
-    }
+            if (priorEphemeralNode == null) {
+              log.error("Path[%s] not announced, cannot unannounce.", path);
+              return;
+            }
 
-    try {
-      curator.inTransaction().delete().forPath(path).and().commit();
-    }
-    catch (KeeperException.NoNodeException e) {
-      log.info("node[%s] didn't exist anyway...", path);
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  private void startCache(PathChildrenCache cache)
-  {
-    try {
-      cache.start();
-    }
-    catch (Exception e) {
-      CloseQuietly.close(cache);
-      throw Throwables.propagate(e);
-    }
-  }
-
-  private void createPath(String parentPath)
-  {
-    try {
-      curator.create().creatingParentsIfNeeded().forPath(parentPath);
-      parentsIBuilt.add(parentPath);
-    }
-    catch (Exception e) {
-      log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
-    }
+            try {
+              RetryUtils.retry(
+                  new Callable<Void>()
+                  {
+                    @Override
+                    public Void call() throws Exception
+                    {
+                      priorEphemeralNode.close();
+                      return null;
+                    }
+                  },
+                  new Predicate<Throwable>()
+                  {
+                    @Override
+                    public boolean apply(Throwable input)
+                    {
+                      return input instanceof IOException;
+                    }
+                  },
+                  3
+              );
+            }
+            catch (Exception ex) {
+              throw Throwables.propagate(ex);
+            }
+            announcements.remove(path);
+            buggers.remove(path);
+          }
+        }, atomic
+    );
   }
 }

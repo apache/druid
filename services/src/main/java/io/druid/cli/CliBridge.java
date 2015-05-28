@@ -172,7 +172,7 @@ public class CliBridge extends ServerRunnable
               @Bridge CuratorFramework curator
           )
           {
-            return new Announcer(curator, Execs.singleThreaded("BridgeAnnouncer-%s"));
+            return new Announcer(curator, "BridgeAnnouncer-%s");
           }
 
           @Provides

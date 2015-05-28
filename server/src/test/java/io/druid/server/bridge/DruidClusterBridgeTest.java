@@ -149,7 +149,7 @@ public class DruidClusterBridgeTest
         serverView
     );
 
-    Announcer announcer = new Announcer(remoteCf, Executors.newSingleThreadExecutor());
+    Announcer announcer = new Announcer(remoteCf, "DruidClusterBridgeTestAnnouncer-%s");
     announcer.start();
     announcer.announce(zkPathsConfig.getAnnouncementsPath() + "/" + me.getHostAndPort(), jsonMapper.writeValueAsBytes(me));
 

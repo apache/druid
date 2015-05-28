@@ -108,7 +108,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     announcer = new DataSegmentAnnouncer()
     {
       private final DataSegmentAnnouncer delegate = new SingleDataSegmentAnnouncer(
-          me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper
+          me, zkPaths, new Announcer(curator, "ZKCoordinatorTestAnnouncer-%s"), jsonMapper
       );
 
       @Override
