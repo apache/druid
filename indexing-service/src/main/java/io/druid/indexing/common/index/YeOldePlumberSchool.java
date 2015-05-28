@@ -32,7 +32,7 @@ import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -158,7 +158,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            IndexMaker.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
+            IndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
           }
 
           // Map merged segment so we can extract dimensions
@@ -203,7 +203,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           log.info("Spilling index[%d] with rows[%d] to: %s", indexToPersist.getCount(), rowsToPersist, dirToPersist);
 
           try {
-            IndexMaker.persist(
+            IndexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
                 config.getIndexSpec()
