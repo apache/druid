@@ -44,6 +44,7 @@ public class HadoopIngestionSpecTest
       schema = jsonReadWriteRead(
           "{\n"
           + "    \"dataSchema\": {\n"
+          + "     \"dataSource\": \"foo\",\n"
           + "     \"metricsSpec\": [],\n"
           + "        \"granularitySpec\": {\n"
           + "                \"type\": \"uniform\",\n"

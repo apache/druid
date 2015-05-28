@@ -56,6 +56,8 @@ public class MySQLConnector extends SQLMetadataConnector
     datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
 
     this.dbi = new DBI(datasource);
+
+    log.info("Configured MySQL as metadata storage");
   }
 
   @Override
