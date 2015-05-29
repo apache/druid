@@ -19,6 +19,7 @@ package io.druid.segment.indexing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.metamx.common.IAE;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -78,6 +79,25 @@ public class DataSchemaTest
     Assert.assertEquals(
         ImmutableSet.of("dimC", "col1"),
         schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+    );
+  }
+
+  @Test(expected = IAE.class)
+  public void testOverlapMetricNameAndDim() throws Exception
+  {
+    DataSchema schema = new DataSchema(
+        "test",
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "metric1"), ImmutableList.of("dimC"), null)
+            )
+        ),
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+        },
+        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015")))
     );
   }
 }

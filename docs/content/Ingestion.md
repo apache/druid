@@ -184,3 +184,12 @@ Batch Ingestion: See [Batch ingestion](Batch-ingestion.html)
 
 Real-time Ingestion: See [Real-time ingestion](Realtime-ingestion.html).
 Batch Ingestion: See [Batch ingestion](Batch-ingestion.html)
+
+# Evaluating Timestamp, Dimensions and Metrics
+
+Druid will interpret dimensions, dimension exclusions, and metrics in the following order:
+
+* Any column listed in the list of dimensions is treated as a dimension.
+* Any column listed in the list of dimension exclusions is excluded as a dimension.
+* The timestamp column and columns/fieldNames required by metrics are excluded by default.
+* If a metric is also listed as a dimension, the metric must have a different name than the dimension name.

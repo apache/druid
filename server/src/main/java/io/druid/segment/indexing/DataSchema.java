@@ -20,7 +20,9 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -70,15 +72,25 @@ public class DataSchema
         }
       }
       if (dimensionsSpec != null) {
+        final Set<String> metSet = Sets.newHashSet();
+        for (AggregatorFactory aggregator : aggregators) {
+          metSet.add(aggregator.getName());
+        }
+        final Set<String> dimSet = Sets.newHashSet(dimensionsSpec.getDimensions());
+        final Set<String> overlap = Sets.intersection(metSet, dimSet);
+        if (!overlap.isEmpty()) {
+          throw new IAE(
+              "Cannot have overlapping dimensions and metrics of the same name. Please change the name of the metric. Overlap: %s",
+              overlap
+          );
+        }
+
         this.parser = parser.withParseSpec(
             parser.getParseSpec()
                   .withDimensionsSpec(
                       dimensionsSpec
                           .withDimensionExclusions(
-                              Sets.difference(
-                                  dimensionExclusions,
-                                  Sets.newHashSet(dimensionsSpec.getDimensions())
-                              )
+                              Sets.difference(dimensionExclusions, dimSet)
                           )
                   )
         );
