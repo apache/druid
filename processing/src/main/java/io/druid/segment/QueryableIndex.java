@@ -21,11 +21,12 @@ import com.metamx.collections.bitmap.BitmapFactory;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
  */
-public interface QueryableIndex extends ColumnSelector
+public interface QueryableIndex extends ColumnSelector, Closeable
 {
   public Interval getDataInterval();
   public int getNumRows();
@@ -37,6 +38,6 @@ public interface QueryableIndex extends ColumnSelector
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
    * @throws java.io.IOException if an exception was thrown closing the index
    */
-  @Deprecated
+  //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
   public void close() throws IOException;
 }

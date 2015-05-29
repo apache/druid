@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -335,6 +334,38 @@ public class IndexMerger
     };
 
     return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
+  }
+
+  // Faster than IndexMaker
+  public static File convert(final File inDir, final File outDir, final IndexSpec indexSpec) throws IOException
+  {
+    return convert(inDir, outDir, indexSpec, new BaseProgressIndicator());
+  }
+
+  public static File convert(
+      final File inDir, final File outDir, final IndexSpec indexSpec, final ProgressIndicator progress
+  ) throws IOException
+  {
+    try (QueryableIndex index = IndexIO.loadIndex(inDir)) {
+      final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+      return makeIndexFiles(
+          ImmutableList.of(adapter),
+          outDir,
+          progress,
+          Lists.newArrayList(adapter.getDimensionNames()),
+          Lists.newArrayList(adapter.getMetricNames()),
+          new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
+          {
+            @Nullable
+            @Override
+            public Iterable<Rowboat> apply(ArrayList<Iterable<Rowboat>> input)
+            {
+              return input.get(0);
+            }
+          },
+          indexSpec
+      );
+    }
   }
 
   public static File append(

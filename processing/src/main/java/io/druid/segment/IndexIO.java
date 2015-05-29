@@ -466,10 +466,14 @@ public class IndexIO
 
     public static void validateTwoSegments(File dir1, File dir2) throws IOException
     {
-      validateTwoSegments(
-          new QueryableIndexIndexableAdapter(loadIndex(dir1)),
-          new QueryableIndexIndexableAdapter(loadIndex(dir2))
-      );
+      try(QueryableIndex queryableIndex1 = loadIndex(dir1)) {
+        try(QueryableIndex queryableIndex2 = loadIndex(dir2)) {
+          validateTwoSegments(
+              new QueryableIndexIndexableAdapter(queryableIndex1),
+              new QueryableIndexIndexableAdapter(queryableIndex2)
+          );
+        }
+      }
     }
 
     public static void validateTwoSegments(final IndexableAdapter adapter1, final IndexableAdapter adapter2)
