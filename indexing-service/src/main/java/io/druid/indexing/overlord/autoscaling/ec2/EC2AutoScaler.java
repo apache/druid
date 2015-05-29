@@ -22,6 +22,7 @@ import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.InstanceNetworkInterfaceSpecification;
 import com.amazonaws.services.ec2.model.Placement;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
@@ -122,6 +123,13 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
                   workerConfig.getIamProfile() == null
                   ? null
                   : workerConfig.getIamProfile().toIamInstanceProfileSpecification()
+              )
+              .withNetworkInterfaces(
+                  workerConfig.getAssociatePublicIpAddress() == null
+                  ? null
+                  : new InstanceNetworkInterfaceSpecification().withAssociatePublicIpAddress(
+                      workerConfig.getAssociatePublicIpAddress()
+                  )
               )
               .withUserData(userDataBase64)
       );

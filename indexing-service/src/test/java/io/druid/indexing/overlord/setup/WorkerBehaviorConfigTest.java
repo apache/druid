@@ -56,6 +56,7 @@ public class WorkerBehaviorConfigTest
                     Arrays.asList("securityGroupIds"),
                     "keyNames",
                     "subnetId",
+                    null,
                     null
                 ),
                 new StringEC2UserData(
