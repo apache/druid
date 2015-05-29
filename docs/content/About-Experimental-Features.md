@@ -1,5 +1,5 @@
 ---
 title: this page has moved.
 layout: simple_page
-redirect_to: development/about-experimental-features.html
+redirect_to: development/experimental.html
 ---

@@ -5,7 +5,7 @@ For general Indexing Service information, see [here](../design/indexing-service.
 
 ## Runtime Configuration
 
-The indexing service uses several of the global configs in [Configuration](../configuration/configuration.html) and has the following set of configurations as well:
+The indexing service uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
 ### Must be set on Overlord and Middle Manager
 

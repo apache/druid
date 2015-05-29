@@ -6,7 +6,7 @@ Realtime Data Ingestion
 =======================
 For general Real-time Node information, see [here](../design/realtime.html).
 
-For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime-config.html).
+For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime.html).
 
 For writing your own plugins to the real-time node, see [Firehose](../ingestion/firehose.html).
 
@@ -105,7 +105,7 @@ There are three parts to a realtime stream specification, `dataSchema`, `IOConfi
 
 This field is required.
 
-See [Ingestion](../ingestion/ingestion.html)
+See [Ingestion](../ingestion/index.html)
 
 ### IOConfig
 

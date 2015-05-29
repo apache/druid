@@ -8,7 +8,7 @@ For general Broker Node information, see [here](../design/broker.html).
 Runtime Configuration
 ---------------------
 
-The broker node uses several of the global configs in [Configuration](../configuration/configuration.html) and has the following set of configurations as well:
+The broker node uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
 ### Node Configs
 

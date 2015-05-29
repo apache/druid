@@ -1,5 +1,5 @@
 ---
 title: this page has moved.
 layout: simple_page
-redirect_to: ingestion/ingestion-faq.html
+redirect_to: ingestion/faq.html
 ---

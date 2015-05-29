@@ -51,7 +51,7 @@ The following AWS information must be set in `druid.properties`, as environment 
     
 How to get the IDENTITY and CREDENTIAL keys is discussed above.
 
-In order to configure each node, you can edit `services/druid/src/main/resources/functions/start_druid.sh` for JVM configuration and `services/druid/src/main/resources/functions/configure_[NODE_NAME].sh` for specific node configuration. For more information on configuration, see the [Druid configuration documentation](../configuration/configuration.html).
+In order to configure each node, you can edit `services/druid/src/main/resources/functions/start_druid.sh` for JVM configuration and `services/druid/src/main/resources/functions/configure_[NODE_NAME].sh` for specific node configuration. For more information on configuration, see the [Druid configuration documentation](../configuration/index.html).
 
 ### Start a Test Cluster With Whirr
 Run the following command:

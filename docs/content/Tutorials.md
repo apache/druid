@@ -1,5 +1,5 @@
 ---
 title: this page has moved.
 layout: simple_page
-redirect_to: tutorials/tutorials.html
+redirect_to: tutorials/
 ---

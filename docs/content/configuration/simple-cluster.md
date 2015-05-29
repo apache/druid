@@ -4,7 +4,7 @@ layout: doc_page
 Simple Cluster Configuration
 ===============================
 
-This simple Druid cluster configuration can be used for initially experimenting with Druid on your local machine. For a more realistic production Druid cluster, see [Production Cluster Configuration](../configuration/production-cluster-configuration.html).
+This simple Druid cluster configuration can be used for initially experimenting with Druid on your local machine. For a more realistic production Druid cluster, see [Production Cluster Configuration](../configuration/production-cluster.html).
 
 ### Common Configuration (common.runtime.properties)
 

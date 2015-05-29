@@ -148,7 +148,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 |-------|------|-------------|----------|
 | dimensions | JSON String array | The names of the dimensions. | yes |
 | dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
-| spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geographicqueries.html) | no (default == [] |
+| spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
 
 ## GranularitySpec
 

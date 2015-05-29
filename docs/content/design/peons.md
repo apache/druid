@@ -5,7 +5,7 @@ layout: doc_page
 Peons
 -----
 
-For Peon Configuration, see [Peon Configuration](../configuration/indexing-service-config.html).
+For Peon Configuration, see [Peon Configuration](../configuration/indexing-service.html).
 
 Peons run a single task in a single JVM. MiddleManager is responsible for creating Peons for running tasks.
 Peons should rarely (if ever for testing purposes) be run on their own.

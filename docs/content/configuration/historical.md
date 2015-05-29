@@ -8,7 +8,7 @@ For general Historical Node information, see [here](../design/historical.html).
 Runtime Configuration
 ---------------------
 
-The historical node uses several of the global configs in [Configuration](../configuration/configuration.html) and has the following set of configurations as well:
+The historical node uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
 ### Node Configs
 

@@ -6,13 +6,13 @@
 h2. Getting Started
 * "Concepts":./
 * "Hello, Druid":../tutorials/tutorial-a-first-look-at-druid.html
-* "Tutorials":../tutorials/tutorials.html
+* "Tutorials":../tutorials/index.html
 * "Evaluate Druid":../misc/evaluate.html
 
 h2. Data Ingestion
 * "Overview":../ingestion/ingestion-overview.html
 * "Data Formats":../ingestion/data-formats.html
-* "Data Schema":../ingestion/ingestion.html
+* "Data Schema":../ingestion/index.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
 * "FAQ":../ingestion/ingestion-faq.html
@@ -59,28 +59,28 @@ h2. Operations
 * "Performance FAQ":../operations/performance-faq.html
 
 h2. Configuration
-* "Common Configuration":../configuration/configuration.html
-* "Indexing Service":../configuration/indexing-service-config.html
-* "Coordinator":../configuration/coordinator-config.html
-* "Historical":../configuration/historical-config.html
-* "Broker":../configuration/broker-config.html
-* "Realtime":../configuration/realtime-config.html
+* "Common Configuration":../configuration/index.html
+* "Indexing Service":../configuration/indexing-service.html
+* "Coordinator":../configuration/coordinator.html
+* "Historical":../configuration/historical.html
+* "Broker":../configuration/broker.html
+* "Realtime":../configuration/realtime.html
 * "Configuring Logging":../configuration/logging.html
-* "Simple Cluster Configuration":../configuration/simple-cluster-configuration.html
-* "Production Cluster Configuration":../configuration/production-cluster-configuration.html
-* "Production Hadoop Configuration":../configuration/hadoop-configuration.html
+* "Simple Cluster Configuration":../configuration/simple-cluster.html
+* "Production Cluster Configuration":../configuration/production-cluster.html
+* "Production Hadoop Configuration":../configuration/hadoop.html
 
 h2. Development
 * "Libraries":../development/libraries.html
 * "Extending Druid":../development/modules.html
-* "Build From Source":../development/build-from-source.html
+* "Build From Source":../development/build.html
 * "Versioning":../development/versioning.html
   "Integration":../development/integrating-druid-with-other-technologies.html
 * Experimental Features
-** "Overview":../development/about-experimental-features.html
-** "Geographic Queries":../development/geographicqueries.html
-** "Select Query":../development/selectquery.html
-** "Approximate Histograms and Quantiles":../development/approxhisto.html
+** "Overview":../development/experimental.html
+** "Geographic Queries":../development/geo.html
+** "Select Query":../development/select-query.html
+** "Approximate Histograms and Quantiles":../development/approximate-histograms.html
 ** "Router node":../development/router.html
 
 h2. Misc

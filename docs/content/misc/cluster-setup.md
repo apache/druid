@@ -77,7 +77,7 @@ Local disk ("ephemeral" on AWS EC2) for caching is recommended over network moun
 Setup
 -----
 
-Setting up a cluster is essentially just firing up all of the nodes you want with the proper [configuration](../configuration/configuration.html). One thing to be aware of is that there are a few properties in the configuration that potentially need to be set individually for each process:
+Setting up a cluster is essentially just firing up all of the nodes you want with the proper [configuration](../configuration/index.html). One thing to be aware of is that there are a few properties in the configuration that potentially need to be set individually for each process:
 
 ```
 druid.server.type=historical|realtime

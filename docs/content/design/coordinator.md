@@ -3,7 +3,7 @@ layout: doc_page
 ---
 Coordinator Node
 ================
-For Coordinator Node Configuration, see [Coordinator Configuration](../configuration/coordinator-config.html).
+For Coordinator Node Configuration, see [Coordinator Configuration](../configuration/coordinator.html).
 
 The Druid coordinator node is primarily responsible for segment management and distribution. More specifically, the Druid coordinator node communicates to historical nodes to load or drop segments based on configurations. The Druid coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
 

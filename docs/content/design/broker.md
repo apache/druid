@@ -3,7 +3,7 @@ layout: doc_page
 ---
 Broker
 ======
-For Broker Node Configuration, see [Broker Configuration](../configuration/broker-config.html).
+For Broker Node Configuration, see [Broker Configuration](../configuration/broker.html).
 
 The Broker is the node to route queries to if you want to run a distributed cluster. It understands the metadata published to ZooKeeper about what segments exist on what nodes and routes queries such that they hit the right nodes. This node also merges the result sets from all of the individual nodes together.
 On start up, Realtime nodes announce themselves and the segments they are serving in Zookeeper. 

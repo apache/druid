@@ -239,7 +239,7 @@ On this console, you can look at statuses and logs of recently submitted and com
 
 If you decide to reuse the local firehose to ingest your own data and if you run into problems, you can use the console to read the individual task logs.
 
-Task logs can be stored locally or uploaded to [Deep Storage](../dependencies/deep-storage.html). More information about how to configure this is [here](../configuration/configuration.html).
+Task logs can be stored locally or uploaded to [Deep Storage](../dependencies/deep-storage.html). More information about how to configure this is [here](../configuration/index.html).
 
 Most common data ingestion problems are around timestamp formats and other malformed data issues.
 

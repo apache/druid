@@ -117,7 +117,7 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
 
 This field is required.
 
-See [Ingestion](../ingestion/ingestion.html)
+See [Ingestion](../ingestion/index.html)
 
 ### IOConfig
 
@@ -337,7 +337,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
 
 This field is required.
 
-See [Ingestion](../ingestion/ingestion.html)
+See [Ingestion](../ingestion/index.html)
 
 ### IOConfig
 

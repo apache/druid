@@ -3,7 +3,7 @@ layout: doc_page
 ---
 Indexing Service
 ================
-For Indexing Service Configuration, see [Indexing Service Configuration](../configuration/indexing-service-config.html).
+For Indexing Service Configuration, see [Indexing Service Configuration](../configuration/indexing-service.html).
 
 The indexing service is a highly-available, distributed service that runs indexing related tasks. Indexing service [tasks](../misc/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
 

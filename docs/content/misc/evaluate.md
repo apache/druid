@@ -24,7 +24,7 @@ coordination nodes (coordinators and overlords). Coordination nodes should requi
 ## Selecting Hardware
 
 Druid is designed to run on commodity hardware and we've tried to provide some general guidelines on [how things should be tuned]() for various deployments. We've also provided
-some [example specs](../configuration/production-cluster-configuration.html) for hardware for a production cluster.
+some [example specs](../configuration/production-cluster.html) for hardware for a production cluster.
 
 ## Benchmarking Druid
 

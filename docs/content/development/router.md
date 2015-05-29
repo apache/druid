@@ -65,7 +65,7 @@ druid.server.http.numThreads=100
 Runtime Configuration
 ---------------------
 
-The router module uses several of the default modules in [Configuration](../configuration/configuration.html) and has the following set of configurations as well:
+The router module uses several of the default modules in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|

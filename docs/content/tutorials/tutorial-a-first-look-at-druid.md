@@ -43,7 +43,7 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-To start, we need to get our hands on a Druid build. There are two ways to get Druid: download a tarball, or [Build From Source](../development/build-from-source.html). You only need to do one of these.
+To start, we need to get our hands on a Druid build. There are two ways to get Druid: download a tarball, or [Build From Source](../development/build.html). You only need to do one of these.
 
 ### Download a Tarball
 
@@ -51,7 +51,7 @@ We've built a tarball that contains everything you'll need. You'll find it [here
 
 ### Build From Source
 
-Follow the [Build From Source](../development/build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-<version>-bin.tar.gz.
+Follow the [Build From Source](../development/build.html) guide to build from source. Then grab the tarball from services/target/druid-<version>-bin.tar.gz.
 
 ### Unpack the Tarball
 

@@ -18,7 +18,7 @@ We'll use r3.8xlarge nodes for query facing nodes and m1.xlarge nodes for coordi
 
 For general purposes of high availability, there should be at least 2 of every node type.
 
-To setup a local Druid cluster, see [Simple Cluster Configuration](../configuration/simple-cluster-configuration.html).
+To setup a local Druid cluster, see [Simple Cluster Configuration](../configuration/simple-cluster.html).
 
 ### Common Configuration (common.runtime.properties)
 

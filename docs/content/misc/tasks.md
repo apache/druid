@@ -92,7 +92,7 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 
 This field is required.
 
-See [Ingestion](../ingestion/ingestion.html)
+See [Ingestion](../ingestion/index.html)
 
 #### IOConfig
 

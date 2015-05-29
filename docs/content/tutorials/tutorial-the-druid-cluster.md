@@ -13,7 +13,7 @@ In this tutorial, we will set up other types of Druid nodes and external depende
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). You can also [Build From Source](../development/build-from-source.html) and grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). You can also [Build From Source](../development/build.html) and grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
 
 Either way, once you have the tarball, untar the contents within by issuing:
 
@@ -95,7 +95,7 @@ Before we get started, let's make sure we have configs in the config directory f
 ls config
 ```
 
-If you are interested in learning more about Druid configuration files, check out this [link](../configuration/configuration.html). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
+If you are interested in learning more about Druid configuration files, check out this [link](../configuration/index.html). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
 
 #### Common Configuration
 

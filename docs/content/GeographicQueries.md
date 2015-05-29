@@ -1,5 +1,5 @@
 ---
 title: this page has moved.
 layout: simple_page
-redirect_to: development/geographicqueries.html
+redirect_to: development/geo.html
 ---

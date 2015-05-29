@@ -8,7 +8,7 @@ For general Realtime Node information, see [here](../design/realtime.html).
 Runtime Configuration
 ---------------------
 
-The realtime node uses several of the global configs in [Configuration](../configuration/configuration.html) and has the following set of configurations as well:
+The realtime node uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
 ### Node Config
 
