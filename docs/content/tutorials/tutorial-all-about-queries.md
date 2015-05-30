@@ -14,7 +14,7 @@ Before we start digging into how to query Druid, make sure you've gone through t
 
 Let's start up a simple Druid cluster so we can query all the things.
 
-Note: If Zookeeper and metadata storage aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
+Note: If Zookeeper and metadata storage aren't running, you'll have to start them again as described in [The Druid Cluster](../tutorials/tutorial-the-druid-cluster.html).
 
 To start a Coordinator node:
 
@@ -37,7 +37,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_commo
 Querying Your Data
 ------------------
 
-Make sure you've completed [Loading Your Data](Tutorial%3A-Loading-Streaming-Data.html) so we have some data to query. Having done that, it's time to query our data! For a complete specification of queries, see [Querying](Querying.html).
+Make sure you've completed [Loading Your Data](../tutorials/tutorial-loading-streaming-data.html) so we have some data to query. Having done that, it's time to query our data! For a complete specification of queries, see [Querying](../querying/querying.html).
 
 #### Construct a Query
 ```json
@@ -80,7 +80,7 @@ This result tells us that our query has 5 edits, and we have 5 rows of data as w
 
 #### What can I query for?
 
-How are we to know what queries we can run? Although [Querying](Querying.html) is a helpful index, to get a handle on querying our data we need to look at our ingestion schema. There are a few particular fields we care about in the ingestion schema. All of these fields should in present in the real-time ingestion schema and the batch ingestion schema.
+How are we to know what queries we can run? Although [Querying](../querying/querying.html) is a helpful index, to get a handle on querying our data we need to look at our ingestion schema. There are a few particular fields we care about in the ingestion schema. All of these fields should in present in the real-time ingestion schema and the batch ingestion schema.
 
 Datasource:
 
@@ -119,7 +119,7 @@ Aggregators:
 }]
 ```
 
-The [Aggregations](Aggregations.html) specified at ingestion time correlated directly to the metrics that can be queried.
+The [Aggregations](../querying/aggregations.html) specified at ingestion time correlated directly to the metrics that can be queried.
 
 Dimensions:
 
@@ -194,14 +194,14 @@ Which gets us metrics about only those edits where the namespace is 'article':
 } ]
 ```
 
-Check out [Filters](Filters.html) for more information.
+Check out [Filters](../querying/filters.html) for more information.
 
 What Types of Queries to Use
 ----------------------------
 
-The types of query you should use depends on your use case. [TimeBoundary queries](TimeBoundaryQuery.html) are useful to understand the range of your data. [Timeseries queries](TimeseriesQuery.html) are useful for aggregates and filters over a time range, and offer significant speed improvements over [GroupBy queries](GroupByQuery.html). To find the top values for a given dimension, [TopN queries](TopNQuery.html) should be used over group by queries as well.
+The types of query you should use depends on your use case. [TimeBoundary queries](../querying/timeboundaryquery.html) are useful to understand the range of your data. [Timeseries queries](../querying/timeseriesquery.html) are useful for aggregates and filters over a time range, and offer significant speed improvements over [GroupBy queries](../querying/groupbyquery.html). To find the top values for a given dimension, [TopN queries](../querying/topnquery.html) should be used over group by queries as well.
 
 
 ## Learn More ##
 
-You can learn more about querying at [Querying](Querying.html)! If you are ready to evaluate Druid more in depth, check out [Booting a production cluster](Booting-a-production-cluster.html)!
+You can learn more about querying at [Querying](../querying/querying.html)! If you are ready to evaluate Druid more in depth, check out [Booting a production cluster](../tutorials/booting-a-production-cluster.html)!

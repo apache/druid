@@ -1,0 +1,170 @@
+---
+layout: doc_page
+---
+# Druid Metrics
+
+Druid generates metrics related to queries, ingestion, and coordination.
+
+Metrics are emitted as JSON objects to a runtime log file or over HTTP (to a service such as Apache Kafka). Metric emission is disabled by default.
+
+All Druid metrics share a common set of fields:
+
+* `timestamp` - the time the metric was created
+* `metric` - the name of the metric
+* `service` - the service name that emitted the metric
+* `host` - the host name that emitted the metric
+* `value` - some numeric value associated with the metric
+
+Metrics may have additional dimensions beyond those listed above.
+
+Most metric values reset each emission period.
+
+Available Metrics
+-----------------
+
+## Query Metrics
+
+### Broker
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
+|`query/node/time`|Milliseconds taken to query individual historical/realtime nodes.|id, status, server.|< 1s|
+|`query/intervalChunk/time`|Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk.|id, status, chunkInterval (if interval chunking is enabled).|< 1s|
+
+### Historical
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
+|`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|id, status, segment.|several hundred milliseconds|
+|`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|< several hundred milliseconds|
+|`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
+|`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the historical node).|id, segment.|several hundred milliseconds|
+
+### Real-time
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
+|`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
+|`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
+
+### Cache
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/cache/delta/*`|Cache metrics since the last emission.||N/A|
+|`query/cache/total/*`|Total cache metrics.||N/A|
+
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`*/numEntries`|Number of cache entries.||Varies.|
+|`*/sizeBytes`|Size in bytes of cache entries.||Varies.|
+|`*/hits`|Number of cache hits.||Varies.|
+|`*/misses`|Number of cache misses.||Varies.|
+|`*/evictions`|Number of cache evictions.||Varies.|
+|`*/hitRate`|Cache hit rate.||~40%|
+|`*/averageByte`|Average cache entry byte size.||Varies.|
+|`*/timeouts`|Number of cache timeouts.||0|
+|`*/errors`|Number of cache errors.||0|
+
+## Ingestion Metrics
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource.|0|
+|`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|dataSource.|0|
+|`ingest/events/processed`|Number of events successfully processed.|dataSource.|Equal to your # of events.|
+|`ingest/rows/output`|Number of Druid rows persisted.|dataSource.|Your # of events with rollup.|
+|`ingest/persists/count`|Number of times persist occurred.|dataSource.|Depends on configuration.|
+|`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration.|Generally a few minutes at most.|
+|`ingest/persists/backPressure`|Number of persists pending.|dataSource.|0|
+|`ingest/persists/failed`|Number of persists that failed.|dataSource.|0|
+|`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
+
+### Indexing Service
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`task/run/time`|Milliseconds taken to run task.|dataSource, taskType, taskStatus.|Varies.|
+|`segment/added/bytes`|Size in bytes of new segments created.|dataSource, taskType, interval.|Varies.|
+|`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.|dataSource, taskType, interval.|Varies.|
+|`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.|dataSource, taskType, interval.|Varies.|
+
+## Coordination
+
+These metrics are for the Druid coordinator and are reset each time the coordinator runs the coordination logic.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`segment/added/count`|Number of segments added to the cluster.|tier.|Varies.|
+|`segment/moved/count`|Number of segments moved in the cluster.|tier.|Varies.|
+|`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier.|Varies.|
+|`segment/deleted/count`|Number of segments dropped due to rules.|tier.|Varies.|
+|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|tier.|Varies.|
+|`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|tier.|Varies.|
+|`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|tier.|Varies.|
+|`segment/cost/normalized`|Used in cost balancing. The normalized cost of hosting segments.|tier.|Varies.|
+|`segment/loadQueue/size`|Size in bytes of segments to load.|server.|Varies.|
+|`segment/loadQueue/failed`|Number of segments that failed to load.|server.|0|
+|`segment/loadQueue/count`|Number of segments to load.|server.|Varies.|
+|`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
+|`segment/size`|Size in bytes of available segments.|dataSource.|Varies.|
+|`segment/count`|Number of available segments.|dataSource.|< max|
+|`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
+
+## General Health
+
+### Historical
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`segment/max`|Maximum byte limit available for segments.||Varies.|
+|`segment/used`|Bytes used for served segments.|dataSource, tier, priority.|< max|
+|`segment/usedPercent`|Percentage of space used by served segments.|dataSource, tier, priority.|< 100%|
+|`segment/count`|Number of served segments.|dataSource, tier, priority.|Varies.|
+
+### JVM
+
+These metrics are only available if the JVMMonitor module is included.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`jvm/pool/committed`|Committed pool.|poolKind, poolName.|close to max pool|
+|`jvm/pool/init`|Initial pool.|poolKind, poolName.|Varies.|
+|`jvm/pool/max`|Max pool.|poolKind, poolName.|Varies.|
+|`jvm/pool/used`|Pool used.|poolKind, poolName.|< max pool|
+|`jvm/bufferpool/count`|bufferPoolName.|Bufferpool count.|Varies.|
+|`jvm/bufferpool/used`|bufferPoolName.|Bufferpool used.|close to capacity|
+|`jvm/bufferpool/capacity`|bufferPoolName.|Bufferpool capacity.|Varies.|
+|`jvm/mem/init`|Initial memory.|memKind.|Varies.|
+|`jvm/mem/max`|Max memory.|memKind.|Varies.|
+|`jvm/mem/used`|Used memory.|memKind.|< max memory|
+|`jvm/mem/committed`|Committed memory.|memKind.|close to max memory|
+|`jvm/gc/count`|gcName.|Garbage collection count.|< 100|
+|`jvm/gc/time`|gcName.|Garbage collection time.|< 1s|	
+
+## Sys
+
+These metrics are only available if the SysMonitor module is included.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`sys/swap/free`|Free swap.||Varies.|
+|`sys/swap/max`|Max swap.||Varies.|
+|`sys/swap/pageIn`|Paged in swap.||Varies.|
+|`sys/swap/pageOut`|Paged out swap.||Varies.|
+|`sys/disk/write/count`|Writes to disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/read/count`|Reads from disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/write/size`|Bytes written to disk. Can we used to determine how much paging is occuring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/read/size`|Bytes read from disk. Can we used to determine how much paging is occuring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/net/write/size`|Bytes written to the network.|netName, netAddress, netHwaddr|Varies.|
+|`sys/net/read/size`|Bytes read from the network.|netName, netAddress, netHwaddr|Varies.|
+|`sys/fs/used`|Filesystem bytes used.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|< max|
+|`sys/fs/max`|Filesystesm bytes max.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/mem/used`|Memory used.||< max|
+|`sys/mem/max`|Memory max.||Varies.|
+|`sys/storage/used`|Disk space used.|fsDirName.|Varies.|
+|`sys/cpu`|CPU used.|cpuName, cpuTime.|Varies.|
