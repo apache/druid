@@ -78,7 +78,7 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
       "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
     },
     "metadataUpdateSpec" : {
-      "type":"metadata",
+      "type":"mysql",
       "connectURI" : "jdbc:metadata storage://localhost:3306/druid",
       "password" : "diurd",
       "segmentTable" : "druid_segments",
