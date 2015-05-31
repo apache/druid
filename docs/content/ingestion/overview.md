@@ -14,7 +14,7 @@ If you have a continuous stream of data, there are a few options to get your dat
 
 ### Ingest from a Stream Processor
 
-If you process your data using a stream processor such as Apache Samza or Apache Storm, you can use the [Tranquility](https://github.com/metamx/tranquility) library to manage
+If you process your data using a stream processor such as Apache Samza or Apache Storm, you can use the [Tranquility](https://github.com/druid-io/tranquility) library to manage
 your real-time ingestion. This setup requires using the indexing service for ingestion, which is what is used in production by many organizations that use Druid.
 
 ### Ingest from Apache Kafka
