@@ -10,7 +10,7 @@ For Real-time Node Configuration, see [Realtime Configuration](../configuration/
 
 For writing your own plugins to the real-time node, see [Firehose](../ingestion/firehose.html).
 
-There are two ways of ingesting real-time data. This can be achieved with a standalone real-time node, or using the [Tranquility](https://github.com/metamx/tranquility) client library as part of the [Indexing Service](../design/indexing-service.html). For a full explanation of why there are two methods, please see [this link](https://groups.google.com/forum/#!searchin/druid-development/fangjin$20yang$20%22thoughts%22/druid-development/aRMmNHQGdhI/muBGl0Xi_wgJ). If you are comfortable with the limitations of standalone real-time nodes, you can use them as they are easier to set up. The indexing service is a more robust and highly available solution but will also require more effort to set up.
+There are two ways of ingesting real-time data. This can be achieved with a standalone real-time node, or using the [Tranquility](https://github.com/druid-io/tranquility) client library as part of the [Indexing Service](../design/indexing-service.html). For a full explanation of why there are two methods, please see [this link](https://groups.google.com/forum/#!searchin/druid-development/fangjin$20yang$20%22thoughts%22/druid-development/aRMmNHQGdhI/muBGl0Xi_wgJ). If you are comfortable with the limitations of standalone real-time nodes, you can use them as they are easier to set up. The indexing service is a more robust and highly available solution but will also require more effort to set up.
 
 ## Realtime Node Ingestion
 
@@ -238,7 +238,7 @@ You can use type `numbered` similarly. Note that type `none` is essentially type
 
 ## Realtime Ingestion using the Indexing Service
 
-We strongly recommend using the client library [Tranquility](https://github.com/metamx/tranquility) for this use case. Please read the documentation on the Tranquility web page.
+We strongly recommend using the client library [Tranquility](https://github.com/druid-io/tranquility) for this use case. Please read the documentation on the Tranquility web page.
 
 ## Constraints
 

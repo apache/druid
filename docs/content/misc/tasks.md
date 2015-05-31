@@ -157,7 +157,7 @@ If you are having trouble with any extensions in HadoopIndexTask, it may be the 
 
 ### Realtime Index Task
 
-The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. We recommend you use the library [tranquility](https://github.com/metamx/tranquility) to programmatically manage generating real-time index tasks. The grammar for the real-time task is as follows:
+The indexing service can also run real-time tasks. These tasks effectively transform a middle manager into a real-time node. We introduced real-time tasks as a way to programmatically add new real-time data sources without needing to manually add nodes. We recommend you use the library [tranquility](https://github.com/druid-io/tranquility) to programmatically manage generating real-time index tasks. The grammar for the real-time task is as follows:
 
 ```json
 {
