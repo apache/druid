@@ -229,7 +229,7 @@ public class IndexIO
         return true;
       default:
         if (forceIfCurrent) {
-          IndexMaker.convert(toConvert, converted, indexSpec);
+          IndexMerger.convert(toConvert, converted, indexSpec);
           if(validate){
             DefaultIndexIOHandler.validateTwoSegments(toConvert, converted);
           }
