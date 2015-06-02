@@ -33,6 +33,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.DruidMetrics;
 import io.druid.query.QuerySegmentWalker;
@@ -136,10 +137,10 @@ public class QueryResource
         queryId = UUID.randomUUID().toString();
         query = query.withId(queryId);
       }
-      if (query.getContextValue("timeout") == null) {
+      if (query.getContextValue(QueryContextKeys.TIMEOUT) == null) {
         query = query.withOverriddenContext(
             ImmutableMap.of(
-                "timeout",
+                QueryContextKeys.TIMEOUT,
                 config.getMaxIdleTime().toStandardDuration().getMillis()
             )
         );

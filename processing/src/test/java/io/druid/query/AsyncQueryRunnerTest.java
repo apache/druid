@@ -102,7 +102,7 @@ public class AsyncQueryRunnerTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER);
 
     Sequence lazy = asyncRunner.run(
-        query.withOverriddenContext(ImmutableMap.<String,Object>of("timeout", 1)),
+        query.withOverriddenContext(ImmutableMap.<String,Object>of(QueryContextKeys.TIMEOUT, 1)),
         Collections.EMPTY_MAP);
 
     try {

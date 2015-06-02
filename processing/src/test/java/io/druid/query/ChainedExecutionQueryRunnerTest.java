@@ -253,7 +253,7 @@ public class ChainedExecutionQueryRunnerTest
               .dataSource("test")
               .intervals("2014/2015")
               .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
-              .context(ImmutableMap.<String, Object>of("timeout", 100, "queryId", "test"))
+              .context(ImmutableMap.<String, Object>of(QueryContextKeys.TIMEOUT, 100, "queryId", "test"))
               .build(),
         context
     );

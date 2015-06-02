@@ -138,7 +138,7 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
     // Let the runners complete
     try {
       queryWatcher.registerQuery(query, futures);
-      final Number timeout = query.getContextValue("timeout", (Number) null);
+      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
       if (timeout == null) {
         futures.get();
       } else {
