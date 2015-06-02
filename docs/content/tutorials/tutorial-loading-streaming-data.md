@@ -4,7 +4,7 @@ layout: doc_page
 
 # Loading Streaming Data
 
-In our [last tutorial](Tutorial%3A-The-Druid-Cluster.html), we set up a
+In our [last tutorial](../tutorials/tutorial-the-druid-cluster.html), we set up a
 complete Druid cluster. We created all the Druid dependencies and ingested
 streaming data. In this tutorial, we will expand upon what we've done in the
 first two tutorials.
@@ -12,29 +12,29 @@ first two tutorials.
 ## About the Data
 
 We will be working with the same Wikipedia edits data schema [from our previous
-tutorials](Tutorial%3A-A-First-Look-at-Druid.html#about-the-data).
+tutorials](tutorial-a-first-look-at-druid.html#about-the-data).
 
 ## Set Up
 
 At this point, you should already have Druid downloaded and be comfortable
 running a Druid cluster locally. If not, [have a look at our second
-tutorial](Tutorial%3A-The-Druid-Cluster.html). If Zookeeper and MySQL are not
+tutorial](../tutorials/tutorial-the-druid-cluster.html). If Zookeeper and MySQL are not
 running, you will have to start them as described in [The Druid
-Cluster](Tutorial%3A-The-Druid-Cluster.html).
+Cluster](../tutorials/tutorial-the-druid-cluster.html).
 
 With real-world data, we recommend having a message bus such as [Apache
 Kafka](http://kafka.apache.org/) sit between the data stream and the real-time
 node. The message bus provides higher availability for production environments.
-[Firehoses](Firehose.html) are the key abstraction for real-time ingestion.
+[Firehoses](../ingestion/firehose.html) are the key abstraction for real-time ingestion.
 
 ### Kafka
 
 Druid communicates with Kafka using the
-[KafkaFirehoseFactory](Firehose.html). Using this [Firehose](Firehose.html)
+[KafkaFirehoseFactory](../ingestion/firehose.html). Using this [Firehose](../ingestion/firehose.html)
 with the right configuration, we can import data into Druid in real-time
 without writing any code. To load data to a real-time node via Kafka, we'll
 first need to initialize Zookeeper and Kafka, and then configure and initialize
-a [Realtime](Realtime.html) node.
+a [Realtime](../design/realtime.html) node.
 
 The following quick-start instructions for booting a Zookeeper and then Kafka
 cluster were adapted from the [Apache Kafka quickstart guide](http://kafka.apache.org/documentation.html#quickstart).
@@ -103,7 +103,7 @@ download](http://static.druid.io/artifacts/releases/druid-services-0.7.1-bin.tar
     {"timestamp": "2013-08-31T12:41:27Z", "page": "Coyote Tango", "language" : "ja", "user" : "stringer", "unpatrolled" : "true", "newPage" : "false", "robot": "true", "anonymous": "false", "namespace":"wikipedia", "continent":"Asia", "country":"Japan", "region":"Kanto", "city":"Tokyo", "added": 1, "deleted": 10, "delta": -9}
     ```
 
-    **Note:** This config uses a [`messageTime` rejection policy](Plumber.html)
+    **Note:** This config uses a [`messageTime` rejection policy](../design/plumber.html)
     which will accept all events and hand off as long as there is a continuous
     stream of events. In this particular example, hand-off will not actually
     occur because we only have a handful of events.
@@ -121,7 +121,7 @@ download](http://static.druid.io/artifacts/releases/druid-services-0.7.1-bin.tar
 
 1. Issue a query
 
-    Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) to the real-time node
+    Issuing a [TimeBoundaryQuery](../querying/timeboundaryquery.html) to the real-time node
     should return some results:
 
     ```bash
@@ -144,7 +144,7 @@ download](http://static.druid.io/artifacts/releases/druid-services-0.7.1-bin.tar
 
 Druid offers an additional method of ingesting streaming data via the indexing service. You may be wondering why a second method is needed. Standalone real-time nodes are sufficient for certain volumes of data and availability tolerances. They pull data from a message queue like Kafka or Rabbit, index data locally, and periodically finalize segments for handoff to historical nodes. They are fairly straightforward to scale, simply taking advantage of the innate scalability of the backing message queue. But they are difficult to make highly available with Kafka, the most popular supported message queue, because its high-level consumer doesn’t provide a way to scale out two replicated consumer groups such that each one gets the same data in the same shard. They also become difficult to manage once you have a lot of them, since every machine needs a unique configuration.
 
-Druid solved the availability problem by switching from a pull-based model to a push-based model; rather than Druid indexers pulling data from Kafka, another process pulls data and pushes the data into Druid. Since with the push based model, we can ensure that the same data makes it into the same shard, we can replicate data. The [indexing service](Indexing-Service.html) encapsulates this functionality, where a task-and-resources model replaces a standalone machine model. In addition to simplifying machine configuration, the model also allows nodes to run in the cloud with an elastic number of machines. If you are interested in this form of real-time ingestion, please check out the client library [Tranquility](https://github.com/metamx/tranquility).
+Druid solved the availability problem by switching from a pull-based model to a push-based model; rather than Druid indexers pulling data from Kafka, another process pulls data and pushes the data into Druid. Since with the push based model, we can ensure that the same data makes it into the same shard, we can replicate data. The [indexing service](../design/indexing-service.html) encapsulates this functionality, where a task-and-resources model replaces a standalone machine model. In addition to simplifying machine configuration, the model also allows nodes to run in the cloud with an elastic number of machines. If you are interested in this form of real-time ingestion, please check out the client library [Tranquility](https://github.com/druid-io/tranquility).
 
 Additional Information
 ----------------------

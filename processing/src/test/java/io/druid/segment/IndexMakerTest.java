@@ -66,6 +66,7 @@ public class IndexMakerTest
   };
   private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
+      CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4
   );
   private static final List<String> DIMS = ImmutableList.of("dim0", "dim1");

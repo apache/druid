@@ -4,7 +4,7 @@ layout: doc_page
 
 # Tutorial: Loading Batch Data
 
-In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](Indexing-Service.html). The indexing service is a standalone service that accepts [tasks](Tasks.html) in the form of POST requests. The output of most tasks are segments. The indexing service can be used as a single service for both real-time/streaming and batch ingestion.
+In this tutorial, we will learn about batch ingestion (as opposed to real-time ingestion) and how to create segments using the final piece of the Druid Cluster, the [indexing service](../design/indexing-service.html). The indexing service is a standalone service that accepts [tasks](../misc/tasks.html) in the form of POST requests. The output of most tasks are segments. The indexing service can be used as a single service for both real-time/streaming and batch ingestion.
 
 The Data
 --------
@@ -39,7 +39,7 @@ Metrics (things to aggregate over):
 Batch Ingestion
 ---------------
 
-For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](Tutorial%3A-Loading-Streaming-Data.html).
+For the purposes of this tutorial, we are going to use our very small and simple Wikipedia data set. This data can directly be ingested via other means as shown in the previous [tutorial](../tutorials/tutorial-loading-streaming-data.html).
 
 Our data is located at:
 
@@ -61,7 +61,7 @@ The following events should exist in the file:
 
 To index the data, we are going to need an indexing service, a historical node, and a coordinator node.
 
-Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html).
+Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](../tutorials/tutorial-the-druid-cluster.html).
 
 To start the Indexing Service:
 
@@ -83,7 +83,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_commo
 
 #### Index the Data
 
-There are two ways we can load the data, depending on the data volume. The simplest method of loading data is to use the [Index Task](Tasks.html). Index tasks can load batch data without any external dependencies. They are however, slow when the data volume exceeds 1G.
+There are two ways we can load the data, depending on the data volume. The simplest method of loading data is to use the [Index Task](../misc/tasks.html). Index tasks can load batch data without any external dependencies. They are however, slow when the data volume exceeds 1G.
 
 #### Index Task
 
@@ -214,7 +214,7 @@ These logs indicate that the coordinator has assigned our new segment to the his
 
 Once the segment is announced the segment is queryable. Now you should be able to query the data.
 
-Issuing a [TimeBoundaryQuery](TimeBoundaryQuery.html) should yield:
+Issuing a [TimeBoundaryQuery](../querying/timeboundaryquery.html) should yield:
 
 ```json
 [ {
@@ -239,7 +239,7 @@ On this console, you can look at statuses and logs of recently submitted and com
 
 If you decide to reuse the local firehose to ingest your own data and if you run into problems, you can use the console to read the individual task logs.
 
-Task logs can be stored locally or uploaded to [Deep Storage](Deep-Storage.html). More information about how to configure this is [here](Configuration.html).
+Task logs can be stored locally or uploaded to [Deep Storage](../dependencies/deep-storage.html). More information about how to configure this is [here](../configuration/index.html).
 
 Most common data ingestion problems are around timestamp formats and other malformed data issues.
 
@@ -249,7 +249,7 @@ Druid is designed for large data volumes, and most real-world data sets require 
 
 For this tutorial, we used [Hadoop 2.3.0](https://archive.apache.org/dist/hadoop/core/hadoop-2.3.0/). There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example.
 
-Before indexing the data, make sure you have a valid Hadoop cluster running. To build our Druid segment, we are going to submit a [Hadoop index task](Tasks.html) to the indexing service. The grammar for the Hadoop index task is very similar to the index task of the last tutorial. The tutorial Hadoop index task should be located at:
+Before indexing the data, make sure you have a valid Hadoop cluster running. To build our Druid segment, we are going to submit a [Hadoop index task](../misc/tasks.html) to the indexing service. The grammar for the Hadoop index task is very similar to the index task of the last tutorial. The tutorial Hadoop index task should be located at:
 
 ```
 examples/indexing/wikipedia_index_hadoop_task.json
@@ -317,7 +317,7 @@ Examining the contents of the file, you should find:
   }
   ```
 
-If you are curious about what all this configuration means, see [here](Tasks.html).
+If you are curious about what all this configuration means, see [here](../misc/tasks.html).
 
 To submit the task:
 
@@ -329,7 +329,7 @@ After the task is completed, the segment should be assigned to your historical n
 
 Next Steps
 ----------
-We demonstrated using the indexing service as a way to ingest data into Druid. Previous versions of Druid used the [HadoopDruidIndexer](Batch-ingestion.html) to ingest batch data. The `HadoopDruidIndexer` still remains a valid option for batch ingestion, however, we recommend using the indexing service as the preferred method of getting batch data into Druid.
+We demonstrated using the indexing service as a way to ingest data into Druid. Previous versions of Druid used the [HadoopDruidIndexer](../ingestion/batch-ingestion.html) to ingest batch data. The `HadoopDruidIndexer` still remains a valid option for batch ingestion, however, we recommend using the indexing service as the preferred method of getting batch data into Druid.
 
 Additional Information
 ----------------------

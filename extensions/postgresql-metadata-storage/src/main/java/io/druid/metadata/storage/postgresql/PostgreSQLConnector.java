@@ -51,6 +51,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     datasource.setDriverClassName("org.postgresql.Driver");
 
     this.dbi = new DBI(datasource);
+
+    log.info("Configured PostgreSQL as metadata storage");
   }
 
   @Override

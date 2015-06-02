@@ -34,6 +34,7 @@ public class EC2NodeData
   private final String keyName;
   private final String subnetId;
   private final EC2IamProfileData iamProfile;
+  private final Boolean associatePublicIpAddress;
 
   @JsonCreator
   public EC2NodeData(
@@ -44,7 +45,8 @@ public class EC2NodeData
       @JsonProperty("securityGroupIds") List<String> securityGroupIds,
       @JsonProperty("keyName") String keyName,
       @JsonProperty("subnetId") String subnetId,
-      @JsonProperty("iamProfile") EC2IamProfileData iamProfile
+      @JsonProperty("iamProfile") EC2IamProfileData iamProfile,
+      @JsonProperty("associatePublicIpAddress") Boolean associatePublicIpAddress
   )
   {
     this.amiId = amiId;
@@ -55,6 +57,7 @@ public class EC2NodeData
     this.keyName = keyName;
     this.subnetId = subnetId;
     this.iamProfile = iamProfile;
+    this.associatePublicIpAddress = associatePublicIpAddress;
   }
 
   @JsonProperty
@@ -103,6 +106,12 @@ public class EC2NodeData
   public EC2IamProfileData getIamProfile()
   {
     return iamProfile;
+  }
+
+  @JsonProperty
+  public Boolean getAssociatePublicIpAddress()
+  {
+    return associatePublicIpAddress;
   }
 
   @Override

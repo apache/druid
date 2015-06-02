@@ -5,83 +5,84 @@
 
 h2. Getting Started
 * "Concepts":./
-* "Hello, Druid":./Tutorial:-A-First-Look-at-Druid.html
-* "Tutorials":./Tutorials.html
-* "Evaluate Druid":./Evaluate.html
+* "Hello, Druid":../tutorials/tutorial-a-first-look-at-druid.html
+* "Tutorials":../tutorials/index.html
+* "Evaluate Druid":../misc/evaluate.html
 
 h2. Data Ingestion
-* "Overview":./Ingestion-overview.html
-* "Data Formats":./Data_formats.html
-* "Data Schema":./Ingestion.html
-* "Realtime Ingestion":./Realtime-ingestion.html
-* "Batch Ingestion":./Batch-ingestion.html
-* "FAQ":./Ingestion-FAQ.html
+* "Overview":../ingestion/ingestion-overview.html
+* "Data Formats":../ingestion/data-formats.html
+* "Data Schema":../ingestion/index.html
+* "Realtime Ingestion":../ingestion/realtime-ingestion.html
+* "Batch Ingestion":../ingestion/batch-ingestion.html
+* "FAQ":../ingestion/ingestion-faq.html
 
 h2. Querying
-* "Overview":./Querying.html
-* "Timeseries":./TimeseriesQuery.html
-* "TopN":./TopNQuery.html
-* "GroupBy":./GroupByQuery.html
-* "Time Boundary":./TimeBoundaryQuery.html
-* "Segment Metadata":./SegmentMetadataQuery.html
-* "DataSource Metadata":./DataSourceMetadataQuery.html
-* "Search":./SearchQuery.html
+* "Overview":../querying/querying.html
+* "Timeseries":../querying/timeseriesquery.html
+* "TopN":../querying/topnquery.html
+* "GroupBy":../querying/groupbyquery.html
+* "Time Boundary":../querying/timeboundaryquery.html
+* "Segment Metadata":../querying/segmentmetadataquery.html
+* "DataSource Metadata":../querying/datasourcemetadataquery.html
+* "Search":../querying/searchquery.html
 * Components
-** "Filters":./Filters.html
-** "Aggregations":./Aggregations.html
-** "Post Aggregations":./Post-aggregations.html
-** "Granularities":./Granularities.html
-** "DimensionSpecs":./DimensionSpecs.html
+** "Filters":../querying/filters.html
+** "Aggregations":../querying/aggregations.html
+** "Post Aggregations":../querying/post-aggregations.html
+** "Granularities":../querying/granularities.html
+** "DimensionSpecs":../querying/dimensionspecs.html
 
 h2. Design
-* "Overview":./Design.html
+* "Overview":../design/design.html
 * Storage
-** "Segments":./Segments.html
+** "Segments":../design/segments.html
 * Node Types
-** "Historical":./Historical.html
-** "Broker":./Broker.html
-** "Coordinator":./Coordinator.html
-** "Indexing Service":./Indexing-Service.html
-** "Realtime":./Realtime.html
+** "Historical":../design/historical.html
+** "Broker":../design/broker.html
+** "Coordinator":../design/coordinator.html
+** "Indexing Service":../design/indexing-service.html
+** "Realtime":../design/realtime.html
 * Dependencies
-** "Deep Storage":./Deep-Storage.html
-** "Metadata Storage":./Metadata-storage.html
-** "ZooKeeper":./ZooKeeper.html
+** "Deep Storage":../dependencies/deep-storage.html
+** "Metadata Storage":../dependencies/metadata-storage.html
+** "ZooKeeper":../dependencies/zookeeper.html
 
 h2. Operations
-* "Good Practices":Recommendations.html
-* "Including Extensions":./Including-Extensions.html
-* "Data Retention":./Rule-Configuration.html
-* "Metrics and Monitoring":./Metrics.html
-* "Alerts":./alerts.html
-* "Updating the Cluster":./Rolling-Updates.html
-* "Different Hadoop Versions":./Other-Hadoop.html
-* "Performance FAQ":./Performance-FAQ.html
+* "Good Practices":../operations/recommendations.html
+* "Including Extensions":../operations/including-extensions.html
+* "Data Retention":../operations/rule-configuration.html
+* "Metrics and Monitoring":../operations/metrics.html
+* "Alerts":../operations/alerts.html
+* "Updating the Cluster":../operations/rolling-updates.html
+* "Different Hadoop Versions":../operations/other-hadoop.html
+* "Performance FAQ":../operations/performance-faq.html
 
 h2. Configuration
-* "Common Configuration":./Configuration.html
-* "Indexing Service":./Indexing-Service-Config.html
-* "Coordinator":./Coordinator-Config.html
-* "Historical":./Historical-Config.html
-* "Broker":./Broker-Config.html
-* "Realtime":./Realtime-Config.html
-* "Configuring Logging":./Logging.html
-* "Simple Cluster Configuration":./Simple-Cluster-Configuration.html
-* "Production Cluster Configuration":./Production-Cluster-Configuration.html
-* "Production Hadoop Configuration":./Hadoop-Configuration.html
+* "Common Configuration":../configuration/index.html
+* "Indexing Service":../configuration/indexing-service.html
+* "Coordinator":../configuration/coordinator.html
+* "Historical":../configuration/historical.html
+* "Broker":../configuration/broker.html
+* "Realtime":../configuration/realtime.html
+* "Configuring Logging":../configuration/logging.html
+* "Simple Cluster Configuration":../configuration/simple-cluster.html
+* "Production Cluster Configuration":../configuration/production-cluster.html
+* "Production Hadoop Configuration":../configuration/hadoop.html
 
 h2. Development
-* "Libraries":./Libraries.html
-* "Extending Druid":./Modules.html
-* "Build From Source":./Build-from-source.html
-* "Versioning":./Versioning.html
+* "Libraries":../development/libraries.html
+* "Extending Druid":../development/modules.html
+* "Build From Source":../development/build.html
+* "Versioning":../development/versioning.html
+  "Integration":../development/integrating-druid-with-other-technologies.html
 * Experimental Features
-** "Overview":./About-Experimental-Features.html
-** "Geographic Queries":./GeographicQueries.html
-** "Select Query":./SelectQuery.html
-** "Approximate Histograms and Quantiles":./ApproxHisto.html
-** "Router node":./Router.html
+** "Overview":../development/experimental.html
+** "Geographic Queries":../development/geo.html
+** "Select Query":../development/select-query.html
+** "Approximate Histograms and Quantiles":../development/approximate-histograms.html
+** "Router node":../development/router.html
 
 h2. Misc
-* "Papers & Talks":./Papers-and-talks.html
+* "Papers & Talks":../misc/papers-and-talks.html
 * "Thanks":/thanks.html

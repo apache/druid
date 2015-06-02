@@ -65,6 +65,7 @@ public class IndexIOTest
   private static Interval DEFAULT_INTERVAL = Interval.parse("1970-01-01/2000-01-01");
   private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
+      CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4
   );
 

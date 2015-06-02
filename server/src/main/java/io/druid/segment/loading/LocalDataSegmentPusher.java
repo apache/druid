@@ -47,6 +47,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   {
     this.config = config;
     this.jsonMapper = jsonMapper;
+
+    log.info("Configured local filesystem as deep storage");
   }
 
   @Override
@@ -59,6 +61,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(File dataSegmentFile, DataSegment segment) throws IOException
   {
     File outDir = new File(config.getStorageDirectory(), DataSegmentPusherUtil.getStorageDir(segment));
+
+    log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getIdentifier(), outDir.toString());
 
     if (dataSegmentFile.equals(outDir)) {
       long size = 0;

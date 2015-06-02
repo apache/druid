@@ -90,6 +90,9 @@ public class GroupByQuery extends BaseQuery<Row>
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
+    for (DimensionSpec spec : this.dimensions) {
+      Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
+    }
     this.aggregatorSpecs = aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
     this.havingSpec = havingSpec;
@@ -104,6 +107,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     if (havingSpec != null) {
       postProcFn = Functions.compose(
+          postProcFn,
           new Function<Sequence<Row>, Sequence<Row>>()
           {
             @Override
@@ -121,8 +125,7 @@ public class GroupByQuery extends BaseQuery<Row>
                   }
               );
             }
-          },
-          postProcFn
+          }
       );
     }
 

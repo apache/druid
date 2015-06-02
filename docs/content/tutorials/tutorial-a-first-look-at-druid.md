@@ -43,7 +43,7 @@ Metrics (things to aggregate over):
 Setting Up
 ----------
 
-To start, we need to get our hands on a Druid build. There are two ways to get Druid: download a tarball, or [Build From Source](Build-from-source.html). You only need to do one of these.
+To start, we need to get our hands on a Druid build. There are two ways to get Druid: download a tarball, or [Build From Source](../development/build.html). You only need to do one of these.
 
 ### Download a Tarball
 
@@ -51,7 +51,7 @@ We've built a tarball that contains everything you'll need. You'll find it [here
 
 ### Build From Source
 
-Follow the [Build From Source](Build-from-source.html) guide to build from source. Then grab the tarball from services/target/druid-<version>-bin.tar.gz.
+Follow the [Build From Source](../development/build.html) guide to build from source. Then grab the tarball from services/target/druid-<version>-bin.tar.gz.
 
 ### Unpack the Tarball
 
@@ -95,7 +95,7 @@ cd ..
 Running Example Scripts
 -----------------------
 
-Let's start doing stuff. You can start an example Druid [Realtime](Realtime.html) node by issuing:
+Let's start doing stuff. You can start an example Druid [Realtime](../design/realtime.html) node by issuing:
 
 ```
 ./run_example_server.sh
@@ -124,7 +124,7 @@ To query the real-time node you've spun up, you can issue:
 ./run_example_client.sh
 ```
 
-Select "wikipedia" once again. This script issues [TimeBoundary](TimeBoundaryQuery.html) to the data we've been ingesting. The query looks like this:
+Select "wikipedia" once again. This script issues [TimeBoundary](../querying/timeboundaryquery.html) to the data we've been ingesting. The query looks like this:
 
 ```json
 {
@@ -158,7 +158,7 @@ In your favorite editor, create the file:
 timeseries.json
 ```
 
-We are going to make a slightly more complicated query, the [TimeseriesQuery](TimeseriesQuery.html). Copy and paste the following into the file:
+We are going to make a slightly more complicated query, the [TimeseriesQuery](../querying/timeseriesquery.html). Copy and paste the following into the file:
 
 ```json
 {
@@ -173,7 +173,7 @@ We are going to make a slightly more complicated query, the [TimeseriesQuery](Ti
 }
 ```
 
-Our query has now expanded to include a time interval, [Granularities](Granularities.html), and [Aggregations](Aggregations.html). What the query is doing is aggregating a set of metrics over a span of time, and the results are grouped into a single time bucket.
+Our query has now expanded to include a time interval, [Granularities](../querying/granularities.html), and [Aggregations](../querying/aggregations.html). What the query is doing is aggregating a set of metrics over a span of time, and the results are grouped into a single time bucket.
 To issue the query and get some results, run the following in your command line:
 
 ```
@@ -231,7 +231,7 @@ This gives us results like the following:
 Solving a Problem
 -----------------
 
-One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we can use the [TopN](TopNQuery.html).
+One of Druid's main powers is to provide answers to problems, so let's pose a problem. What if we wanted to know what the top pages in the US are, ordered by the number of edits over the last few minutes you've been going through this tutorial? To solve this problem, we can use the [TopN](../querying/topnquery.html).
 
 Let's create the file:
 
@@ -257,7 +257,7 @@ and put the following in there:
 }
 ```
 
-Note that our query now includes [Filters](Filters.html). Filters are like `WHERE` clauses in SQL and help narrow down the data that needs to be scanned.
+Note that our query now includes [Filters](../querying/filters.html). Filters are like `WHERE` clauses in SQL and help narrow down the data that needs to be scanned.
 
 If you issue the query:
 
@@ -281,16 +281,16 @@ You should see an answer to our question. As an example, some results are shown 
 ]
 ```
 
-Feel free to tweak other query parameters to answer other questions you may have about the data. Druid also includes more complex query types such as [groupBy queries](GroupByQuery.html). For more information on querying, see this [link](Querying.html).
+Feel free to tweak other query parameters to answer other questions you may have about the data. Druid also includes more complex query types such as [groupBy queries](../querying/groupbyquery.html). For more information on querying, see this [link](../querying/querying.html).
 
 Next Steps
 ----------
 
-This tutorial only covered the basic operations of a single Druid node. For production, you'll likely need a full Druid cluster. Check out our next tutorial [The Druid Cluster](Tutorial%3A-The-Druid-Cluster.html) to learn more.
+This tutorial only covered the basic operations of a single Druid node. For production, you'll likely need a full Druid cluster. Check out our next tutorial [The Druid Cluster](../tutorials/tutorial-the-druid-cluster.html) to learn more.
 
-To learn more about loading streaming data, see [Loading Streaming Data](Tutorial%3A-Loading-Streaming-Data.html).
+To learn more about loading streaming data, see [Loading Streaming Data](../tutorials/tutorial-loading-streaming-data.html).
 
-To learn more about loading batch data, see [Loading Batch Data](Tutorial%3A-Loading-Batch-Data.html).
+To learn more about loading batch data, see [Loading Batch Data](../tutorials/tutorial-loading-batch-data.html).
 
 Additional Information
 ----------------------

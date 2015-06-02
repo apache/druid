@@ -3,7 +3,7 @@ layout: doc_page
 ---
 
 # Tutorial: The Druid Cluster
-Welcome back! In our first [tutorial](Tutorial%3A-A-First-Look-at-Druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like?
+Welcome back! In our first [tutorial](../tutorials/tutorial-a-first-look-at-druid.html), we introduced you to the most basic Druid setup: a single realtime node. We streamed in some data and queried it. Realtime nodes collect very recent data and periodically hand that data off to the rest of the Druid cluster. Some questions about the architecture must naturally come to mind. What does the rest of Druid cluster look like?
 
 This tutorial will hopefully answer these questions!
 
@@ -13,7 +13,7 @@ In this tutorial, we will set up other types of Druid nodes and external depende
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). You can also [Build From Source](Build-from-source.html) and grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
+You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). You can also [Build From Source](../development/build.html) and grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
 
 Either way, once you have the tarball, untar the contents within by issuing:
 
@@ -59,7 +59,7 @@ cd ..
 
 ## The Data
 
-Similar to the first tutorial, the data we will be loading is based on edits that have occurred on Wikipedia. Every time someone edits a page in Wikipedia, metadata is generated about the editor and edited page. Druid collects each individual event and packages them together in a container known as a [segment](Segments.html). Segments contain data over some span of time. We've prebuilt a segment for this tutorial and will cover making your own segments in other [pages](Tutorial%3A-Loading-Streaming-Data.html).The segment we are going to work with has the following format:
+Similar to the first tutorial, the data we will be loading is based on edits that have occurred on Wikipedia. Every time someone edits a page in Wikipedia, metadata is generated about the editor and edited page. Druid collects each individual event and packages them together in a container known as a [segment](../design/segments.html). Segments contain data over some span of time. We've prebuilt a segment for this tutorial and will cover making your own segments in other [pages](../tutorials/tutorial-loading-streaming-data.html).The segment we are going to work with has the following format:
 
 Dimensions (things to filter on):
 
@@ -95,7 +95,7 @@ Before we get started, let's make sure we have configs in the config directory f
 ls config
 ```
 
-If you are interested in learning more about Druid configuration files, check out this [link](Configuration.html). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
+If you are interested in learning more about Druid configuration files, check out this [link](../configuration/index.html). Many aspects of Druid are customizable. For the purposes of this tutorial, we are going to use default values for most things.
 
 #### Common Configuration
 
@@ -143,7 +143,7 @@ In this file we define our external dependencies and cluster wide configs.
 #### Start a Coordinator Node
 
 Coordinator nodes are in charge of load assignment and distribution. Coordinator nodes monitor the status of the cluster and command historical nodes to assign and drop segments.
-For more information about coordinator nodes, see [here](Coordinator.html).
+For more information about coordinator nodes, see [here](../design/coordinator.html).
 
 The coordinator config file should already exist at:
 
@@ -174,7 +174,7 @@ Note: we will be running a single historical node in these examples, so you may 
 #### Start a Historical Node
 
 Historical nodes are the workhorses of a cluster and are in charge of loading historical segments and making them available for queries. Realtime nodes hand off segments to historical nodes.
-For more information about Historical nodes, see [here](Historical.html).
+For more information about Historical nodes, see [here](../design/historical.html).
 
 The historical config file should exist at:
 
@@ -207,7 +207,7 @@ java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_commo
 #### Start a Broker Node
 
 Broker nodes are responsible for figuring out which historical and/or realtime nodes correspond to which queries. They also merge partial results from these nodes in a scatter/gather fashion.
-For more information about Broker nodes, see [here](Broker.html).
+For more information about Broker nodes, see [here](../design/broker.html).
 
 The broker config file should exist at:
 
@@ -324,9 +324,9 @@ The realtime query results will reflect the data that was recently indexed from 
 
 Querying the historical and realtime node directly is useful for understanding how the segment handling is working, but if you just want to run a query for all the data (realtime and historical), then send the query to the broker at port 8082 (which is what we did in the first example). The broker will send the query to the historical and realtime nodes and merge the results.
 
-For more information on querying, see this [link](Querying.html).
+For more information on querying, see this [link](../querying/querying.html).
 
 Next Steps
 ----------
-If you are interested in how data flows through the different Druid components, check out the [Druid data flow architecture](Design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
-Check out the next [tutorial](Tutorial%3A-Loading-Streaming-Data.html) section for more info!
+If you are interested in how data flows through the different Druid components, check out the [Druid data flow architecture](../design/design.html). Now that you have an understanding of what the Druid cluster looks like, why not load some of your own data?
+Check out the next [tutorial](../tutorials/tutorial-loading-streaming-data.html) section for more info!
