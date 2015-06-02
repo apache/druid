@@ -29,7 +29,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "partial", value = MatchingDimExtractionFn.class),
     @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class),
     @JsonSubTypes.Type(name = "javascript", value = JavascriptExtractionFn.class),
-    @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class)
+    @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class),
+    @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class)
 })
 /**
  * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension)
@@ -56,8 +57,8 @@ public interface ExtractionFn
    * a contract on the method rather than enforced at a lower level in order to eliminate a global check
    * for extraction functions that do not already need one.
    *
-   *
    * @param value the original value of the dimension
+   *
    * @return a value that should be used instead of the original
    */
   public String apply(Object value);
@@ -68,11 +69,26 @@ public interface ExtractionFn
 
   /**
    * Offers information on whether the extraction will preserve the original ordering of the values.
-   *
+   * <p/>
    * Some optimizations of queries is possible if ordering is preserved.  Null values *do* count towards
    * ordering.
    *
    * @return true if ordering is preserved, false otherwise
    */
   public boolean preservesOrdering();
+
+  /**
+   * A dim extraction can be of one of two types, renaming or rebucketing. In the `ONE_TO_ONE` case, a unique values is
+   * modified into another unique value. In the `MANY_TO_ONE` case, there is no longer a 1:1 relation between old dimension
+   * value and new dimension value
+   *
+   * @return {@link io.druid.query.extraction.ExtractionFn.ExtractionType} declaring what kind of manipulation this
+   * function does
+   */
+  public ExtractionType getExtractionType();
+
+  public static enum ExtractionType
+  {
+    MANY_TO_ONE, ONE_TO_ONE
+  }
 }

@@ -161,6 +161,35 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
+  public TopNQuery withDimensionSpec(DimensionSpec spec){
+    return new TopNQuery(
+        getDataSource(),
+        spec,
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+  public TopNQuery withPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs){
+    return new TopNQuery(
+        getDataSource(),
+        getDimensionSpec(),
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
   @Override
   public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
   {
