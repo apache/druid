@@ -24,10 +24,23 @@ import org.joda.time.Period;
  */
 public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
 {
+  private final Period timeout;
+
+  public TestRemoteTaskRunnerConfig(Period timeout)
+  {
+    this.timeout = timeout;
+  }
+
   @Override
   public Period getTaskAssignmentTimeout()
   {
-    return new Period("PT1S");
+    return timeout;
+  }
+
+  @Override
+  public Period getTaskCleanupTimeout()
+  {
+    return timeout;
   }
 
   @Override

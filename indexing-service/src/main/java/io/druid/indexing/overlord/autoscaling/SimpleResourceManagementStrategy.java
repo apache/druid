@@ -187,7 +187,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
           final List<String> laziestWorkerIps =
               Lists.transform(
-                  runner.markWokersLazy(isLazyWorker, excessWorkers),
+                  runner.markWorkersLazy(isLazyWorker, excessWorkers),
                   new Function<ZkWorker, String>()
                   {
                     @Override

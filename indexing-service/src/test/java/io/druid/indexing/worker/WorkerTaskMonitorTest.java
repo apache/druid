@@ -17,6 +17,7 @@
 
 package io.druid.indexing.worker;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
@@ -45,6 +46,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -96,30 +98,40 @@ public class WorkerTaskMonitorTest
     workerCuratorCoordinator = new WorkerCuratorCoordinator(
         jsonMapper,
         new IndexerZkConfig(
-        new ZkPathsConfig()
-        {
-          @Override
-          public String getBase()
-          {
-            return basePath;
-          }
-        },null,null,null,null,null),
-        new TestRemoteTaskRunnerConfig(),
+            new ZkPathsConfig()
+            {
+              @Override
+              public String getBase()
+              {
+                return basePath;
+              }
+            }, null, null, null, null, null
+        ),
+        new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         cf,
         worker
     );
     workerCuratorCoordinator.start();
 
-    final File tmp = Files.createTempDir();
 
     // Start a task monitor
-    workerTaskMonitor = new WorkerTaskMonitor(
+    workerTaskMonitor = createTaskMonitor();
+    jsonMapper.registerSubtypes(new NamedType(TestMergeTask.class, "test"));
+    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
+    workerTaskMonitor.start();
+
+    task = TestMergeTask.createDummyTask("test");
+  }
+
+  private WorkerTaskMonitor createTaskMonitor()
+  {
+    return new WorkerTaskMonitor(
         jsonMapper,
         cf,
         workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
-                new TaskConfig(tmp.toString(), null, null, 0, null),
+                new TaskConfig(Files.createTempDir().toString(), null, null, 0, null),
                 null, null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
                 new SegmentLoaderLocalCacheManager(
                     null,
@@ -131,18 +143,14 @@ public class WorkerTaskMonitorTest
                         return Lists.newArrayList();
                       }
                     }
-                , jsonMapper)
+                    , jsonMapper
+                )
             ), jsonMapper
             ),
             null
         ),
         new WorkerConfig().setCapacity(1)
     );
-    jsonMapper.registerSubtypes(new NamedType(TestMergeTask.class, "test"));
-    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
-    workerTaskMonitor.start();
-
-    task = TestMergeTask.createDummyTask("test");
   }
 
   @After
@@ -178,7 +186,6 @@ public class WorkerTaskMonitorTest
         )
     );
 
-
     Assert.assertTrue(
         TestUtils.conditionValid(
             new IndexingServiceCondition()
@@ -203,5 +210,99 @@ public class WorkerTaskMonitorTest
 
     Assert.assertEquals(task.getId(), taskAnnouncement.getTaskStatus().getId());
     Assert.assertEquals(TaskStatus.Status.RUNNING, taskAnnouncement.getTaskStatus().getStatusCode());
+  }
+
+  @Test
+  public void testGetAnnouncements() throws Exception
+  {
+    cf.create()
+      .creatingParentsIfNeeded()
+      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                try {
+                  return cf.checkExists().forPath(joiner.join(statusPath, task.getId())) != null;
+                }
+                catch (Exception e) {
+                  return false;
+                }
+              }
+            }
+        )
+    );
+
+    List<TaskAnnouncement> announcements = workerCuratorCoordinator.getAnnouncements();
+    Assert.assertEquals(1, announcements.size());
+    Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
+    Assert.assertEquals(TaskStatus.Status.RUNNING, announcements.get(0).getTaskStatus().getStatusCode());
+  }
+
+  @Test
+  public void testRestartCleansOldStatus() throws Exception
+  {
+    cf.create()
+      .creatingParentsIfNeeded()
+      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                try {
+                  return cf.checkExists().forPath(joiner.join(statusPath, task.getId())) != null;
+                }
+                catch (Exception e) {
+                  return false;
+                }
+              }
+            }
+        )
+    );
+    // simulate node restart
+    workerTaskMonitor.stop();
+    workerTaskMonitor = createTaskMonitor();
+    workerTaskMonitor.start();
+    List<TaskAnnouncement> announcements = workerCuratorCoordinator.getAnnouncements();
+    Assert.assertEquals(1, announcements.size());
+    Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
+    Assert.assertEquals(TaskStatus.Status.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
+  }
+
+  @Test
+  public void testStatusAnnouncementsArePersistent() throws Exception
+  {
+    cf.create()
+      .creatingParentsIfNeeded()
+      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                try {
+                  return cf.checkExists().forPath(joiner.join(statusPath, task.getId())) != null;
+                }
+                catch (Exception e) {
+                  return false;
+                }
+              }
+            }
+        )
+    );
+    // ephermal owner is 0 is created node is PERSISTENT
+    Assert.assertEquals(0, cf.checkExists().forPath(joiner.join(statusPath, task.getId())).getEphemeralOwner());
+
   }
 }
