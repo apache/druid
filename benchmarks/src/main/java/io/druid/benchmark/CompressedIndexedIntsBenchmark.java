@@ -19,14 +19,10 @@
 
 package io.druid.benchmark;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import io.druid.segment.CompressedVSizeIndexedSupplier;
+import com.google.common.primitives.Ints;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
-import io.druid.segment.data.VSizeIndexed;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -38,31 +34,23 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.BitSet;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-public class CompressedVSizeIndexedBenchmark
+public class CompressedIndexedIntsBenchmark
 {
-  private IndexedMultivalue<IndexedInts> uncompressed;
-  private IndexedMultivalue<IndexedInts> compressed;
+  private IndexedInts uncompressed;
+  private IndexedInts compressed;
 
   @Param({"1", "2", "3", "4"})
   int bytes;
-
-  @Param({"5", "10", "100", "1000"})
-  int valuesPerRowBound;
 
   // Number of rows to read, the test will read random rows
   @Param({"1000", "10000", "100000", "1000000", "1000000"})
@@ -74,68 +62,45 @@ public class CompressedVSizeIndexedBenchmark
   public void setup() throws IOException
   {
     Random rand = new Random(0);
-    List<int[]> rows = Lists.newArrayList();
+    int[] vals = new int[0x100000];
     final int bound = 1 << bytes;
-    for (int i = 0; i < 0x100000; i++) {
-      int count = rand.nextInt(valuesPerRowBound) + 1;
-      int[] row = new int[rand.nextInt(count)];
-      for (int j = 0; j < row.length; j++) {
-        row[j] = rand.nextInt(bound);
-      }
-      rows.add(row);
+    for (int i = 0; i < vals.length; ++i) {
+      vals[i] = rand.nextInt(bound);
     }
-
     final ByteBuffer bufferCompressed = serialize(
-        CompressedVSizeIndexedSupplier.fromIterable(
-            Iterables.transform(
-                rows,
-                new Function<int[], IndexedInts>()
-                {
-                  @Override
-                  public IndexedInts apply(int[] input)
-                  {
-                    return VSizeIndexedInts.fromArray(input, 20);
-                  }
-                }
-            ),
+        CompressedVSizeIntsIndexedSupplier.fromList(
+            Ints.asList(vals),
             bound - 1,
+            CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(bytes),
             ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
         )
     );
-    this.compressed = CompressedVSizeIndexedSupplier.fromByteBuffer(
+    this.compressed = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(
         bufferCompressed, ByteOrder.nativeOrder()
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(
-        VSizeIndexed.fromIterable(
-            Iterables.transform(
-                rows,
-                new Function<int[], VSizeIndexedInts>()
-                {
-                  @Override
-                  public VSizeIndexedInts apply(int[] input)
-                  {
-                    return VSizeIndexedInts.fromArray(input, 20);
-                  }
-                }
+        new VSizeIndexedInts.VSizeIndexedIntsSupplier(
+            VSizeIndexedInts.fromArray(
+                vals
             )
-        ).asWritableSupplier()
+        )
     );
-    this.uncompressed = VSizeIndexed.readFromByteBuffer(bufferUncompressed);
+    this.uncompressed = VSizeIndexedInts.readFromByteBuffer(bufferUncompressed);
 
     filter = new BitSet();
     for (int i = 0; i < filteredRowCount; i++) {
-      int rowToAccess = rand.nextInt(rows.size());
+      int rowToAccess = rand.nextInt(vals.length);
       // Skip already selected rows if any
       while (filter.get(rowToAccess)) {
-        rowToAccess = (rowToAccess+1) % rows.size();
+        rowToAccess = (rowToAccess+1) % vals.length;
       }
       filter.set(rowToAccess);
     }
+
   }
 
-  private static ByteBuffer serialize(WritableSupplier<IndexedMultivalue<IndexedInts>> writableSupplier)
-      throws IOException
+  private static ByteBuffer serialize(WritableSupplier<IndexedInts> writableSupplier) throws IOException
   {
     final ByteBuffer buffer = ByteBuffer.allocateDirect((int) writableSupplier.getSerializedSize());
 
@@ -172,10 +137,7 @@ public class CompressedVSizeIndexedBenchmark
   public void uncompressed(Blackhole blackhole)
   {
     for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-      IndexedInts row = uncompressed.get(i);
-      for (int j = 0; j < row.size(); j++) {
-        blackhole.consume(row.get(j));
-      }
+      blackhole.consume(uncompressed.get(i));
     }
   }
 
@@ -185,10 +147,7 @@ public class CompressedVSizeIndexedBenchmark
   public void compressed(Blackhole blackhole)
   {
     for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
-      IndexedInts row = compressed.get(i);
-      for (int j = 0; j < row.size(); j++) {
-        blackhole.consume(row.get(j));
-      }
+      blackhole.consume(compressed.get(i));
     }
   }
 }
