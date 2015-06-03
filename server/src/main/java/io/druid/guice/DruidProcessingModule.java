@@ -18,6 +18,7 @@
 package io.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
@@ -35,6 +36,7 @@ import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
+import io.druid.guice.annotations.QueryResourceWaitingPool;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.MetricsEmittingExecutorService;
@@ -94,6 +96,21 @@ public class DruidProcessingModule implements Module
         ),
         emitter,
         new ServiceMetricEvent.Builder()
+    );
+  }
+
+  @Provides
+  @QueryResourceWaitingPool
+  @LazySingleton
+  public ListeningExecutorService getQueryResourceWaitingPool() throws Exception
+  {
+    return MoreExecutors.listeningDecorator(
+        Executors.newCachedThreadPool(
+            new ThreadFactoryBuilder()
+                .setDaemon(false)
+                .setNameFormat("QueryResourceWaitingPool-%d")
+                .build()
+        )
     );
   }
 
