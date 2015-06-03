@@ -108,31 +108,40 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
         }
       }
 
-      final RunInstancesResult result = amazonEC2Client.runInstances(
-          new RunInstancesRequest(
-              workerConfig.getAmiId(),
-              workerConfig.getMinInstances(),
-              workerConfig.getMaxInstances()
+      RunInstancesRequest request = new RunInstancesRequest(
+          workerConfig.getAmiId(),
+          workerConfig.getMinInstances(),
+          workerConfig.getMaxInstances()
+      )
+          .withInstanceType(workerConfig.getInstanceType())
+          .withPlacement(new Placement(envConfig.getAvailabilityZone()))
+          .withKeyName(workerConfig.getKeyName())
+          .withIamInstanceProfile(
+              workerConfig.getIamProfile() == null
+              ? null
+              : workerConfig.getIamProfile().toIamInstanceProfileSpecification()
           )
-              .withInstanceType(workerConfig.getInstanceType())
-              .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
-              .withPlacement(new Placement(envConfig.getAvailabilityZone()))
-              .withKeyName(workerConfig.getKeyName())
-              .withSubnetId(workerConfig.getSubnetId())
-              .withIamInstanceProfile(
-                  workerConfig.getIamProfile() == null
-                  ? null
-                  : workerConfig.getIamProfile().toIamInstanceProfileSpecification()
-              )
-              .withNetworkInterfaces(
-                  workerConfig.getAssociatePublicIpAddress() == null
-                  ? null
-                  : new InstanceNetworkInterfaceSpecification().withAssociatePublicIpAddress(
-                      workerConfig.getAssociatePublicIpAddress()
-                  )
-              )
-              .withUserData(userDataBase64)
-      );
+          .withUserData(userDataBase64);
+
+      // InstanceNetworkInterfaceSpecification.getAssociatePublicIpAddress may be
+      // true or false by default in EC2, depending on the subnet.
+      // Setting EC2NodeData.getAssociatePublicIpAddress explicitly will use that value instead,
+      // leaving it null uses the EC2 default.
+      if (workerConfig.getAssociatePublicIpAddress() != null) {
+        request.withNetworkInterfaces(
+            new InstanceNetworkInterfaceSpecification()
+                .withAssociatePublicIpAddress(workerConfig.getAssociatePublicIpAddress())
+                .withSubnetId(workerConfig.getSubnetId())
+                .withGroups(workerConfig.getSecurityGroupIds())
+                .withDeviceIndex(0)
+        );
+      } else {
+        request
+            .withSecurityGroupIds(workerConfig.getSecurityGroupIds())
+            .withSubnetId(workerConfig.getSubnetId());
+      }
+
+      final RunInstancesResult result = amazonEC2Client.runInstances(request);
 
       final List<String> instanceIds = Lists.transform(
           result.getReservation().getInstances(),
