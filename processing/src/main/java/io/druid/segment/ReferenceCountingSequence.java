@@ -24,6 +24,7 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 /**
  */
@@ -44,6 +45,18 @@ public class ReferenceCountingSequence<T> extends YieldingSequenceBase<T>
   )
   {
     final Closeable closeable = segment.increment();
-    return new ResourceClosingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), closeable);
+    final Yielder<OutType> yielder = baseSequence.toYielder(initValue, accumulator);
+    try {
+      return new ResourceClosingYielder<OutType>(baseSequence.toYielder(initValue, accumulator), closeable);
+    }
+    catch (RuntimeException ex) {
+      try {
+        yielder.close();
+      }
+      catch (IOException e) {
+        ex.addSuppressed(e);
+      }
+      throw ex;
+    }
   }
 }

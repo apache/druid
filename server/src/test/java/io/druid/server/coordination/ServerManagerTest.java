@@ -729,38 +729,49 @@ public class ServerManagerTest
       }
 
       final Yielder<OutType> baseYielder = baseSequence.toYielder(initValue, accumulator);
-      return new Yielder<OutType>()
-      {
-        @Override
-        public OutType get()
+      try {
+        return new Yielder<OutType>()
         {
-          try {
-            waitLatch.await(1000, TimeUnit.MILLISECONDS);
+          @Override
+          public OutType get()
+          {
+            try {
+              waitLatch.await(1000, TimeUnit.MILLISECONDS);
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+            return baseYielder.get();
           }
-          catch (Exception e) {
-            throw Throwables.propagate(e);
+
+          @Override
+          public Yielder<OutType> next(OutType initValue)
+          {
+            return baseYielder.next(initValue);
           }
-          return baseYielder.get();
-        }
 
-        @Override
-        public Yielder<OutType> next(OutType initValue)
-        {
-          return baseYielder.next(initValue);
-        }
+          @Override
+          public boolean isDone()
+          {
+            return baseYielder.isDone();
+          }
 
-        @Override
-        public boolean isDone()
-        {
-          return baseYielder.isDone();
-        }
-
-        @Override
-        public void close() throws IOException
-        {
+          @Override
+          public void close() throws IOException
+          {
+            baseYielder.close();
+          }
+        };
+      }
+      catch (RuntimeException ex) {
+        try {
           baseYielder.close();
         }
-      };
+        catch (IOException e) {
+          ex.addSuppressed(e);
+        }
+        throw ex;
+      }
     }
   }
 }

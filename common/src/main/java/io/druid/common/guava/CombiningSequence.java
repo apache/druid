@@ -73,9 +73,19 @@ public class CombiningSequence<T> implements Sequence<T>
     );
 
     combiningAccumulator.setRetVal(initValue);
-    Yielder<T> baseYielder = baseSequence.toYielder(null, combiningAccumulator);
+    final Yielder<T> baseYielder = baseSequence.toYielder(null, combiningAccumulator);
 
-    return makeYielder(baseYielder, combiningAccumulator, false);
+    try {
+      return makeYielder(baseYielder, combiningAccumulator, false);
+    }catch(RuntimeException ex){
+      try {
+        baseYielder.close();
+      }
+      catch (IOException e) {
+        ex.addSuppressed(e);
+      }
+      throw ex;
+    }
   }
 
   public <OutType, T> Yielder<OutType> makeYielder(

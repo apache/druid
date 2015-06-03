@@ -18,7 +18,6 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -28,7 +27,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -159,7 +157,18 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           throw e;
         }
 
-        return makeYielder(startTime, retVal, builder);
+        try {
+          return makeYielder(startTime, retVal, builder);
+        }
+        catch (RuntimeException ex) {
+          try {
+            retVal.close();
+          }
+          catch (IOException e) {
+            ex.addSuppressed(e);
+          }
+          throw ex;
+        }
       }
 
       private <OutType> Yielder<OutType> makeYielder(
