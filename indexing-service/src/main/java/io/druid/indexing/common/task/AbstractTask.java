@@ -28,6 +28,8 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 
@@ -63,6 +65,17 @@ public abstract class AbstractTask implements Task
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
     this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+  }
+
+  public static String makeId(String id, final String typeName, String dataSource, Interval interval)
+  {
+    return id != null ? id : joinId(
+        typeName,
+        dataSource,
+        interval.getStart(),
+        interval.getEnd(),
+        new DateTime().toString()
+    );
   }
 
   @JsonProperty
