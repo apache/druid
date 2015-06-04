@@ -17,11 +17,15 @@
 
 package io.druid.query.topn;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Comparator;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class AlphaNumericTopNMetricSpecTest
 {
@@ -59,5 +63,23 @@ public class AlphaNumericTopNMetricSpecTest
     // ... don't work too well
     assertTrue(comparator.compare("1.3", "1.15") < 0);
 
+  }
+
+  @Test
+  public void testSerdeAlphaNumericTopNMetricSpec() throws IOException{
+    AlphaNumericTopNMetricSpec expectedMetricSpec = new AlphaNumericTopNMetricSpec(null);
+    AlphaNumericTopNMetricSpec expectedMetricSpec1 = new AlphaNumericTopNMetricSpec("test");
+    String jsonSpec = "{\n"
+                      + "    \"type\": \"alphaNumeric\"\n"
+                      + "}";
+    String jsonSpec1 = "{\n"
+                       + "    \"type\": \"alphaNumeric\",\n"
+                       + "    \"previousStop\": \"test\"\n"
+                       + "}";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
+    TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
+    assertEquals(expectedMetricSpec, actualMetricSpec);
+    assertEquals(expectedMetricSpec1, actualMetricSpec1);
   }
 }

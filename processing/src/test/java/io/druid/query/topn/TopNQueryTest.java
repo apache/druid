@@ -26,6 +26,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.LegacyDimensionSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,6 +40,7 @@ import static io.druid.query.QueryRunnerTestHelper.dataSource;
 import static io.druid.query.QueryRunnerTestHelper.fullOnInterval;
 import static io.druid.query.QueryRunnerTestHelper.indexMetric;
 import static io.druid.query.QueryRunnerTestHelper.marketDimension;
+import static io.druid.query.QueryRunnerTestHelper.rowsCount;
 
 public class TopNQueryTest
 {
@@ -72,6 +74,40 @@ public class TopNQueryTest
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
+  }
+
+  @Test
+  public void testQuerySerdeWithAlphaNumericTopNMetricSpec() throws IOException{
+    TopNQuery expectedQuery = new TopNQueryBuilder()
+        .dataSource(dataSource)
+        .granularity(allGran)
+        .dimension(new LegacyDimensionSpec(marketDimension))
+        .metric(new AlphaNumericTopNMetricSpec(null))
+        .threshold(2)
+        .intervals(fullOnInterval.getIntervals())
+        .aggregators(Lists.<AggregatorFactory>newArrayList(rowsCount))
+        .build();
+    String jsonQuery = "{\n"
+                       + "  \"queryType\": \"topN\",\n"
+                       + "  \"dataSource\": \"testing\",\n"
+                       + "  \"dimension\": \"market\",\n"
+                       + "  \"threshold\": 2,\n"
+                       + "  \"metric\": {\n"
+                       + "    \"type\": \"alphaNumeric\"\n"
+                       + "   },\n"
+                       + "  \"granularity\": \"all\",\n"
+                       + "  \"aggregations\": [\n"
+                       + "    {\n"
+                       + "      \"type\": \"count\",\n"
+                       + "      \"name\": \"rows\"\n"
+                       + "    }\n"
+                       + "  ],\n"
+                       + "  \"intervals\": [\n"
+                       + "    \"1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z\"\n"
+                       + "  ]\n"
+                       + "}";
+    TopNQuery actualQuery = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonQuery, TopNQuery.class)), TopNQuery.class);
+    Assert.assertEquals(expectedQuery, actualQuery);
   }
 
 }

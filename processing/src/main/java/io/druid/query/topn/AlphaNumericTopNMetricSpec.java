@@ -38,7 +38,11 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
     {
       int[] pos = {0, 0};
 
-      if (str1.length() == 0) {
+      if (str1 == null) {
+        return -1;
+      } else if (str2 == null) {
+        return 1;
+      } else if (str1.length() == 0) {
         return str2.length() == 0 ? 0 : -1;
       } else if (str2.length() == 0) {
         return 1;
@@ -179,15 +183,12 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
     }
   };
 
-  private final String previousStop;
-
   @JsonCreator
   public AlphaNumericTopNMetricSpec(
       @JsonProperty("previousStop") String previousStop
   )
   {
     super(previousStop);
-    this.previousStop = (previousStop == null) ? "" : previousStop;
   }
 
   @Override
@@ -199,7 +200,7 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] previousStopBytes = StringUtils.toUtf8(previousStop);
+    byte[] previousStopBytes = getPreviousStop() == null ? new byte[]{} : StringUtils.toUtf8(getPreviousStop());
 
     return ByteBuffer.allocate(1 + previousStopBytes.length)
                      .put(CACHE_TYPE_ID)
@@ -217,7 +218,7 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
   public String toString()
   {
     return "AlphaNumericTopNMetricSpec{" +
-           "previousStop='" + previousStop + '\'' +
+           "previousStop='" + getPreviousStop() + '\'' +
            '}';
   }
 }
