@@ -36,7 +36,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
   {
     Random random = new Random(0L);
     HyperUniqueFinalizingPostAggregator postAggregator = new HyperUniqueFinalizingPostAggregator(
-        "uniques"
+        "uniques", "uniques"
     );
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
