@@ -20,6 +20,7 @@ package io.druid.server.coordinator.rules;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.IAE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -238,6 +239,13 @@ public abstract class LoadRule implements Rule
     }
 
     return stats;
+  }
+
+  protected void validateTieredReplicants(Map<String, Integer> tieredReplicants){
+    for (Map.Entry<String, Integer> entry: tieredReplicants.entrySet()) {
+      if (entry.getValue() < 0)
+        throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
+    }
   }
 
   public abstract Map<String, Integer> getTieredReplicants();

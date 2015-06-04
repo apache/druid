@@ -41,6 +41,7 @@ public class IntervalLoadRule extends LoadRule
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
+    validateTieredReplicants(tieredReplicants);
     this.interval = interval;
     this.tieredReplicants = tieredReplicants;
   }

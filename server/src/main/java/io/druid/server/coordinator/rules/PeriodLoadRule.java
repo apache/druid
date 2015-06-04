@@ -42,6 +42,7 @@ public class PeriodLoadRule extends LoadRule
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
+    validateTieredReplicants(tieredReplicants);
     this.period = period;
     this.tieredReplicants = tieredReplicants;
   }
