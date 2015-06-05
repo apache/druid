@@ -19,6 +19,7 @@ package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.util.Sets;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +37,7 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import javax.annotation.Nullable;
+import java.net.URLClassLoader;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -68,14 +70,14 @@ public class InitializationTest
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
 
     Function<DruidModule, String> fnClassName = new Function<DruidModule, String>()
-        {
-          @Nullable
-          @Override
-          public String apply(@Nullable DruidModule input)
-          {
-            return input.getClass().getCanonicalName();
-          }
-        };
+    {
+      @Nullable
+      @Override
+      public String apply(@Nullable DruidModule input)
+      {
+        return input.getClass().getCanonicalName();
+      }
+    };
 
     Assert.assertFalse(
         "modules does not contain TestDruidModule",
@@ -96,7 +98,38 @@ public class InitializationTest
   }
 
   @Test
-  public void test04MakeInjectorWithModules() throws Exception
+  public void test04DuplicateClassLoaderExtensions() throws Exception
+  {
+    Initialization.getLoadersMap().put("xyz", (URLClassLoader) Initialization.class.getClassLoader());
+
+    Collection<DruidModule> modules = Initialization.getFromExtensions(
+        new ExtensionsConfig()
+        {
+          @Override
+          public List<String> getCoordinates()
+          {
+            return ImmutableList.of("xyz");
+          }
+
+          @Override
+          public List<String> getRemoteRepositories()
+          {
+            return ImmutableList.of();
+          }
+        }, DruidModule.class
+    );
+
+    Set<String> loadedModuleNames = Sets.newHashSet();
+    for (DruidModule module : modules) {
+      Assert.assertFalse("Duplicate extensions are loaded", loadedModuleNames.contains(module.getClass().getName()));
+      loadedModuleNames.add(module.getClass().getName());
+    }
+
+    Initialization.getLoadersMap().clear();
+  }
+
+  @Test
+  public void test05MakeInjectorWithModules() throws Exception
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(
