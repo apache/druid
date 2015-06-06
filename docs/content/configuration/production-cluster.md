@@ -274,7 +274,7 @@ druid.server.maxSize=300000000000
 
 druid.segmentCache.locations=[{"path": "/mnt/persistent/zk_druid", "maxSize": 300000000000}]
 
-druid.monitoring.monitors=["io.druid.server.metrics.ServerMonitor", "com.metamx.metrics.JvmMonitor"]
+druid.monitoring.monitors=["io.druid.server.metrics.HistoricalMetricsMonitor", "com.metamx.metrics.JvmMonitor"]
 ```
 
 ### Broker Node

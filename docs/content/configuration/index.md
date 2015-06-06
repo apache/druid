@@ -113,7 +113,7 @@ The following monitors are available:
 |----|-----------|
 |`io.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker nodes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
 |`com.metamx.metrics.SysMonitor`|This uses the [SIGAR library](http://www.hyperic.com/products/sigar) to report on various system activities and statuses. Make sure to add the [sigar library jar](https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/org/hyperic/sigar/1.6.5.132/sigar-1.6.5.132.jar) to your classpath if using this monitor.|
-|`io.druid.server.metrics.ServerMonitor`|Reports statistics on Historical nodes.|
+|`io.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical nodes.|
 |`com.metamx.metrics.JvmMonitor`|Reports JVM-related statistics.|
 |`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
 
