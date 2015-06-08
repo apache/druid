@@ -36,9 +36,7 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
   private final Key<Supplier<DruidHttpClientConfig>> configKey;
   private final Key<SSLContext> sslContextKey;
 
-  private Provider<Supplier<DruidHttpClientConfig>> configProvider;
-  private Provider<Lifecycle> lifecycleProvider;
-  private Binding<SSLContext> sslContextBinding;
+  private Injector injector;
 
   public AbstractHttpClientProvider()
   {
@@ -73,9 +71,7 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
   @Inject
   public void configure(Injector injector)
   {
-    configProvider = injector.getProvider(configKey);
-    sslContextBinding = injector.getExistingBinding(sslContextKey);
-    lifecycleProvider = injector.getProvider(Lifecycle.class);
+    this.injector = injector;
   }
 
   public Key<Supplier<DruidHttpClientConfig>> getConfigKey()
@@ -90,16 +86,16 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
 
   public Provider<Supplier<DruidHttpClientConfig>> getConfigProvider()
   {
-    return configProvider;
+    return injector.getProvider(configKey);
   }
 
   public Provider<Lifecycle> getLifecycleProvider()
   {
-    return lifecycleProvider;
+    return injector.getProvider(Lifecycle.class);
   }
 
   public Binding<SSLContext> getSslContextBinding()
   {
-    return sslContextBinding;
+    return injector.getExistingBinding(sslContextKey);
   }
 }
