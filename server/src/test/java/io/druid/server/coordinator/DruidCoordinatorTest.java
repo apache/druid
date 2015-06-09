@@ -33,7 +33,6 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,26 +72,7 @@ public class DruidCoordinatorTest
     EasyMock.replay(scheduledExecutorFactory);
 
     coordinator = new DruidCoordinator(
-        new DruidCoordinatorConfig()
-        {
-          @Override
-          public Duration getCoordinatorStartDelay()
-          {
-            return null;
-          }
-
-          @Override
-          public Duration getCoordinatorPeriod()
-          {
-            return null;
-          }
-
-          @Override
-          public Duration getCoordinatorIndexingPeriod()
-          {
-            return null;
-          }
-        },
+        new TestDruidCoordinatorConfig(null, null, null, null, null, false, false),
         new ZkPathsConfig()
         {
 

@@ -54,38 +54,35 @@ import java.util.Map;
 public class ApproximateHistogramTopNQueryTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    List<Object> retVal = Lists.newArrayList();
-    retVal.addAll(
-        QueryRunnerTestHelper.makeQueryRunners(
-            new TopNQueryRunnerFactory(
-                TestQueryRunners.getPool(),
-                new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-                QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    return QueryRunnerTestHelper.transformToConstructionFeeder(
+        Iterables.concat(
+            QueryRunnerTestHelper.makeQueryRunners(
+                new TopNQueryRunnerFactory(
+                    TestQueryRunners.getPool(),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                )
+            ),
+            QueryRunnerTestHelper.makeQueryRunners(
+                new TopNQueryRunnerFactory(
+                    new StupidPool<ByteBuffer>(
+                        new Supplier<ByteBuffer>()
+                        {
+                          @Override
+                          public ByteBuffer get()
+                          {
+                            return ByteBuffer.allocate(2000);
+                          }
+                        }
+                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                )
             )
         )
     );
-    retVal.addAll(
-        QueryRunnerTestHelper.makeQueryRunners(
-            new TopNQueryRunnerFactory(
-                new StupidPool<ByteBuffer>(
-                    new Supplier<ByteBuffer>()
-                    {
-                      @Override
-                      public ByteBuffer get()
-                      {
-                        return ByteBuffer.allocate(2000);
-                      }
-                    }
-                ),
-                new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-                QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
-        )
-    );
-
-    return retVal;
   }
 
   private final QueryRunner runner;

@@ -53,9 +53,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.joda.time.DateTime;
@@ -246,7 +244,8 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getPartitionsSpec();
   }
 
-  public IndexSpec getIndexSpec() {
+  public IndexSpec getIndexSpec()
+  {
     return schema.getTuningConfig().getIndexSpec();
   }
 
@@ -486,35 +485,6 @@ public class HadoopDruidIndexerConfig
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
     return new Path(makeDescriptorInfoDir(), String.format("%s.json", segment.getIdentifier().replace(":", "")));
-  }
-
-  public Path makeSegmentOutputPath(FileSystem fileSystem, Bucket bucket)
-  {
-    final Interval bucketInterval = schema.getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get();
-    if (fileSystem instanceof DistributedFileSystem) {
-      return new Path(
-          String.format(
-              "%s/%s/%s_%s/%s/%s",
-              schema.getIOConfig().getSegmentOutputPath(),
-              schema.getDataSchema().getDataSource(),
-              bucketInterval.getStart().toString(ISODateTimeFormat.basicDateTime()),
-              bucketInterval.getEnd().toString(ISODateTimeFormat.basicDateTime()),
-              schema.getTuningConfig().getVersion().replace(":", "_"),
-              bucket.partitionNum
-          )
-      );
-    }
-    return new Path(
-        String.format(
-            "%s/%s/%s_%s/%s/%s",
-            schema.getIOConfig().getSegmentOutputPath(),
-            schema.getDataSchema().getDataSource(),
-            bucketInterval.getStart().toString(),
-            bucketInterval.getEnd().toString(),
-            schema.getTuningConfig().getVersion(),
-            bucket.partitionNum
-        )
-    );
   }
 
   public void addJobProperties(Job job)

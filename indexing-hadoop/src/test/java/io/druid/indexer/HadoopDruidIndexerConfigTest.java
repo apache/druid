@@ -96,7 +96,14 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = cfg.makeSegmentOutputPath(new DistributedFileSystem(), bucket);
+    Path path = JobHelper.makeSegmentOutputPath(
+        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
+        new DistributedFileSystem(),
+        cfg.getSchema().getDataSchema().getDataSource(),
+        cfg.getSchema().getTuningConfig().getVersion(),
+        cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+        bucket.partitionNum
+    );
     Assert.assertEquals(
         "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712",
         path.toString()
@@ -142,9 +149,16 @@ public class HadoopDruidIndexerConfigTest
     );
 
     Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
-    Path path = cfg.makeSegmentOutputPath(new LocalFileSystem(), bucket);
+    Path path = JobHelper.makeSegmentOutputPath(
+        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
+        new LocalFileSystem(),
+        cfg.getSchema().getDataSchema().getDataSource(),
+        cfg.getSchema().getTuningConfig().getVersion(),
+        cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+        bucket.partitionNum
+    );
     Assert.assertEquals(
-        "/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712",
+        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712",
         path.toString()
     );
 

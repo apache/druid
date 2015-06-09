@@ -27,6 +27,7 @@ import io.druid.collections.StupidPool;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
@@ -112,7 +113,7 @@ public class TopNQueryEngine
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting
       topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
-    } else if(selector.isHasExtractionFn()) {
+    } else if (selector.isHasExtractionFn()) {
       topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
@@ -123,5 +124,13 @@ public class TopNQueryEngine
     }
 
     return new TopNMapFn(query, topNAlgorithm);
+  }
+
+  public static boolean canApplyExtractionInPost(TopNQuery query)
+  {
+    return query.getDimensionSpec() != null
+           && query.getDimensionSpec().getExtractionFn() != null
+           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(query.getDimensionSpec().getExtractionFn().getExtractionType())
+           && query.getTopNMetricSpec().canBeOptimizedUnordered();
   }
 }

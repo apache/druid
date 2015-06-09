@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -60,8 +61,14 @@ public class CompressedVSizeIndexedBenchmark
   @Param({"1", "2", "3", "4"})
   int bytes;
 
-  @Param({"5", "10"})
+  @Param({"5", "10", "100", "1000"})
   int valuesPerRowBound;
+
+  // Number of rows to read, the test will read random rows
+  @Param({"1000", "10000", "100000", "1000000", "1000000"})
+  int filteredRowCount;
+
+  private BitSet filter;
 
   @Setup
   public void setup() throws IOException
@@ -69,9 +76,9 @@ public class CompressedVSizeIndexedBenchmark
     Random rand = new Random(0);
     List<int[]> rows = Lists.newArrayList();
     final int bound = 1 << bytes;
-    for (int i = 0; i < 0x10000; i++) {
-      int[] row = new int[rand.nextInt(valuesPerRowBound)];
-      int count = rand.nextInt(valuesPerRowBound);
+    for (int i = 0; i < 0x100000; i++) {
+      int count = rand.nextInt(valuesPerRowBound) + 1;
+      int[] row = new int[rand.nextInt(count)];
       for (int j = 0; j < row.length; j++) {
         row[j] = rand.nextInt(bound);
       }
@@ -115,6 +122,16 @@ public class CompressedVSizeIndexedBenchmark
         ).asWritableSupplier()
     );
     this.uncompressed = VSizeIndexed.readFromByteBuffer(bufferUncompressed);
+
+    filter = new BitSet();
+    for (int i = 0; i < filteredRowCount; i++) {
+      int rowToAccess = rand.nextInt(rows.size());
+      // Skip already selected rows if any
+      while (filter.get(rowToAccess)) {
+        rowToAccess = (rowToAccess+1) % rows.size();
+      }
+      filter.set(rowToAccess);
+    }
   }
 
   private static ByteBuffer serialize(WritableSupplier<IndexedMultivalue<IndexedInts>> writableSupplier)
@@ -154,8 +171,7 @@ public class CompressedVSizeIndexedBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void uncompressed(Blackhole blackhole)
   {
-    final int size = uncompressed.size();
-    for (int i = 0; i < size; ++i) {
+    for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
       IndexedInts row = uncompressed.get(i);
       for (int j = 0; j < row.size(); j++) {
         blackhole.consume(row.get(j));
@@ -168,22 +184,11 @@ public class CompressedVSizeIndexedBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void compressed(Blackhole blackhole)
   {
-    final int size = compressed.size();
-    for (int i = 0; i < size; ++i) {
+    for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
       IndexedInts row = compressed.get(i);
       for (int j = 0; j < row.size(); j++) {
         blackhole.consume(row.get(j));
       }
     }
-  }
-
-  public static void main(String... args) throws IOException, RunnerException
-  {
-    Options opt = new OptionsBuilder()
-        .include(CompressedVSizeIndexedBenchmark.class.getSimpleName())
-        .forks(1)
-        .build();
-
-    new Runner(opt).run();
   }
 }

@@ -17,3 +17,7 @@ layout: doc_page
 * [Not Exactly! Fast Queries via Approximation Algorithms](https://www.youtube.com/watch?v=Hpd3f_MLdXo) - Discusses how approximate algorithms work in Druid.
 
 * [Real-time Analytics with Open Source Technologies](https://www.youtube.com/watch?v=kJMYVpnW_AQ) - Discusses Lambda architectures with Druid.
+
+* [Stories from the Trenches - The Challenges of Building an Analytics Stack](https://www.youtube.com/watch?v=Sz4w75xRrYM) - Discusses features that were added to scale Druid.
+
+* [Building Interactive Applications at Scale](https://www.youtube.com/watch?v=bZ3LqG3iHbM) - Discusses building applications on top of Druid.

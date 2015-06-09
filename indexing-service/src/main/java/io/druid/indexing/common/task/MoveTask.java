@@ -49,7 +49,7 @@ public class MoveTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        TaskUtils.makeId(id, "move", dataSource, interval),
+        makeId(id, "move", dataSource, interval),
         dataSource,
         interval
     );

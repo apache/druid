@@ -37,6 +37,7 @@ import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -143,7 +144,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                       );
                       try {
                         queryWatcher.registerQuery(query, future);
-                        final Number timeout = query.getContextValue("timeout", (Number) null);
+                        final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
                         if (timeout == null) {
                           future.get();
                         } else {

@@ -333,24 +333,26 @@ public class IndexMaker
       final File inDir, final File outDir, final IndexSpec indexSpec, final ProgressIndicator progress
   ) throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(IndexIO.loadIndex(inDir));
-    return makeIndexFiles(
-        ImmutableList.of(adapter),
-        outDir,
-        progress,
-        Lists.newArrayList(adapter.getDimensionNames()),
-        Lists.newArrayList(adapter.getMetricNames()),
-        new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
-        {
-          @Nullable
-          @Override
-          public Iterable<Rowboat> apply(ArrayList<Iterable<Rowboat>> input)
+    try (QueryableIndex index = IndexIO.loadIndex(inDir)) {
+      final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+      return makeIndexFiles(
+          ImmutableList.of(adapter),
+          outDir,
+          progress,
+          Lists.newArrayList(adapter.getDimensionNames()),
+          Lists.newArrayList(adapter.getMetricNames()),
+          new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
           {
-            return input.get(0);
-          }
-        },
-        indexSpec
-    );
+            @Nullable
+            @Override
+            public Iterable<Rowboat> apply(ArrayList<Iterable<Rowboat>> input)
+            {
+              return input.get(0);
+            }
+          },
+          indexSpec
+      );
+    }
   }
 
 
@@ -842,6 +844,7 @@ public class IndexMaker
   {
     private final List<Integer> delegate;
     private final boolean delegateHasNullAtZero;
+
     NullsAtZeroConvertingIntList(List<Integer> delegate, final boolean delegateHasNullAtZero)
     {
       this.delegate = delegate;
@@ -961,7 +964,10 @@ public class IndexMaker
                       if (input == null) {
                         return VSizeIndexedInts.fromList(ImmutableList.<Integer>of(0), dictionarySize);
                       } else {
-                        return VSizeIndexedInts.fromList(new NullsAtZeroConvertingIntList(input, false), dictionarySize);
+                        return VSizeIndexedInts.fromList(
+                            new NullsAtZeroConvertingIntList(input, false),
+                            dictionarySize
+                        );
                       }
                     }
                   }

@@ -45,10 +45,12 @@ import java.util.Map;
 public class TimeBoundaryQueryRunnerTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.makeQueryRunners(
-        new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+    return QueryRunnerTestHelper.transformToConstructionFeeder(
+        QueryRunnerTestHelper.makeQueryRunners(
+            new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+        )
     );
   }
 

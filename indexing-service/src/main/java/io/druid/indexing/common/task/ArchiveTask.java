@@ -20,7 +20,6 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
@@ -44,7 +43,7 @@ public class ArchiveTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        TaskUtils.makeId(id, "archive", dataSource, interval),
+        makeId(id, "archive", dataSource, interval),
         dataSource,
         interval
     );

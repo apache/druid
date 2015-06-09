@@ -47,7 +47,7 @@ public class KillTask extends AbstractFixedIntervalTask
   )
   {
     super(
-        TaskUtils.makeId(id, "kill", dataSource, interval),
+        makeId(id, "kill", dataSource, interval),
         dataSource,
         interval
     );

@@ -146,6 +146,16 @@ Example for a regular dimension
 }
 ```
 
+```json
+{
+  "type" : "javascript",
+  "function" : "function(str) { return str + '!!!'; }",
+  "injective" : true
+}
+```
+
+A property of `injective` specifies if the javascript function preserves uniqueness. The default value is `false` meaning uniqueness is not preserved
+
 Example for the `__time` dimension:
 
 ```json
@@ -154,3 +164,40 @@ Example for the `__time` dimension:
   "function" : "function(t) { return 'Second ' + Math.floor((t % 60000) / 1000); }"
 }
 ```
+
+### Explicit lookup extraction function
+Explicit lookups allow you to specify a set of keys and values to use when performing the extraction
+```json
+{
+  "type":"lookup",
+  "lookup":{
+    "type":"map",
+    "map":{"foo":"bar", "baz":"bat"}
+  },
+  "retainMissingValue":true,
+  "injective":true
+}
+```
+
+```json
+{
+  "type":"lookup",
+  "lookup":{
+    "type":"map",
+    "map":{"foo":"bar", "baz":"bat"}
+  },
+  "retainMissingValue":false,
+  "injective":false,
+  "replaceMissingValueWith":"MISSING"
+}
+```
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect of setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
+ 
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`
+
+A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
+
+A null dimension value can be mapped to a specific value by specifying the empty string as the key.
+This allows distinguishing between a null dimension and a lookup resulting in a null.
+For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.
+Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.

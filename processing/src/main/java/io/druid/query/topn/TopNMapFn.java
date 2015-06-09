@@ -19,6 +19,7 @@ package io.druid.query.topn;
 
 import com.google.common.base.Function;
 import io.druid.query.Result;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 
@@ -26,7 +27,6 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
 {
   private final TopNQuery query;
   private final TopNAlgorithm topNAlgorithm;
-
 
   public TopNMapFn(
       TopNQuery query,

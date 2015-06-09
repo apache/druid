@@ -19,6 +19,7 @@ package io.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -30,14 +31,20 @@ import java.util.Set;
  */
 public class HyperUniqueFinalizingPostAggregator implements PostAggregator
 {
+  private final String name;
   private final String fieldName;
 
   @JsonCreator
   public HyperUniqueFinalizingPostAggregator(
+      @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName
   )
   {
-    this.fieldName = fieldName;
+    this.fieldName = Preconditions.checkNotNull(fieldName, "fieldName is null");
+    //Note that, in general, name shouldn't be null, we are defaulting
+    //to fieldName here just to be backward compatible with 0.7.x
+    this.name = name == null ? fieldName : name;
+
   }
 
   @Override
@@ -59,8 +66,14 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   }
 
   @Override
-  @JsonProperty("fieldName")
+  @JsonProperty("name")
   public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty("fieldName")
+  public String getFieldName()
   {
     return fieldName;
   }

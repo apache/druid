@@ -46,7 +46,7 @@ public class JavascriptExtractionFnTest
   public void testJavascriptSubstring()
   {
     String function = "function(str) { return str.substring(0,3); }";
-    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function, false);
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);
@@ -59,28 +59,28 @@ public class JavascriptExtractionFnTest
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
     final long millis = new DateTime("2015-01-02T13:00:59.999Z").getMillis();
-    Assert.assertEquals("Second 59" , new JavascriptExtractionFn(utcHour).apply(millis));
+    Assert.assertEquals("Second 59" , new JavascriptExtractionFn(utcHour, false).apply(millis));
   }
 
   @Test
   public void testLongs() throws Exception
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavascriptExtractionFn(typeOf).apply(1234L));
+    Assert.assertEquals("number", new JavascriptExtractionFn(typeOf, false).apply(1234L));
   }
 
   @Test
   public void testFloats() throws Exception
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavascriptExtractionFn(typeOf).apply(1234.0));
+    Assert.assertEquals("number", new JavascriptExtractionFn(typeOf, false).apply(1234.0));
   }
 
   @Test
   public void testCastingAndNull()
   {
     String function = "function(x) {\n  x = Number(x);\n  if(isNaN(x)) return null;\n  return Math.floor(x / 5) * 5;\n}";
-    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function, false);
 
     Iterator<String> it = Iterators.forArray("0", "5", "5", "10", null);
 
@@ -95,7 +95,7 @@ public class JavascriptExtractionFnTest
   public void testJavascriptRegex()
   {
     String function = "function(str) { return str.replace(/[aeiou]/g, ''); }";
-    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function, false);
 
     Iterator it = Iterators.forArray("Qt", "Clgry", "Tky", "Stckhlm", "Vncvr", "Prtr", "Wllngtn", "Ontr");
     for (String str : testStrings) {
@@ -299,7 +299,7 @@ public class JavascriptExtractionFnTest
                       + ""
                       + "}";
 
-    ExtractionFn extractionFn = new JavascriptExtractionFn(function);
+    ExtractionFn extractionFn = new JavascriptExtractionFn(function, false);
 
     Iterator<String> inputs = Iterators.forArray("introducing", "exploratory", "analytics", "on", "large", "datasets");
     Iterator<String> it = Iterators.forArray("introduc", "exploratori", "analyt", "on", "larg", "dataset");
@@ -327,5 +327,12 @@ public class JavascriptExtractionFnTest
             ExtractionFn.class
         )
     );
+  }
+
+  @Test
+  public void testInjective()
+  {
+    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, new JavascriptExtractionFn("function(str) { return str; }", false).getExtractionType());
+    Assert.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, new JavascriptExtractionFn("function(str) { return str; }", true).getExtractionType());
   }
 }

@@ -21,5 +21,12 @@ package io.druid.server.coordinator;
  */
 public interface LoadPeonCallback
 {
+  /**
+   * Ideally, this method is called after the load/drop opertion is successfully done, i.e., the historical node
+   * removes the zookeeper node from loadQueue and announces/unannouces the segment. However, this method will
+   * also be called in failure scenarios so for implementations of LoadPeonCallback that care about success it
+   * is important to take extra measures to ensure that whatever side effects they expect to happen upon success
+   * have happened. Coordinator will have a complete and correct view of the cluster in the next run period.
+   */
   public void execute();
 }
