@@ -364,7 +364,7 @@ public class TaskLifecycleTest
                                                  IR("2010-01-02T01", "a", "c", 1)
                                              )
                                          )),
-                                         new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)),
+                                         new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)),
         TestUtils.MAPPER
     );
 
@@ -418,7 +418,7 @@ public class TaskLifecycleTest
                 )
             ),
             new IndexTask.IndexIOConfig(newMockExceptionalFirehoseFactory()),
-            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
         TestUtils.MAPPER
     );

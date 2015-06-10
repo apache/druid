@@ -501,6 +501,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
+      Preconditions.checkArgument(rowFlushBoundary >= 0, "rowFlushBoundary should be positive or zero");
       this.rowFlushBoundary = rowFlushBoundary == 0 ? DEFAULT_ROW_FLUSH_BOUNDARY : rowFlushBoundary;
       this.numShards = numShards == null ? -1 : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;

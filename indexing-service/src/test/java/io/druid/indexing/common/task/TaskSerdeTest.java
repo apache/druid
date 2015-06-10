@@ -75,7 +75,7 @@ public class TaskSerdeTest
                 )
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
-            new IndexTask.IndexTuningConfig(10000, -1, -1, indexSpec)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
         jsonMapper
     );
