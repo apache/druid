@@ -72,6 +72,7 @@
         <jackson.version>2.4.4</jackson.version>
         <log4j.version>2.2</log4j.version>
         <slf4j.version>1.7.10</slf4j.version>
+        <hadoop.compile.version>2.3.0</hadoop.compile.version>
     </properties>
 
     <modules>
@@ -497,7 +498,7 @@
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
-                <version>2.3.0</version>
+                <version>${hadoop.compile.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
