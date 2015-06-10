@@ -33,7 +33,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.JobHelper;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -508,7 +508,7 @@ public class HadoopConverterJob
       if (!outDir.mkdir() && (!outDir.exists() || !outDir.isDirectory())) {
         throw new IOException(String.format("Could not create output directory [%s]", outDir));
       }
-      IndexMaker.convert(
+      IndexMerger.convert(
           inDir,
           outDir,
           config.getIndexSpec(),
