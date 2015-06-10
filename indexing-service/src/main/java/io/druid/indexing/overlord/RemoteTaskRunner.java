@@ -82,6 +82,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -95,7 +97,8 @@ import java.util.concurrent.TimeUnit;
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
  * For example, {@link io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler} can take care of these duties.
  * <p/>
- * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the worker.
+ * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the
+ * worker after waiting for RemoteTaskRunnerConfig.taskCleanupTimeout for the worker to show up.
  * <p/>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
@@ -135,6 +138,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 
   private volatile boolean started = false;
 
+  private final ScheduledExecutorService cleanupExec;
+
+  private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
+
   public RemoteTaskRunner(
       ObjectMapper jsonMapper,
       RemoteTaskRunnerConfig config,
@@ -142,7 +149,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       CuratorFramework cf,
       PathChildrenCacheFactory pathChildrenCacheFactory,
       HttpClient httpClient,
-      Supplier<WorkerBehaviorConfig> workerConfigRef
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      ScheduledExecutorService cleanupExec
   )
   {
     this.jsonMapper = jsonMapper;
@@ -153,6 +161,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     this.workerPathCache = pathChildrenCacheFactory.make(cf, indexerZkConfig.getAnnouncementsPath());
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
+    this.cleanupExec = cleanupExec;
   }
 
   @LifecycleStart
@@ -239,6 +248,18 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           waitingForMonitor.wait();
         }
       }
+      // Schedule cleanup for task status of the workers that might have disconnected while overlord was not running
+      for (String worker : cf.getChildren().forPath(indexerZkConfig.getStatusPath())) {
+        if (!zkWorkers.containsKey(worker)
+            && cf.checkExists().forPath(JOINER.join(indexerZkConfig.getAnnouncementsPath(), worker)) == null) {
+          scheduleTasksCleanupForWorker(
+              worker,
+              cf.getChildren()
+                .forPath(JOINER.join(indexerZkConfig.getStatusPath(), worker))
+          );
+        }
+      }
+
       started = true;
     }
     catch (Exception e) {
@@ -675,6 +696,12 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     log.info("Worker[%s] reportin' for duty!", worker.getHost());
 
     try {
+      ScheduledFuture previousCleanup = removedWorkerCleanups.remove(worker.getHost());
+      if (previousCleanup != null) {
+        log.info("Cancelling Worker[%s] scheduled task cleanup", worker.getHost());
+        previousCleanup.cancel(false);
+      }
+
       final String workerStatusPath = JOINER.join(indexerZkConfig.getStatusPath(), worker.getHost());
       final PathChildrenCache statusCache = pathChildrenCacheFactory.make(cf, workerStatusPath);
       final SettableFuture<ZkWorker> retVal = SettableFuture.create();
@@ -819,22 +846,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     final ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
-
-        List<String> tasksToFail = getAssignedTasks(worker);
-        for (String assignedTask : tasksToFail) {
-          RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
-          if (taskRunnerWorkItem != null) {
-            String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), worker.getHost(), assignedTask);
-            if (cf.checkExists().forPath(taskPath) != null) {
-              cf.delete().guaranteed().forPath(taskPath);
-            }
-
-            log.info("Failing task[%s]", assignedTask);
-            taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTaskId()));
-          } else {
-            log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
-          }
-        }
+        scheduleTasksCleanupForWorker(worker.getHost(), getAssignedTasks(worker));
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -850,6 +862,53 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       }
     }
     lazyWorkers.remove(worker.getHost());
+  }
+
+  private void scheduleTasksCleanupForWorker(final String worker, final List<String> tasksToFail)
+  {
+    removedWorkerCleanups.put(
+        worker, cleanupExec.schedule(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                log.info("Running scheduled cleanup for Worker[%s]", worker);
+                try {
+                  for (String assignedTask : tasksToFail) {
+                    String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), worker, assignedTask);
+                    String statusPath = JOINER.join(indexerZkConfig.getStatusPath(), worker, assignedTask);
+                    try {
+                      if (cf.checkExists().forPath(taskPath) != null) {
+                        cf.delete().guaranteed().forPath(taskPath);
+                      }
+
+                      if (cf.checkExists().forPath(statusPath) != null) {
+                        cf.delete().guaranteed().forPath(statusPath);
+                      }
+                    }
+                    catch (Exception e) {
+                      throw Throwables.propagate(e);
+                    }
+
+                    log.info("Failing task[%s]", assignedTask);
+                    RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
+                    if (taskRunnerWorkItem != null) {
+                      taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTaskId()));
+                    } else {
+                      log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
+                    }
+                  }
+                }
+                finally {
+                  removedWorkerCleanups.remove(worker);
+                }
+              }
+            },
+            config.getTaskCleanupTimeout().toStandardDuration().getMillis(),
+            TimeUnit.MILLISECONDS
+        )
+    );
   }
 
   private void taskComplete(
@@ -881,7 +940,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     taskRunnerWorkItem.setResult(taskStatus);
   }
 
-  public List<ZkWorker> markWokersLazy(Predicate<ZkWorker> isLazyWorker, int maxWorkers)
+  public List<ZkWorker> markWorkersLazy(Predicate<ZkWorker> isLazyWorker, int maxWorkers)
   {
     // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
     synchronized (statusLock) {
@@ -929,8 +988,14 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     return assignedTasks;
   }
 
+  // Used for tests
   public List<ZkWorker> getLazyWorkers()
   {
     return ImmutableList.copyOf(lazyWorkers.values());
+  }
+
+  ConcurrentMap<String, ScheduledFuture> getRemovedWorkerCleanups()
+  {
+    return removedWorkerCleanups;
   }
 }

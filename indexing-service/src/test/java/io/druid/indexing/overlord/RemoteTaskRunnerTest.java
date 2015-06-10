@@ -26,6 +26,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.DSuppliers;
@@ -51,6 +54,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,6 +63,7 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -79,6 +84,7 @@ public class RemoteTaskRunnerTest
   private TestMergeTask task;
 
   private Worker worker;
+  private RemoteTaskRunnerConfig config;
 
   @Before
   public void setUp() throws Exception
@@ -361,6 +367,18 @@ public class RemoteTaskRunnerTest
     TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRemovedWorkerCleanups().isEmpty();
+              }
+            }
+        )
+    );
   }
 
   @Test
@@ -389,12 +407,11 @@ public class RemoteTaskRunnerTest
   private void doSetup() throws Exception
   {
     makeWorker();
-    makeRemoteTaskRunner();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
   }
 
-  private void makeRemoteTaskRunner() throws Exception
+  private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
   {
-    RemoteTaskRunnerConfig config = new TestRemoteTaskRunnerConfig();
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         config,
@@ -411,7 +428,8 @@ public class RemoteTaskRunnerTest
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
-        DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig()))
+        DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
+        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d")
     );
 
     remoteTaskRunner.start();
@@ -505,7 +523,7 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
-    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWokersLazy(
+    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWorkersLazy(
         new Predicate<ZkWorker>()
         {
           @Override
@@ -526,7 +544,7 @@ public class RemoteTaskRunnerTest
     doSetup();
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
-    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWokersLazy(
+    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWorkersLazy(
         new Predicate<ZkWorker>()
         {
           @Override
@@ -545,7 +563,7 @@ public class RemoteTaskRunnerTest
   public void testFindLazyWorkerNotRunningAnyTask() throws Exception
   {
     doSetup();
-    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWokersLazy(
+    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWorkersLazy(
         new Predicate<ZkWorker>()
         {
           @Override
@@ -557,6 +575,56 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertEquals(1, lazyworkers.size());
     Assert.assertEquals(1, remoteTaskRunner.getLazyWorkers().size());
+  }
+
+  @Test
+  public void testWorkerZKReconnect() throws Exception
+  {
+    makeWorker();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5M")));
+    Future<TaskStatus> future = remoteTaskRunner.run(task);
+
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+
+    Assert.assertTrue(workerRunningTask(task.getId()));
+    byte[] bytes = cf.getData().forPath(announcementsPath);
+    cf.delete().forPath(announcementsPath);
+    // worker task cleanup scheduled
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRemovedWorkerCleanups().containsKey(worker.getHost());
+              }
+            }
+        )
+    );
+
+    // Worker got reconnected
+    cf.create().forPath(announcementsPath, bytes);
+
+    // worker task cleanup should get cancelled and removed
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return !remoteTaskRunner.getRemovedWorkerCleanups().containsKey(worker.getHost());
+              }
+            }
+        )
+    );
+
+    mockWorkerCompleteSuccessfulTask(task);
+    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    Assert.assertEquals(status.getStatusCode(), TaskStatus.Status.SUCCESS);
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
   }
 
 }

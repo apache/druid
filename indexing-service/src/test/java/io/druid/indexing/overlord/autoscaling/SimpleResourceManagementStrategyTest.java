@@ -275,7 +275,7 @@ public class SimpleResourceManagementStrategyTest
             new TestZkWorker(testTask)
         )
     ).times(2);
-    EasyMock.expect(runner.markWokersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
+    EasyMock.expect(runner.markWorkersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
         )
@@ -318,7 +318,7 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList()).times(2);
-    EasyMock.expect(runner.markWokersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
+    EasyMock.expect(runner.markWorkersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
         Arrays.<ZkWorker>asList(
             new TestZkWorker(testTask)
         )
@@ -368,7 +368,7 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList());
-    EasyMock.expect(runner.markWokersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
+    EasyMock.expect(runner.markWorkersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
         Collections.<ZkWorker>emptyList()
     );
     EasyMock.replay(runner);
@@ -412,7 +412,7 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(3);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList());
-    EasyMock.expect(runner.markWokersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
+    EasyMock.expect(runner.markWorkersLazy((Predicate<ZkWorker>) EasyMock.anyObject(), EasyMock.anyInt())).andReturn(
         Collections.<ZkWorker>emptyList()
     );
     EasyMock.replay(runner);
