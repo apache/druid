@@ -118,6 +118,24 @@ public class IndexTask extends AbstractFixedIntervalTask
     );
   }
 
+  static RealtimeTuningConfig convertTuningConfig(ShardSpec spec, IndexTuningConfig config)
+  {
+    return new RealtimeTuningConfig(
+        config.getRowFlushBoundary(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        spec,
+        config.getIndexSpec(),
+        null,
+        null,
+        null
+    );
+  }
+
   @JsonIgnore
   private final IndexIngestionSpec ingestionSchema;
 
@@ -337,20 +355,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         tmpDir
     ).findPlumber(
         schema,
-        new RealtimeTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            shardSpec,
-            ingestionSchema.getTuningConfig().getIndexSpec(),
-            null,
-            null,
-            null
-        ),
+        convertTuningConfig(shardSpec, ingestionSchema.getTuningConfig()),
         metrics
     );
 
