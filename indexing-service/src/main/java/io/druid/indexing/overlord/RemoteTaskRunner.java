@@ -22,6 +22,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -70,7 +71,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -123,6 +126,10 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private final RemoteTaskRunnerWorkQueue completeTasks = new RemoteTaskRunnerWorkQueue();
 
   private final ExecutorService runPendingTasksExec = Executors.newSingleThreadExecutor();
+
+  // Workers that have been marked as lazy. these workers are not running any tasks and can be terminated safely by the scaling policy.
+  private final ConcurrentMap<String, ZkWorker> lazyWorkers = new ConcurrentHashMap<>();
+
 
   private final Object statusLock = new Object();
 
@@ -545,7 +552,16 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           config,
           ImmutableMap.copyOf(
               Maps.transformEntries(
-                  zkWorkers,
+                  Maps.filterEntries(
+                      zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
+                      {
+                        @Override
+                        public boolean apply(Map.Entry<String, ZkWorker> input)
+                        {
+                          return !lazyWorkers.containsKey(input.getKey());
+                        }
+                      }
+                  ),
                   new Maps.EntryTransformer<String, ZkWorker, ImmutableZkWorker>()
                   {
                     @Override
@@ -562,8 +578,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       );
       if (immutableZkWorker.isPresent()) {
         final ZkWorker zkWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
-        announceTask(task, zkWorker, taskRunnerWorkItem);
-        return true;
+        return announceTask(task, zkWorker, taskRunnerWorkItem);
       } else {
         log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
         return false;
@@ -577,58 +592,63 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
    *
    * @param theZkWorker        The worker the task is assigned to
    * @param taskRunnerWorkItem The task to be assigned
+   *
+   * @return boolean indicating whether the task was successfully assigned or not
    */
-  private void announceTask(
+  private boolean announceTask(
       final Task task,
       final ZkWorker theZkWorker,
       final RemoteTaskRunnerWorkItem taskRunnerWorkItem
   ) throws Exception
   {
     Preconditions.checkArgument(task.getId().equals(taskRunnerWorkItem.getTaskId()), "task id != workItem id");
-    final Worker theWorker = theZkWorker.getWorker();
-
-    log.info("Coordinator asking Worker[%s] to add task[%s]", theWorker.getHost(), task.getId());
-
-    byte[] rawBytes = jsonMapper.writeValueAsBytes(task);
-    if (rawBytes.length > config.getMaxZnodeBytes()) {
-      throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
-    }
-
-    String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), theWorker.getHost(), task.getId());
-
-    if (cf.checkExists().forPath(taskPath) == null) {
-      cf.create()
-        .withMode(CreateMode.EPHEMERAL)
-        .forPath(
-            taskPath, rawBytes
-        );
-    }
-
-    RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(task.getId());
-    if (workItem == null) {
-      log.makeAlert("WTF?! Got a null work item from pending tasks?! How can this be?!")
-         .addData("taskId", task.getId())
-         .emit();
-      return;
-    }
-
-    RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theWorker);
-    runningTasks.put(task.getId(), newWorkItem);
-    log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
-
-    // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
-    // on a worker - this avoids overflowing a worker with tasks
-    Stopwatch timeoutStopwatch = Stopwatch.createUnstarted();
-    timeoutStopwatch.start();
+    final String worker = theZkWorker.getWorker().getHost();
     synchronized (statusLock) {
-      while (!isWorkerRunningTask(theWorker, task.getId())) {
+      if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
+        // the worker might got killed or has been marked as lazy.
+        log.info("Not assigning task to already removed worker[%s]", worker);
+        return false;
+      }
+      log.info("Coordinator asking Worker[%s] to add task[%s]", worker, task.getId());
+
+      byte[] rawBytes = jsonMapper.writeValueAsBytes(task);
+      if (rawBytes.length > config.getMaxZnodeBytes()) {
+        throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
+      }
+
+      String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), worker, task.getId());
+
+      if (cf.checkExists().forPath(taskPath) == null) {
+        cf.create()
+          .withMode(CreateMode.EPHEMERAL)
+          .forPath(
+              taskPath, rawBytes
+          );
+      }
+
+      RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(task.getId());
+      if (workItem == null) {
+        log.makeAlert("WTF?! Got a null work item from pending tasks?! How can this be?!")
+           .addData("taskId", task.getId())
+           .emit();
+        return false;
+      }
+
+      RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker());
+      runningTasks.put(task.getId(), newWorkItem);
+      log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+
+      // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
+      // on a worker - this avoids overflowing a worker with tasks
+      Stopwatch timeoutStopwatch = Stopwatch.createStarted();
+      while (!isWorkerRunningTask(theZkWorker.getWorker(), task.getId())) {
         final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
         statusLock.wait(waitMs);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
         if (elapsed >= waitMs) {
           log.error(
               "Something went wrong! [%s] never ran task [%s]! Timeout: (%s >= %s)!",
-              theWorker.getHost(),
+              worker,
               task.getId(),
               elapsed,
               config.getTaskAssignmentTimeout()
@@ -637,6 +657,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           break;
         }
       }
+      return true;
     }
   }
 
@@ -798,22 +819,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     final ZkWorker zkWorker = zkWorkers.get(worker.getHost());
     if (zkWorker != null) {
       try {
-        List<String> tasksToFail = Lists.newArrayList(
-            cf.getChildren().forPath(JOINER.join(indexerZkConfig.getTasksPath(), worker.getHost()))
-        );
-        log.info("[%s]: Found %d tasks assigned", worker.getHost(), tasksToFail.size());
 
-        for (Map.Entry<String, RemoteTaskRunnerWorkItem> entry : runningTasks.entrySet()) {
-          if (entry.getValue() == null) {
-            log.error("Huh? null work item for [%s]", entry.getKey());
-          } else if (entry.getValue().getWorker() == null) {
-            log.error("Huh? no worker for [%s]", entry.getKey());
-          } else if (entry.getValue().getWorker().getHost().equalsIgnoreCase(worker.getHost())) {
-            log.info("[%s]: Found [%s] running", worker.getHost(), entry.getKey());
-            tasksToFail.add(entry.getKey());
-          }
-        }
-
+        List<String> tasksToFail = getAssignedTasks(worker);
         for (String assignedTask : tasksToFail) {
           RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
           if (taskRunnerWorkItem != null) {
@@ -842,6 +849,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         zkWorkers.remove(worker.getHost());
       }
     }
+    lazyWorkers.remove(worker.getHost());
   }
 
   private void taskComplete(
@@ -871,5 +879,58 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
 
     // Notify interested parties
     taskRunnerWorkItem.setResult(taskStatus);
+  }
+
+  public List<ZkWorker> markWokersLazy(Predicate<ZkWorker> isLazyWorker, int maxWorkers)
+  {
+    // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
+    synchronized (statusLock) {
+      Iterator<String> iterator = zkWorkers.keySet().iterator();
+      while (iterator.hasNext()) {
+        String worker = iterator.next();
+        ZkWorker zkWorker = zkWorkers.get(worker);
+        try {
+          if (getAssignedTasks(zkWorker.getWorker()).isEmpty() && isLazyWorker.apply(zkWorker)) {
+            log.info("Adding Worker[%s] to lazySet!", zkWorker.getWorker().getHost());
+            lazyWorkers.put(worker, zkWorker);
+            if (lazyWorkers.size() == maxWorkers) {
+              // only mark excess workers as lazy and allow their cleanup
+              break;
+            }
+          }
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+      }
+      return ImmutableList.copyOf(lazyWorkers.values());
+    }
+  }
+
+  private List<String> getAssignedTasks(Worker worker) throws Exception
+  {
+    List<String> assignedTasks = Lists.newArrayList(
+        cf.getChildren().forPath(JOINER.join(indexerZkConfig.getTasksPath(), worker.getHost()))
+    );
+
+    for (Map.Entry<String, RemoteTaskRunnerWorkItem> entry : runningTasks.entrySet()) {
+      if (entry.getValue() == null) {
+        log.error(
+            "Huh? null work item for [%s]", entry.getKey()
+        );
+      } else if (entry.getValue().getWorker() == null) {
+        log.error("Huh? no worker for [%s]", entry.getKey());
+      } else if (entry.getValue().getWorker().getHost().equalsIgnoreCase(worker.getHost())) {
+        log.info("[%s]: Found [%s] running", worker.getHost(), entry.getKey());
+        assignedTasks.add(entry.getKey());
+      }
+    }
+    log.info("[%s]: Found %d tasks assigned", worker.getHost(), assignedTasks.size());
+    return assignedTasks;
+  }
+
+  public List<ZkWorker> getLazyWorkers()
+  {
+    return ImmutableList.copyOf(lazyWorkers.values());
   }
 }

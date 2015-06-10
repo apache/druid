@@ -32,8 +32,6 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * The ResourceManagementScheduler schedules a check for when worker nodes should potentially be created or destroyed.
- * It uses a {@link TaskRunner} to return all pending tasks in the system and the status of the worker nodes in
- * the system.
  * The ResourceManagementScheduler does not contain the logic to decide whether provision or termination should actually
  * occur. That decision is made in the {@link ResourceManagementStrategy}.
  */
@@ -80,7 +78,7 @@ public class ResourceManagementScheduler
             @Override
             public void run()
             {
-              resourceManagementStrategy.doProvision(taskRunner.getPendingTasks(), taskRunner.getWorkers());
+              resourceManagementStrategy.doProvision(taskRunner);
             }
           }
       );
@@ -99,7 +97,7 @@ public class ResourceManagementScheduler
             @Override
             public void run()
             {
-              resourceManagementStrategy.doTerminate(taskRunner.getPendingTasks(), taskRunner.getWorkers());
+              resourceManagementStrategy.doTerminate(taskRunner);
             }
           }
       );

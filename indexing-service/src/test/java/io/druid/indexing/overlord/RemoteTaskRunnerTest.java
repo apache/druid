@@ -20,6 +20,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -55,6 +56,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -396,14 +398,16 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner = new RemoteTaskRunner(
         jsonMapper,
         config,
-        new IndexerZkConfig(new ZkPathsConfig()
-        {
-          @Override
-          public String getBase()
-          {
-            return basePath;
-          }
-        },null,null,null,null,null),
+        new IndexerZkConfig(
+            new ZkPathsConfig()
+            {
+              @Override
+              public String getBase()
+              {
+                return basePath;
+              }
+            }, null, null, null, null, null
+        ),
         cf,
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
@@ -492,4 +496,67 @@ public class RemoteTaskRunnerTest
     TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()));
     cf.setData().forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
+
+  @Test
+  public void testFindLazyWorkerTaskRunning() throws Exception
+  {
+    doSetup();
+    remoteTaskRunner.start();
+    remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWokersLazy(
+        new Predicate<ZkWorker>()
+        {
+          @Override
+          public boolean apply(ZkWorker input)
+          {
+            return true;
+          }
+        }, 1
+    );
+    Assert.assertTrue(lazyworkers.isEmpty());
+    Assert.assertTrue(remoteTaskRunner.getLazyWorkers().isEmpty());
+    Assert.assertEquals(1, remoteTaskRunner.getWorkers().size());
+  }
+
+  @Test
+  public void testFindLazyWorkerForWorkerJustAssignedTask() throws Exception
+  {
+    doSetup();
+    remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWokersLazy(
+        new Predicate<ZkWorker>()
+        {
+          @Override
+          public boolean apply(ZkWorker input)
+          {
+            return true;
+          }
+        }, 1
+    );
+    Assert.assertTrue(lazyworkers.isEmpty());
+    Assert.assertTrue(remoteTaskRunner.getLazyWorkers().isEmpty());
+    Assert.assertEquals(1, remoteTaskRunner.getWorkers().size());
+  }
+
+  @Test
+  public void testFindLazyWorkerNotRunningAnyTask() throws Exception
+  {
+    doSetup();
+    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWokersLazy(
+        new Predicate<ZkWorker>()
+        {
+          @Override
+          public boolean apply(ZkWorker input)
+          {
+            return true;
+          }
+        }, 1
+    );
+    Assert.assertEquals(1, lazyworkers.size());
+    Assert.assertEquals(1, remoteTaskRunner.getLazyWorkers().size());
+  }
+
 }
