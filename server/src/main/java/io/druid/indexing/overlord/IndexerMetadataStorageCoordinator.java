@@ -28,6 +28,16 @@ import java.util.Set;
  */
 public interface IndexerMetadataStorageCoordinator
 {
+  /**
+   * Get all segments which may include any data in the interval and are flagged as used.
+   *
+   * @param dataSource The datasource to query
+   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
+   *
+   * @return The DataSegments which include data in the requested interval. These segments may contain data outside the requested interval.
+   *
+   * @throws IOException
+   */
   public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
       throws IOException;
 
@@ -36,6 +46,7 @@ public interface IndexerMetadataStorageCoordinator
    * with identifiers already in the metadata storage will not be added).
    *
    * @param segments set of segments to add
+   *
    * @return set of segments actually added
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException;
@@ -45,5 +56,13 @@ public interface IndexerMetadataStorageCoordinator
 
   public void deleteSegments(final Set<DataSegment> segments) throws IOException;
 
+  /**
+   * Get all segments which include ONLY data within the given interval and are not flagged as used.
+   *
+   * @param dataSource The datasource the segments belong to
+   * @param interval   Filter the data segments to ones that include data in this interval exclusively. Start is inclusive, end is exclusive
+   *
+   * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
+   */
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval);
 }
