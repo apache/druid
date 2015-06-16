@@ -183,6 +183,7 @@ public class QueryResource
                   {
                     // json serializer will always close the yielder
                     jsonWriter.writeValue(outputStream, yielder);
+                    outputStream.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
                     outputStream.close();
 
                     final long queryTime = System.currentTimeMillis() - start;
@@ -213,7 +214,7 @@ public class QueryResource
             .build();
       }
       catch (Exception e) {
-        // make sure to close yieder if anything happened before starting to serialize the response.
+        // make sure to close yielder if anything happened before starting to serialize the response.
         yielder.close();
         throw Throwables.propagate(e);
       }
