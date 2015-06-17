@@ -44,6 +44,9 @@ public class SegmentLoaderConfig
   @JsonProperty("numLoadingThreads")
   private int numLoadingThreads = 1;
 
+  @JsonProperty("numBootstrapThreads")
+  private Integer numBootstrapThreads = null;
+
   @JsonProperty
   private File infoDir = null;
 
@@ -70,6 +73,10 @@ public class SegmentLoaderConfig
   public int getNumLoadingThreads()
   {
     return numLoadingThreads;
+  }
+
+  public int getNumBootstrapThreads() {
+    return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
   public File getInfoDir()
