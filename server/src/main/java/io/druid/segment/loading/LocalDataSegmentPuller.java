@@ -41,11 +41,14 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 
 /**
  */
 public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static final int DEFAULT_RETRY_COUNT = 3;
+
   public static FileObject buildFileObject(final URI uri)
   {
     final Path path = Paths.get(uri);
@@ -140,7 +143,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
                 Files.asByteSource(oldFile),
                 new File(dir, oldFile.getName()),
                 shouldRetryPredicate(),
-                10
+                DEFAULT_RETRY_COUNT
             ).getFiles()
         );
       }
@@ -217,7 +220,16 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     // not found, there's only so much that retries would do (unless the file was temporarily absent for some reason).
     // Since this is not a commonly used puller in production, and in general is more useful in testing/debugging,
     // I do not have a good sense of what kind of Exceptions people would expect to encounter in the wild
-    return FileUtils.IS_EXCEPTION;
+    return new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable input)
+      {
+        return !(input instanceof InterruptedException)
+               && !(input instanceof CancellationException)
+               && (input instanceof Exception);
+      }
+    };
   }
 
   private File getFile(DataSegment segment) throws SegmentLoadingException

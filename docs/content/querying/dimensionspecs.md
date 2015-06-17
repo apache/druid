@@ -165,7 +165,7 @@ Example for the `__time` dimension:
 }
 ```
 
-### Explicit lookup extraction function
+### Lookup lookup extraction function
 Explicit lookups allow you to specify a set of keys and values to use when performing the extraction
 ```json
 {
@@ -191,6 +191,27 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
   "replaceMissingValueWith":"MISSING"
 }
 ```
+
+```json
+{
+  "type":"lookup",
+  "lookup":{"type":"namespace","namespace":"some_lookup"},
+  "replaceMissingValueWith":"Unknown",
+  "injective":false
+}
+```
+
+```json
+{
+  "type":"lookup",
+  "lookup":{"type":"namespace","namespace":"some_lookup"},
+  "retainMissingValue":true,
+  "injective":false
+}
+```
+
+A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
+
 A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect of setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
  
 It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`

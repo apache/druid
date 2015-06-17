@@ -32,10 +32,12 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 
 import javax.tools.FileObject;
@@ -48,11 +50,14 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 
 /**
  */
 public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static final int DEFAULT_RETRY_COUNT = 3;
+
   /**
    * FileObject.getLastModified and FileObject.delete don't throw IOException. This allows us to wrap those calls
    */
@@ -155,7 +160,7 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
   }
 
   private static final Logger log = new Logger(HdfsDataSegmentPuller.class);
-  private final Configuration config;
+  protected final Configuration config;
 
   @Inject
   public HdfsDataSegmentPuller(final Configuration config)
@@ -218,7 +223,7 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
               },
               shouldRetryPredicate(),
-              10
+              DEFAULT_RETRY_COUNT
           );
         }
         catch (Exception e) {

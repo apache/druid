@@ -18,10 +18,11 @@
 package io.druid.guice;
 
 import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import com.google.inject.multibindings.MapBinder;
+import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -29,9 +30,10 @@ import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
+import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.segment.loading.LocalLoadSpec;
-import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoader;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 
 import java.util.List;
 
@@ -55,6 +57,11 @@ public class LocalDataStorageDruidModule implements DruidModule
 
   private static void bindDeepStorageLocal(Binder binder)
   {
+    MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
+             .addBinding(LocalFileTimestampVersionFinder.URI_SCHEME)
+             .to(LocalFileTimestampVersionFinder.class)
+             .in(LazySingleton.class);
+
     Binders.dataSegmentPullerBinder(binder)
            .addBinding(SCHEME)
            .to(LocalDataSegmentPuller.class)
@@ -66,9 +73,10 @@ public class LocalDataStorageDruidModule implements DruidModule
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
-            .addBinding("local")
+            .addBinding(SCHEME)
             .to(LocalDataSegmentPusher.class)
             .in(LazySingleton.class);
+
     JsonConfigProvider.bind(binder, "druid.storage", LocalDataSegmentPusherConfig.class);
   }
 

@@ -24,6 +24,7 @@ import io.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +50,7 @@ public class HdfsDataSegmentPullerTest
   private static File hdfsTmpDir;
   private static URI uriBase;
   private static Path filePath = new Path("/tmp/foo");
+  private static Path perTestPath = new Path("/tmp/tmp2");
   private static String pathContents = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
   private static byte[] pathByteContents = StringUtils.toUtf8(pathContents);
   private static Configuration conf;
@@ -95,6 +97,12 @@ public class HdfsDataSegmentPullerTest
   public void setUp()
   {
     puller = new HdfsDataSegmentPuller(conf);
+  }
+
+  @After
+  public void tearDown() throws IOException
+  {
+    miniCluster.getFileSystem().delete(perTestPath, true);
   }
 
   @Test
@@ -187,14 +195,14 @@ public class HdfsDataSegmentPullerTest
   public void testDir() throws IOException, SegmentLoadingException
   {
 
-    final Path zipPath = new Path("/tmp/tmp2/test.txt");
+    final Path zipPath = new Path(perTestPath, "test.txt");
 
     final File outTmpDir = com.google.common.io.Files.createTempDir();
     outTmpDir.deleteOnExit();
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 
-    final URI uri = URI.create(uriBase.toString() + "/tmp/tmp2");
+    final URI uri = URI.create(uriBase.toString() + perTestPath.toString());
 
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
       try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
