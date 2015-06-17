@@ -23,19 +23,19 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
+import com.metamx.common.FileUtils;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
-import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.util.Progressable;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -56,9 +57,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.ZipEntry;
@@ -75,6 +76,7 @@ public class JobHelper
 
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
+  private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KB
 
   public static Path distributedClassPath(String path)
   {
@@ -222,7 +224,6 @@ public class JobHelper
       throws IOException
   {
     final FileSystem outputFS = FileSystem.get(segmentBasePath.toUri(), configuration);
-    final FileContext fileContext = FileContext.getFileContext(segmentBasePath.toUri(), configuration);
     final Path tmpPath = new Path(segmentBasePath, String.format("index.zip.%d", taskAttemptID.getId()));
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
@@ -231,11 +232,11 @@ public class JobHelper
           @Override
           public long push() throws IOException
           {
-            try (OutputStream outputStream = fileContext.create(
+            try (OutputStream outputStream = outputFS.create(
                 tmpPath,
-                EnumSet.of(CreateFlag.OVERWRITE, CreateFlag.CREATE),
-                Options.CreateOpts.createParent(),
-                Options.CreateOpts.bufferSize(256 * 1024)
+                true,
+                DEFAULT_FS_BUFFER_SIZE,
+                progressable
             )) {
               size.set(zipAndCopyDir(mergedBase, outputStream, progressable));
               outputStream.flush();
@@ -284,12 +285,20 @@ public class JobHelper
         .withLoadSpec(loadSpec)
         .withSize(size.get())
         .withBinaryVersion(SegmentUtils.getVersionFromDir(mergedBase));
-    fileContext.rename(tmpPath, finalIndexZipFilePath, Options.Rename.OVERWRITE);
+
+    if (!renameIndexFiles(outputFS, tmpPath, finalIndexZipFilePath)) {
+      throw new IOException(
+          String.format(
+              "Unable to rename [%s] to [%s]",
+              tmpPath.toUri().toString(),
+              finalIndexZipFilePath.toUri().toString()
+          )
+      );
+    }
     writeSegmentDescriptor(
         outputFS,
         finalSegment,
         new Path(segmentBasePath, "descriptor.json"),
-        fileContext,
         progressable
     );
     return finalSegment;
@@ -299,7 +308,6 @@ public class JobHelper
       final FileSystem outputFS,
       final DataSegment segment,
       final Path descriptorPath,
-      final FileContext fileContext,
       final Progressable progressable
   )
       throws IOException
@@ -313,22 +321,22 @@ public class JobHelper
             try {
               progressable.progress();
               if (outputFS.exists(descriptorPath)) {
-                if (!fileContext.delete(descriptorPath, false)) {
+                if (!outputFS.delete(descriptorPath, false)) {
                   throw new IOException(String.format("Failed to delete descriptor at [%s]", descriptorPath));
                 }
               }
-              try (final OutputStream descriptorOut = fileContext.create(
+              try (final OutputStream descriptorOut = outputFS.create(
                   descriptorPath,
-                  EnumSet.of(CreateFlag.OVERWRITE, CreateFlag.CREATE),
-                  Options.CreateOpts.bufferSize(256 * 1024),
-                  Options.CreateOpts.createParent()
+                  true,
+                  DEFAULT_FS_BUFFER_SIZE,
+                  progressable
               )) {
                 HadoopDruidIndexerConfig.jsonMapper.writeValue(descriptorOut, segment);
                 descriptorOut.flush();
               }
             }
             catch (RuntimeException | IOException ex) {
-              log.info(ex, "Error in retry loop");
+              log.info(ex, "Exception in descriptor pusher retry loop");
               throw ex;
             }
             return -1;
@@ -433,6 +441,80 @@ public class JobHelper
     return outputPath;
   }
 
+  /**
+   * Rename the files. This works around some limitations of both FileContext (no s3n support) and NativeS3FileSystem.rename
+   * which will not overwrite
+   *
+   * @param outputFS              The output fs
+   * @param indexZipFilePath      The original file path
+   * @param finalIndexZipFilePath The to rename the original file to
+   *
+   * @return False if a rename failed, true otherwise (rename success or no rename needed)
+   */
+  private static boolean renameIndexFiles(
+      final FileSystem outputFS,
+      final Path indexZipFilePath,
+      final Path finalIndexZipFilePath
+  )
+  {
+    try {
+      return RetryUtils.retry(
+          new Callable<Boolean>()
+          {
+            @Override
+            public Boolean call() throws Exception
+            {
+              final boolean needRename;
+
+              if (outputFS.exists(finalIndexZipFilePath)) {
+                // NativeS3FileSystem.rename won't overwrite, so we might need to delete the old index first
+                final FileStatus zipFile = outputFS.getFileStatus(indexZipFilePath);
+                final FileStatus finalIndexZipFile = outputFS.getFileStatus(finalIndexZipFilePath);
+
+                if (zipFile.getModificationTime() >= finalIndexZipFile.getModificationTime()
+                    || zipFile.getLen() != finalIndexZipFile.getLen()) {
+                  log.info(
+                      "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
+                      finalIndexZipFile.getPath(),
+                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      finalIndexZipFile.getLen(),
+                      zipFile.getPath(),
+                      new DateTime(zipFile.getModificationTime()),
+                      zipFile.getLen()
+                  );
+                  outputFS.delete(finalIndexZipFilePath, false);
+                  needRename = true;
+                } else {
+                  log.info(
+                      "File[%s / %s / %sB] existed and will be kept",
+                      finalIndexZipFile.getPath(),
+                      new DateTime(finalIndexZipFile.getModificationTime()),
+                      finalIndexZipFile.getLen()
+                  );
+                  needRename = false;
+                }
+              } else {
+                needRename = true;
+              }
+
+              if (needRename) {
+                log.info("Attempting rename from [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
+                return outputFS.rename(indexZipFilePath, finalIndexZipFilePath);
+              } else {
+                return true;
+              }
+            }
+          },
+          FileUtils.IS_EXCEPTION,
+          NUM_RETRIES
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+
   public static Path prependFSIfNullScheme(FileSystem fs, Path path)
   {
     if (path.toUri().getScheme() == null) {
@@ -455,38 +537,40 @@ public class JobHelper
           @Override
           public long push() throws IOException
           {
-            final FileContext context = FileContext.getFileContext(zip.toUri(), configuration);
-            long size = 0L;
-            final byte[] buffer = new byte[1 << 13];
-            progressable.progress();
-            try (ZipInputStream in = new ZipInputStream(context.open(zip, 1 << 13))) {
-              for (ZipEntry entry = in.getNextEntry(); entry != null; entry = in.getNextEntry()) {
-                final String fileName = entry.getName();
-                try (final OutputStream out = new BufferedOutputStream(
-                    new FileOutputStream(
-                        outDir.getAbsolutePath()
-                        + File.separator
-                        + fileName
-                    ), 1 << 13
-                )) {
-                  for (int len = in.read(buffer); len >= 0; len = in.read(buffer)) {
-                    progressable.progress();
-                    if (len == 0) {
-                      continue;
+            try {
+              final FileSystem fileSystem = zip.getFileSystem(configuration);
+              long size = 0L;
+              final byte[] buffer = new byte[1 << 13];
+              progressable.progress();
+              try (ZipInputStream in = new ZipInputStream(fileSystem.open(zip, 1 << 13))) {
+                for (ZipEntry entry = in.getNextEntry(); entry != null; entry = in.getNextEntry()) {
+                  final String fileName = entry.getName();
+                  try (final OutputStream out = new BufferedOutputStream(
+                      new FileOutputStream(
+                          outDir.getAbsolutePath()
+                          + File.separator
+                          + fileName
+                      ), 1 << 13
+                  )) {
+                    for (int len = in.read(buffer); len >= 0; len = in.read(buffer)) {
+                      progressable.progress();
+                      if (len == 0) {
+                        continue;
+                      }
+                      size += len;
+                      out.write(buffer, 0, len);
                     }
-                    size += len;
-                    out.write(buffer, 0, len);
+                    out.flush();
                   }
-                  out.flush();
                 }
               }
+              progressable.progress();
+              return size;
             }
             catch (IOException | RuntimeException exception) {
-              log.error(exception, "Exception in retry loop");
+              log.error(exception, "Exception in unzip retry loop");
               throw exception;
             }
-            progressable.progress();
-            return size;
           }
         },
         RetryPolicies.exponentialBackoffRetry(NUM_RETRIES, SECONDS_BETWEEN_RETRIES, TimeUnit.SECONDS)

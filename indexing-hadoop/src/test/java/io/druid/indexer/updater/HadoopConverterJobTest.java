@@ -65,6 +65,7 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -451,6 +452,7 @@ public class HadoopConverterJobTest
   }
 
   @Test
+  @Ignore // This takes a long time due to retries
   public void testHadoopFailure() throws IOException, InterruptedException
   {
     final SQLMetadataSegmentManager manager = new SQLMetadataSegmentManager(
