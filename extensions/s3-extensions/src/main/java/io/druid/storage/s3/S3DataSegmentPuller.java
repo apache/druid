@@ -17,7 +17,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3URI;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -29,6 +28,7 @@ import com.metamx.common.FileUtils;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.UOE;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
@@ -51,23 +51,25 @@ import java.net.URI;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
  */
 public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static final int DEFAULT_RETRY_COUNT = 3;
+
   public static FileObject buildFileObject(final URI uri, final RestS3Service s3Client) throws S3ServiceException
   {
-    final URI checkedUri = checkURI(uri);
-    final AmazonS3URI s3URI = new AmazonS3URI(checkedUri);
-    final String key = s3URI.getKey();
-    final String bucket = s3URI.getBucket();
-    final S3Object s3Obj = s3Client.getObject(bucket, key);
+    final S3Coords coords = new S3Coords(checkURI(uri));
+    final S3Object s3Obj = s3Client.getObject(coords.bucket, coords.path);
     final String path = uri.getPath();
 
     return new FileObject()
     {
+      volatile boolean streamAcquired = false;
+
       @Override
       public URI toUri()
       {
@@ -85,10 +87,11 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       public InputStream openInputStream() throws IOException
       {
         try {
+          streamAcquired = true;
           return s3Obj.getDataInputStream();
         }
         catch (ServiceException e) {
-          throw new IOException(String.format("Could not load S3 URI [%s]", checkedUri.toString()), e);
+          throw new IOException(String.format("Could not load S3 URI [%s]", uri), e);
         }
       }
 
@@ -126,6 +129,19 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       public boolean delete()
       {
         throw new UOE("Cannot delete S3 items anonymously. jetS3t doesn't support authenticated deletes easily.");
+      }
+
+      @Override
+      public void finalize() throws Throwable
+      {
+        try {
+          if (!streamAcquired) {
+            s3Obj.closeDataInputStream();
+          }
+        }
+        finally {
+          super.finalize();
+        }
       }
     };
   }
@@ -202,8 +218,8 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
         return result;
       }
       if (CompressionUtils.isGz(s3Coords.path)) {
-        final String fname = Paths.get(uri).getFileName().toString();
-        final File outFile = new File(outDir, CompressionUtils.getGzBaseName(fname));
+        final String fname = Files.getNameWithoutExtension(uri.getPath());
+        final File outFile = new File(outDir, fname);
 
         final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile);
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outFile.getAbsolutePath());
@@ -273,6 +289,66 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   }
 
   /**
+   * Gets the latest version using the "parent" of uri as a prefix. The "parent" of uri is evaluated assuming '/'
+   * delimited paths. If the uri path ends with '/', the path is assumed to be the parent.
+   *
+   * @param uri     The URI of interest whose "parent" will be searched as a key prefix for the latest version
+   * @param pattern The pattern matcher to determine if a *key* is of interest. This will match against the entire key,
+   *                not just the equivalent "filename" like some other implementations. A null value matches everything
+   *
+   * @return A URI to the most recently modified object which matched the pattern.
+   */
+  @Override
+  public URI getLatestVersion(final URI uri, final Pattern pattern)
+  {
+    try {
+      return RetryUtils.retry(
+          new Callable<URI>()
+          {
+            @Override
+            public URI call() throws Exception
+            {
+              final S3Coords coords = new S3Coords(checkURI(uri));
+              long mostRecent = Long.MIN_VALUE;
+              URI latest = null;
+              String parentPath = coords.path.endsWith("/")
+                                  ? coords.path
+                                  : Paths.get(coords.path).getParent().toString();
+              if (!parentPath.endsWith("/")) {
+                parentPath = parentPath + "/";
+              }
+              S3Object[] objects = s3Client.listObjects(coords.bucket, parentPath, "/");
+              if (objects == null) {
+                return null;
+              }
+              for (S3Object storageObject : objects) {
+                storageObject.closeDataInputStream();
+                String keyString = storageObject.getKey().substring(parentPath.length());
+                if (keyString.startsWith("/")) {
+                  keyString = keyString.substring(1);
+                }
+                if (pattern != null && !pattern.matcher(keyString).matches()) {
+                  continue;
+                }
+                final long latestModified = storageObject.getLastModifiedDate().getTime();
+                if (latestModified >= mostRecent) {
+                  mostRecent = latestModified;
+                  latest = new URI(String.format("s3://%s/%s", storageObject.getBucketName(), storageObject.getKey()));
+                }
+              }
+              return latest;
+            }
+          },
+          shouldRetryPredicate(),
+          DEFAULT_RETRY_COUNT
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
    * Returns the "version" (aka last modified timestamp) of the URI
    *
    * @param uri The URI to check the last timestamp
@@ -285,7 +361,11 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   public String getVersion(URI uri) throws IOException
   {
     try {
-      return String.format("%d", buildFileObject(uri, s3Client).getLastModified());
+      final FileObject object = buildFileObject(uri, s3Client);
+      // buildFileObject has a hidden input stream that gets open deep in jets3t. This helps prevent resource leaks
+      try (InputStream nullStream = object.openInputStream()) {
+        return String.format("%d", object.getLastModified());
+      }
     }
     catch (S3ServiceException e) {
       if (S3Utils.isServiceExceptionRecoverable(e)) {
@@ -333,6 +413,19 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   {
     String bucket;
     String path;
+
+    public S3Coords(URI uri)
+    {
+      if (!"s3".equalsIgnoreCase(uri.getScheme())) {
+        throw new IAE("Unsupported scheme: [%s]", uri.getScheme());
+      }
+      bucket = uri.getHost();
+      String path = uri.getPath();
+      if (path.startsWith("/")) {
+        path = path.substring(1);
+      }
+      this.path = path;
+    }
 
     public S3Coords(DataSegment segment)
     {
