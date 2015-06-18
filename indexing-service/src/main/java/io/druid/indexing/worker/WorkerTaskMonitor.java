@@ -84,6 +84,19 @@ public class WorkerTaskMonitor
   public void start()
   {
     try {
+      // cleanup any old running task announcements which are invalid after restart
+      for (TaskAnnouncement announcement : workerCuratorCoordinator.getAnnouncements()){
+        if(announcement.getTaskStatus().isRunnable()) {
+          workerCuratorCoordinator.updateAnnouncement(
+              TaskAnnouncement.create(
+                  announcement.getTaskId(),
+                  announcement.getTaskResource(),
+                  TaskStatus.failure(announcement.getTaskId())
+              )
+          );
+        }
+      }
+
       pathChildrenCache.getListenable().addListener(
           new PathChildrenCacheListener()
           {
@@ -122,7 +135,7 @@ public class WorkerTaskMonitor
                         TaskStatus taskStatus;
                         try {
                           workerCuratorCoordinator.unannounceTask(task.getId());
-                          workerCuratorCoordinator.announceTastAnnouncement(
+                          workerCuratorCoordinator.announceTaskAnnouncement(
                               TaskAnnouncement.create(
                                   task,
                                   TaskStatus.running(task.getId())

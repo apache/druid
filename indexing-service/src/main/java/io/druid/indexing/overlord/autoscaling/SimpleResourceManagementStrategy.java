@@ -22,13 +22,13 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
@@ -70,8 +70,10 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doProvision(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
+  public boolean doProvision(RemoteTaskRunner runner)
   {
+    Collection<RemoteTaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
+    Collection<ZkWorker> zkWorkers = runner.getWorkers();
     synchronized (lock) {
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
@@ -137,8 +139,9 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
-  public boolean doTerminate(Collection<RemoteTaskRunnerWorkItem> pendingTasks, Collection<ZkWorker> zkWorkers)
+  public boolean doTerminate(RemoteTaskRunner runner)
   {
+    Collection<RemoteTaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
     synchronized (lock) {
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       if (workerConfig == null) {
@@ -151,7 +154,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
           workerConfig.getAutoScaler().ipToIdLookup(
               Lists.newArrayList(
                   Iterables.transform(
-                      zkWorkers,
+                      runner.getLazyWorkers(),
                       new Function<ZkWorker, String>()
                       {
                         @Override
@@ -174,28 +177,26 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       currentlyTerminating.clear();
       currentlyTerminating.addAll(stillExisting);
 
-      updateTargetWorkerCount(workerConfig, pendingTasks, zkWorkers);
+      Collection<ZkWorker> workers = runner.getWorkers();
+      updateTargetWorkerCount(workerConfig, pendingTasks, workers);
 
-      final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
       if (currentlyTerminating.isEmpty()) {
-        final int excessWorkers = (zkWorkers.size() + currentlyProvisioning.size()) - targetWorkerCount;
-        if (excessWorkers > 0) {
-          final List<String> laziestWorkerIps =
-              FluentIterable.from(zkWorkers)
-                            .filter(isLazyWorker)
-                            .limit(excessWorkers)
-                            .transform(
-                                new Function<ZkWorker, String>()
-                                {
-                                  @Override
-                                  public String apply(ZkWorker zkWorker)
-                                  {
-                                    return zkWorker.getWorker().getIp();
-                                  }
-                                }
-                            )
-                            .toList();
 
+        final int excessWorkers = (workers.size() + currentlyProvisioning.size()) - targetWorkerCount;
+        if (excessWorkers > 0) {
+          final Predicate<ZkWorker> isLazyWorker = createLazyWorkerPredicate(config);
+          final List<String> laziestWorkerIps =
+              Lists.transform(
+                  runner.markWorkersLazy(isLazyWorker, excessWorkers),
+                  new Function<ZkWorker, String>()
+                  {
+                    @Override
+                    public String apply(ZkWorker zkWorker)
+                    {
+                      return zkWorker.getWorker().getIp();
+                    }
+                  }
+              );
           if (laziestWorkerIps.isEmpty()) {
             log.info("Wanted to terminate %,d workers, but couldn't find any lazy ones!", excessWorkers);
           } else {
@@ -253,7 +254,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       {
         final boolean itHasBeenAWhile = System.currentTimeMillis() - worker.getLastCompletedTaskTime().getMillis()
                                         >= config.getWorkerIdleTimeout().toStandardDuration().getMillis();
-        return worker.getRunningTasks().isEmpty() && (itHasBeenAWhile || !isValidWorker.apply(worker));
+        return itHasBeenAWhile || !isValidWorker.apply(worker);
       }
     };
   }

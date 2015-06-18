@@ -53,7 +53,6 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
-  private final ListeningExecutorService loadingExec;
 
   public BaseZkCoordinator(
       ObjectMapper jsonMapper,
@@ -68,12 +67,6 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
     this.config = config;
     this.me = me;
     this.curator = curator;
-    this.loadingExec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(
-            config.getNumLoadingThreads(),
-            new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ZkCoordinator-%s").build()
-        )
-    );
   }
 
   @LifecycleStart
@@ -95,7 +88,10 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
           loadQueueLocation,
           true,
           true,
-          loadingExec
+          Executors.newFixedThreadPool(
+              config.getNumLoadingThreads(),
+              new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ZkCoordinator-%s").build()
+          )
       );
 
       try {
@@ -217,9 +213,4 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
   public abstract void loadLocalCache();
 
   public abstract DataSegmentChangeHandler getDataSegmentChangeHandler();
-
-  public ListeningExecutorService getLoadingExecutor()
-  {
-    return loadingExec;
-  }
 }

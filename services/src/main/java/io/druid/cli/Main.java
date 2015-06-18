@@ -62,9 +62,9 @@ public class Main
            .withCommands(ConvertProperties.class, DruidJsonValidator.class, PullDependencies.class, CreateTables.class);
 
     builder.withGroup("index")
-               .withDescription("Run indexing for druid")
-               .withDefaultCommand(Help.class)
-               .withCommands(CliHadoopIndexer.class);
+           .withDescription("Run indexing for druid")
+           .withDefaultCommand(Help.class)
+           .withCommands(CliHadoopIndexer.class);
 
     builder.withGroup("internal")
            .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")
@@ -73,7 +73,10 @@ public class Main
 
     final Injector injector = GuiceInjectors.makeStartupInjector();
     final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
-    final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(config, CliCommandCreator.class);
+    final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(
+        config,
+        CliCommandCreator.class
+    );
 
     for (CliCommandCreator creator : extensionCommands) {
       creator.addCommands(builder);
@@ -82,7 +85,7 @@ public class Main
     final Cli<Runnable> cli = builder.build();
     try {
       final Runnable command = cli.parse(args);
-      if (! (command instanceof Help)) { // Hack to work around Help not liking being injected
+      if (!(command instanceof Help)) { // Hack to work around Help not liking being injected
         injector.injectMembers(command);
       }
       command.run();

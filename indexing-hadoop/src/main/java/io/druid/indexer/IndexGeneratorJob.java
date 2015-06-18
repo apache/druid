@@ -51,7 +51,6 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -176,7 +175,7 @@ public class IndexGeneratorJob implements Jobby
 
       config.intoConfiguration(job);
 
-      JobHelper.setupClasspath(config, job);
+      JobHelper.setupClasspath(JobHelper.distributedClassPath(config.getWorkingPath()), job);
 
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
@@ -466,7 +465,6 @@ public class IndexGeneratorJob implements Jobby
             config.makeDescriptorInfoDir().getFileSystem(context.getConfiguration()),
             segment,
             descriptorPath,
-            FileContext.getFileContext(descriptorPath.toUri(), context.getConfiguration()),
             context
         );
         for (File file : toMerge) {

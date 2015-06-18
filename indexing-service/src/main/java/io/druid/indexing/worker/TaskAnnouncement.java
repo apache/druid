@@ -34,8 +34,13 @@ public class TaskAnnouncement
 
   public static TaskAnnouncement create(Task task, TaskStatus status)
   {
-    Preconditions.checkArgument(status.getId().equals(task.getId()), "task id == status id");
-    return new TaskAnnouncement(null, null, status, task.getTaskResource());
+    return create(task.getId(), task.getTaskResource(), status);
+  }
+
+  public static TaskAnnouncement create(String taskId, TaskResource resource, TaskStatus status)
+  {
+    Preconditions.checkArgument(status.getId().equals(taskId), "task id == status id");
+    return new TaskAnnouncement(null, null, status, resource);
   }
 
   @JsonCreator

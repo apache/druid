@@ -20,6 +20,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.guice.annotations.Global;
@@ -27,6 +28,8 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
+
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -38,6 +41,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
+  private final ScheduledExecutorService cleanupExec;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -46,7 +50,8 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
       final IndexerZkConfig zkPaths,
       final ObjectMapper jsonMapper,
       @Global final HttpClient httpClient,
-      final Supplier<WorkerBehaviorConfig> workerConfigRef
+      final Supplier<WorkerBehaviorConfig> workerConfigRef,
+      ScheduledExecutorFactory factory
   )
   {
     this.curator = curator;
@@ -55,6 +60,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
+    this.cleanupExec = factory.create(1,"RemoteTaskRunner-Scheduled-Cleanup--%d");
   }
 
   @Override
@@ -70,7 +76,8 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory
             .withCompressed(true)
             .build(),
         httpClient,
-        workerConfigRef
+        workerConfigRef,
+        cleanupExec
     );
   }
 }

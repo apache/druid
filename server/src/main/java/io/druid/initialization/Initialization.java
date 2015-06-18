@@ -118,37 +118,72 @@ public class Initialization
   /**
    * Used for testing only
    */
-  protected static void clearLoadedModules()
+  static void clearLoadedModules()
   {
     extensionsMap.clear();
   }
 
+  /**
+   * Used for testing only
+   */
+  static Map<String, URLClassLoader> getLoadersMap()
+  {
+    return loadersMap;
+  }
+
+  /**
+   * Look for extension modules for the given class from both classpath and druid.extensions.coordinates.
+   * Extensions explicitly specified in druid.extensions.coordinates will be loaded first, if there is a duplicate
+   * extension from classpath, it will be ignored.
+   *
+   * @param config Extensions configuration
+   * @param clazz  The class of extension module (e.g., DruidModule)
+   *
+   * @return A collection that contains distinct extension modules
+   */
   public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {
     final TeslaAether aether = getAetherClient(config);
-    Set<T> retVal = Sets.newHashSet();
-
-    if (config.searchCurrentClassloader()) {
-      for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
-        log.info("Adding local module[%s]", module.getClass());
-        retVal.add(module);
-      }
-    }
+    final Set<T> retVal = Sets.newHashSet();
+    final Set<String> extensionNames = Sets.newHashSet();
 
     for (String coordinate : config.getCoordinates()) {
       log.info("Loading extension[%s] for class[%s]", coordinate, clazz.getName());
       try {
         URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate, config.getDefaultVersion());
 
-        final ServiceLoader<T> serviceLoader = ServiceLoader.load(clazz, loader);
-
-        for (T module : serviceLoader) {
-          log.info("Adding extension module[%s] for class[%s]", module.getClass(), clazz.getName());
-          retVal.add(module);
+        for (T module : ServiceLoader.load(clazz, loader)) {
+          String moduleName = module.getClass().getCanonicalName();
+          if (moduleName == null) {
+            log.warn(
+                "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
+                module.getClass().getName()
+            );
+          } else if (!extensionNames.contains(moduleName)) {
+            log.info("Adding remote extension module[%s] for class[%s]", moduleName, clazz.getName());
+            extensionNames.add(moduleName);
+            retVal.add(module);
+          }
         }
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
+      }
+    }
+
+    if (config.searchCurrentClassloader()) {
+      for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
+        String moduleName = module.getClass().getCanonicalName();
+        if (moduleName == null) {
+          log.warn(
+              "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
+              module.getClass().getName()
+          );
+        } else if (!extensionNames.contains(moduleName)) {
+          log.info("Adding local extension module[%s] for class[%s]", moduleName, clazz.getName());
+          extensionNames.add(moduleName);
+          retVal.add(module);
+        }
       }
     }
 

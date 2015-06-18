@@ -32,6 +32,10 @@ public class RemoteTaskRunnerConfig
   private Period taskAssignmentTimeout = new Period("PT5M");
 
   @JsonProperty
+  @NotNull
+  private Period taskCleanupTimeout = new Period("PT15M");
+
+  @JsonProperty
   private String minWorkerVersion = "0";
 
   @JsonProperty
@@ -41,6 +45,11 @@ public class RemoteTaskRunnerConfig
   public Period getTaskAssignmentTimeout()
   {
     return taskAssignmentTimeout;
+  }
+
+  @JsonProperty
+  public Period getTaskCleanupTimeout(){
+    return taskCleanupTimeout;
   }
 
   public String getMinWorkerVersion()
