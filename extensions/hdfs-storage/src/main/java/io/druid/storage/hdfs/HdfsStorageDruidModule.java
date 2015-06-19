@@ -29,6 +29,8 @@ import io.druid.initialization.DruidModule;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 import java.util.List;
 import java.util.Properties;
@@ -81,6 +83,11 @@ public class HdfsStorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
+
+    // Walk around a typical case that "maven-assembly" causes bug about "No FileSystem for scheme: hdfs" while loading hadoop-hdfs dependency
+    conf.set("fs.hdfs.impl", DistributedFileSystem.class.getName());
+    conf.set("fs.file.impl", LocalFileSystem.class.getName());
+
     if (props != null) {
       for (String propName : System.getProperties().stringPropertyNames()) {
         if (propName.startsWith("hadoop.")) {
