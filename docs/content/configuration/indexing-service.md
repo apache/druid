@@ -95,7 +95,7 @@ The overlord can dynamically change worker behavior.
 The JSON object can be submitted to the overlord via a POST request at:
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker
 ```
 
 Optional Header Parameters for auditing the config change can also be specified.
@@ -153,7 +153,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 To view the audit history of worker config issue a GET request to the URL -
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
 ```
 
 default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in overlord runtime.properties.

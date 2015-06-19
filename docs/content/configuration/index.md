@@ -68,7 +68,7 @@ The indexing service also uses its own set of paths. These configs can be includ
 If `druid.zk.paths.base` and `druid.zk.paths.indexer.base` are both set, and none of the other `druid.zk.paths.*` or `druid.zk.paths.indexer.*` values are set, then the other properties will be evaluated relative to their respective `base`.
 For example, if `druid.zk.paths.base` is set to `/druid1` and `druid.zk.paths.indexer.base` is set to `/druid2` then `druid.zk.paths.announcementsPath` will default to `/druid1/announcements` while `druid.zk.paths.indexer.announcementsPath` will default to `/druid2/announcements`.
 
-The following path is used service discovery and are **not** affected by `druid.zk.paths.base` and **must** be specified separately.
+The following path is used for service discovery. It is **not** affected by `druid.zk.paths.base` and **must** be specified separately.
 
 |Property|Description|Default|
 |--------|-----------|-------|
