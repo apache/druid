@@ -518,7 +518,7 @@ public class JobHelper
   public static Path prependFSIfNullScheme(FileSystem fs, Path path)
   {
     if (path.toUri().getScheme() == null) {
-      path = new Path(fs.getUri().toString(), String.format("./%s", path));
+      path = fs.makeQualified(path);
     }
     return path;
   }
