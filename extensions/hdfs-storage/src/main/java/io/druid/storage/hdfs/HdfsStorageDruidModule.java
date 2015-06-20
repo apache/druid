@@ -81,6 +81,10 @@ public class HdfsStorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
+
+    // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
+    conf.setClassLoader(getClass().getClassLoader());
+
     if (props != null) {
       for (String propName : System.getProperties().stringPropertyNames()) {
         if (propName.startsWith("hadoop.")) {
