@@ -110,7 +110,19 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
               @Override
               public Yielder<OutType> call() throws Exception
               {
-                return makeYielder(baseSequence.toYielder(initValue, accumulator));
+                final Yielder<OutType> yielder = baseSequence.toYielder(initValue, accumulator);
+                try {
+                  return makeYielder(yielder);
+                }
+                catch (RuntimeException ex) {
+                  try {
+                    yielder.close();
+                  }
+                  catch (IOException e) {
+                    ex.addSuppressed(e);
+                  }
+                  throw ex;
+                }
               }
             }
         );
