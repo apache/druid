@@ -32,7 +32,8 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "fillCapacity", value = FillCapacityWorkerSelectStrategy.class),
     @JsonSubTypes.Type(name = "fillCapacityWithAffinity", value = FillCapacityWithAffinityWorkerSelectStrategy.class),
-    @JsonSubTypes.Type(name = "equalDistribution", value = EqualDistributionWorkerSelectStrategy.class)
+    @JsonSubTypes.Type(name = "equalDistribution", value = EqualDistributionWorkerSelectStrategy.class),
+    @JsonSubTypes.Type(name = "javascript", value = JavaScriptWorkerSelectStrategy.class)
 })
 public interface WorkerSelectStrategy
 {
