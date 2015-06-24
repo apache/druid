@@ -21,8 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
-import junit.framework.Assert;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
  
  /**
@@ -41,5 +41,38 @@ import org.junit.Test;
      Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
  
      Assert.assertEquals(rule, reread);
+   }
+
+   @Test
+   public void testSerdeNullTieredReplicants() throws Exception
+   {
+     IntervalLoadRule rule = new IntervalLoadRule(
+         new Interval("0/3000"), null
+     );
+
+     ObjectMapper jsonMapper = new DefaultObjectMapper();
+     Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+
+     Assert.assertEquals(rule, reread);
+     Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
+   }
+
+   @Test
+   public void testMappingNullTieredReplicants() throws Exception{
+     String inputJson = "    {\n"
+                        + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                        + "      \"type\": \"loadByInterval\"\n"
+                        + "    }";
+     String expectedJson = "{\n"
+                           + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                           + "      \"tieredReplicants\": {\n"
+                           + "        \""+ DruidServer.DEFAULT_TIER +"\": "+ DruidServer.DEFAULT_NUM_REPLICANTS +"\n"
+                           + "      },\n"
+                           + "      \"type\": \"loadByInterval\"\n"
+                           + "    }";
+     ObjectMapper jsonMapper = new DefaultObjectMapper();
+     IntervalLoadRule inputIntervalLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
+     IntervalLoadRule expectedIntervalLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
+     Assert.assertEquals(expectedIntervalLoadRule, inputIntervalLoadRule);
    }
  }
