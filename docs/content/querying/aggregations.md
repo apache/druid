@@ -92,7 +92,7 @@ All JavaScript functions must return numerical values.
 ```json
 {
   "type": "javascript",
-  "name": "sum(log(x)/y) + 10",
+  "name": "sum(log(x)*y) + 10",
   "fieldNames": ["x", "y"],
   "fnAggregate" : "function(current, a, b)      { return current + (Math.log(a) * b); }",
   "fnCombine"   : "function(partialA, partialB) { return partialA + partialB; }",
@@ -137,11 +137,11 @@ SELECT COUNT(DISTINCT(value)) FROM (
 
 #### Cardinality by row
 
-When setting `byRow` to `true` it computes the cardinality by row, i.e. the cardinality of distinct dimension combinations
+When setting `byRow` to `true` it computes the cardinality by row, i.e. the cardinality of distinct dimension combinations.
 This is equivalent to something akin to
 
 ```sql
-SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 FROM <datasource> GROUP BY DIM1, DIM2, DIM3
+SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 FROM <datasource> GROUP BY DIM1, DIM2, DIM3 )
 ```
 
 **Example**
