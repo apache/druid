@@ -17,6 +17,7 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -28,6 +29,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.RetryUtils;
 import com.metamx.common.logger.Logger;
+import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
@@ -56,8 +58,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -577,6 +581,38 @@ public class JobHelper
         RetryPolicies.exponentialBackoffRetry(NUM_RETRIES, SECONDS_BETWEEN_RETRIES, TimeUnit.SECONDS)
     );
     return zipPusher.push();
+  }
+
+  public static URI getURIFromSegment(DataSegment dataSegment)
+  {
+    // There is no good way around this...
+    // TODO: add getURI() to URIDataPuller
+    final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
+    final String type = loadSpec.get("type").toString();
+    final URI segmentLocURI;
+    if ("s3_zip".equals(type)) {
+      segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
+    } else if ("hdfs".equals(type)) {
+      segmentLocURI = URI.create(loadSpec.get("path").toString());
+    } else if ("local".equals(type)) {
+      try {
+        segmentLocURI = new URI("file", null, loadSpec.get("path").toString(), null, null);
+      }
+      catch (URISyntaxException e) {
+        throw new ISE(e, "Unable to form simple file uri");
+      }
+    } else {
+      try {
+        throw new IAE(
+            "Cannot figure out loadSpec %s",
+            HadoopDruidConverterConfig.jsonMapper.writeValueAsString(loadSpec)
+        );
+      }
+      catch (JsonProcessingException e) {
+        throw new ISE("Cannot write Map with json mapper");
+      }
+    }
+    return segmentLocURI;
   }
 
   public static ProgressIndicator progressIndicatorForContext(
