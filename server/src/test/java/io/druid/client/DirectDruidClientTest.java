@@ -39,6 +39,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
@@ -117,14 +118,16 @@ public class DirectDruidClientTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
-        "foo"
+        "foo",
+        new NoopServiceEmitter()
     );
     DirectDruidClient client2 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
-        "foo2"
+        "foo2",
+        new NoopServiceEmitter()
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
@@ -225,7 +228,8 @@ public class DirectDruidClientTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
         httpClient,
-        "foo"
+        "foo",
+        new NoopServiceEmitter()
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(

@@ -18,6 +18,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Accumulator;
@@ -103,11 +104,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       builder.setDimension(userDimension.getKey(), userDimension.getValue());
     }
 
-    String queryId = query.getId();
-    if (queryId == null) {
-      queryId = "";
-    }
-    builder.setDimension(DruidMetrics.ID, queryId);
+    builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
 
     return new Sequence<T>()
     {
