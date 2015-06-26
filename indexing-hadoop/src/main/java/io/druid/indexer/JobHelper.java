@@ -163,6 +163,7 @@ public class JobHelper
 
       job.getConfiguration().set("io.sort.record.percent", "0.19");
       injectSystemProperties(job);
+      config.addJobProperties(job);
 
       config.addInputPaths(job);
     }

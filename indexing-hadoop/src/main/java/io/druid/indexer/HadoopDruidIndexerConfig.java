@@ -316,6 +316,14 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
   }
 
+  /**
+   * Job instance should have Configuration set (by calling {@link #addJobProperties(Job)}
+   * or via injected system properties) before this method is called.  The {@link PathSpec} may
+   * create objects which depend on the values of these configurations.
+   * @param job
+   * @return
+   * @throws IOException
+   */
   public Job addInputPaths(Job job) throws IOException
   {
     return pathSpec.addInputPaths(this, job);
