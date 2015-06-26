@@ -154,9 +154,9 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.connector.useValidationQuery`|Validate a table with a query.|false|
 |`druid.metadata.storage.connector.validationQuery`|The query to validate with.|SELECT 1|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
-|`druid.metadata.storage.tables.segmentTable`|The table to use to look for segments.|druid_segments|
-|`druid.metadata.storage.tables.ruleTable`|The table to use to look for segment load/drop rules.|druid_rules|
-|`druid.metadata.storage.tables.configTable`|The table to use to look for configs.|druid_config|
+|`druid.metadata.storage.tables.segments`|The table to use to look for segments.|druid_segments|
+|`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|druid_rules|
+|`druid.metadata.storage.tables.config`|The table to use to look for configs.|druid_config|
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|druid_tasks|
 |`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|druid_taskLog|
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|
