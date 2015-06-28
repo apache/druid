@@ -23,25 +23,12 @@ cd druid-0.7.1
 ```
 
 ## External Dependencies
+Druid requires 3 external dependencies.
+* A "deep storage" that acts as a backup data repository.
+* A "metadata storage" such as MySQL to hold configuration and metadata information. Druid uses [Apache Derby](http://db.apache.org/derby/) by default.
+* [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster. For this tutorial, we only need the zookeeper dependency.
 
-Druid requires 3 external dependencies. A "deep storage" that acts as a backup data repository, a "metadata storage" such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
-
-For deep storage, we will use local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, we'll be using MySQL, but other options such as PostgreSQL are also supported.
-
-#### Set up Metadata storage
-
-1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
-2. Install MySQL.
-3. Create a druid user and database.
-
-```bash
-mysql -u root
-```
-
-```sql
-GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
-CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
-```
+For deep storage, we will use the local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, Derby is used, but for production Mysql or PostgreSQL etc should be used.
 
 #### Set up Zookeeper
 
@@ -109,16 +96,10 @@ In the directory, there should be a `common.runtime.properties` file with the fo
 
 ```
 # Extensions
-druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-eight","io.druid.extensions:mysql-metadata-storage"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-eight"]
 
 # Zookeeper
 druid.zk.service.host=localhost
-
-# Metadata Storage (mysql)
-druid.metadata.storage.type=mysql
-druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.metadata.storage.connector.user=druid
-druid.metadata.storage.connector.password=diurd
 
 # Deep storage (local filesystem for examples - don't use this in production)
 druid.storage.type=local
