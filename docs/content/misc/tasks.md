@@ -251,7 +251,6 @@ The indexing service can also run real-time tasks. These tasks effectively trans
       "maxRowsInMemory": 500000,
       "intermediatePersistPeriod": "PT10m",
       "windowPeriod": "PT10m",
-      "basePersistDirectory": "\/tmp\/realtime\/basePersist",
       "rejectionPolicy": {
         "type": "serverTime"
       }

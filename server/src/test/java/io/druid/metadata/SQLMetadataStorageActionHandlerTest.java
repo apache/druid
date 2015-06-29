@@ -118,7 +118,11 @@ public class SQLMetadataStorageActionHandlerTest
         handler.getEntry(entryId)
     );
 
+    Assert.assertEquals(Optional.absent(), handler.getEntry("non_exist_entry"));
+
     Assert.assertEquals(Optional.absent(), handler.getStatus(entryId));
+
+    Assert.assertEquals(Optional.absent(), handler.getStatus("non_exist_entry"));
 
     Assert.assertTrue(handler.setStatus(entryId, true, status1));
 
@@ -180,6 +184,11 @@ public class SQLMetadataStorageActionHandlerTest
     handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
 
     Assert.assertEquals(
+        ImmutableList.of(),
+        handler.getLogs("non_exist_entry")
+    );
+
+    Assert.assertEquals(
         ImmutableMap.of(),
         handler.getLocks(entryId)
     );
@@ -205,6 +214,11 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Integer> status = ImmutableMap.of("count", 42);
 
     handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
 
     Assert.assertEquals(
         ImmutableMap.<Long, Map<String, Integer>>of(),

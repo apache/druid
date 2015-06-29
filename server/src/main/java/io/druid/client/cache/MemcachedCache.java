@@ -17,16 +17,19 @@
 
 package io.druid.client.cache;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
-import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.FailureMode;
+import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
@@ -49,6 +52,23 @@ public class MemcachedCache implements Cache
 {
   private static final Logger log = new Logger(MemcachedCache.class);
 
+  final static HashAlgorithm MURMUR3_128 = new HashAlgorithm()
+  {
+    final HashFunction fn = Hashing.murmur3_128();
+
+    @Override
+    public long hash(String k)
+    {
+      return fn.hashString(k, Charsets.UTF_8).asLong();
+    }
+
+    @Override
+    public String toString()
+    {
+      return fn.toString();
+    }
+  };
+
   public static MemcachedCache create(final MemcachedCacheConfig config)
   {
     try {
@@ -67,18 +87,22 @@ public class MemcachedCache implements Cache
 
       return new MemcachedCache(
         new MemcachedClient(
-          new ConnectionFactoryBuilder().setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-                                        .setHashAlg(DefaultHashAlgorithm.FNV1A_64_HASH)
-                                        .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
-                                        .setDaemon(true)
-                                        .setFailureMode(FailureMode.Cancel)
-                                        .setTranscoder(transcoder)
-                                        .setShouldOptimize(true)
-                                        .setOpQueueMaxBlockTime(config.getTimeout())
-                                        .setOpTimeout(config.getTimeout())
-                                        .setReadBufferSize(config.getReadBufferSize())
-                                        .setOpQueueFactory(opQueueFactory)
-                                        .build(),
+          new MemcachedCustomConnectionFactoryBuilder()
+              // 1000 repetitions gives us good distribution with murmur3_128
+              // (approx < 5% difference in counts across nodes, with 5 cache nodes)
+              .setKetamaNodeRepetitions(1000)
+              .setHashAlg(MURMUR3_128)
+              .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
+              .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+              .setDaemon(true)
+              .setFailureMode(FailureMode.Cancel)
+              .setTranscoder(transcoder)
+              .setShouldOptimize(true)
+              .setOpQueueMaxBlockTime(config.getTimeout())
+              .setOpTimeout(config.getTimeout())
+              .setReadBufferSize(config.getReadBufferSize())
+              .setOpQueueFactory(opQueueFactory)
+              .build(),
           AddrUtil.getAddresses(config.getHosts())
         ),
         config

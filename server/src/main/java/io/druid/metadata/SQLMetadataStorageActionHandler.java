@@ -165,16 +165,15 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           @Override
           public Optional<EntryType> withHandle(Handle handle) throws Exception
           {
+            byte[] res = handle.createQuery(
+                String.format("SELECT payload FROM %s WHERE id = :id", entryTable)
+            )
+                               .bind("id", entryId)
+                               .map(ByteArrayMapper.FIRST)
+                               .first();
+
             return Optional.fromNullable(
-                jsonMapper.<EntryType>readValue(
-                    handle.createQuery(
-                        String.format("SELECT payload FROM %s WHERE id = :id", entryTable)
-                    )
-                          .bind("id", entryId)
-                          .map(ByteArrayMapper.FIRST)
-                          .first(),
-                    entryType
-                )
+                res == null ? null : jsonMapper.<EntryType>readValue(res, entryType)
             );
           }
         }
@@ -190,16 +189,15 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
           @Override
           public Optional<StatusType> withHandle(Handle handle) throws Exception
           {
+            byte[] res = handle.createQuery(
+                String.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
+            )
+                               .bind("id", entryId)
+                               .map(ByteArrayMapper.FIRST)
+                               .first();
+
             return Optional.fromNullable(
-                jsonMapper.<StatusType>readValue(
-                    handle.createQuery(
-                        String.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
-                    )
-                          .bind("id", entryId)
-                          .map(ByteArrayMapper.FIRST)
-                          .first(),
-                    statusType
-                )
+                res == null ? null : jsonMapper.<StatusType>readValue(res, statusType)
             );
           }
         }

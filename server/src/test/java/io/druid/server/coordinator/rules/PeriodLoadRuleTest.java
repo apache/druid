@@ -17,7 +17,10 @@
 
 package io.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import io.druid.client.DruidServer;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -73,5 +76,40 @@ public class PeriodLoadRuleTest
             now
         )
     );
+  }
+
+  @Test
+  public void testSerdeNullTieredReplicants() throws Exception
+  {
+    PeriodLoadRule rule = new PeriodLoadRule(
+        new Period("P1D"), null
+    );
+
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+
+    Assert.assertEquals(rule.getPeriod(), ((PeriodLoadRule)reread).getPeriod());
+    Assert.assertEquals(rule.getTieredReplicants(), ((PeriodLoadRule)reread).getTieredReplicants());
+    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
+  }
+
+  @Test
+  public void testMappingNullTieredReplicants() throws Exception{
+    String inputJson = "{\n"
+                       + "      \"period\": \"P1D\",\n"
+                       + "      \"type\": \"loadByPeriod\"\n"
+                       + "    }";
+    String expectedJson = "{\n"
+                          + "      \"period\": \"P1D\",\n"
+                          + "      \"tieredReplicants\": {\n"
+                          + "        \""+ DruidServer.DEFAULT_TIER +"\": "+ DruidServer.DEFAULT_NUM_REPLICANTS +"\n"
+                          + "      },\n"
+                          + "      \"type\": \"loadByPeriod\"\n"
+                          + "    }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    PeriodLoadRule inputPeriodLoadRule = jsonMapper.readValue(inputJson, PeriodLoadRule.class);
+    PeriodLoadRule expectedPeriodLoadRule = jsonMapper.readValue(expectedJson, PeriodLoadRule.class);
+    Assert.assertEquals(expectedPeriodLoadRule.getTieredReplicants(), inputPeriodLoadRule.getTieredReplicants());
+    Assert.assertEquals(expectedPeriodLoadRule.getPeriod(), inputPeriodLoadRule.getPeriod());
   }
 }
