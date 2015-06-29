@@ -29,7 +29,7 @@ for a query.  There are three basic column types: the timestamp
 column, dimension columns, and metric columns, as illustrated in the
 image below:
 
-![Druid column types](../img/druid-column-types.png "Druid Column Types")
+![Druid column types](../../img/druid-column-types.png "Druid Column Types")
 
 The timestamp and metric columns are simple: behind the scenes each of
 these is an array of integer or floating point values compressed with
