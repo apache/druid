@@ -13,7 +13,7 @@ Overlords and middle managers may run on the same node or across multiple nodes 
 Indexing Service Overview
 -------------------------
 
-![Indexing Service](../img/indexing_service.png "Indexing Service")
+![Indexing Service](../../img/indexing_service.png "Indexing Service")
 
 <!--
 Preamble
