@@ -88,7 +88,7 @@ If `type` is not included, the parser defaults to `string`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `protoBuf`. | no |
+| type | String | This should say `protobuf`. | no |
 | parseSpec | JSON Object | Specifies the format of the data. | yes |
 
 ### ParseSpec

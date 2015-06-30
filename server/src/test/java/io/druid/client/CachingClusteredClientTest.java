@@ -217,7 +217,6 @@ public class CachingClusteredClientTest
   protected VersionedIntervalTimeline<String, ServerSelector> timeline;
   protected TimelineServerView serverView;
   protected Cache cache;
-  protected ServiceEmitter emitter;
   DruidServer[] servers;
 
   public CachingClusteredClientTest(int randomSeed)
@@ -247,7 +246,6 @@ public class CachingClusteredClientTest
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createStrictMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    emitter = EasyMock.createStrictMock(ServiceEmitter.class);
     client = makeClient(MoreExecutors.sameThreadExecutor());
 
     servers = new DruidServer[]{
@@ -2097,8 +2095,7 @@ public class CachingClusteredClientTest
           {
             return true;
           }
-        },
-        emitter
+        }
     );
   }
 

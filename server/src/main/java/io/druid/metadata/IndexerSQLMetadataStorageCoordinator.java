@@ -88,11 +88,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final ResultIterator<byte[]> dbSegments =
                 handle.createQuery(
                     String.format(
-                        "SELECT payload FROM %s WHERE used = true AND dataSource = :dataSource",
+                        "SELECT payload FROM %s WHERE used = true AND dataSource = :dataSource AND start <= :end and \"end\" >= :start  AND used = true",
                         dbTables.getSegmentsTable()
                     )
                 )
                       .bind("dataSource", dataSource)
+                      .bind("start", interval.getStart().toString())
+                      .bind("end", interval.getEnd().toString())
                       .map(ByteArrayMapper.FIRST)
                       .iterator();
 

@@ -38,7 +38,7 @@ import static com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import static com.google.protobuf.Descriptors.Descriptor;
 import static com.google.protobuf.Descriptors.FileDescriptor;
 
-@JsonTypeName("protoBuf")
+@JsonTypeName("protobuf")
 public class ProtoBufInputRowParser implements ByteBufferInputRowParser
 {
   private static final Logger log = new Logger(ProtoBufInputRowParser.class);

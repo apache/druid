@@ -19,7 +19,7 @@ Segment Propagation
 
 The segment propagation diagram for real-time data ingestion can be seen below:
 
-![Segment Propagation](../img/segmentPropagation.png "Segment Propagation")
+![Segment Propagation](../../img/segmentPropagation.png "Segment Propagation")
 
 You can read about the various components shown in this diagram under the Architecture section (see the menu on the right). Note that some of the names are now outdated.
 

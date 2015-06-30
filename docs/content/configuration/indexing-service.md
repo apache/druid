@@ -95,7 +95,7 @@ The overlord can dynamically change worker behavior.
 The JSON object can be submitted to the overlord via a POST request at:
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker
 ```
 
 Optional Header Parameters for auditing the config change can also be specified.
@@ -147,13 +147,13 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middlemanagers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, and `equalDistribution`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middlemanagers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
 
 ```
-http://<COORDINATOR_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
 ```
 
 default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in overlord runtime.properties.
@@ -186,6 +186,33 @@ The workers with the least amount of tasks is assigned the task.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`equalDistribution`.|fillCapacity|
+
+##### Javascript
+
+Allows defining arbitrary logic for selecting workers to run task using a JavaScript function.
+The function is passed remoteTaskRunnerConfig, map of workerId to available workers and task to be executed and returns the workerId on which the task should be run or null if the task cannot be run.
+It can be used for rapid development of missing features where the worker selection logic is to be changed or tuned often.
+If the selection logic is quite complex and cannot be easily tested in javascript environment,
+its better to write a druid extension module with extending current worker selection strategies written in java.
+
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`javascript`.|javascript|
+|`function`|String representing javascript function||
+
+Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
+
+```
+{
+"type":"javascript",
+"function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"10.0.0.1\");\nbatch_workers.add(\"10.0.0.2\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
+}
+
+
+```
+
+
 
 
 #### Autoscaler

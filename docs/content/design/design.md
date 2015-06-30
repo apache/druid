@@ -39,7 +39,7 @@ This separation allows each node to only care about what it is best at. By separ
 
 The following diagram shows how queries and data flow through this architecture, and which nodes (and external dependencies, discussed below) are involved:
 
-<img src="../img/druid-dataflow-3.png" width="800"/>
+<img src="../../img/druid-dataflow-3.png" width="800"/>
 
 All nodes can be run in some highly available fashion, either as symmetric peers in a share-nothing cluster or as hot-swap failover nodes.
 
@@ -51,7 +51,7 @@ Aside from these nodes, there are 3 external dependencies to the system:
 
 The following diagram illustrates the cluster's management layer, showing how certain nodes and dependencies help manage the cluster by tracking and exchanging metadata:
 
-<img src="../img/druid-manage-1.png" width="800"/>
+<img src="../../img/druid-manage-1.png" width="800"/>
 
 
 ### Segments and Data Storage
