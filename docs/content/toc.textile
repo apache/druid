@@ -10,12 +10,12 @@ h2. Getting Started
 * "Evaluate Druid":../misc/evaluate.html
 
 h2. Data Ingestion
-* "Overview":../ingestion/ingestion-overview.html
+* "Overview":../ingestion/overview.html
 * "Data Formats":../ingestion/data-formats.html
 * "Data Schema":../ingestion/index.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
-* "FAQ":../ingestion/ingestion-faq.html
+* "FAQ":../ingestion/faq.html
 
 h2. Querying
 * "Overview":../querying/querying.html
