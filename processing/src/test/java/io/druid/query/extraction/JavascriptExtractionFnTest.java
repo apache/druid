@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package io.druid.query.extraction.extraction;
+package io.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
