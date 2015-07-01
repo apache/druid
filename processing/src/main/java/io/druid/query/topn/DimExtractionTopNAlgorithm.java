@@ -19,7 +19,6 @@ package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
@@ -28,6 +27,7 @@ import io.druid.segment.data.IndexedInts;
 import java.util.Map;
 
 /**
+ * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle multiple index numerals referencing the same dimension value.
  */
 public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][], Map<String, Aggregator[]>, TopNParams>
 {
