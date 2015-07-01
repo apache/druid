@@ -18,7 +18,6 @@
 package io.druid.guice;
 
 import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
@@ -57,6 +56,10 @@ public class LocalDataStorageDruidModule implements DruidModule
   {
     Binders.dataSegmentPullerBinder(binder)
            .addBinding(SCHEME)
+           .to(LocalDataSegmentPuller.class)
+           .in(LazySingleton.class);
+    Binders.dataSegmentPullerBinder(binder)
+           .addBinding(LocalDataSegmentPuller.URI_SCHEME)
            .to(LocalDataSegmentPuller.class)
            .in(LazySingleton.class);
 
