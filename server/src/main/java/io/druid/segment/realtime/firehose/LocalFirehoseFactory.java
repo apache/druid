@@ -82,7 +82,7 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
-    log.info("Searching for all [%s] in [%s]", filter, baseDir.getAbsoluteFile());
+    log.info("Searching for all [%s] in and beneath [%s]", filter, baseDir.getAbsoluteFile());
 
     Collection<File> foundFiles = FileUtils.listFiles(
         baseDir.getAbsoluteFile(),
@@ -93,6 +93,7 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
     if (foundFiles == null || foundFiles.isEmpty()) {
       throw new ISE("Found no files to ingest! Check your schema.");
     }
+    log.info ("Found files: " + foundFiles);
 
     final LinkedList<File> files = Lists.newLinkedList(
         foundFiles
