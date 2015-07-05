@@ -108,7 +108,7 @@ A sample local firehose spec is shown below:
 |--------|-----------|---------|
 |type|This should be "local".|yes|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
-|baseDir|location of baseDirectory containing files to be ingested. |yes|
+|baseDir|directory to search recursively for files to be ingested. |yes|
 
 #### IngestSegmentFirehose
 
