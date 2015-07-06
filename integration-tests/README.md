@@ -31,18 +31,49 @@ docker info
 Running Integration tests
 =========================
 
-## Running tests using mvn
+## Starting docker tests
 
-To run all the tests using mvn run the following command -
+To run all the tests using docker and mvn run the following command -
 ```
   mvn verify -P integration-tests
 ```
 
-To run only a single test using mvn run following command -
+To run only a single test using mvn run the following command -
 ```
   mvn verify -P integration-tests -Dit.test=<test_name>
 ```
 
+## Configure and run integration tests using existing cluster
+
+To run tests on any druid cluster that is already running, create a configuration file:
+
+    {   
+       "broker_host": "<broker_ip>",
+       "broker_port": "<broker_port>",
+       "router_host": "<router_ip>",
+       "router_port": "<router_port>",
+       "indexer_host": "<indexer_ip>",
+       "indexer_port": "<indexer_port>",
+       "coordinator_host": "<coordinator_ip>",
+       "coordinator_port": "<coordinator_port>",
+       "middle_manager_host": "<middle_manager_ip>",
+       "zookeeper_hosts": "<comma-separated list of zookeeper_ip:zookeeper_port>",
+    }
+
+Set the environment variable CONFIG_FILE to the name of the configuration file -
+```
+export CONFIG_FILE=<config file name>
+```
+
+To run all the tests using mvn run the following command -
+```
+  mvn verify -P int-tests-config-file
+```
+
+To run only a single test using mvn run the following command -
+```
+  mvn verify -P int-tests-config-file -Dit.test=<test_name>
+```
 
 Writing a New Test
 ===============

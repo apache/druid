@@ -147,6 +147,39 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>int-tests-config-file</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-tests</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <argLine>
+                                -Duser.timezone=UTC
+                                -Dfile.encoding=UTF-8
+                                -Dtestrunfactory=org.testng.DruidTestRunnerFactory
+                                -Ddruid.test.config.type=configFile
+                                -Ddruid.test.config.configFile=${env.CONFIG_FILE}
+                            </argLine>
+                            <suiteXmlFiles>
+                                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                            </suiteXmlFiles>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
 </project>

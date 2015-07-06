@@ -1,6 +1,5 @@
 /*
  * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +14,25 @@
  * limitations under the License.
  */
 
-package io.druid.testing;
+package io.druid.testing.clients;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
+import com.google.inject.Inject;
+import io.druid.testing.IntegrationTestingConfig;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class),
-    @JsonSubTypes.Type(name = "configFile", value = ConfigFileConfigProvider.class)
-})
-public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
+public class ZookeeperTestClient
 {
+  private final String hosts;
+
+  @Inject
+  ZookeeperTestClient(
+      IntegrationTestingConfig config
+  )
+  {
+    this.hosts = config.getZookeeperHosts();
+  }
+
+  public String getZookeeperHosts()
+  {
+    return hosts;
+  }
 }

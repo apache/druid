@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
 
-public class DockerConfigProvider  implements IntegrationTestingConfigProvider
+public class DockerConfigProvider implements IntegrationTestingConfigProvider
 {
 
   @JsonProperty
@@ -62,6 +62,12 @@ public class DockerConfigProvider  implements IntegrationTestingConfigProvider
       public String getMiddleManagerHost()
       {
         return dockerIp;
+      }
+
+      @Override
+      public String getZookeeperHosts()
+      {
+        return dockerIp + ":2181";
       }
     };
   }
