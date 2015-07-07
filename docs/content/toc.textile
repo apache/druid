@@ -32,6 +32,7 @@ h2. Querying
 ** "Post Aggregations":../querying/post-aggregations.html
 ** "Granularities":../querying/granularities.html
 ** "DimensionSpecs":../querying/dimensionspecs.html
+* "SQL":../querying/sql.html
 
 h2. Design
 * "Overview":../design/design.html

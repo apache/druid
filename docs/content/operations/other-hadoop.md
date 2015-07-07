@@ -13,6 +13,12 @@ The Hadoop Index Task takes this parameter has part of the task JSON and the sta
 
 If you are still having problems, include all relevant hadoop jars at the beginning of the classpath of your indexing or historical nodes.
 
+Working with CDH
+----------------
+Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid. Currently, our best workaround is to edit Druid's pom.xml dependencies to match the version of Jackson in your hadoop version and recompile Druid.
+
+For more about building Druid, please see [Building Druid](../development/build.html).
+
 
 Working with Hadoop 1.x and older
 ---------------------------------
