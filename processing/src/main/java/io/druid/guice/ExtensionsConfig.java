@@ -18,7 +18,6 @@
 package io.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 
 import javax.validation.constraints.NotNull;
 import java.util.List;
@@ -27,54 +26,37 @@ import java.util.List;
  */
 public class ExtensionsConfig
 {
-  public static final String PACKAGE_VERSION = ExtensionsConfig.class.getPackage().getImplementationVersion();
-
   @JsonProperty
   @NotNull
   private boolean searchCurrentClassloader = true;
 
   @JsonProperty
-  @NotNull
-  private List<String> coordinates = ImmutableList.of();
-
-  // default version to use for extensions without version info
-  @JsonProperty
-  private String defaultVersion;
+  private String directory = "druid_extensions";
 
   @JsonProperty
-  @NotNull
-  private String localRepository = String.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
+  private String hadoopDependenciesDir = "hadoop_druid_dependencies";
 
   @JsonProperty
-  @NotNull
-  private List<String> remoteRepositories = ImmutableList.of(
-      "https://repo1.maven.org/maven2/",
-      "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
-  );
+  private List<String> loadList;
 
   public boolean searchCurrentClassloader()
   {
     return searchCurrentClassloader;
   }
 
-  public List<String> getCoordinates()
+  public String getDirectory()
   {
-    return coordinates;
+    return directory;
   }
 
-  public String getDefaultVersion()
+  public String getHadoopDependenciesDir()
   {
-    return defaultVersion != null ? defaultVersion : PACKAGE_VERSION;
+    return hadoopDependenciesDir;
   }
 
-  public String getLocalRepository()
+  public List<String> getLoadList()
   {
-    return localRepository;
-  }
-
-  public List<String> getRemoteRepositories()
-  {
-    return remoteRepositories;
+    return loadList;
   }
 
   @Override
@@ -82,10 +64,9 @@ public class ExtensionsConfig
   {
     return "ExtensionsConfig{" +
            "searchCurrentClassloader=" + searchCurrentClassloader +
-           ", coordinates=" + coordinates +
-           ", defaultVersion='" + getDefaultVersion() + '\'' +
-           ", localRepository='" + localRepository + '\'' +
-           ", remoteRepositories=" + remoteRepositories +
+           ", directory='" + directory + '\'' +
+           ", hadoopDependenciesDir='" + hadoopDependenciesDir + '\'' +
+           ", loadList=" + loadList +
            '}';
   }
 }

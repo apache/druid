@@ -28,7 +28,6 @@ cd ${CURR_DIR}
 
 # start process
 JAVA_ARGS="${JAVA_ARGS} -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
-JAVA_ARGS="${JAVA_ARGS} -Ddruid.extensions.localRepository=${MAVEN_DIR}"
 
 DRUID_CP="${SCRIPT_DIR}/config/_common"
 DRUID_CP="${DRUID_CP}:${SCRIPT_DIR}/config/$SERVER_TYPE"
