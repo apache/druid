@@ -94,6 +94,7 @@
         <module>extensions/s3-extensions</module>
         <module>extensions/kafka-eight</module>
         <module>extensions/kafka-eight-simpleConsumer</module>
+        <module>extensions/druid-rocketmq</module>
         <module>extensions/rabbitmq</module>
         <module>extensions/histogram</module>
         <module>extensions/mysql-metadata-storage</module>
