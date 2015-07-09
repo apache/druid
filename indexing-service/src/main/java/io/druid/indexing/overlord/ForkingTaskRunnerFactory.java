@@ -19,6 +19,8 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.metamx.http.client.HttpClient;
+import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
@@ -39,6 +41,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
   private final ObjectMapper jsonMapper;
   private final TaskLogPusher persistentTaskLogs;
   private final DruidNode node;
+  private final HttpClient httpClient;
 
   @Inject
   public ForkingTaskRunnerFactory(
@@ -48,7 +51,8 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
       final Properties props,
       final ObjectMapper jsonMapper,
       final TaskLogPusher persistentTaskLogs,
-      @Self DruidNode node
+      @Self DruidNode node,
+      @Global HttpClient httpClient
   ) {
     this.config = config;
     this.taskConfig = taskConfig;
@@ -57,11 +61,12 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
     this.jsonMapper = jsonMapper;
     this.persistentTaskLogs = persistentTaskLogs;
     this.node = node;
+    this.httpClient = httpClient;
   }
 
   @Override
   public TaskRunner build()
   {
-    return new ForkingTaskRunner(config, taskConfig, workerConfig, props, persistentTaskLogs, jsonMapper, node);
+    return new ForkingTaskRunner(config, taskConfig, workerConfig, props, persistentTaskLogs, jsonMapper, node, httpClient);
   }
 }

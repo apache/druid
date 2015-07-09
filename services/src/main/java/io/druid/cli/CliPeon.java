@@ -70,6 +70,7 @@ import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.server.QueryResource;
+import io.druid.server.http.ShutdownResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -86,8 +87,8 @@ import java.util.List;
 )
 public class CliPeon extends GuiceRunnable
 {
-  @Arguments(description = "task.json status.json", required = true)
-  public List<String> taskAndStatusFile;
+  @Arguments(description = "task.json status.json task.port", required = true)
+  public List<String> taskAndStatusFiles;
 
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String nodeType = "indexer-executor";
@@ -125,7 +126,7 @@ public class CliPeon extends GuiceRunnable
             handlerProviderBinder.addBinding("noop")
                                  .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
             binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
-            
+
             binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
@@ -148,8 +149,9 @@ public class CliPeon extends GuiceRunnable
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskAndStatusFile.get(0)))
-                    .setStatusFile(new File(taskAndStatusFile.get(1)))
+                    .setTaskFile(new File(taskAndStatusFiles.get(0)))
+                    .setStatusFile(new File(taskAndStatusFiles.get(1)))
+                    .setPortFile(new File(taskAndStatusFiles.get(2)))
             );
 
             binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
@@ -166,6 +168,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ChatHandlerResource.class);
+            Jerseys.addResource(binder, ShutdownResource.class);
             LifecycleModule.register(binder, QueryResource.class);
 
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));

@@ -74,9 +74,28 @@ public class PortFinder
     return port;
   }
 
-  public synchronized void markPortUnused(int port)
+  /**
+   * Force a port to be thought of as used.
+   *
+   * @param port The port of interest
+   *
+   * @return Result of Set.add
+   */
+  public synchronized boolean markPortUsed(int port)
   {
-    usedPorts.remove(port);
+    return usedPorts.add(port);
+  }
+
+  /**
+   * Force removing a port from the list of used ports
+   *
+   * @param port The port to remove
+   *
+   * @return The result of Set.remove
+   */
+  public synchronized boolean markPortUnused(int port)
+  {
+    return usedPorts.remove(port);
   }
 
   private int chooseNext(int start)
