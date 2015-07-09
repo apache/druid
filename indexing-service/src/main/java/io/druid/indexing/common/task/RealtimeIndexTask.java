@@ -58,7 +58,6 @@ import org.joda.time.Period;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 public class RealtimeIndexTask extends AbstractTask
@@ -293,35 +292,40 @@ public class RealtimeIndexTask extends AbstractTask
       long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
       while (firehose.hasMore()) {
         final InputRow inputRow;
+
         try {
           inputRow = firehose.nextRow();
+
           if (inputRow == null) {
+            log.debug("thrown away null input row, considering unparseable");
+            fireDepartment.getMetrics().incrementUnparseable();
             continue;
-          }
-
-          int currCount = plumber.add(inputRow);
-          if (currCount == -1) {
-            fireDepartment.getMetrics().incrementThrownAway();
-            log.debug("Throwing away event[%s]", inputRow);
-
-            if (System.currentTimeMillis() > nextFlush) {
-              plumber.persist(firehose.commit());
-              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-            }
-
-            continue;
-          }
-
-          fireDepartment.getMetrics().incrementProcessed();
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
-            plumber.persist(firehose.commit());
-            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
           }
         }
         catch (ParseException e) {
-          log.warn(e, "unparseable line");
+          log.debug(e, "thrown away line due to exception, considering unparseable");
           fireDepartment.getMetrics().incrementUnparseable();
+          continue;
+        }
+
+        int currCount = plumber.add(inputRow);
+        if (currCount == -1) {
+          fireDepartment.getMetrics().incrementThrownAway();
+          log.debug("Throwing away event[%s]", inputRow);
+
+          if (System.currentTimeMillis() > nextFlush) {
+            plumber.persist(firehose.commit());
+            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
+          }
+
+          continue;
+        }
+
+        fireDepartment.getMetrics().incrementProcessed();
+        final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+        if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
+          plumber.persist(firehose.commit());
+          nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
         }
       }
     }
