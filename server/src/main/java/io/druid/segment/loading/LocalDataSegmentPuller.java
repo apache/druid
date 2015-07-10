@@ -46,6 +46,8 @@ import java.util.Map;
  */
 public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static final String URI_SCHEME = "file";
+
   public static FileObject buildFileObject(final URI uri)
   {
     final Path path = Paths.get(uri);
