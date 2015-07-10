@@ -379,6 +379,7 @@ public class RemoteTaskRunnerTest
             }
         )
     );
+    Assert.assertNull(cf.checkExists().forPath(statusPath));
   }
 
   @Test
