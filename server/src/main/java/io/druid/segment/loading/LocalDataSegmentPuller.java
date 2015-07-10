@@ -18,17 +18,21 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import com.metamx.common.CompressionUtils;
 import com.metamx.common.FileUtils;
 import com.metamx.common.MapUtils;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.UOE;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import javax.tools.FileObject;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -41,11 +45,17 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.regex.Pattern;
 
 /**
  */
 public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static final int DEFAULT_RETRY_COUNT = 3;
+  public static final String URI_SCHEMA = "file";
+
   public static FileObject buildFileObject(final URI uri)
   {
     final Path path = Paths.get(uri);
@@ -140,7 +150,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
                 Files.asByteSource(oldFile),
                 new File(dir, oldFile.getName()),
                 shouldRetryPredicate(),
-                10
+                DEFAULT_RETRY_COUNT
             ).getFiles()
         );
       }
@@ -217,7 +227,78 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     // not found, there's only so much that retries would do (unless the file was temporarily absent for some reason).
     // Since this is not a commonly used puller in production, and in general is more useful in testing/debugging,
     // I do not have a good sense of what kind of Exceptions people would expect to encounter in the wild
-    return FileUtils.IS_EXCEPTION;
+    return new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable input)
+      {
+        return !(input instanceof InterruptedException)
+               && !(input instanceof CancellationException)
+               && (input instanceof Exception);
+      }
+    };
+  }
+
+  private URI mostRecentInDir(final Path dir, final Pattern pattern) throws IOException
+  {
+    long latestModified = Long.MIN_VALUE;
+    URI latest = null;
+    for (File file : dir.toFile().listFiles(
+        new FileFilter()
+        {
+          @Override
+          public boolean accept(File pathname)
+          {
+            return pathname.exists()
+                   && pathname.isFile()
+                   && (pattern == null || pattern.matcher(pathname.getName()).matches());
+          }
+        }
+    )) {
+      final long thisModified = file.lastModified();
+      if (thisModified >= latestModified) {
+        latestModified = thisModified;
+        latest = file.toURI();
+      }
+    }
+    return latest;
+  }
+
+  /**
+   * Matches based on a pattern in the file name. Returns the file with the latest timestamp.
+   *
+   * @param uri     If it is a file, then the parent is searched. If it is a directory, then the directory is searched.
+   * @param pattern The matching filter to down-select the file names in the directory of interest. Passing `null` results in matching any file
+   *
+   * @return The URI of the most recently modified file which matches the pattern, or `null` if it cannot be found
+   */
+  @Override
+  public URI getLatestVersion(URI uri, final Pattern pattern)
+  {
+    final File file = new File(uri);
+    try {
+      return RetryUtils.retry(
+          new Callable<URI>()
+          {
+            @Override
+            public URI call() throws Exception
+            {
+              return mostRecentInDir(
+                  file.isDirectory() ? file.toPath() : file.getParentFile().toPath(),
+                  pattern
+              );
+            }
+          },
+          shouldRetryPredicate(),
+          DEFAULT_RETRY_COUNT
+      );
+    }
+    catch (Exception e) {
+      if (e instanceof FileNotFoundException) {
+        return null;
+      }
+      throw Throwables.propagate(e);
+    }
   }
 
   private File getFile(DataSegment segment) throws SegmentLoadingException

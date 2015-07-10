@@ -24,6 +24,7 @@ import io.druid.storage.hdfs.HdfsDataSegmentPuller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,6 +39,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -49,6 +51,7 @@ public class HdfsDataSegmentPullerTest
   private static File hdfsTmpDir;
   private static URI uriBase;
   private static Path filePath = new Path("/tmp/foo");
+  private static Path perTestPath = new Path("/tmp/tmp2");
   private static String pathContents = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
   private static byte[] pathByteContents = StringUtils.toUtf8(pathContents);
   private static Configuration conf;
@@ -95,6 +98,12 @@ public class HdfsDataSegmentPullerTest
   public void setUp()
   {
     puller = new HdfsDataSegmentPuller(conf);
+  }
+
+  @After
+  public void tearDown() throws IOException
+  {
+    miniCluster.getFileSystem().delete(perTestPath, true);
   }
 
   @Test
@@ -187,14 +196,14 @@ public class HdfsDataSegmentPullerTest
   public void testDir() throws IOException, SegmentLoadingException
   {
 
-    final Path zipPath = new Path("/tmp/tmp2/test.txt");
+    final Path zipPath = new Path(perTestPath, "test.txt");
 
     final File outTmpDir = com.google.common.io.Files.createTempDir();
     outTmpDir.deleteOnExit();
     final File outFile = new File(outTmpDir, "test.txt");
     outFile.delete();
 
-    final URI uri = URI.create(uriBase.toString() + "/tmp/tmp2");
+    final URI uri = URI.create(uriBase.toString() + perTestPath.toString());
 
     try (final OutputStream outputStream = miniCluster.getFileSystem().create(zipPath)) {
       try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
@@ -216,5 +225,115 @@ public class HdfsDataSegmentPullerTest
         outTmpDir.delete();
       }
     }
+  }
+
+  @Test
+  public void testSimpleLatestVersion() throws IOException, InterruptedException
+  {
+    final Path oldPath = new Path(perTestPath, "555test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Thread.sleep(10);
+
+    final Path newPath = new Path(perTestPath, "666test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Assert.assertEquals(newPath.toString(), puller.getLatestVersion(oldPath.toUri(), Pattern.compile(".*")).getPath());
+  }
+
+  @Test
+  public void testAlreadyLatestVersion() throws IOException, InterruptedException
+  {
+    final Path oldPath = new Path(perTestPath, "555test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Thread.sleep(10);
+
+    final Path newPath = new Path(perTestPath, "666test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Assert.assertEquals(newPath.toString(), puller.getLatestVersion(newPath.toUri(), Pattern.compile(".*")).getPath());
+  }
+
+  @Test
+  public void testNoLatestVersion() throws IOException, InterruptedException
+  {
+    final Path oldPath = new Path(perTestPath, "555test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
+    Assert.assertNull(puller.getLatestVersion(oldPath.toUri(), Pattern.compile(".*")));
+  }
+
+  @Test
+  public void testSimpleLatestVersionInDir() throws IOException, InterruptedException
+  {
+    final Path oldPath = new Path(perTestPath, "555test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Thread.sleep(10);
+
+    final Path newPath = new Path(perTestPath, "666test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Assert.assertEquals(
+        newPath.toString(),
+        puller.getLatestVersion(perTestPath.toUri(), Pattern.compile(".*test\\.txt")).getPath()
+    );
+  }
+
+  @Test
+  public void testSkipMismatch() throws IOException, InterruptedException
+  {
+    final Path oldPath = new Path(perTestPath, "555test.txt");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(oldPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Thread.sleep(10);
+
+    final Path newPath = new Path(perTestPath, "666test.txt2");
+    Assert.assertFalse(miniCluster.getFileSystem().exists(newPath));
+    try (final OutputStream outputStream = miniCluster.getFileSystem().create(newPath)) {
+      try (final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+        ByteStreams.copy(inputStream, outputStream);
+      }
+    }
+
+    Assert.assertEquals(
+        oldPath.toString(),
+        puller.getLatestVersion(perTestPath.toUri(), Pattern.compile(".*test\\.txt")).getPath()
+    );
   }
 }

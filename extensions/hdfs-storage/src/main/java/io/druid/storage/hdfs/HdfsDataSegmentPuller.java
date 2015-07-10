@@ -32,10 +32,12 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 
 import javax.tools.FileObject;
@@ -48,11 +50,14 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 
 /**
  */
 public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
+  public static final int DEFAULT_RETRY_COUNT = 3;
+
   /**
    * FileObject.getLastModified and FileObject.delete don't throw IOException. This allows us to wrap those calls
    */
@@ -218,7 +223,7 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
               },
               shouldRetryPredicate(),
-              10
+              DEFAULT_RETRY_COUNT
           );
         }
         catch (Exception e) {
@@ -343,6 +348,67 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
         return apply(input.getCause());
       }
     };
+  }
+
+  private URI mostRecentInDir(final Path dir, final Pattern pattern) throws IOException
+  {
+    final PathFilter filter = new PathFilter()
+    {
+      @Override
+      public boolean accept(Path path)
+      {
+        return pattern == null || pattern.matcher(path.getName()).matches();
+      }
+    };
+    long modifiedTime = Long.MIN_VALUE;
+    URI mostRecentURI = null;
+    final FileSystem fs = dir.getFileSystem(config);
+    for (FileStatus status : fs.listStatus(dir, filter)) {
+      if (status.isFile()) {
+        final long thisModifiedTime = status.getModificationTime();
+        if (thisModifiedTime >= modifiedTime) {
+          modifiedTime = thisModifiedTime;
+          mostRecentURI = status.getPath().toUri();
+        }
+      }
+    }
+
+    return mostRecentURI;
+  }
+
+  /**
+   * Returns the latest modified file at the uri of interest.
+   *
+   * @param uri     Either a directory or a file on HDFS. If it is a file, the parent directory will be searched.
+   * @param pattern A pattern matcher for file names in the directory of interest. Passing `null` results in matching any file in the directory.
+   *
+   * @return The URI of the file with the most recent modified timestamp.
+   */
+  @Override
+  public URI getLatestVersion(final URI uri, final Pattern pattern)
+  {
+    final Path path = new Path(uri);
+    try {
+      return RetryUtils.retry(
+          new Callable<URI>()
+          {
+            @Override
+            public URI call() throws Exception
+            {
+              final FileSystem fs = path.getFileSystem(config);
+              if (!fs.exists(path)) {
+                return null;
+              }
+              return mostRecentInDir(fs.isDirectory(path) ? path : path.getParent(), pattern);
+            }
+          },
+          shouldRetryPredicate(),
+          DEFAULT_RETRY_COUNT
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   private Path getPath(DataSegment segment)
