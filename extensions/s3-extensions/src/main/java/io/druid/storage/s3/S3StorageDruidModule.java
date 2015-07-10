@@ -39,6 +39,7 @@ import java.util.List;
 public class S3StorageDruidModule implements DruidModule
 {
   public static final String SCHEME = "s3_zip";
+  public static final String URI_SCHEME = "s3";
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -72,6 +73,7 @@ public class S3StorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
 
     Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(S3DataSegmentPuller.class).in(LazySingleton.class);
+    Binders.dataSegmentPullerBinder(binder).addBinding(URI_SCHEME).to(S3DataSegmentPuller.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(S3DataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME).to(S3DataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder).addBinding(SCHEME).to(S3DataSegmentArchiver.class).in(LazySingleton.class);
