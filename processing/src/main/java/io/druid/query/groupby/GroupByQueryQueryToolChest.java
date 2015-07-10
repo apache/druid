@@ -413,7 +413,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   {
     return new CacheStrategy<Row, Object, GroupByQuery>()
     {
+      private static final byte CACHE_STRATEGY_VERSION = 0x1;
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+      private final List<DimensionSpec> dims = query.getDimensions();
+
 
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
@@ -435,7 +438,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
         ByteBuffer buffer = ByteBuffer
             .allocate(
-                1
+                2
                 + granularityBytes.length
                 + filterBytes.length
                 + aggregatorBytes.length
@@ -444,6 +447,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                 + limitBytes.length
             )
             .put(GROUPBY_QUERY)
+            .put(CACHE_STRATEGY_VERSION)
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes);
@@ -474,10 +478,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           {
             if (input instanceof MapBasedRow) {
               final MapBasedRow row = (MapBasedRow) input;
-              final List<Object> retVal = Lists.newArrayListWithCapacity(2);
+              final List<Object> retVal = Lists.newArrayListWithCapacity(1 + dims.size() + aggs.size());
               retVal.add(row.getTimestamp().getMillis());
-              retVal.add(row.getEvent());
-
+              Map<String, Object> event = row.getEvent();
+              for (DimensionSpec dim : dims) {
+                retVal.add(event.get(dim.getOutputName()));
+              }
+              for (AggregatorFactory agg : aggs) {
+                retVal.add(event.get(agg.getName()));
+              }
               return retVal;
             }
 
@@ -500,21 +509,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
             DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
 
+            Map<String, Object> event = Maps.newLinkedHashMap();
+            Iterator<DimensionSpec> dimsIter = dims.iterator();
+            while (dimsIter.hasNext() && results.hasNext()) {
+              final DimensionSpec factory = dimsIter.next();
+              event.put(factory.getOutputName(), results.next());
+            }
+
             Iterator<AggregatorFactory> aggsIter = aggs.iterator();
-
-            Map<String, Object> event = jsonMapper.convertValue(
-                results.next(),
-                new TypeReference<Map<String, Object>>()
-                {
-                }
-            );
-
-            while (aggsIter.hasNext()) {
+            while (aggsIter.hasNext() && results.hasNext()) {
               final AggregatorFactory factory = aggsIter.next();
-              Object agg = event.get(factory.getName());
-              if (agg != null) {
-                event.put(factory.getName(), factory.deserialize(agg));
-              }
+              event.put(factory.getName(), factory.deserialize(results.next()));
+            }
+
+            if (dimsIter.hasNext() || aggsIter.hasNext() || results.hasNext()) {
+              throw new ISE(
+                  "Found left over objects while reading from cache!! dimsIter[%s] aggsIter[%s] results[%s]",
+                  dimsIter.hasNext(),
+                  aggsIter.hasNext(),
+                  results.hasNext()
+              );
             }
 
             return new MapBasedRow(
