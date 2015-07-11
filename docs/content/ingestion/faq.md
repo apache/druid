@@ -2,6 +2,20 @@
 layout: doc_page
 ---
 
+## My Data isn't being loaded
+
+### Realtime Ingestion
+
+If you are trying to stream in historical (not current time) data into Druid and you are using the [serverTime](../ingestion/realtime-ingestion.html) rejection policy in your ingestion spec (the default rejection policy), Druid will not ingest this data as it is outside of the acceptable window period. You can verify this is what is happening by looking at the logs of your real-time process for log lines containing "ingest/events/*". These metrics will indicate the events ingested, rejected, etc. We recommend using batch ingestion methods for historical data in production.
+
+If you are doing a POC, you can use the [messageTime](../ingestion/realtime-ingestion.html) rejection policy, but please be aware of the hand-off caveats. This rejection policy is not recommended in production. 
+
+If you are experimenting with realtime ingestion, you can also use the [none](../ingestion/realtime-ingestion.html) rejection policy to load all incoming events, but hand-off will never occur. 
+ 
+### Batch Ingestion
+ 
+If you are trying to batch load historical data but no events are being loaded, make sure the interval of your ingestion spec actually encapsulates the interval of your data. Events outside this interval are dropped. 
+
 ## What types of data does Druid support?
 
 Druid can ingest JSON, CSV, TSV and other delimited data out of the box. Druid supports single dimension values, or multiple dimension values (an array of strings). Druid supports long and float numeric columns.
