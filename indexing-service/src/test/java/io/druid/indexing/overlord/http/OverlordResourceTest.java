@@ -222,10 +222,6 @@ public class OverlordResourceTest
     NoopTask task_1 = new NoopTask(taskId_1, 0, 0, null, null);
     taskStorage.insert(task_1, TaskStatus.running(taskId_1));
 
-    response = overlordResource.getWaitingTasks();
-    // 1 task that was manually inserted should be in waiting state
-    Assert.assertEquals(1, (((List) response.getEntity()).size()));
-
     // Simulate completion of task_1
     taskCountDownLatches[Integer.parseInt(taskId_1)].countDown();
     // Wait for taskQueue to handle success status of task_1
