@@ -30,6 +30,9 @@ public class MetadataRuleManagerConfig
   @JsonProperty
   private Period pollDuration = new Period("PT1M");
 
+  @JsonProperty
+  private Period alertThreshold = new Period("PT10M");
+
   public String getDefaultRule()
   {
     return defaultRule;
@@ -38,5 +41,10 @@ public class MetadataRuleManagerConfig
   public Period getPollDuration()
   {
     return pollDuration;
+  }
+
+  public Period getAlertThreshold()
+  {
+    return alertThreshold;
   }
 }
