@@ -58,7 +58,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       9,
       100
   );
-  private final Set<DataSegment> segments = ImmutableSet.of(defaultSegment);
+
+  private final DataSegment defaultSegment2 = new DataSegment(
+      "dataSource",
+      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      "version",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new LinearShardSpec(1),
+      9,
+      100
+  );
+  private final Set<DataSegment> segments = ImmutableSet.of(defaultSegment, defaultSegment2);
   IndexerSQLMetadataStorageCoordinator coordinator;
 
   @Before
@@ -82,22 +94,24 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void unUseSegment()
   {
-    Assert.assertEquals(
-        1, (int) derbyConnector.getDBI().<Integer>withHandle(
-            new HandleCallback<Integer>()
-            {
-              @Override
-              public Integer withHandle(Handle handle) throws Exception
+    for (final DataSegment segment : segments) {
+      Assert.assertEquals(
+          1, (int) derbyConnector.getDBI().<Integer>withHandle(
+              new HandleCallback<Integer>()
               {
-                return handle.createStatement(
-                    String.format("UPDATE %s SET used = false WHERE id = :id", tablesConfig.getSegmentsTable())
-                )
-                             .bind("id", defaultSegment.getIdentifier())
-                             .execute();
+                @Override
+                public Integer withHandle(Handle handle) throws Exception
+                {
+                  return handle.createStatement(
+                      String.format("UPDATE %s SET used = false WHERE id = :id", tablesConfig.getSegmentsTable())
+                  )
+                               .bind("id", segment.getIdentifier())
+                               .execute();
+                }
               }
-            }
-        )
-    );
+          )
+      );
+    }
   }
 
   @Test
@@ -243,7 +257,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.getUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getStart().minus(1), defaultSegment.getInterval().getStart().plus(1))
+            new Interval(
+                defaultSegment.getInterval().getStart().minus(1),
+                defaultSegment.getInterval().getStart().plus(1)
+            )
         ).isEmpty()
     );
   }
