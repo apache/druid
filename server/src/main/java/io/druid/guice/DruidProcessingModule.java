@@ -69,7 +69,7 @@ public class DruidProcessingModule implements Module
           cacheConfig.getNumBackgroundThreads(),
           new ThreadFactoryBuilder()
               .setNameFormat("background-cacher-%d")
-              .setDaemon(true) // TODO: migrate this to Execs after https://github.com/druid-io/druid/pull/984
+              .setDaemon(true)
               .setPriority(Thread.MIN_PRIORITY)
               .build()
       );
