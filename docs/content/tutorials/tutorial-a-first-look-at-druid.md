@@ -76,7 +76,10 @@ You should see a bunch of files:
 
 ## External Dependencies
 
-Druid requires 3 external dependencies. A "deep storage" that acts as a backup data repository, a "metadata storage" such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster. For this tutorial, we only need the zookeeper dependency.
+Druid requires 3 external dependencies.
+* A "deep storage" that acts as a backup data repository.
+* A "metadata storage" such as MySQL to hold configuration and metadata information. Druid uses [Apache Derby](http://db.apache.org/derby/) by default.
+* [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster. For this tutorial, we only need the zookeeper dependency.
 
 #### Set up Zookeeper
 
