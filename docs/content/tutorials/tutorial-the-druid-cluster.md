@@ -24,9 +24,9 @@ cd druid-0.7.1
 
 ## External Dependencies
 Druid requires 3 external dependencies.
-* A "deep storage" that acts as a backup data repository.
-* A "metadata storage" such as MySQL to hold configuration and metadata information. Druid uses [Apache Derby](http://db.apache.org/derby/) by default.
-* [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster. For this tutorial, we only need the zookeeper dependency.
+* A "deep storage" that acts as a data repository. This is generally distributed storage like HDFS or S3. For prototyping or experimentation on a single machine, Druid can use the local filesystem.
+* A "metadata storage" to hold configuration and metadata information. This is generally a small, shared database like MySQL or Postgres. For prototyping or experimentation on a single machine, Druid can use a local instance of [Apache Derby](http://db.apache.org/derby/).
+* [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
 
 For deep storage, we will use the local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, Derby is used, but for production Mysql or PostgreSQL etc should be used.
 
