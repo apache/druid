@@ -246,7 +246,8 @@ public class TaskSerdeTest
                 indexSpec,
                 false,
                 false,
-                null
+                null,
+                0.3F
             )
         )
     );
@@ -282,6 +283,8 @@ public class TaskSerdeTest
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
         task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
+    Assert.assertEquals(task.getRealtimeIngestionSchema().getTuningConfig().getAggregationBufferRatio(),
+                        task2.getRealtimeIngestionSchema().getTuningConfig().getAggregationBufferRatio(), 0.0f);
   }
 
   @Test

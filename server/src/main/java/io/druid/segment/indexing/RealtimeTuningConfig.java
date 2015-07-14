@@ -49,7 +49,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final boolean defaultPersistInHeap = false;
   private static final boolean defaultIngestOffheap = false;
   private static final int defaultBufferSize = 128 * 1024* 1024; // 128M
-
+  private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
 
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig()
@@ -66,7 +66,8 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultIndexSpec,
         defaultPersistInHeap,
         defaultIngestOffheap,
-        defaultBufferSize
+        defaultBufferSize,
+        DEFAULT_AGG_BUFFER_RATIO
     );
   }
 
@@ -82,6 +83,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private final boolean persistInHeap;
   private final boolean ingestOffheap;
   private final int bufferSize;
+  private final float aggregationBufferRatio;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -96,7 +98,8 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("persistInHeap") Boolean persistInHeap,
       @JsonProperty("ingestOffheap") Boolean ingestOffheap,
-      @JsonProperty("buffersize") Integer bufferSize
+      @JsonProperty("buffersize") Integer bufferSize,
+      @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -115,7 +118,7 @@ public class RealtimeTuningConfig implements TuningConfig
     this.persistInHeap = persistInHeap == null ? defaultPersistInHeap : persistInHeap;
     this.ingestOffheap = ingestOffheap == null ? defaultIngestOffheap : ingestOffheap;
     this.bufferSize = bufferSize == null ? defaultBufferSize : bufferSize;
-
+    this.aggregationBufferRatio = aggregationBufferRatio == null ? DEFAULT_AGG_BUFFER_RATIO : aggregationBufferRatio;
   }
 
   @JsonProperty
@@ -188,6 +191,12 @@ public class RealtimeTuningConfig implements TuningConfig
     return bufferSize;
   }
 
+  @JsonProperty
+  public float getAggregationBufferRatio()
+  {
+    return aggregationBufferRatio;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -202,7 +211,8 @@ public class RealtimeTuningConfig implements TuningConfig
         indexSpec,
         persistInHeap,
         ingestOffheap,
-        bufferSize
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 
@@ -220,7 +230,8 @@ public class RealtimeTuningConfig implements TuningConfig
         indexSpec,
         persistInHeap,
         ingestOffheap,
-        bufferSize
+        bufferSize,
+        aggregationBufferRatio
     );
   }
 }
