@@ -69,7 +69,7 @@ public class DruidProcessingModule implements Module
           cacheConfig.getNumBackgroundThreads(),
           new ThreadFactoryBuilder()
               .setNameFormat("background-cacher-%d")
-              .setDaemon(true)
+              .setDaemon(true) // TODO: migrate this to Execs after https://github.com/druid-io/druid/pull/984
               .setPriority(Thread.MIN_PRIORITY)
               .build()
       );
@@ -118,7 +118,8 @@ public class DruidProcessingModule implements Module
             )
         );
       }
-    } catch(UnsupportedOperationException e) {
+    }
+    catch (UnsupportedOperationException e) {
       log.info(e.getMessage());
     }
 

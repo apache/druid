@@ -79,12 +79,12 @@ public class TaskQueue
   private final Condition managementMayBeNecessary = giant.newCondition();
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder()
-          .setDaemon(false)
+          .setDaemon(false) // Don't use Execs because of this
           .setNameFormat("TaskQueue-Manager").build()
   );
   private final ScheduledExecutorService storageSyncExec = Executors.newSingleThreadScheduledExecutor(
       new ThreadFactoryBuilder()
-          .setDaemon(false)
+          .setDaemon(false) // Don't use Execs because of this
           .setNameFormat("TaskQueue-StorageSync").build()
   );
 

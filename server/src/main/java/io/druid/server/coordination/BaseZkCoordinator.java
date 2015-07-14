@@ -19,12 +19,10 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -35,7 +33,6 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
-import java.util.concurrent.Executors;
 
 /**
  */
@@ -88,10 +85,7 @@ public abstract class BaseZkCoordinator implements DataSegmentChangeHandler
           loadQueueLocation,
           true,
           true,
-          Executors.newFixedThreadPool(
-              config.getNumLoadingThreads(),
-              new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ZkCoordinator-%s").build()
-          )
+          Execs.multiThreaded(config.getNumLoadingThreads(), "ZkCoordinator-%s")
       );
 
       try {

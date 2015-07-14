@@ -18,12 +18,12 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Granularity;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
+import io.druid.concurrent.Execs;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -90,13 +89,7 @@ public class FlushingPlumber extends RealtimePlumber
     initializeExecutors();
 
     if (flushScheduledExec == null) {
-      flushScheduledExec = Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("flushing_scheduled_%d")
-              .build()
-      );
+      flushScheduledExec = Execs.scheduledSingleThreaded("flushing_scheduled_%d");
     }
 
     bootstrapSinksFromDisk();
