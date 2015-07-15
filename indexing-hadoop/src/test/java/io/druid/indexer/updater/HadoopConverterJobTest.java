@@ -268,7 +268,8 @@ public class HadoopConverterJobTest
                 false,
                 false,
                 null,
-                null
+                null,
+                false
             )
         )
     );

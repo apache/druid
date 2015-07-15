@@ -31,9 +31,9 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import com.metamx.common.parsers.ParseException;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -64,11 +64,13 @@ import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -149,6 +151,11 @@ public class IndexGeneratorJob implements Jobby
         throw new RuntimeException("No buckets?? seems there is no data to index.");
       }
 
+      if(config.getSchema().getTuningConfig().getUseCombiner()) {
+        job.setCombinerClass(IndexGeneratorCombiner.class);
+        job.setCombinerKeyGroupingComparatorClass(BytesWritable.Comparator.class);
+      }
+
       job.setNumReduceTasks(numReducers);
       job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
@@ -190,6 +197,36 @@ public class IndexGeneratorJob implements Jobby
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private static IncrementalIndex makeIncrementalIndex(
+      Bucket theBucket,
+      AggregatorFactory[] aggs,
+      HadoopDruidIndexerConfig config,
+      boolean isOffHeap,
+      StupidPool bufferPool
+  )
+  {
+    final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(theBucket.time.getMillis())
+        .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
+        .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
+        .withMetrics(aggs)
+        .build();
+    if (isOffHeap) {
+      return new OffheapIncrementalIndex(
+          indexSchema,
+          bufferPool,
+          true,
+          tuningConfig.getBufferSize()
+      );
+    } else {
+      return new OnheapIncrementalIndex(
+          indexSchema,
+          tuningConfig.getRowFlushBoundary()
+      );
     }
   }
 
@@ -242,6 +279,128 @@ public class IndexGeneratorJob implements Jobby
           ).toBytesWritable(),
           new BytesWritable(InputRowSerde.toBytes(inputRow, aggregators))
       );
+    }
+  }
+
+  public static class IndexGeneratorCombiner extends Reducer<BytesWritable, BytesWritable, BytesWritable, BytesWritable>
+  {
+    private HadoopDruidIndexerConfig config;
+    private AggregatorFactory[] aggregators;
+    private AggregatorFactory[] combiningAggs;
+
+    @Override
+    protected void setup(Context context)
+        throws IOException, InterruptedException
+    {
+      config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+
+      aggregators = config.getSchema().getDataSchema().getAggregators();
+      combiningAggs = new AggregatorFactory[aggregators.length];
+      for (int i = 0; i < aggregators.length; ++i) {
+        combiningAggs[i] = aggregators[i].getCombiningFactory();
+      }
+    }
+
+    @Override
+    protected void reduce(
+        final BytesWritable key, Iterable<BytesWritable> values, final Context context
+    ) throws IOException, InterruptedException
+    {
+
+      Iterator<BytesWritable> iter = values.iterator();
+      BytesWritable first = iter.next();
+
+      if(iter.hasNext()) {
+        SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
+        Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
+        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, false, null);
+        index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
+
+        while(iter.hasNext()) {
+          context.progress();
+          InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
+
+          if(!index.canAppendRow()) {
+            log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
+            flushIndexToContextAndClose(key, index, context);
+            index = makeIncrementalIndex(bucket, combiningAggs, config, false, null);
+          }
+
+          index.add(value);
+        }
+
+        flushIndexToContextAndClose(key, index, context);
+      } else {
+        context.write(key, first);
+      }
+    }
+
+    private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context) throws IOException, InterruptedException
+    {
+      Iterator<Row> rows = index.iterator();
+      while(rows.hasNext()) {
+        context.progress();
+        Row row = rows.next();
+        InputRow inputRow = getInputRowFromRow(row, index.getDimensions());
+        context.write(
+            key,
+            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
+        );
+      }
+      index.close();
+    }
+
+    private InputRow getInputRowFromRow(final Row row, final List<String> dimensions) {
+      return new InputRow()
+      {
+        @Override
+        public List<String> getDimensions()
+        {
+          return dimensions;
+        }
+
+        @Override
+        public long getTimestampFromEpoch()
+        {
+          return row.getTimestampFromEpoch();
+        }
+
+        @Override
+        public DateTime getTimestamp()
+        {
+          return row.getTimestamp();
+        }
+
+        @Override
+        public List<String> getDimension(String dimension)
+        {
+          return row.getDimension(dimension);
+        }
+
+        @Override
+        public Object getRaw(String dimension)
+        {
+          return row.getRaw(dimension);
+        }
+
+        @Override
+        public float getFloatMetric(String metric)
+        {
+          return row.getFloatMetric(metric);
+        }
+
+        @Override
+        public long getLongMetric(String metric)
+        {
+          return row.getLongMetric(metric);
+        }
+
+        @Override
+        public int compareTo(Row o)
+        {
+          return row.compareTo(o);
+        }
+      };
     }
   }
 
@@ -350,7 +509,13 @@ public class IndexGeneratorJob implements Jobby
                                                * config.getSchema().getTuningConfig().getAggregationBufferRatio());
 
       final StupidPool<ByteBuffer> bufferPool = new OffheapBufferPool(aggregationBufferSize);
-      IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, bufferPool);
+      IncrementalIndex index = makeIncrementalIndex(
+          bucket,
+          combiningAggs,
+          config,
+          config.getSchema().getTuningConfig().isIngestOffheap(),
+          bufferPool
+      );
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
         baseFlushFile.delete();
@@ -392,7 +557,13 @@ public class IndexGeneratorJob implements Jobby
             // close this index and make a new one, reusing same buffer
             index.close();
 
-            index = makeIncrementalIndex(bucket, combiningAggs, bufferPool);
+            index = makeIncrementalIndex(
+                bucket,
+                combiningAggs,
+                config,
+                config.getSchema().getTuningConfig().isIngestOffheap(),
+                bufferPool
+            );
             startTime = System.currentTimeMillis();
             ++indexCount;
           }
@@ -473,31 +644,6 @@ public class IndexGeneratorJob implements Jobby
       }
       finally {
         index.close();
-      }
-    }
-
-    private IncrementalIndex makeIncrementalIndex(Bucket theBucket, AggregatorFactory[] aggs, StupidPool bufferPool)
-    {
-      final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
-      final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-          .withMinTimestamp(theBucket.time.getMillis())
-          .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
-          .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
-          .withMetrics(aggs)
-          .build();
-      if (tuningConfig.isIngestOffheap()) {
-
-        return new OffheapIncrementalIndex(
-            indexSchema,
-            bufferPool,
-            true,
-            tuningConfig.getBufferSize()
-        );
-      } else {
-        return new OnheapIncrementalIndex(
-            indexSchema,
-            tuningConfig.getRowFlushBoundary()
-        );
       }
     }
   }
