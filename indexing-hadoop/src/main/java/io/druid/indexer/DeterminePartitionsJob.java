@@ -259,7 +259,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Writable value,
+        Object value,
         Context context
     ) throws IOException, InterruptedException
     {
@@ -340,7 +340,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Writable value,
+        Object value,
         Context context
     ) throws IOException, InterruptedException
     {
@@ -378,7 +378,7 @@ public class DeterminePartitionsJob implements Jobby
     }
 
     public void emitDimValueCounts(
-        TaskInputOutputContext<? extends Writable, ? extends Writable, BytesWritable, Text> context,
+        TaskInputOutputContext<?, ?, BytesWritable, Text> context,
         DateTime timestamp,
         Map<String, Iterable<String>> dims
     ) throws IOException, InterruptedException
@@ -891,7 +891,7 @@ public class DeterminePartitionsJob implements Jobby
   }
 
   private static void write(
-      TaskInputOutputContext<? extends Writable, ? extends Writable, BytesWritable, Text> context,
+      TaskInputOutputContext<?, ?, BytesWritable, Text> context,
       final byte[] groupKey,
       DimValueCount dimValueCount
   )
