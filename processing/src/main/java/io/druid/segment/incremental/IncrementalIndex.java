@@ -19,6 +19,7 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
@@ -71,9 +72,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 {
   private volatile DateTime maxIngestedEventTime;
 
-  protected static ColumnSelectorFactory makeColumnSelectorFactory(
+  public static ColumnSelectorFactory makeColumnSelectorFactory(
       final AggregatorFactory agg,
-      final ThreadLocal<InputRow> in,
+      final Supplier<InputRow> in,
       final boolean deserializeComplexMetrics
   )
   {
@@ -260,6 +261,14 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   // This is modified on add() in a critical section.
   private ThreadLocal<InputRow> in = new ThreadLocal<>();
+  private Supplier<InputRow> rowSupplier = new Supplier<InputRow>()
+  {
+    @Override
+    public InputRow get()
+    {
+      return in.get();
+    }
+  };
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -283,7 +292,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     final ImmutableList.Builder<String> metricNamesBuilder = ImmutableList.builder();
     final ImmutableMap.Builder<String, Integer> metricIndexesBuilder = ImmutableMap.builder();
     final ImmutableMap.Builder<String, String> metricTypesBuilder = ImmutableMap.builder();
-    this.aggs = initAggs(metrics, in, deserializeComplexMetrics);
+    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
 
     for (int i = 0; i < metrics.length; i++) {
       final String metricName = metrics[i].getName();
@@ -343,7 +352,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   protected abstract AggregatorType[] initAggs(
       AggregatorFactory[] metrics,
-      ThreadLocal<InputRow> in,
+      Supplier<InputRow> rowSupplier,
       boolean deserializeComplexMetrics
   );
 
@@ -353,7 +362,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       InputRow row,
       AtomicInteger numEntries,
       TimeAndDims key,
-      ThreadLocal<InputRow> in
+      ThreadLocal<InputRow> rowContainer,
+      Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException;
 
   protected abstract AggregatorType[] getAggsForRow(int rowOffset);
@@ -449,7 +459,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
 
     final TimeAndDims key = new TimeAndDims(Math.max(gran.truncate(row.getTimestampFromEpoch()), minTimestamp), dims);
-    final Integer rv = addToFacts(metrics, deserializeComplexMetrics, row, numEntries, key, in);
+    final Integer rv = addToFacts(metrics, deserializeComplexMetrics, row, numEntries, key, in, rowSupplier);
     updateMaxIngestedTime(row.getTimestamp());
     return rv;
   }

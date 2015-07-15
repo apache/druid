@@ -20,6 +20,7 @@ package io.druid.segment.incremental;
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.Clock;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -135,7 +136,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         InputRow row,
         AtomicInteger numEntries,
         TimeAndDims key,
-        ThreadLocal<InputRow> in
+        ThreadLocal<InputRow> rowContainer,
+        Supplier<InputRow> rowSupplier
     ) throws IndexSizeExceededException
     {
 
@@ -147,10 +149,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         aggs = indexedMap.get(priorIdex);
       } else {
         aggs = new Aggregator[metrics.length];
+
         for (int i = 0; i < metrics.length; i++) {
           final AggregatorFactory agg = metrics[i];
           aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
+              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
           );
         }
         Integer rowIndex;
@@ -176,7 +179,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         }
       }
 
-      in.set(row);
+      rowContainer.set(row);
 
       for (Aggregator agg : aggs) {
         synchronized (agg) {
@@ -184,7 +187,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         }
       }
 
-      in.set(null);
+      rowContainer.set(null);
 
 
       return numEntries.get();
