@@ -34,14 +34,14 @@ Running Integration tests
 ## Running tests using mvn
 
 To run all the tests using mvn run the following command -
-'''''
+```
   mvn verify -P integration-tests
-'''''
+```
 
 To run only a single test using mvn run following command -
-'''''
+```
   mvn verify -P integration-tests -Dit.test=<test_name>
-'''''
+```
 
 
 Writing a New Test
@@ -66,9 +66,9 @@ A test can access different helper and utility classes provided by test-framewor
 To mark a test be able to use Guice Dependency Injection -
 Annotate the test class with the below annotation
 
- '''''''
+```
  @Guice(moduleFactory = DruidTestModuleFactory.class)
- '''''''
+```
 This will tell the test framework that the test class needs to be constructed using guice.
 
 ### Helper Classes provided
