@@ -34,7 +34,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
@@ -43,11 +42,11 @@ import com.metamx.common.guava.LazySequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.BySegmentResultValueClass;
@@ -78,7 +77,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  */
@@ -110,9 +108,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
 
     serverView.registerSegmentCallback(
-        Executors.newFixedThreadPool(
-            1, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("CCClient-ServerView-CB-%d").build()
-        ),
+        Execs.singleThreaded("CCClient-ServerView-CB-%d"),
         new ServerView.BaseSegmentCallback()
         {
           @Override

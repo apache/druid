@@ -19,8 +19,8 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -28,7 +28,6 @@ import io.druid.data.input.impl.InputRowParser;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -68,12 +67,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     {
       firehose = delegateFactory.connect(parser);
 
-      exec = Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder().setDaemon(true)
-                                    .setNameFormat("timed-shutoff-firehose-%d")
-                                    .build()
-      );
+      exec = Execs.scheduledSingleThreaded("timed-shutoff-firehose-%d");
 
       exec.schedule(
           new Runnable()

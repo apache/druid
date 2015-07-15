@@ -98,17 +98,28 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     this.defaultPriority = defaultPriority;
   }
 
-  @Override protected <T> PrioritizedListenableFutureTask<T> newTaskFor(Runnable runnable, T value) {
-    Preconditions.checkArgument(allowRegularTasks || runnable instanceof PrioritizedRunnable, "task does not implement PrioritizedRunnable");
-    return PrioritizedListenableFutureTask.create(ListenableFutureTask.create(runnable, value),
-                                                  runnable instanceof PrioritizedRunnable
-                                                  ? ((PrioritizedRunnable) runnable).getPriority()
-                                                  : defaultPriority
+  @Override
+  protected <T> PrioritizedListenableFutureTask<T> newTaskFor(Runnable runnable, T value)
+  {
+    Preconditions.checkArgument(
+        allowRegularTasks || runnable instanceof PrioritizedRunnable,
+        "task does not implement PrioritizedRunnable"
+    );
+    return PrioritizedListenableFutureTask.create(
+        ListenableFutureTask.create(runnable, value),
+        runnable instanceof PrioritizedRunnable
+        ? ((PrioritizedRunnable) runnable).getPriority()
+        : defaultPriority
     );
   }
 
-  @Override protected <T> PrioritizedListenableFutureTask<T> newTaskFor(Callable<T> callable) {
-    Preconditions.checkArgument(allowRegularTasks || callable instanceof PrioritizedCallable, "task does not implement PrioritizedCallable");
+  @Override
+  protected <T> PrioritizedListenableFutureTask<T> newTaskFor(Callable<T> callable)
+  {
+    Preconditions.checkArgument(
+        allowRegularTasks || callable instanceof PrioritizedCallable,
+        "task does not implement PrioritizedCallable"
+    );
     return PrioritizedListenableFutureTask.create(
         ListenableFutureTask.create(callable), callable instanceof PrioritizedCallable
                                                ? ((PrioritizedCallable) callable).getPriority()
@@ -116,15 +127,21 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     );
   }
 
-  @Override public ListenableFuture<?> submit(Runnable task) {
+  @Override
+  public ListenableFuture<?> submit(Runnable task)
+  {
     return (ListenableFuture<?>) super.submit(task);
   }
 
-  @Override public <T> ListenableFuture<T> submit(Runnable task, @Nullable T result) {
+  @Override
+  public <T> ListenableFuture<T> submit(Runnable task, @Nullable T result)
+  {
     return (ListenableFuture<T>) super.submit(task, result);
   }
 
-  @Override public <T> ListenableFuture<T> submit(Callable<T> task) {
+  @Override
+  public <T> ListenableFuture<T> submit(Callable<T> task)
+  {
     return (ListenableFuture<T>) super.submit(task);
   }
 
@@ -170,7 +187,10 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   }
 
 
-  public static class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>, ListenableFuture<V>, PrioritizedRunnable, Comparable<PrioritizedListenableFutureTask>
+  public static class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
+      ListenableFuture<V>,
+      PrioritizedRunnable,
+      Comparable<PrioritizedListenableFutureTask>
   {
     public static <V> PrioritizedListenableFutureTask<V> create(PrioritizedRunnable task, @Nullable V result)
     {
