@@ -69,7 +69,7 @@ Since the CSV data cannot contain the column names (no header is allowed), these
     "timestampSpec" : {
       "column" : "timestamp"
     },
-    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
     "dimensionsSpec" : {
       "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
     }
@@ -83,7 +83,7 @@ Since the CSV data cannot contain the column names (no header is allowed), these
     "timestampSpec" : {
       "column" : "timestamp"
     },
-    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+    "columns" : ["timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"],
     "delimiter":"|",
     "dimensionsSpec" : {
       "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
