@@ -30,4 +30,6 @@ public interface IntegrationTestingConfig
   public String getBrokerHost();
 
   public String getMiddleManagerHost();
+
+  public String getZookeeperHosts();
 }
