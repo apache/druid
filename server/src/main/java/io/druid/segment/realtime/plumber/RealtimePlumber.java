@@ -185,12 +185,19 @@ public class RealtimePlumber implements Plumber
   @Override
   public int add(InputRow row) throws IndexSizeExceededException
   {
-    final Sink sink = getSink(row.getTimestampFromEpoch());
-    if (sink == null) {
+    try {
+      final Sink sink = getSink(row.getTimestampFromEpoch());
+      if (sink == null) {
+        return -1;
+      }
+
+      return sink.add(row);
+    } catch (Exception e) {
+      log.makeAlert(e, "Failed to add row[%s]", schema.getDataSource())
+           .addData("row", row)
+           .emit();
       return -1;
     }
-
-    return sink.add(row);
   }
 
   public Sink getSink(long timestamp)
