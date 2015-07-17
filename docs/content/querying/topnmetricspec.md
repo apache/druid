@@ -47,7 +47,7 @@ The grammar for dimension values sorted lexicographically is as follows:
 ## AlphaNumeric TopNMetricSpec
 
 Sort dimension values in alpha-numeric order, i.e treating numbers differently from other characters in sorting the values.
-See [http://www.davekoelle.com/alphanum.html](http://www.davekoelle.com/alphanum.html) for details on how the algorithm works.
+The algorithm is based on [https://github.com/amjjd/java-alphanum](https://github.com/amjjd/java-alphanum).
 
 ```json
 "metric": {
