@@ -19,14 +19,18 @@ package io.druid.storage.azure;
 
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
+import io.druid.firehose.azure.StaticAzureBlobStoreFirehoseFactory;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.annotations.Json;
 import io.druid.initialization.DruidModule;
 
 import java.net.URISyntaxException;
@@ -64,7 +68,9 @@ public class AzureStorageDruidModule implements DruidModule
           {
             context.registerSubtypes(AzureLoadSpec.class);
           }
-        }
+        },
+        new SimpleModule().registerSubtypes(
+            new NamedType(StaticAzureBlobStoreFirehoseFactory.class, "static-azure-blobstore"))
     );
   }
 
@@ -84,6 +90,10 @@ public class AzureStorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME)
            .to(AzureDataSegmentKiller.class).in(LazySingleton.class);
+
+    Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
+    binder.bind(AzureTaskLogs.class).in(LazySingleton.class);
   }
 
   @Provides

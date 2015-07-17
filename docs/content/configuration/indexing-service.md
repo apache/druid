@@ -19,11 +19,11 @@ The indexing service uses several of the global configs in [Configuration](../co
 
 #### Task Logging
 
-If you are running the indexing service in remote mode, the task logs must S3 or HDFS.
+If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store or HDFS.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.type`|Choices:noop, s3, hdfs, file. Where to store task logs|file|
+|`druid.indexer.logs.type`|Choices:noop, s3, azure, hdfs, file. Where to store task logs|file|
 
 ##### File Task Logs
 
@@ -41,6 +41,16 @@ Store task logs in S3.
 |--------|-----------|-------|
 |`druid.indexer.logs.s3Bucket`|S3 bucket name.|none|
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
+
+#### Azure Blob Store Task Logs
+Store task logs in Azure Blob Store.
+
+Note: this uses the same storage account as the deep storage module for azure.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
+|`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
 ##### HDFS Task Logs
 
