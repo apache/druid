@@ -40,7 +40,7 @@ Other common reasons that hand-off fails are as follows:
 
 ## How do I get HDFS to work?
 
-Make sure to include the `druid-hdfs-storage` module as one of your extensions and set `druid.storage.type=hdfs`. You may also need to include hadoop configs on the classpath.
+Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, dependencies (that can be obtained by running command `hadoop classpath` on a machine where hadoop has been setup) in the classpath. And, provide necessary HDFS settings as described in [Deep Storage](../dependencies/deep-storage.html) .
 
 ## I don't see my Druid segments on my historical nodes
 You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make sure that your segments have actually loaded on [historical nodes](../design/historical.html). If your segments are not present, check the coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because historical nodes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
