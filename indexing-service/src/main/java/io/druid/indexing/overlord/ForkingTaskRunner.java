@@ -86,6 +86,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -206,6 +207,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
           @Override
           public void onSuccess(TaskStatus result)
           {
+            // Success of retrieving task status, not success of task
             final ForkingTaskRunnerWorkItem workItem = workItemAtomicReference.get();
             final ProcessHolder processHolder = workItem.processHolder.get();
             uploadLogAndCleanDir(taskId, processHolder.attemptId);
@@ -218,19 +220,27 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
           @Override
           public void onFailure(Throwable t)
           {
-            final ForkingTaskRunnerWorkItem workItem = tasks.get(taskId);
+            final ForkingTaskRunnerWorkItem workItem = workItemAtomicReference.get();
             if (workItem == null) {
-              log.error("Task [%s] not found", taskId);
+              if (t instanceof CancellationException) {
+                log.debug("Task [%s] did not have work item set. Probably didn't win leader election", taskId);
+              } else {
+                log.error(t, "Error in attaching to task [%s]", taskId);
+              }
               return;
             }
-            workItemAtomicReference.set(workItem);
             final ProcessHolder processHolder = workItem.processHolder.get();
             if (processHolder == null) {
               log.error("Task [%s] has no process holder, cannot attach!", taskId);
               return;
             }
             try {
-              log.error(t, "Task watcher for [%s] had an error on attaching", processHolder);
+              portFinder.markPortUnused(processHolder.port);
+              if(t instanceof InterruptedException) {
+                log.info("Task watcher for [%s] was interrupted", processHolder);
+              } else {
+                log.error(t, "Task watcher for [%s] had an error on attaching", processHolder);
+              }
             }
             finally {
               if (!tasks.remove(processHolder.taskId, workItem)) {
@@ -428,8 +438,24 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                 return attach(task.getId(), leaderLatch, MoreExecutors.sameThreadExecutor()).get();
               }
             }
+            catch(InterruptedException e)
+            {
+              log.info("Interrupted while waiting for task to start [%s]", processHolder);
+              Thread.currentThread().interrupt();
+              throw Throwables.propagate(e);
+            }
+            catch(ExecutionException e){
+              final Throwable eCause = e.getCause();
+              if(eCause instanceof InterruptedException){
+                log.info(e, "Attach interrupted for [%s]", processHolder);
+                Thread.currentThread().interrupt();
+              } else {
+                log.info(e, "Exception during execution of attach for [%s]", processHolder);
+              }
+              throw Throwables.propagate(e);
+            }
             catch (Throwable t) {
-              log.info(t, "Exception caught during forking");
+              log.info(t, "Exception caught during forking of [%s]", processHolder);
               throw Throwables.propagate(t);
             }
           }
@@ -944,8 +970,35 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         // A) The peon has exited between ForkingTaskRunner instances
         // B) The peon is still starting up and hasn't written the port file yet
         log.debug("Found no port file for task [%d]. Uploading log and cleaning", task.getId());
-        // TODO: report status?
-        uploadLogAndCleanDir(task.getId(), latestAttemptDir.getName());
+        final CountDownLatch doneLatch = new CountDownLatch(1);
+        try {
+          final ListenableFuture<TaskStatus> future;
+          final ForkingTaskRunnerWorkItem workItem;
+          try {
+            future = attach(task.getId(), doneLatch, exec);
+            workItem = new ForkingTaskRunnerWorkItem(task.getId(), future);
+            workItem.processHolder = new AtomicReference<>(
+                new ProcessHolder(
+                    task.getId(),
+                    latestAttemptDir.getName(),
+                    0
+                )
+            );
+            tasks.put(task.getId(), workItem);
+          }
+          finally {
+            doneLatch.countDown();
+          }
+          future.get();
+          workItem.processHolder.get().awaitShutdown(100L);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw Throwables.propagate(e);
+        }
+        catch (TimeoutException | ExecutionException e) {
+          log.makeAlert(e, "Could upload data for task [%s] which finished between runs", task.getId()).emit();
+        }
         continue;
       } else {
         portFinder.markPortUsed(port);
@@ -1074,16 +1127,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
       catch (IOException e) {
         throw Throwables.propagate(e);
-      }
-      final ForkingTaskRunnerWorkItem startingWorkItem = tasks.get(taskId);
-      while (tasks.get(taskId) != null
-             && System.currentTimeMillis() - startTime > timeoutMS
-             && startingWorkItem == tasks.get(taskId)) {
-        // Wait for cleanup to complete
-        Thread.sleep(1);
-      }
-      if (System.currentTimeMillis() - startTime > timeoutMS) {
-        throw new TimeoutException("Waiting for task state cleanup");
       }
     }
 

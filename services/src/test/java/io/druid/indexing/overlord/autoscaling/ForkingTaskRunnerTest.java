@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSink;
 import com.google.common.io.Closer;
+import com.google.common.io.FileBackedOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -59,6 +60,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -72,6 +74,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Ignore // Takes too long to run on Travis
 public class ForkingTaskRunnerTest
@@ -100,6 +103,7 @@ public class ForkingTaskRunnerTest
   private HttpClient httpClient;
   private File watchFile;
   private ObjectMapper mapper;
+  private final AtomicInteger pushTaskLogCalls = new AtomicInteger(0);
 
 
   private ForkingTaskRunner makeForkingTaskRunner(Integer timeout) throws IOException
@@ -126,7 +130,7 @@ public class ForkingTaskRunnerTest
           @Override
           public void pushTaskLog(String taskid, File logFile) throws IOException
           {
-            // NOOP
+            pushTaskLogCalls.incrementAndGet();
           }
         },
         mapper,
@@ -170,7 +174,7 @@ public class ForkingTaskRunnerTest
     ListenableFuture<TaskStatus> future = waitForTaskStart(600_000);
     Assert.assertFalse(forkingTaskRunner.getRunningTasks().isEmpty());
     forkingTaskRunner.shutdown(taskId);
-    Assert.assertTrue(forkingTaskRunner.getRunningTasks().isEmpty());
+    waitForEmptyTaskList(1_000);
     Assert.assertTrue(future.get().isFailure());
     Assert.assertFalse(taskDir.exists());
   }
@@ -192,7 +196,7 @@ public class ForkingTaskRunnerTest
     ListenableFuture<TaskStatus> future = waitForTaskStart(60_000);
     Assert.assertFalse(forkingTaskRunner.getRunningTasks().isEmpty());
     forkingTaskRunner.shutdown(taskId);
-    Assert.assertTrue(forkingTaskRunner.getRunningTasks().isEmpty());
+    waitForEmptyTaskList(1_000);
     Assert.assertTrue(future.get().isFailure());
     Assert.assertFalse(taskDir.exists());
   }
@@ -252,7 +256,7 @@ public class ForkingTaskRunnerTest
     Assert.assertTrue(statusFile.createNewFile());
 
     forkingTaskRunner.start();
-    Assert.assertTrue(forkingTaskRunner.getRunningTasks().isEmpty());
+    waitForEmptyTaskList(1_000);
   }
 
   @Test
@@ -286,7 +290,46 @@ public class ForkingTaskRunnerTest
     Assert.assertTrue(statusFile.createNewFile());
 
     forkingTaskRunner.start();
-    Assert.assertTrue(forkingTaskRunner.getRunningTasks().isEmpty());
+    waitForEmptyTaskList(1_000);
+  }
+
+
+  @Test
+  public void testTaskHadFinished() throws IOException
+  {
+    final File attemptDir = new File(taskDir, "attempt_dir");
+    Assert.assertTrue(attemptDir.mkdirs());
+
+    final File taskFile = new File(attemptDir, "task.json");
+    writeStringToFile(
+        mapper.writeValueAsString(
+            new BusyTask(
+                taskId,
+                watchFile.getAbsolutePath(),
+                100
+            )
+        ), taskFile
+    );
+
+    final File logFile = new File(attemptDir, "task.log");
+    Assert.assertTrue(logFile.createNewFile());
+
+    final File statusFile = new File(attemptDir, "status.json");
+    writeStringToFile(mapper.writeValueAsString(TaskStatus.success(taskId)), statusFile);
+
+    Assert.assertEquals(0, pushTaskLogCalls.get());
+    forkingTaskRunner.start();
+    waitForEmptyTaskList(1_000);
+    Assert.assertEquals(1, pushTaskLogCalls.get());
+  }
+
+  private void waitForEmptyTaskList(long timeout)
+  {
+    long start = System.currentTimeMillis();
+    while(!forkingTaskRunner.getRunningTasks().isEmpty())
+    {
+      Assert.assertTrue(System.currentTimeMillis() - start < timeout);
+    }
   }
 
   private void writeStringToFile(String string, final File file) throws IOException
