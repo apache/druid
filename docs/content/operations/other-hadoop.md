@@ -19,6 +19,32 @@ Members of the community have reported dependency conflicts between the version 
 
 For more about building Druid, please see [Building Druid](../development/build.html).
 
+Another workaround solution is to build a custom fat jar of Druid using [sbt](http://www.scala-sbt.org/), which manually excludes all the conflicting Jackson dependencies, and then put this fat jar in the classpath of the command that starts overlord indexing service. To do this, please follow the following steps.
+
+(1) Download and install sbt.
+
+(2) Make a new directory named 'druid_build'.
+
+(3) Cd to 'druid_build' and create the build.sbt file with the content [here](./use_sbt_to_build_fat_jar.md).
+
+You can always add more building targets or remove the ones you don't need.
+
+(4) In the same directory creat a new directory named 'project'.
+
+(5) Put the druid source code into 'druid_build/project'.
+
+(6) Create a file 'druid_build/project/assembly.sbt' with content as follows.
+```
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.13.0")
+```
+
+(7) In the 'druid_build' directory, run 'sbt assembly'.
+
+(8) In the 'druid_build/target/scala-2.10' folder, you will find the fat jar you just build.
+
+(9) Make sure the jars you've uploaded has been completely removed. The hdfs directory is by default '/tmp/druid-indexing/classpath'.
+
+(10) Include the fat jar in the classpath when you start the indexing service. Make sure you've removed 'lib/*' from your classpath because now the fat jar includes all you need.
 
 Working with Hadoop 1.x and older
 ---------------------------------
