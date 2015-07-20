@@ -31,6 +31,7 @@ import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
@@ -38,6 +39,7 @@ import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TestRealtimeTask;
+import io.druid.indexing.common.TestRealtimeTaskV2;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -48,6 +50,7 @@ import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -232,6 +235,51 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
+  public void testRunSameAvailabilityGroupV2() throws Exception
+  {
+    doSetup();
+
+    TestRealtimeTaskV2 task1 = new TestRealtimeTaskV2("rtV1", new TaskResource("rtV1", 1), "foo", TaskStatus.running("rtV1"));
+    remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+
+    TestRealtimeTaskV2 task2 = new TestRealtimeTaskV2("rtV2", new TaskResource("rtV1", 1), "foo", TaskStatus.running("rtV2"));
+    remoteTaskRunner.run(task2);
+
+    TestRealtimeTaskV2 task3 = new TestRealtimeTaskV2("rtV3", new TaskResource("rtV2", 1), "foo", TaskStatus.running("rtV3"));
+    remoteTaskRunner.run(task3);
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRunningTasks().size() == 2;
+              }
+            }
+        )
+    );
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getPendingTasks().size() == 1;
+              }
+            }
+        )
+    );
+
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTaskId().equals("rtV2"));
+  }
+
+  @Test
   public void testRunWithCapacity() throws Exception
   {
     doSetup();
@@ -276,6 +324,53 @@ public class RemoteTaskRunnerTest
     );
 
     Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTaskId().equals("rt2"));
+  }
+
+  @Test
+  public void testRunWithCapacityV2() throws Exception
+  {
+    doSetup();
+
+    TestRealtimeTaskV2 task1 = new TestRealtimeTaskV2("rtV1", new TaskResource("rtV1", 1), "foo", TaskStatus.running("rtV1"));
+    remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+
+    TestRealtimeTaskV2 task2 = new TestRealtimeTaskV2("rtV2", new TaskResource("rtV2", 3), "foo", TaskStatus.running("rtV2"));
+    remoteTaskRunner.run(task2);
+
+    TestRealtimeTaskV2 task3 = new TestRealtimeTaskV2("rtV3", new TaskResource("rtV3", 2), "foo", TaskStatus.running("rtV3"));
+    remoteTaskRunner.run(task3);
+    Assert.assertTrue(taskAnnounced(task3.getId()));
+    mockWorkerRunningTask(task3);
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getRunningTasks().size() == 2;
+              }
+            }
+        )
+    );
+
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            new IndexingServiceCondition()
+            {
+              @Override
+              public boolean isValid()
+              {
+                return remoteTaskRunner.getPendingTasks().size() == 1;
+              }
+            }
+        )
+    );
+
+    Assert.assertTrue(remoteTaskRunner.getPendingTasks().iterator().next().getTaskId().equals("rtV2"));
   }
 
   @Test

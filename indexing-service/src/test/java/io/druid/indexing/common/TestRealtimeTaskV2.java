@@ -17,9 +17,12 @@
 
 package io.druid.indexing.common;
 
+import java.io.File;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -28,21 +31,19 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.firehose.LocalFirehoseFactoryV2;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
-
-import java.io.File;
 
 /**
  */
 @JsonTypeName("test_realtime")
-public class TestRealtimeTask extends RealtimeIndexTask
+public class TestRealtimeTaskV2 extends RealtimeIndexTask
 {
   private final TaskStatus status;
 
   @JsonCreator
-  public TestRealtimeTask(
+  public TestRealtimeTaskV2(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSource") String dataSource,
@@ -53,18 +54,20 @@ public class TestRealtimeTask extends RealtimeIndexTask
         id,
         taskResource,
         new FireDepartment(
-            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null), new RealtimeIOConfig(
-            new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return null;
-          }
-        }, null
-        ), null
+            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null), 
+            new RealtimeIOConfig(
+                null, 
+                new PlumberSchool() {
+                  @Override
+                  public Plumber findPlumber(
+                    DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+                  )
+                  {
+                    return null;
+                  }
+               }, 
+               new LocalFirehoseFactoryV2(new File("lol"), "rofl", null)
+           ), null
         )
     );
     this.status = status;

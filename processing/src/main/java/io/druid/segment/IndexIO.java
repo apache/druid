@@ -201,7 +201,13 @@ public class IndexIO
     return convertSegment(toConvert, converted, indexSpec, false, true);
   }
 
-  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec, boolean forceIfCurrent, boolean validate)
+  public static boolean convertSegment(
+      File toConvert,
+      File converted,
+      IndexSpec indexSpec,
+      boolean forceIfCurrent,
+      boolean validate
+  )
       throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
@@ -253,7 +259,7 @@ public class IndexIO
       IndexableAdapter adapter2
   )
   {
-    if(rb1.getTimestamp() != rb2.getTimestamp()){
+    if (rb1.getTimestamp() != rb2.getTimestamp()) {
       throw new SegmentValidationException(
           "Timestamp mismatch. Expected %d found %d",
           rb1.getTimestamp(), rb2.getTimestamp()
@@ -852,14 +858,12 @@ public class IndexIO
       Set<String> columns = Sets.newTreeSet();
       columns.addAll(Lists.newArrayList(dims9));
       columns.addAll(Lists.newArrayList(availableMetrics));
-
       GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.STRING_STRATEGY);
 
       final String segmentBitmapSerdeFactoryString = mapper.writeValueAsString(segmentBitmapSerdeFactory);
 
       final long numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16
                             + serializerUtils.getSerializedStringByteSize(segmentBitmapSerdeFactoryString);
-
       final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
       cols.writeToChannel(writer);
       dims9.writeToChannel(writer);
@@ -970,7 +974,8 @@ public class IndexIO
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
           columns,
-          index.getFileMapper()
+          index.getFileMapper(),
+          null
       );
     }
   }
@@ -999,6 +1004,7 @@ public class IndexIO
       final GenericIndexed<String> dims = GenericIndexed.read(indexBuffer, GenericIndexed.STRING_STRATEGY);
       final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
+
       /**
        * This is a workaround for the fact that in v8 segments, we have no information about the type of bitmap
        * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
@@ -1010,6 +1016,12 @@ public class IndexIO
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
+      Object commitMetaData = null;
+      ByteBuffer metadata = smooshedFiles.mapFile("metadata.drd");
+      if (metadata != null) {
+        commitMetaData = mapper.readValue(serializerUtils.readBytes(metadata, metadata.remaining()), Object.class);
+      }
+
       Map<String, Column> columns = Maps.newHashMap();
 
       for (String columnName : cols) {
@@ -1019,7 +1031,7 @@ public class IndexIO
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time")));
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles
+          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, commitMetaData
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);

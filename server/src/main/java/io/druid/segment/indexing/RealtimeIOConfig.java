@@ -20,6 +20,7 @@ package io.druid.segment.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.FirehoseFactoryV2;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 
 /**
@@ -28,21 +29,30 @@ public class RealtimeIOConfig implements IOConfig
 {
   private final FirehoseFactory firehoseFactory;
   private final PlumberSchool plumberSchool;
+  private final FirehoseFactoryV2 firehoseFactoryV2;
 
   @JsonCreator
   public RealtimeIOConfig(
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("plumber") PlumberSchool plumberSchool
+      @JsonProperty("plumber") PlumberSchool plumberSchool,
+      @JsonProperty("firehoseV2") FirehoseFactoryV2 firehoseFactoryV2
   )
   {
     this.firehoseFactory = firehoseFactory;
     this.plumberSchool = plumberSchool;
+    this.firehoseFactoryV2 = firehoseFactoryV2;
   }
 
   @JsonProperty("firehose")
   public FirehoseFactory getFirehoseFactory()
   {
     return firehoseFactory;
+  }
+
+  @JsonProperty("firehoseV2")
+  public FirehoseFactoryV2 getFirehoseFactoryV2()
+  {
+    return firehoseFactoryV2;
   }
 
   public PlumberSchool getPlumberSchool()

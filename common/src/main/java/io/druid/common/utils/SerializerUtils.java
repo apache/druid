@@ -67,9 +67,14 @@ public class SerializerUtils
   public String readString(ByteBuffer in) throws IOException
   {
     final int length = in.getInt();
-    byte[] stringBytes = new byte[length];
-    in.get(stringBytes);
-    return new String(stringBytes, UTF8);
+    return new String(readBytes(in, length), UTF8);
+  }
+  
+  public byte[] readBytes(ByteBuffer in, int length) throws IOException
+  {
+    byte[] bytes = new byte[length];
+    in.get(bytes);
+    return bytes;
   }
 
   public void writeStrings(OutputStream out, String[] names) throws IOException
