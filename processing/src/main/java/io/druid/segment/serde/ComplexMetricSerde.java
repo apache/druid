@@ -69,4 +69,32 @@ public abstract class ComplexMetricSerde
   {
     return null;
   }
+
+  /**
+   * Converts intermediate representation of aggregate to byte[].
+   *
+   * @param val intermediate representation of aggregate
+   * @return serialized intermediate representation of aggregate in byte[]
+   */
+  public byte[] toBytes(Object val)
+  {
+    return getObjectStrategy().toBytes(val);
+  }
+
+  /**
+   * Converts byte[] to intermediate representation of the aggregate.
+   *
+   * @param byte array
+   * @param start offset in the byte array where to start reading
+   * @param numBytes number of bytes to read in given array
+   * @return intermediate representation of the aggregate
+   */
+  public Object fromBytes(byte[] data, int start, int numBytes)
+  {
+    ByteBuffer bb = ByteBuffer.wrap(data);
+    if(start > 0) {
+      bb.position(start);
+    }
+    return getObjectStrategy().fromByteBuffer(bb, numBytes);
+  }
 }

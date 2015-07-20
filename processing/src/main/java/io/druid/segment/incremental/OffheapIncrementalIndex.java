@@ -18,6 +18,7 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import io.druid.collections.ResourceHolder;
@@ -156,7 +157,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   @Override
   protected BufferAggregator[] initAggs(
       AggregatorFactory[] metrics,
-      ThreadLocal<InputRow> in,
+      Supplier<InputRow> rowSupplier,
       boolean deserializeComplexMetrics
   )
   {
@@ -164,7 +165,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
       aggs[i] = agg.factorizeBuffered(
-          makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
+          makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
       );
     }
     return aggs;
@@ -177,7 +178,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       InputRow row,
       AtomicInteger numEntries,
       TimeAndDims key,
-      ThreadLocal<InputRow> in
+      ThreadLocal<InputRow> rowContainer,
+      Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
     final BufferAggregator[] aggs = getAggs();
@@ -199,13 +201,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
       }
     }
-    in.set(row);
+    rowContainer.set(row);
     for (int i = 0; i < aggs.length; i++) {
       synchronized (aggs[i]) {
         aggs[i].aggregate(bufferHolder.get(), getMetricPosition(rowOffset, i));
       }
     }
-    in.set(null);
+    rowContainer.set(null);
     return numEntries.get();
   }
 

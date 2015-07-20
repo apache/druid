@@ -17,6 +17,7 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
@@ -112,7 +113,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   @Override
   protected Aggregator[] initAggs(
-      AggregatorFactory[] metrics, ThreadLocal<InputRow> in, boolean deserializeComplexMetrics
+      AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
   )
   {
     return new Aggregator[metrics.length];
@@ -125,7 +126,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       InputRow row,
       AtomicInteger numEntries,
       TimeAndDims key,
-      ThreadLocal<InputRow> in
+      ThreadLocal<InputRow> rowContainer,
+      Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
     final Integer priorIndex = facts.get(key);
@@ -136,10 +138,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       aggs = concurrentGet(priorIndex);
     } else {
       aggs = new Aggregator[metrics.length];
+
       for (int i = 0; i < metrics.length; i++) {
         final AggregatorFactory agg = metrics[i];
         aggs[i] = agg.factorize(
-            makeColumnSelectorFactory(agg, in, deserializeComplexMetrics)
+            makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
         );
       }
       final Integer rowIndex = indexIncrement.getAndIncrement();
@@ -162,7 +165,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    in.set(row);
+    rowContainer.set(row);
 
     for (Aggregator agg : aggs) {
       synchronized (agg) {
@@ -170,7 +173,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    in.set(null);
+    rowContainer.set(null);
 
 
     return numEntries.get();
