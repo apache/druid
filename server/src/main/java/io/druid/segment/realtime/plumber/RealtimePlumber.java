@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -88,7 +87,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -553,13 +551,7 @@ public class RealtimePlumber implements Plumber
     }
 
     if (scheduledExecutor == null) {
-      scheduledExecutor = Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder()
-              .setDaemon(true)
-              .setNameFormat("plumber_scheduled_%d")
-              .build()
-      );
+      scheduledExecutor = Execs.scheduledSingleThreaded("plumber_scheduled_%d");
     }
   }
 
@@ -741,7 +733,11 @@ public class RealtimePlumber implements Plumber
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
-    log.info("Found [%,d] segments. Attempting to hand off segments that start before [%s].", sinks.size(), minTimestampAsDate);
+    log.info(
+        "Found [%,d] segments. Attempting to hand off segments that start before [%s].",
+        sinks.size(),
+        minTimestampAsDate
+    );
 
     List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {

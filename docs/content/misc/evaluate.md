@@ -31,3 +31,20 @@ some [example specs](../configuration/production-cluster.html) for hardware for 
 The best resource to benchmark Druid is to follow the steps outlined in our [blog post](http://druid.io/blog/2014/03/17/benchmarking-druid.html) about the topic.
 The code to reproduce the results in the blog post are all open source. The blog post covers Druid queries on TPC-H data, but you should be able to customize
  configuration parameters to your data set. The blog post is a little outdated and uses an older version of Druid, but is still mostly relevant to demonstrate performance.
+
+## Colocating Druid Processes for a POC
+
+Not all Druid node processes need to run on separate machines. You can set up a small cluster with colocated processes to load several gigabytes of data.
+
+It is recommended you follow the [example production configuration](../configuration/production-cluster.html) for an actual production setup.
+
+1. node1: [Coordinator](../design/coordinator.html) + metadata store + zookeeper
+2. node2: [Broker](../design/broker.html) + [Historical](../design/historical.html)
+3. node3: [Overlord](../design/indexing-service.html)
+
+The coordination pieces (coordinator, metadata store, ZK) can be colocated on the same node. These processes do not require many resources, even for reasonably large clusters.
+ 
+The query pieces (broker + historical) can be colocated. You can add more of these nodes if your data doesn't fit on a single machine. Make sure to allocate enough heap/off-heap size to both processes.
+
+For small ingest workloads, you can run the overlord in local mode to load your data.
+

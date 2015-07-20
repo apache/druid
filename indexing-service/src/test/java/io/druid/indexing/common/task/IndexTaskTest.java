@@ -48,7 +48,9 @@ import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,16 +60,16 @@ import java.util.List;
 
 public class IndexTaskTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private final IndexSpec indexSpec = new IndexSpec();
 
   @Test
   public void testDeterminePartitions() throws Exception
   {
-    File tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
+    File tmpDir = temporaryFolder.newFolder();
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
-    tmpFile.deleteOnExit();
 
     PrintWriter writer = new PrintWriter(tmpFile);
     writer.println("2014-01-01T00:00:10Z,a,1");
@@ -130,11 +132,9 @@ public class IndexTaskTest
   @Test
   public void testWithArbitraryGranularity() throws Exception
   {
-    File tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
+    File tmpDir = temporaryFolder.newFolder();
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
-    tmpFile.deleteOnExit();
 
     PrintWriter writer = new PrintWriter(tmpFile);
     writer.println("2014-01-01T00:00:10Z,a,1");
@@ -229,7 +229,7 @@ public class IndexTaskTest
             segments.add(segment);
             return segment;
           }
-        }, null, null, null, null, null, null, null, null, null, null, null
+        }, null, null, null, null, null, null, null, null, null, null, temporaryFolder.newFolder()
         )
     );
 
@@ -239,11 +239,9 @@ public class IndexTaskTest
   @Test
   public void testIntervalBucketing() throws Exception
   {
-    File tmpDir = Files.createTempDir();
-    tmpDir.deleteOnExit();
+    File tmpDir = temporaryFolder.newFolder();
 
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
-    tmpFile.deleteOnExit();
 
     PrintWriter writer = new PrintWriter(tmpFile);
     writer.println("2015-03-01T07:59:59.977Z,a,1");

@@ -53,6 +53,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
@@ -62,6 +63,8 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
@@ -167,6 +170,28 @@ public class HadoopDruidIndexerConfig
       );
     }
     catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static HadoopDruidIndexerConfig fromDistributedFileSystem(String path)
+  {
+    try
+    {
+      Path pt = new Path(path);
+      FileSystem fs = pt.getFileSystem(new Configuration());
+      Reader reader = new InputStreamReader(fs.open(pt));
+
+      return fromMap(
+        (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
+            reader, new TypeReference<Map<String, Object>>()
+            {
+            }
+            )
+        );
+    }
+    catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
@@ -316,6 +341,14 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
   }
 
+  /**
+   * Job instance should have Configuration set (by calling {@link #addJobProperties(Job)}
+   * or via injected system properties) before this method is called.  The {@link PathSpec} may
+   * create objects which depend on the values of these configurations.
+   * @param job
+   * @return
+   * @throws IOException
+   */
   public Job addInputPaths(Job job) throws IOException
   {
     return pathSpec.addInputPaths(this, job);

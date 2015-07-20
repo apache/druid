@@ -158,8 +158,8 @@ public class IndexGeneratorJob implements Jobby
       job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
       FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
 
-      config.addInputPaths(job);
       config.addJobProperties(job);
+      config.addInputPaths(job);
 
       // hack to get druid.processing.bitmap property passed down to hadoop job.
       // once IndexIO doesn't rely on globally injected properties, we can move this into the HadoopTuningConfig.

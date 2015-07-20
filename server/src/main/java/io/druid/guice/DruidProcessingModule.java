@@ -118,7 +118,8 @@ public class DruidProcessingModule implements Module
             )
         );
       }
-    } catch(UnsupportedOperationException e) {
+    }
+    catch (UnsupportedOperationException e) {
       log.info(e.getMessage());
     }
 

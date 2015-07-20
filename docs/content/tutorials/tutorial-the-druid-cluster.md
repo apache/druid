@@ -13,35 +13,22 @@ In this tutorial, we will set up other types of Druid nodes and external depende
 
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
-You can download the latest version of druid [here](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz). You can also [Build From Source](../development/build.html) and grab the tarball from services/target/druid-0.7.1-bin.tar.gz.
+You can download the latest version of druid [here](http://druid.io/downloads.html). You can also [Build From Source](../development/build.html) and grab the tarball from services/target/druid-<version>-bin.tar.gz.
 
 Either way, once you have the tarball, untar the contents within by issuing:
 
 ```bash
-tar -zxvf druid-0.7.1-bin.tar.gz
-cd druid-0.7.1
+tar -zxvf druid-<version>-bin.tar.gz
+cd druid-<version>
 ```
 
 ## External Dependencies
+Druid requires 3 external dependencies.
+* A "deep storage" that acts as a data repository. This is generally distributed storage like HDFS or S3. For prototyping or experimentation on a single machine, Druid can use the local filesystem.
+* A "metadata storage" to hold configuration and metadata information. This is generally a small, shared database like MySQL or Postgres. For prototyping or experimentation on a single machine, Druid can use a local instance of [Apache Derby](http://db.apache.org/derby/).
+* [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
 
-Druid requires 3 external dependencies. A "deep storage" that acts as a backup data repository, a "metadata storage" such as MySQL to hold configuration and metadata information, and [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
-
-For deep storage, we will use local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, we'll be using MySQL, but other options such as PostgreSQL are also supported.
-
-#### Set up Metadata storage
-
-1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
-2. Install MySQL.
-3. Create a druid user and database.
-
-```bash
-mysql -u root
-```
-
-```sql
-GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
-CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
-```
+For deep storage, we will use the local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, Derby is used, but for production Mysql or PostgreSQL etc should be used.
 
 #### Set up Zookeeper
 
@@ -109,16 +96,10 @@ In the directory, there should be a `common.runtime.properties` file with the fo
 
 ```
 # Extensions
-druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-eight","io.druid.extensions:mysql-metadata-storage"]
+druid.extensions.coordinates=["io.druid.extensions:druid-examples","io.druid.extensions:druid-kafka-eight"]
 
 # Zookeeper
 druid.zk.service.host=localhost
-
-# Metadata Storage (mysql)
-druid.metadata.storage.type=mysql
-druid.metadata.storage.connector.connectURI=jdbc\:mysql\://localhost\:3306/druid
-druid.metadata.storage.connector.user=druid
-druid.metadata.storage.connector.password=diurd
 
 # Deep storage (local filesystem for examples - don't use this in production)
 druid.storage.type=local

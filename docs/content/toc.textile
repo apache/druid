@@ -4,18 +4,18 @@
 <link rel="stylesheet" href="css/toc.css">
 
 h2. Getting Started
-* "Concepts":./
+* "Concepts":../design/
 * "Hello, Druid":../tutorials/tutorial-a-first-look-at-druid.html
 * "Tutorials":../tutorials/index.html
 * "Evaluate Druid":../misc/evaluate.html
 
 h2. Data Ingestion
-* "Overview":../ingestion/ingestion-overview.html
+* "Overview":../ingestion/overview.html
 * "Data Formats":../ingestion/data-formats.html
 * "Data Schema":../ingestion/index.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
-* "FAQ":../ingestion/ingestion-faq.html
+* "FAQ":../ingestion/faq.html
 
 h2. Querying
 * "Overview":../querying/querying.html
@@ -32,6 +32,7 @@ h2. Querying
 ** "Post Aggregations":../querying/post-aggregations.html
 ** "Granularities":../querying/granularities.html
 ** "DimensionSpecs":../querying/dimensionspecs.html
+* "SQL":../querying/sql.html
 
 h2. Design
 * "Overview":../design/design.html

@@ -238,9 +238,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       final TopNQuery query, final MetricManipulationFn fn
   )
   {
-    final ExtractionFn extractionFn = TopNQueryEngine.canApplyExtractionInPost(query)
-                                      ? query.getDimensionSpec().getExtractionFn()
-                                      : null;
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
     {
       private String dimension = query.getDimensionSpec().getOutputName();
@@ -284,8 +281,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                       values.put(name, fn.manipulate(aggregatorFactories[i], input.getMetric(name)));
                     }
 
-                    final Object dimValue = input.getDimensionValue(dimension);
-                    values.put(dimension, extractionFn == null ? dimValue : extractionFn.apply(dimValue));
+                    values.put(dimension, input.getDimensionValue(dimension));
 
                     return values;
                   }

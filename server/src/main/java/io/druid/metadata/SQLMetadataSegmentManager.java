@@ -30,6 +30,7 @@ import com.metamx.common.MapUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
@@ -66,7 +67,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
-  private static final Logger log = new Logger(SQLMetadataSegmentManager.class);
+  private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
+
 
   private final Object lock = new Object();
 
@@ -119,7 +121,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 poll();
               }
               catch (Exception e) {
-                log.error(e, "uncaught exception in segment manager polling thread");
+                log.makeAlert(e, "uncaught exception in segment manager polling thread").emit();
+
               }
             }
           },
@@ -494,7 +497,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       }
     }
     catch (Exception e) {
-      log.error(e, "Problem polling DB.");
+      log.makeAlert(e, "Problem polling DB.").emit();
     }
   }
 

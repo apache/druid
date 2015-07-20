@@ -23,7 +23,8 @@ import com.google.inject.Provider;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class)
+    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class),
+    @JsonSubTypes.Type(name = "configFile", value = ConfigFileConfigProvider.class)
 })
 public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
 {

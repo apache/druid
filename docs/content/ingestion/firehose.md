@@ -27,6 +27,33 @@ This firehose acts as a Kafka consumer and ingests data from Kafka.
 
 This firehose ingests events from a predefined list of S3 objects.
 
+#### StaticAzureBlobStoreFirehose
+
+This firehose ingests events, similar to the StaticS3Firehose, but from an Azure Blob Store.
+
+Data is newline delimited, with one JSON object per line and parsed as per the `InputRowParser` configuration.
+
+The storage account is shared with the one used for Azure deep storage functionality, but blobs can be in a different container.
+
+As with the S3 blobstore, it is assumed to be gzipped if the extension ends in .gz
+
+Sample spec:
+```json
+"firehose" : {
+    "type" : "static-azure-blobstore",
+    "blobs": [
+        {
+          "container": "container",
+          "path": "/path/to/your/file.json"
+        },
+        {
+          "container": "anothercontainer",
+          "path": "/another/path.json"
+        }
+    ]
+}
+```
+
 #### TwitterSpritzerFirehose
 
 See [Examples](../tutorials/examples.html). This firehose connects directly to the twitter spritzer data stream.
@@ -108,7 +135,7 @@ A sample local firehose spec is shown below:
 |--------|-----------|---------|
 |type|This should be "local".|yes|
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) for more information.|yes|
-|baseDir|location of baseDirectory containing files to be ingested. |yes|
+|baseDir|directory to search recursively for files to be ingested. |yes|
 
 #### IngestSegmentFirehose
 

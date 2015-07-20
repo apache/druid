@@ -22,7 +22,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.metamx.common.CompressionUtils;
-import com.metamx.common.RetryUtils;
 import com.metamx.common.logger.Logger;
 import com.microsoft.azure.storage.StorageException;
 import io.druid.segment.SegmentUtils;
@@ -94,11 +93,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
 
   }
 
-  public <T> T retryAzureOperation(Callable<T> f, int maxTries) throws Exception
-  {
-    return RetryUtils.retry(f, AzureUtils.AZURE_RETRY, maxTries);
-  }
-
   public DataSegment uploadDataSegment(
       DataSegment segment,
       final int version,
@@ -146,7 +140,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     final Map<String, String> azurePaths = getAzurePaths(segment);
 
     try {
-      return retryAzureOperation(
+      return AzureUtils.retryAzureOperation(
           new Callable<DataSegment>()
           {
             @Override

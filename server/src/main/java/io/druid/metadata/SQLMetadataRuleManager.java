@@ -33,6 +33,7 @@ import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
@@ -67,6 +68,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @ManageLifecycle
 public class SQLMetadataRuleManager implements MetadataRuleManager
 {
+
+
   public static void createDefaultRule(
       final IDBI dbi,
       final String ruleTable,
@@ -126,7 +129,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     }
   }
 
-  private static final Logger log = new Logger(SQLMetadataRuleManager.class);
+  private static final EmittingLogger log = new EmittingLogger(SQLMetadataRuleManager.class);
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataRuleManagerConfig> config;
@@ -141,6 +144,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
   private volatile ListeningScheduledExecutorService exec = null;
   private volatile ListenableFuture<?> future = null;
+
+  private volatile long retryStartTime = 0;
 
   @Inject
   public SQLMetadataRuleManager(
@@ -287,9 +292,20 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       log.info("Polled and found rules for %,d datasource(s)", newRules.size());
 
       rules.set(newRules);
+      retryStartTime = 0;
     }
     catch (Exception e) {
-      log.error(e, "Exception while polling for rules");
+      if (retryStartTime == 0) {
+        retryStartTime = System.currentTimeMillis();
+      }
+
+      if (System.currentTimeMillis() - retryStartTime > config.get().getAlertThreshold().getMillis()) {
+        log.makeAlert(e, "Exception while polling for rules")
+           .emit();
+        retryStartTime = 0;
+      } else {
+        log.error(e, "Exception while polling for rules");
+      }
     }
   }
 

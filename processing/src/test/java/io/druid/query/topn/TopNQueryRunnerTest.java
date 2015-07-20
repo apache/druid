@@ -1610,6 +1610,134 @@ public class TopNQueryRunnerTest
     assertExpectedResults(expectedResults, query);
   }
 
+
+
+  @Test
+  public void testTopNDimExtractionFastTopNOptimalWithReplaceMissing()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new LookupExtractionFn(
+                    new MapLookupExtractor(
+                        ImmutableMap.of(
+                            "spot", "2spot0",
+                            "total_market", "1total_market0",
+                            "upfront", "3upfront0"
+                        )
+                    ), false, "MISSING", true
+                ),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "2spot0",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "1total_market0",
+                        "rows", 4L,
+                        "index", 5351.814697265625D,
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "3upfront0",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+
+  @Test
+  public void testTopNDimExtractionFastTopNUnOptimalWithReplaceMissing()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.marketDimension,
+                QueryRunnerTestHelper.marketDimension,
+                new LookupExtractionFn(
+                    new MapLookupExtractor(
+                        ImmutableMap.of(
+                            "spot", "2spot0",
+                            "total_market", "1total_market0",
+                            "upfront", "3upfront0"
+                        )
+                    ), false, "MISSING", false
+                ),
+                null
+            )
+        )
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "2spot0",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "1total_market0",
+                        "rows", 4L,
+                        "index", 5351.814697265625D,
+                        "addRowsIndexConstant", 5356.814697265625D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "3upfront0",
+                        "rows", 4L,
+                        "index", 4875.669677734375D,
+                        "addRowsIndexConstant", 4880.669677734375D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_2
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+
   @Test
   // Test a "direct" query
   public void testTopNDimExtractionFastTopNOptimal()

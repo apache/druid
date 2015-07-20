@@ -152,9 +152,9 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.connector.password`|The password to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
-|`druid.metadata.storage.tables.segmentTable`|The table to use to look for segments.|druid_segments|
-|`druid.metadata.storage.tables.ruleTable`|The table to use to look for segment load/drop rules.|druid_rules|
-|`druid.metadata.storage.tables.configTable`|The table to use to look for configs.|druid_config|
+|`druid.metadata.storage.tables.segments`|The table to use to look for segments.|druid_segments|
+|`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|druid_rules|
+|`druid.metadata.storage.tables.config`|The table to use to look for configs.|druid_config|
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|druid_tasks|
 |`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|druid_taskLog|
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|

@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
@@ -67,6 +68,7 @@ public class BrokerServerView implements TimelineServerView
   private final HttpClient httpClient;
   private final ServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
+  private final ServiceEmitter emitter;
 
   private volatile boolean initialized = false;
 
@@ -77,7 +79,8 @@ public class BrokerServerView implements TimelineServerView
       @Smile ObjectMapper smileMapper,
       @Client HttpClient httpClient,
       ServerInventoryView baseView,
-      TierSelectorStrategy tierSelectorStrategy
+      TierSelectorStrategy tierSelectorStrategy,
+      ServiceEmitter emitter
   )
   {
     this.warehouse = warehouse;
@@ -86,6 +89,7 @@ public class BrokerServerView implements TimelineServerView
     this.httpClient = httpClient;
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
+    this.emitter = emitter;
 
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
@@ -173,7 +177,7 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost());
+    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost(), emitter);
   }
 
   private QueryableDruidServer removeServer(DruidServer server)

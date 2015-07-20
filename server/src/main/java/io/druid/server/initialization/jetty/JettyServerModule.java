@@ -157,6 +157,7 @@ public class JettyServerModule extends JerseyServletModule
     final QueuedThreadPool threadPool = new QueuedThreadPool();
     threadPool.setMinThreads(config.getNumThreads());
     threadPool.setMaxThreads(config.getNumThreads());
+    threadPool.setDaemon(true);
 
     final Server server = new Server(threadPool);
 

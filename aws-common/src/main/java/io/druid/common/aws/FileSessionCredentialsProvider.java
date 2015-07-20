@@ -21,6 +21,7 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.druid.concurrent.Execs;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,10 +38,7 @@ public class FileSessionCredentialsProvider implements AWSCredentialsProvider {
   private volatile String accessKey;
   private volatile String secretKey;
 
-  private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-      new ThreadFactoryBuilder().setNameFormat("FileSessionCredentialsProviderRefresh-%d")
-          .setDaemon(true).build()
-  );
+  private final ScheduledExecutorService scheduler = Execs.scheduledSingleThreaded("FileSessionCredentialsProviderRefresh-%d");
 
   public FileSessionCredentialsProvider(String sessionCredentials) {
     this.sessionCredentials = sessionCredentials;

@@ -19,17 +19,17 @@ Clone Druid and build it:
 git clone https://github.com/druid-io/druid.git druid
 cd druid
 git fetch --tags
-git checkout druid-0.7.1
+git checkout druid-<version>
 mvn clean package
 ```
 
 ### Downloading the DSK (Druid Standalone Kit)
 
-[Download](http://static.druid.io/artifacts/releases/druid-0.7.1-bin.tar.gz) a stand-alone tarball and run it:
+[Download](http://druid.io/downloads.html) a stand-alone tarball and run it:
 
 ``` bash
-tar -xzf druid-0.7.1-bin.tar.gz
-cd druid-0.7.1
+tar -xzf druid-<version>-bin.tar.gz
+cd druid-<version>
 ```
 
 Twitter Example

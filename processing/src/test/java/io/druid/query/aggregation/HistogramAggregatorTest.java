@@ -17,12 +17,15 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class HistogramAggregatorTest
 {
@@ -30,6 +33,21 @@ public class HistogramAggregatorTest
   {
     agg.aggregate();
     selector.increment();
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
+    String json0 = "{\"type\": \"histogram\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
+    HistogramAggregatorFactory agg0 = objectMapper.readValue(json0, HistogramAggregatorFactory.class);
+    Assert.assertEquals(ImmutableList.of(), agg0.getBreaks());
+
+    String aggSpecJson = "{\"type\": \"histogram\", \"name\": \"billy\", \"fieldName\": \"nilly\", \"breaks\": [ -1, 2, 3.0 ]}";
+    HistogramAggregatorFactory agg = objectMapper.readValue(aggSpecJson, HistogramAggregatorFactory.class);
+
+    Assert.assertEquals(new HistogramAggregatorFactory("billy", "nilly", Arrays.asList(-1f, 2f, 3.0f)), agg);
+    Assert.assertEquals(agg, objectMapper.readValue(objectMapper.writeValueAsBytes(agg), HistogramAggregatorFactory.class));
   }
 
   @Test

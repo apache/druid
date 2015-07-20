@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
@@ -52,7 +51,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -118,12 +116,7 @@ public class DruidClusterBridge
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
     this.self = self;
 
-    ExecutorService serverInventoryViewExec = Executors.newFixedThreadPool(
-        1,
-        new ThreadFactoryBuilder().setDaemon(true)
-                                  .setNameFormat("DruidClusterBridge-ServerInventoryView-%d")
-                                  .build()
-    );
+    ExecutorService serverInventoryViewExec = Execs.singleThreaded("DruidClusterBridge-ServerInventoryView-%d");
 
     serverInventoryView.registerSegmentCallback(
         serverInventoryViewExec,
@@ -376,7 +369,11 @@ public class DruidClusterBridge
     }
   }
 
-  private void serverRemovedSegment(DataSegmentAnnouncer dataSegmentAnnouncer, DataSegment segment, DruidServerMetadata server)
+  private void serverRemovedSegment(
+      DataSegmentAnnouncer dataSegmentAnnouncer,
+      DataSegment segment,
+      DruidServerMetadata server
+  )
       throws IOException
   {
     Integer count = segments.get(segment);

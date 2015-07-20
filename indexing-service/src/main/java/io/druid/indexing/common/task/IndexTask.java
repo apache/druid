@@ -132,6 +132,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         config.getIndexSpec(),
         null,
         null,
+        null,
         null
     );
   }
