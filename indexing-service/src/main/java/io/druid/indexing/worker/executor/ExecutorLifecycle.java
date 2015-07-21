@@ -18,9 +18,11 @@
 package io.druid.indexing.worker.executor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.io.ByteSink;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -29,14 +31,32 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
+import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.server.DruidNode;
 
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
+import java.nio.CharBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -51,8 +71,7 @@ public class ExecutorLifecycle
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskRunner taskRunner;
   private final ObjectMapper jsonMapper;
-
-  private final ExecutorService parentMonitorExec = Execs.singleThreaded("parent-monitor-%d");
+  private final DruidNode druidNode;
 
   private volatile ListenableFuture<TaskStatus> statusFuture = null;
 
@@ -61,13 +80,15 @@ public class ExecutorLifecycle
       ExecutorLifecycleConfig config,
       TaskActionClientFactory taskActionClientFactory,
       TaskRunner taskRunner,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      @Self DruidNode druidNode
   )
   {
     this.config = config;
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
     this.jsonMapper = jsonMapper;
+    this.druidNode = druidNode;
   }
 
   @LifecycleStart
@@ -75,7 +96,21 @@ public class ExecutorLifecycle
   {
     final File taskFile = Preconditions.checkNotNull(config.getTaskFile(), "taskFile");
     final File statusFile = Preconditions.checkNotNull(config.getStatusFile(), "statusFile");
-    final InputStream parentStream = Preconditions.checkNotNull(config.getParentStream(), "parentStream");
+    final File portFile = Preconditions.checkNotNull(config.getPortFile(), "portFile");
+
+    try(final FileChannel portFileChannel = FileChannel.open(portFile.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+      final String portStr = String.format("%d", druidNode.getPort());
+      final FileLock lock = portFileChannel.lock();
+      try {
+        CharsetEncoder encoder = Charsets.UTF_8.newEncoder();
+        portFileChannel.write(encoder.encode(CharBuffer.wrap(portStr)));
+      }finally{
+        lock.release();
+      }
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
 
     final Task task;
 
@@ -90,30 +125,6 @@ public class ExecutorLifecycle
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
-
-    // Spawn monitor thread to keep a watch on parent's stdin
-    // If stdin reaches eof, the parent is gone, and we should shut down
-    parentMonitorExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              while (parentStream.read() != -1) {
-                // Toss the byte
-              }
-            }
-            catch (Exception e) {
-              log.error(e, "Failed to read from stdin");
-            }
-
-            // Kind of gross, but best way to kill the JVM as far as I know
-            log.info("Triggering JVM shutdown.");
-            System.exit(2);
-          }
-        }
-    );
 
     // Won't hurt in remote mode, and is required for setting up locks in local mode:
     try {
@@ -166,6 +177,12 @@ public class ExecutorLifecycle
   @LifecycleStop
   public void stop()
   {
-    parentMonitorExec.shutdown();
+    final File portFile = Preconditions.checkNotNull(config.getPortFile(), "portFile");
+    if(!portFile.delete())
+    {
+      log.warn("Unable to delete task port file at [%s]", portFile.toString());
+    } else {
+      log.info("Deleted port file at [%s]", portFile.toString());
+    }
   }
 }

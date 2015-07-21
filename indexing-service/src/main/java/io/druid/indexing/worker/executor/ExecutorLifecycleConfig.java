@@ -38,8 +38,9 @@ public class ExecutorLifecycleConfig
   private File statusFile = null;
 
   @JsonProperty
-  @Pattern(regexp = "\\{stdin\\}")
-  private String parentStreamName = "stdin";
+  @NotNull
+  private File portFile = null;
+
 
   public File getTaskFile()
   {
@@ -63,24 +64,14 @@ public class ExecutorLifecycleConfig
     return this;
   }
 
-  public String getParentStreamName()
+  public File getPortFile()
   {
-    return parentStreamName;
+    return portFile;
   }
 
-  public ExecutorLifecycleConfig setParentStreamName(String parentStreamName)
+  public ExecutorLifecycleConfig setPortFile(File portFile)
   {
-    this.parentStreamName = parentStreamName;
+    this.portFile = portFile;
     return this;
-  }
-
-  public InputStream getParentStream()
-  {
-   if ("stdin".equals(parentStreamName)) {
-     return System.in;
-   }
-   else {
-     throw new ISE("Unknown stream name[%s]", parentStreamName);
-   }
   }
 }

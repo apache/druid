@@ -49,6 +49,14 @@ public class ForkingTaskRunnerConfig
   @Max(65535)
   private int startPort = 8100;
 
+
+  /**
+   * This is the time (in ms) that the forking task runner should allow the task to softly shutdown before trying to forcibly kill it.
+   */
+  @JsonProperty
+  @Min(0)
+  private long softShutdownTimelimit = 30_000;
+
   @JsonProperty
   @NotNull
   List<String> allowedPrefixes = Lists.newArrayList(
@@ -84,5 +92,16 @@ public class ForkingTaskRunnerConfig
   public List<String> getAllowedPrefixes()
   {
     return allowedPrefixes;
+  }
+
+  public ForkingTaskRunnerConfig setSoftShutdownTimeLimit(@Min(0) long limit)
+  {
+    this.softShutdownTimelimit = limit;
+    return this;
+  }
+
+  public long getSoftShutdownTimelimit()
+  {
+    return softShutdownTimelimit;
   }
 }
