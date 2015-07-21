@@ -17,6 +17,8 @@
 
 package io.druid.metadata;
 
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -127,9 +129,59 @@ public class SQLMetadataRuleManagerTest
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("test_dataSource", "rules", null);
     Assert.assertEquals(1, auditEntries.size());
     AuditEntry entry = auditEntries.get(0);
-    Assert.assertEquals(mapper.writeValueAsString(rules), entry.getPayload());
+
+    Assert.assertEquals(
+        rules, mapper.readValue(
+            entry.getPayload(), new TypeReference<List<Rule>>()
+            {
+            }
+        )
+    );
     Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals("test_dataSource", entry.getKey());
+  }
+
+  @Test
+  public void testFetchAuditEntriesForAllDataSources() throws Exception
+  {
+    List<Rule> rules = Arrays.<Rule>asList(
+        new IntervalLoadRule(
+            new Interval("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        )
+    );
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    ruleManager.overrideRule(
+        "test_dataSource2",
+        rules,
+        auditInfo
+    );
+    // fetch rules from metadata storage
+    ruleManager.poll();
+
+    Assert.assertEquals(rules, ruleManager.getRules("test_dataSource"));
+    Assert.assertEquals(rules, ruleManager.getRules("test_dataSource2"));
+
+    // test fetch audit entries
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("rules", null);
+    Assert.assertEquals(2, auditEntries.size());
+    for (AuditEntry entry : auditEntries) {
+      Assert.assertEquals(
+          rules, mapper.readValue(
+              entry.getPayload(), new TypeReference<List<Rule>>()
+              {
+              }
+          )
+      );
+      Assert.assertEquals(auditInfo, entry.getAuditInfo());
+    }
   }
 
   @After
