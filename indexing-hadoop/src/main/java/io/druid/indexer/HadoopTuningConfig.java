@@ -42,6 +42,7 @@ public class HadoopTuningConfig implements TuningConfig
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
   private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
   private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
+  private static final boolean DEFAULT_USE_COMBINER = false;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -61,7 +62,8 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         false,
         DEFAULT_BUFFER_SIZE,
-        DEFAULT_AGG_BUFFER_RATIO
+        DEFAULT_AGG_BUFFER_RATIO,
+        DEFAULT_USE_COMBINER
     );
   }
 
@@ -81,6 +83,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean ingestOffheap;
   private final int bufferSize;
   private final float aggregationBufferRatio;
+  private final boolean useCombiner;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -99,7 +102,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("persistInHeap") boolean persistInHeap,
       final @JsonProperty("ingestOffheap") boolean ingestOffheap,
       final @JsonProperty("bufferSize") Integer bufferSize,
-      final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio
+      final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio,
+      final @JsonProperty("useCombiner") Boolean useCombiner
   )
   {
     this.workingPath = workingPath;
@@ -120,6 +124,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.ingestOffheap = ingestOffheap;
     this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
     this.aggregationBufferRatio = aggregationBufferRatio == null ? DEFAULT_AGG_BUFFER_RATIO : aggregationBufferRatio;
+    this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
   }
 
   @JsonProperty
@@ -216,6 +221,12 @@ public class HadoopTuningConfig implements TuningConfig
     return aggregationBufferRatio;
   }
 
+  @JsonProperty
+  public boolean getUseCombiner()
+  {
+    return useCombiner;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -234,7 +245,8 @@ public class HadoopTuningConfig implements TuningConfig
         persistInHeap,
         ingestOffheap,
         bufferSize,
-        aggregationBufferRatio
+        aggregationBufferRatio,
+        useCombiner
     );
   }
 
@@ -256,7 +268,8 @@ public class HadoopTuningConfig implements TuningConfig
         persistInHeap,
         ingestOffheap,
         bufferSize,
-        aggregationBufferRatio
+        aggregationBufferRatio,
+        useCombiner
     );
   }
 
@@ -278,7 +291,8 @@ public class HadoopTuningConfig implements TuningConfig
         persistInHeap,
         ingestOffheap,
         bufferSize,
-        aggregationBufferRatio
+        aggregationBufferRatio,
+        useCombiner
     );
   }
 }

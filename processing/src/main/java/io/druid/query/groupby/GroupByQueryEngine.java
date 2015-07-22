@@ -364,11 +364,11 @@ public class GroupByQueryEngine
         }
         cursor.advance();
       }
-      while (!cursor.isDone()) {
+      while (!cursor.isDone() && rowUpdater.getNumRows() < config.getMaxIntermediateRows()) {
         ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Ints.BYTES);
 
         unprocessedKeys = rowUpdater.updateValues(key, dimensions);
-        if (unprocessedKeys != null || rowUpdater.getNumRows() > config.getMaxIntermediateRows()) {
+        if (unprocessedKeys != null) {
           break;
         }
 

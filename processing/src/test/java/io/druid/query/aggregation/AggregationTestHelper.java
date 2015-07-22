@@ -62,6 +62,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 
 import java.io.File;
 import java.io.IOException;
@@ -156,8 +157,7 @@ public class AggregationTestHelper
   {
     StringInputRowParser parser = mapper.readValue(parserJson, StringInputRowParser.class);
 
-    CharSource cs = Files.asCharSource(inputDataFile, Charset.defaultCharset());
-    Iterator<String> iter = cs.readLines().iterator();
+    LineIterator iter = FileUtils.lineIterator(inputDataFile, "UTF-8");
 
     List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
         aggregators,
