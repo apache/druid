@@ -48,3 +48,8 @@ Community Helper Libraries
 * [housejester/druid-test-harness](https://github.com/housejester/druid-test-harness) - A set of scripts to simplify standing up some servers and seeing how things work
 * [mingfang/docker-druid](https://github.com/mingfang/docker-druid) - A Dockerfile to run the entire Druid cluster
 
+
+UIs
+---
+
+* [mistercrunch/panoramix](https://github.com/mistercrunch/panoramix) - A web application to slice, dice and visualize data out of Druid
