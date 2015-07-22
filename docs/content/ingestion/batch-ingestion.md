@@ -196,6 +196,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |cleanupOnFailure|Boolean|Cleans up intermediate files when the job fails as opposed to leaving them around for debugging.|no (default == true)|
 |overwriteFiles|Boolean|Override existing files found during indexing.|no (default == false)|
 |ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
+|useCombiner|Boolean|Use hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|a map of properties to add to the Hadoop job configuration.|no (default == null)|
 
 ### Partitioning specification
