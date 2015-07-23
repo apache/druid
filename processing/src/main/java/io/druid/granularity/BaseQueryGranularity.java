@@ -18,7 +18,6 @@
 package io.druid.granularity;
 
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -33,7 +32,7 @@ public abstract class BaseQueryGranularity extends QueryGranularity
 
   public DateTime toDateTime(long offset)
   {
-    return new DateTime(offset, DateTimeZone.UTC);
+    return new DateTime(offset);
   }
 
   public Iterable<Long> iterable(final long start, final long end)
