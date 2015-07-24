@@ -41,6 +41,7 @@ import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -54,6 +55,7 @@ import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -158,9 +160,7 @@ public class TopNQueryRunnerTest
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
-    return mergeRunner.run(
-        query, context
-    );
+    return mergeRunner.run(query, context);
   }
 
   @Test
@@ -3149,4 +3149,91 @@ public class TopNQueryRunnerTest
     );
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
   }
+
+  @Test
+  public void testTopNWithExtractionFilter()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("spot", "spot0");
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+
+    TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("rows")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(QueryRunnerTestHelper.commonAggregators)
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .filters(new ExtractionDimFilter(QueryRunnerTestHelper.marketDimension, "spot0", lookupExtractionFn, null))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        QueryRunnerTestHelper.marketDimension, "spot",
+                        "rows", 18L,
+                        "index", 2231.8768157958984D,
+                        "addRowsIndexConstant", 2250.8768157958984D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    )
+                )
+            )
+        )
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNWithExtractionFilterNoExistingValue()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("","NULL");
+
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
+    TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension("null_column")
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(Lists.newArrayList(Iterables.concat(QueryRunnerTestHelper.commonAggregators, Lists.newArrayList(
+                new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                    extractionFilter),
+                //new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                new DoubleMinAggregatorFactory("minIndex", "index")))))
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant));
+    TopNQuery topNQueryWithNULLValueExtraction = topNQueryBuilder
+        .filters(extractionFilter)
+        .build();
+
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("null_column", null);
+    map.put("rows", 1209L);
+    map.put("index", 503332.5071372986D);
+    map.put("addRowsIndexConstant", 504542.5071372986D);
+    map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+    map.put("maxIndex", 1870.06103515625D);
+    map.put("minIndex", 59.02102279663086D);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    map
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, topNQueryWithNULLValueExtraction);
+  }
+
 }

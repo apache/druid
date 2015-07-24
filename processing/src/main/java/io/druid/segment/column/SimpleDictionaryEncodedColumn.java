@@ -17,6 +17,7 @@
 
 package io.druid.segment.column;
 
+import com.google.common.base.Strings;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
@@ -71,7 +72,7 @@ public class SimpleDictionaryEncodedColumn
   @Override
   public String lookupName(int id)
   {
-    return cachedLookups.get(id);
+    return Strings.emptyToNull(cachedLookups.get(id));
   }
 
   @Override

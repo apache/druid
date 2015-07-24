@@ -17,17 +17,19 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.WrappedImmutableConciseBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.Indexed;
-import it.uniroma3.mat.extendedset.intset.ImmutableConciseSet;
+import io.druid.segment.data.IndexedInts;
 
 import java.util.List;
 
@@ -54,15 +56,20 @@ public class ExtractionFilter implements Filter
   {
     final Indexed<String> allDimVals = selector.getDimensionValues(dimension);
     final List<Filter> filters = Lists.newArrayList();
-    if (allDimVals != null) {
-      for (int i = 0; i < allDimVals.size(); i++) {
+    if (allDimVals != null)
+    {
+      for (int i = 0; i < allDimVals.size(); i++)
+      {
         String dimVal = allDimVals.get(i);
-        if (value.equals(fn.apply(dimVal))) {
+        if (value.equals(fn.apply(dimVal)))
+        {
           filters.add(new SelectorFilter(dimension, dimVal));
         }
       }
+    } else if (value.equals(fn.apply(null)))
+    {
+      filters.add(new SelectorFilter(dimension, null));
     }
-
     return filters;
   }
 
@@ -79,13 +86,39 @@ public class ExtractionFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    throw new UnsupportedOperationException();
+    return factory.makeValueMatcher(dimension, new Predicate<String>()
+    {
+      @Override public boolean apply(String input)
+      {
+        // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
+        return value.equals(fn.apply(Strings.emptyToNull(input)));
+      }
+    });
   }
 
   @Override
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory)
   {
-    throw new UnsupportedOperationException();
+    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension, null);
+    if (dimensionSelector == null) {
+      return new BooleanValueMatcher(Strings.isNullOrEmpty(fn.apply(value)));
+    } else {
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          final IndexedInts row = dimensionSelector.getRow();
+          final int size = row.size();
+          for (int i = 0; i < size; ++i) {
+            if (value.equals(fn.apply(dimensionSelector.lookupName(row.get(i))))) {
+              return true;
+            }
+          }
+          return false;
+        }
+      };
+    }
   }
 
 }
