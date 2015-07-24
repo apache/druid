@@ -20,6 +20,12 @@ If you are trying to batch load historical data but no events are being loaded, 
 
 Druid can ingest JSON, CSV, TSV and other delimited data out of the box. Druid supports single dimension values, or multiple dimension values (an array of strings). Druid supports long and float numeric columns.
 
+## Not all of my events were ingested
+
+Druid will reject events outside of a window period. The best way to see if events are being rejected is to check the [Druid ingest metrics](../operations/metrics.html).
+
+If the number of ingested events seem correct, make sure your query is correctly formed. If you included a `count` aggregator in your ingestion spec, you will need to query for the results of this aggregate with a `longSum` aggregator. Issuing a query with a count aggregator will count the number of Druid rows, which includes [roll-up](../design/index.html).
+
 ## Where do my Druid segments end up after ingestion?
 
 Depending on what `druid.storage.type` is set to, Druid will upload segments to some [Deep Storage](../dependencies/deep-storage.html). Local disk is used as the default deep storage.

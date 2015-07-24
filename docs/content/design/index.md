@@ -4,7 +4,7 @@ layout: doc_page
 
 # Druid Concepts
 
-Druid is an open source data store designed for [OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing) queries on time-series data.
+Druid is an open source data store designed for [OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing) queries on event data.
 This page is meant to provide readers with a high level overview of how Druid stores data, and the architecture of a Druid cluster.
 
 ## The Data
