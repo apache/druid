@@ -13,6 +13,7 @@ h2. Data Ingestion
 * "Overview":../ingestion/overview.html
 * "Data Formats":../ingestion/data-formats.html
 * "Data Schema":../ingestion/index.html
+* "Schema Design":../ingestion/schema-design.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
 * "FAQ":../ingestion/faq.html
@@ -27,11 +28,13 @@ h2. Querying
 * "DataSource Metadata":../querying/datasourcemetadataquery.html
 * "Search":../querying/searchquery.html
 * Components
+** "Datasources":../querying/datasource.html
 ** "Filters":../querying/filters.html
 ** "Aggregations":../querying/aggregations.html
 ** "Post Aggregations":../querying/post-aggregations.html
 ** "Granularities":../querying/granularities.html
 ** "DimensionSpecs":../querying/dimensionspecs.html
+** "Context":../querying/query-context.html
 * "SQL":../querying/sql.html
 
 h2. Design
