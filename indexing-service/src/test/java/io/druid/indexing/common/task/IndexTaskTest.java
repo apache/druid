@@ -18,7 +18,6 @@
 package io.druid.indexing.common.task;
 
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -308,7 +307,11 @@ public class IndexTaskTest
         null,
         new IndexSpec()
     );
-    RealtimeTuningConfig realtimeTuningConfig = IndexTask.convertTuningConfig(spec, config);
+    RealtimeTuningConfig realtimeTuningConfig = IndexTask.convertTuningConfig(
+        spec,
+        config.getRowFlushBoundary(),
+        config.getIndexSpec()
+    );
     Assert.assertEquals(realtimeTuningConfig.getMaxRowsInMemory(), config.getRowFlushBoundary());
     Assert.assertEquals(realtimeTuningConfig.getShardSpec(), spec);
     Assert.assertEquals(realtimeTuningConfig.getIndexSpec(), indexSpec);

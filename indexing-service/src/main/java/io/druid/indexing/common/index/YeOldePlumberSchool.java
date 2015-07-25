@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -106,17 +107,23 @@ public class YeOldePlumberSchool implements PlumberSchool
       }
 
       @Override
-      public int add(InputRow row) throws IndexSizeExceededException
+      public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
       {
         Sink sink = getSink(row.getTimestampFromEpoch());
         if (sink == null) {
           return -1;
         }
 
-        return sink.add(row);
+        final int numRows = sink.add(row);
+
+        if (!sink.canAppendRow()) {
+          persist(committerSupplier.get());
+        }
+
+        return numRows;
       }
 
-      public Sink getSink(long timestamp)
+      private Sink getSink(long timestamp)
       {
         if (theSink.getInterval().contains(timestamp)) {
           return theSink;
@@ -132,10 +139,10 @@ public class YeOldePlumberSchool implements PlumberSchool
       }
 
       @Override
-      public void persist(Runnable commitRunnable)
+      public void persist(Committer committer)
       {
         spillIfSwappable();
-        commitRunnable.run();
+        committer.run();
       }
 
       @Override
@@ -228,12 +235,6 @@ public class YeOldePlumberSchool implements PlumberSchool
       private File getSpillDir(final int n)
       {
         return new File(persistDir, String.format("spill%d", n));
-      }
-
-      @Override
-      public void persist(Committer commitRunnable)
-      {
-        persist(commitRunnable);
       }
     };
   }
