@@ -44,7 +44,13 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{root, new DefaultHandler()});
+    handlerList.setHandlers(
+        new Handler[]{
+            JettyServerInitUtils.getJettyRequestLogHandler(),
+            root,
+            new DefaultHandler()
+        }
+    );
     server.setHandler(handlerList);
   }
 }

@@ -45,7 +45,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{root});
+    handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
     server.setHandler(handlerList);
   }
 }
