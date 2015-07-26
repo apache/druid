@@ -93,7 +93,7 @@ If `type` is not included, the parser defaults to `string`.
 
 ### ParseSpec
 
-If `type` is not included, the parseSpec defaults to `tsv`.
+If `format` is not included, the parseSpec defaults to `tsv`.
 
 #### JSON ParseSpec
 
