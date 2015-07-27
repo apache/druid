@@ -178,8 +178,7 @@ This can be used to merge data from more than one firehoses.
 
 
 #### EventReceiverFirehose
-EventReceiverFirehoseFactory can be used to ingest events using http endpoint.
-when using this firehose `druid.realtime.chathandler.type` needs to be set to `announce` in runtime.properties.
+EventReceiverFirehoseFactory can be used to ingest events using an http endpoint.
 
 ```json
 {
@@ -188,7 +187,7 @@ when using this firehose `druid.realtime.chathandler.type` needs to be set to `a
   "bufferSize": 10000
 }
 ```
-when using above firehose the events can be sent via submitting a POST request to the http endpoint -
+When using this firehose, events can be sent by submitting a POST request to the http endpoint -
 `http://<peonHost>:<port>/druid/worker/v1/chat/<eventReceiverServiceName>/push-events/`
 
 |property|description|required?|
