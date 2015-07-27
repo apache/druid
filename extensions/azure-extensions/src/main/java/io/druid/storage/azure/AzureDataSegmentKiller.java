@@ -56,8 +56,11 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     try {
       azureStorage.emptyCloudBlobDirectory(containerName, dirPath);
     }
-    catch (StorageException | URISyntaxException e) {
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]", segment.getIdentifier());
+    catch(StorageException e){
+      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e.getExtendedErrorInformation() == null ? null : e.getExtendedErrorInformation().getErrorMessage());
+    }
+    catch (URISyntaxException e) {
+      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e.getReason());
     }
   }
 
