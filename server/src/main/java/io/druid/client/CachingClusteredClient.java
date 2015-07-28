@@ -27,7 +27,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -37,7 +36,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.LazySequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -64,11 +62,8 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
-import org.joda.time.Interval;
-
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +72,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import org.joda.time.Interval;
 
 /**
  */
@@ -491,36 +487,21 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       return Sequences.empty();
     }
 
-    Collections.sort(
-        sequencesByInterval,
-        Ordering.from(Comparators.intervalsByStartThenEnd()).onResultOf(Pair.<Interval, Sequence<T>>lhsFn())
+    return toolChest.mergeSequencesUnordered(
+        Sequences.simple(
+            Lists.transform(
+                sequencesByInterval,
+                new Function<Pair<Interval, Sequence<T>>, Sequence<T>>()
+                {
+                  @Override
+                  public Sequence<T> apply(Pair<Interval, Sequence<T>> input)
+                  {
+                    return input.rhs;
+                  }
+                }
+            )
+        )
     );
-
-    // result sequences from overlapping intervals could start anywhere within that interval
-    // therefore we cannot assume any ordering with respect to the first result from each
-    // and must resort to calling toolchest.mergeSequencesUnordered for those.
-    Iterator<Pair<Interval, Sequence<T>>> iterator = sequencesByInterval.iterator();
-    Pair<Interval, Sequence<T>> current = iterator.next();
-
-    final List<Sequence<T>> orderedSequences = Lists.newLinkedList();
-    List<Sequence<T>> unordered = Lists.newLinkedList();
-
-    unordered.add(current.rhs);
-
-    while (iterator.hasNext()) {
-      Pair<Interval, Sequence<T>> next = iterator.next();
-      if (!next.lhs.overlaps(current.lhs)) {
-        orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
-        unordered = Lists.newLinkedList();
-      }
-      unordered.add(next.rhs);
-      current = next;
-    }
-    if (!unordered.isEmpty()) {
-      orderedSequences.add(toolChest.mergeSequencesUnordered(Sequences.simple(unordered)));
-    }
-
-    return toolChest.mergeSequencesUnordered(Sequences.simple(orderedSequences));
   }
 
   private static class CachePopulator
