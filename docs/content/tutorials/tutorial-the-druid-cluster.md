@@ -43,6 +43,20 @@ cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 cd ..
 ```
+#### Setting up Metadata Store (MySQL)
+
+1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
+2. Install MySQL.
+3. Create a druid user and database.
+
+```bash
+mysql -u root
+```
+
+```sql
+GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
+CREATE database druid;
+```
 
 ## The Data
 
