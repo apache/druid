@@ -100,7 +100,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/status/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{root});
+    handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
     server.setHandler(handlerList);
   }
 }

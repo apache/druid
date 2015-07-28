@@ -77,8 +77,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
     root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");
+
     HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{root});
+    handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
 
     server.setHandler(handlerList);
   }

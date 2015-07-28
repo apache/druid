@@ -76,11 +76,13 @@ The following path is used for service discovery. It is **not** affected by `dru
 
 ### Request Logging
 
-All nodes that can serve queries can also log the requests they see.
+All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter. How to log every request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter. How to log every query request.|noop|
+
+Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
 #### File Request Logging
 
