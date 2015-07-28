@@ -23,8 +23,10 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.common.aws.AWSCredentialsUtils;
+import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -70,7 +72,14 @@ public class S3StorageDruidModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
-
+    MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
+             .addBinding("s3")
+             .to(S3TimestampVersionedDataFinder.class)
+             .in(LazySingleton.class);
+    MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
+             .addBinding("s3n")
+             .to(S3TimestampVersionedDataFinder.class)
+             .in(LazySingleton.class);
     Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(S3DataSegmentPuller.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(S3DataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME).to(S3DataSegmentMover.class).in(LazySingleton.class);
