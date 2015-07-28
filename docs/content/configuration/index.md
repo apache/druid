@@ -215,18 +215,20 @@ This deep storage is used to interface with Cassandra.
 
 ### Caching
 
-If you are using a distributed cache such as memcached, you can include the configuration here.
+You can enable caching of results at the broker/historical using following configurations.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.(broker/historical).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.(broker/historical).cache.useCache`|Whether to use cache for getting query results.|false|
+|`druid.(broker/historical).cache.populateCache`|Whether to populate cache.|false|
 
 #### Local Cache
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
+|`druid.cache.sizeInBytes`|Maximum cache size in bytes. You must set this if you enabled populateCache/useCache, or else cache size of zero wouldn't really cache anything.|0|
 |`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
 |`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 
