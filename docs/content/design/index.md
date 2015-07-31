@@ -118,7 +118,7 @@ Druid has a couple of external dependencies for cluster operations.
 
 * **Metadata Storage** Druid relies on a metadata storage to store metadata about segments and configuration. Services that create segments write new entries to the metadata store
   and the coordinator nodes monitor the metadata store to know when new data needs to be loaded or old data needs to be dropped. The metadata store is not
-  involved in the query path. MySQL and PostgreSQL are popular metadata stores.
+  involved in the query path. MySQL and PostgreSQL are popular metadata stores for production, but Derby can be used for experimentation when you are running all druid nodes on a single machine.
 
 * **Deep Storage** Deep storage acts as a permanent backup of segments. Services that create segments upload segments to deep storage and historical nodes download
 segments from deep storage. Deep storage is not involved in the query path. S3 and HDFS are popular deep storages.
