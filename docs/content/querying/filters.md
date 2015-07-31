@@ -84,7 +84,7 @@ The following matches any dimension values for the dimension `name` between `'ba
 ### Extraction filter
 
 Extraction filter matches a dimension using some specific [Extraction function](./dimensionspecs.html#extraction-functions).
-The filter matches the values for which the extraction function has transformation entry `input_key=output_value` where
+The following filter matches the values for which the extraction function has transformation entry `input_key=output_value` where
  `output_value` is equal to the filter `value` and `input_key` is present as dimension.
 
 **Example**

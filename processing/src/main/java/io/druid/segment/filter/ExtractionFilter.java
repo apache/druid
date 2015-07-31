@@ -41,11 +41,7 @@ public class ExtractionFilter implements Filter
   private final String value;
   private final ExtractionFn fn;
 
-  public ExtractionFilter(
-      String dimension,
-      String value,
-      ExtractionFn fn
-  )
+  public ExtractionFilter(String dimension, String value, ExtractionFn fn)
   {
     this.dimension = dimension;
     this.value = value;
@@ -56,18 +52,14 @@ public class ExtractionFilter implements Filter
   {
     final Indexed<String> allDimVals = selector.getDimensionValues(dimension);
     final List<Filter> filters = Lists.newArrayList();
-    if (allDimVals != null)
-    {
-      for (int i = 0; i < allDimVals.size(); i++)
-      {
+    if (allDimVals != null) {
+      for (int i = 0; i < allDimVals.size(); i++) {
         String dimVal = allDimVals.get(i);
-        if (value.equals(fn.apply(dimVal)))
-        {
+        if (value.equals(Strings.nullToEmpty(fn.apply(dimVal)))) {
           filters.add(new SelectorFilter(dimension, dimVal));
         }
       }
-    } else if (value.equals(fn.apply(null)))
-    {
+    } else if (value.equals(Strings.nullToEmpty(fn.apply(null)))) {
       filters.add(new SelectorFilter(dimension, null));
     }
     return filters;
@@ -86,14 +78,17 @@ public class ExtractionFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(dimension, new Predicate<String>()
-    {
-      @Override public boolean apply(String input)
-      {
-        // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
-        return value.equals(fn.apply(Strings.emptyToNull(input)));
-      }
-    });
+    return factory.makeValueMatcher(
+        dimension, new Predicate<String>()
+        {
+          @Override
+          public boolean apply(String input)
+          {
+            // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
+            return value.equals(Strings.nullToEmpty(fn.apply(Strings.emptyToNull(input))));
+          }
+        }
+    );
   }
 
   @Override
@@ -101,7 +96,7 @@ public class ExtractionFilter implements Filter
   {
     final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension, null);
     if (dimensionSelector == null) {
-      return new BooleanValueMatcher(Strings.isNullOrEmpty(fn.apply(value)));
+      return new BooleanValueMatcher(value.equals(Strings.nullToEmpty(fn.apply(null))));
     } else {
       return new ValueMatcher()
       {
@@ -111,7 +106,7 @@ public class ExtractionFilter implements Filter
           final IndexedInts row = dimensionSelector.getRow();
           final int size = row.size();
           for (int i = 0; i < size; ++i) {
-            if (value.equals(fn.apply(dimensionSelector.lookupName(row.get(i))))) {
+            if (value.equals(Strings.nullToEmpty(fn.apply(dimensionSelector.lookupName(row.get(i)))))) {
               return true;
             }
           }

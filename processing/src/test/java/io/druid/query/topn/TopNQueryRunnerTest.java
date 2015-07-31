@@ -1611,7 +1611,6 @@ public class TopNQueryRunnerTest
   }
 
 
-
   @Test
   public void testTopNDimExtractionFastTopNOptimalWithReplaceMissing()
   {
@@ -3119,8 +3118,10 @@ public class TopNQueryRunnerTest
     );
     assertExpectedResults(expectedResults, query);
   }
+
   @Test
-  public void testAlphaNumericTopNWithNullPreviousStop(){
+  public void testAlphaNumericTopNWithNullPreviousStop()
+  {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryGranularity.ALL)
@@ -3159,15 +3160,22 @@ public class TopNQueryRunnerTest
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
 
     TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric("rows")
-        .threshold(3)
-        .intervals(QueryRunnerTestHelper.firstToThird)
-        .aggregators(QueryRunnerTestHelper.commonAggregators)
-        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-        .filters(new ExtractionDimFilter(QueryRunnerTestHelper.marketDimension, "spot0", lookupExtractionFn, null))
-        .build();
+                                            .granularity(QueryRunnerTestHelper.allGran)
+                                            .dimension(QueryRunnerTestHelper.marketDimension)
+                                            .metric("rows")
+                                            .threshold(3)
+                                            .intervals(QueryRunnerTestHelper.firstToThird)
+                                            .aggregators(QueryRunnerTestHelper.commonAggregators)
+                                            .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                            .filters(
+                                                new ExtractionDimFilter(
+                                                    QueryRunnerTestHelper.marketDimension,
+                                                    "spot0",
+                                                    lookupExtractionFn,
+                                                    null
+                                                )
+                                            )
+                                            .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
@@ -3190,10 +3198,10 @@ public class TopNQueryRunnerTest
   }
 
   @Test
-  public void testTopNWithExtractionFilterNoExistingValue()
+  public void testTopNWithExtractionFilterAndFilteredAggregatorCaseNoExistingValue()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("","NULL");
+    extractionMap.put("", "NULL");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
@@ -3205,11 +3213,19 @@ public class TopNQueryRunnerTest
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(Lists.newArrayList(Iterables.concat(QueryRunnerTestHelper.commonAggregators, Lists.newArrayList(
-                new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                    extractionFilter),
-                //new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                new DoubleMinAggregatorFactory("minIndex", "index")))))
+        .aggregators(
+            Lists.newArrayList(
+                Iterables.concat(
+                    QueryRunnerTestHelper.commonAggregators, Lists.newArrayList(
+                        new FilteredAggregatorFactory(
+                            new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                            extractionFilter
+                        ),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant));
     TopNQuery topNQueryWithNULLValueExtraction = topNQueryBuilder
         .filters(extractionFilter)
