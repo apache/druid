@@ -358,8 +358,6 @@ public class BrokerServerViewTest extends CuratorTestBase
       }
     };
 
-    baseView.start();
-
     brokerServerView = new BrokerServerView(
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),
@@ -369,6 +367,8 @@ public class BrokerServerViewTest extends CuratorTestBase
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter()
     );
+
+    baseView.start();
   }
 
   private void setupZNodeForServer(DruidServer server) throws Exception
