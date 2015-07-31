@@ -1,39 +1,37 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.firehose.kafka;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.net.HostAndPort;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import kafka.api.FetchRequest;
 import kafka.api.FetchRequestBuilder;
 import kafka.api.PartitionOffsetRequestInfo;
-import kafka.javaapi.FetchResponse;
 import kafka.cluster.Broker;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
+import kafka.javaapi.FetchResponse;
 import kafka.javaapi.OffsetRequest;
 import kafka.javaapi.OffsetResponse;
 import kafka.javaapi.PartitionMetadata;
@@ -43,11 +41,16 @@ import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- * refer @{link
- * https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer
- * +Example}
- * <p/>
+ * refer @{link https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example}
+ * <p>
  * This class is not thread safe, the caller must ensure all the methods be
  * called from single thread
  */
@@ -58,7 +61,7 @@ public class KafkaSimpleConsumer
 
   private static final Logger log = new Logger(KafkaSimpleConsumer.class);
 
-  private final List<KafkaBroker> allBrokers;
+  private final List<HostAndPort> allBrokers;
   private final String topic;
   private final int partitionId;
   private final String clientId;
@@ -66,7 +69,7 @@ public class KafkaSimpleConsumer
   private final boolean earliest;
 
   private volatile Broker leaderBroker;
-  private List<KafkaBroker> replicaBrokers;
+  private List<HostAndPort> replicaBrokers;
   private SimpleConsumer consumer = null;
 
   private static final int SO_TIMEOUT = 30000;
@@ -76,21 +79,17 @@ public class KafkaSimpleConsumer
 
   public KafkaSimpleConsumer(String topic, int partitionId, String clientId, List<String> brokers, boolean earliest)
   {
-    List<KafkaBroker> brokerList = new ArrayList<KafkaBroker>();
+    List<HostAndPort> brokerList = new ArrayList<>();
     for (String broker : brokers) {
-      String[] tokens = broker.split(":");
-      if (tokens.length != 2) {
-        log.warn("wrong broker name [%s], its format should be host:port", broker);
-        continue;
-      }
-
-      try {
-        brokerList.add(new KafkaBroker(tokens[0], Integer.parseInt(tokens[1])));
-      }
-      catch (NumberFormatException e) {
-        log.warn("wrong broker name [%s], its format should be host:port", broker);
-        continue;
-      }
+      HostAndPort brokerHostAndPort = HostAndPort.fromString(broker);
+      Preconditions.checkArgument(
+          brokerHostAndPort.getHostText() != null &&
+          !brokerHostAndPort.getHostText().isEmpty() &&
+          brokerHostAndPort.hasPort(),
+          "kafka broker [%s] is not valid, must be <host>:<port>",
+          broker
+      );
+      brokerList.add(brokerHostAndPort);
     }
 
     this.allBrokers = Collections.unmodifiableList(brokerList);
@@ -101,7 +100,11 @@ public class KafkaSimpleConsumer
     this.replicaBrokers = new ArrayList<>();
     this.replicaBrokers.addAll(this.allBrokers);
     this.earliest = earliest;
-    log.info("KafkaSimpleConsumer initialized with clientId [%s] for message consumption and clientId [%s] for leader lookup", this.clientId, this.leaderLookupClientId);
+    log.info(
+        "KafkaSimpleConsumer initialized with clientId [%s] for message consumption and clientId [%s] for leader lookup",
+        this.clientId,
+        this.leaderLookupClientId
+    );
   }
 
   private void ensureConsumer(Broker leader) throws InterruptedException
@@ -147,24 +150,6 @@ public class KafkaSimpleConsumer
     public long offset()
     {
       return offset;
-    }
-  }
-
-  static class KafkaBroker
-  {
-    final String host;
-    final int port;
-
-    KafkaBroker(String host, int port)
-    {
-      this.host = host;
-      this.port = port;
-    }
-
-    @Override
-    public String toString()
-    {
-      return String.format("%s:%d", host, port);
     }
   }
 
@@ -265,7 +250,7 @@ public class KafkaSimpleConsumer
         if (errorCode == ErrorMapping.RequestTimedOutCode()) {
           log.info("kafka request timed out, response[%s]", response);
         } else if (errorCode == ErrorMapping.OffsetOutOfRangeCode()) {
-        	long newOffset = getOffset(earliest);
+          long newOffset = getOffset(earliest);
           log.info("got [%s] offset[%s] for [%s][%s]", earliest ? "earliest" : "latest", newOffset, topic, partitionId);
           if (newOffset < 0) {
             needNewLeader = true;
@@ -307,7 +292,6 @@ public class KafkaSimpleConsumer
     }
   }
 
-  // stop the consumer
   public void stop()
   {
     stopConsumer();
@@ -316,11 +300,11 @@ public class KafkaSimpleConsumer
 
   private PartitionMetadata findLeader() throws InterruptedException
   {
-    for (KafkaBroker broker : replicaBrokers) {
+    for (HostAndPort broker : replicaBrokers) {
       SimpleConsumer consumer = null;
       try {
-        log.info("Finding new leader from Kafka brokers, try broker %s:%s", broker.host, broker.port);
-        consumer = new SimpleConsumer(broker.host, broker.port, SO_TIMEOUT, BUFFER_SIZE, leaderLookupClientId);
+        log.info("Finding new leader from Kafka brokers, try broker [%s]", broker.toString());
+        consumer = new SimpleConsumer(broker.getHostText(), broker.getPort(), SO_TIMEOUT, BUFFER_SIZE, leaderLookupClientId);
         TopicMetadataResponse resp = consumer.send(new TopicMetadataRequest(Collections.singletonList(topic)));
 
         List<TopicMetadata> metaData = resp.topicsMetadata();
@@ -358,7 +342,9 @@ public class KafkaSimpleConsumer
       if (metadata != null) {
         replicaBrokers.clear();
         for (Broker replica : metadata.replicas()) {
-          replicaBrokers.add(new KafkaBroker(replica.host(), replica.port()));
+          replicaBrokers.add(
+              HostAndPort.fromParts(replica.host(), replica.port())
+          );
         }
 
         log.debug("Got new Kafka leader metadata : [%s], previous leader : [%s]", metadata, oldLeader);
@@ -385,7 +371,8 @@ public class KafkaSimpleConsumer
     }
   }
 
-  private boolean isValidNewLeader(Broker broker) {
+  private boolean isValidNewLeader(Broker broker)
+  {
     // broker is considered valid new leader if it is not the same as old leaderBroker
     return !(leaderBroker.host().equalsIgnoreCase(broker.host()) && leaderBroker.port() == broker.port());
   }
@@ -393,7 +380,7 @@ public class KafkaSimpleConsumer
   private void ensureNotInterrupted(Exception e) throws InterruptedException
   {
     if (Thread.interrupted()) {
-      log.info(e, "Interrupted during fetching for %s - %s", topic, partitionId);
+      log.error(e, "Interrupted during fetching for %s - %s", topic, partitionId);
       throw new InterruptedException();
     }
   }

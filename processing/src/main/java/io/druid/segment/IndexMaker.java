@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment;
 
@@ -115,9 +117,14 @@ public class IndexMaker
     mapper = injector.getInstance(ObjectMapper.class);
   }
 
-  public static File persist(final IncrementalIndex index, File outDir, final Object commitMetaData, final IndexSpec indexSpec) throws IOException
+  public static File persist(
+      final IncrementalIndex index,
+      File outDir,
+      final Map<String, Object> segmentMetadata,
+      final IndexSpec indexSpec
+  ) throws IOException
   {
-    return persist(index, index.getInterval(), outDir, commitMetaData, indexSpec);
+    return persist(index, index.getInterval(), outDir, segmentMetadata, indexSpec);
   }
 
   /**
@@ -134,12 +141,12 @@ public class IndexMaker
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
-      final Object commitMetaData,
+      final Map<String, Object> segmentMetadata,
       final IndexSpec indexSpec
   ) throws IOException
   {
     return persist(
-        index, dataInterval, outDir, commitMetaData, indexSpec, new LoggingProgressIndicator(outDir.toString())
+        index, dataInterval, outDir, segmentMetadata, indexSpec, new LoggingProgressIndicator(outDir.toString())
     );
   }
 
@@ -147,7 +154,7 @@ public class IndexMaker
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
-      final Object commitMetaData,
+      final Map<String, Object> segmentMetadata,
       final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -185,7 +192,7 @@ public class IndexMaker
         ),
         index.getMetricAggs(),
         outDir,
-        commitMetaData,
+        segmentMetadata,
         indexSpec,
         progress
     );
@@ -227,11 +234,11 @@ public class IndexMaker
   }
 
   public static File merge(
-      List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir, final String commitMetaData, final IndexSpec indexSpec
+      List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir, final IndexSpec indexSpec
   ) throws IOException
   {
     return merge(
-        adapters, metricAggs, outDir, commitMetaData, indexSpec, new LoggingProgressIndicator(outDir.toString())
+        adapters, metricAggs, outDir, null, indexSpec, new LoggingProgressIndicator(outDir.toString())
     );
   }
 
@@ -239,7 +246,7 @@ public class IndexMaker
       List<IndexableAdapter> adapters,
       final AggregatorFactory[] metricAggs,
       File outDir,
-      final Object commitMetaData,
+      final Map<String, Object> segmentMetaData,
       final IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -330,7 +337,7 @@ public class IndexMaker
     };
 
     return makeIndexFiles(
-        adapters, outDir, progress, mergedDimensions, mergedMetrics, commitMetaData, rowMergerFn, indexSpec
+        adapters, outDir, progress, mergedDimensions, mergedMetrics, segmentMetaData, rowMergerFn, indexSpec
     );
   }
 
@@ -352,7 +359,7 @@ public class IndexMaker
           progress,
           Lists.newArrayList(adapter.getDimensionNames()),
           Lists.newArrayList(adapter.getMetricNames()),
-          adapter.getMetaData(),
+          null,
           new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
           {
             @Nullable
@@ -367,20 +374,18 @@ public class IndexMaker
     }
   }
 
-
   public static File append(
       final List<IndexableAdapter> adapters,
       final File outDir,
       final IndexSpec indexSpec
   ) throws IOException
   {
-    return append(adapters, outDir, null, new LoggingProgressIndicator(outDir.toString()), indexSpec);
+    return append(adapters, outDir, new LoggingProgressIndicator(outDir.toString()), indexSpec);
   }
 
   public static File append(
       final List<IndexableAdapter> adapters,
       final File outDir,
-      final String commitMetaData,
       final ProgressIndicator progress,
       final IndexSpec indexSpec
   ) throws IOException
@@ -451,7 +456,7 @@ public class IndexMaker
       }
     };
 
-    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, commitMetaData, rowMergerFn, indexSpec);
+    return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
   }
 
   private static File makeIndexFiles(
@@ -460,7 +465,7 @@ public class IndexMaker
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
-      final Object commitMetaData,
+      final Map<String, Object> segmentMetadata,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
       final IndexSpec indexSpec
   ) throws IOException
@@ -556,7 +561,7 @@ public class IndexMaker
     makeIndexBinary(
         v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, skippedDimensions, progress, indexSpec
     );
-    makeMetadataBinary(v9Smoosher, progress, commitMetaData);
+    makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
     v9Smoosher.close();
 
@@ -1404,7 +1409,7 @@ public class IndexMaker
                           + 16
                           + serializerUtils.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
-    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);    
+    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
     cols.writeToChannel(writer);
     dims.writeToChannel(writer);
 
@@ -1433,14 +1438,14 @@ public class IndexMaker
   private static void makeMetadataBinary(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
-      final Object commitMetadata
+      final Map<String, Object> segmentMetadata
   ) throws IOException
   {
-    progress.startSection("metadata.drd");
-    if (commitMetadata != null) {
-      v9Smoosher.add("metadata.drd", ByteBuffer.wrap(mapper.writeValueAsBytes(commitMetadata)));
+    if (segmentMetadata != null && !segmentMetadata.isEmpty()) {
+      progress.startSection("metadata.drd");
+      v9Smoosher.add("metadata.drd", ByteBuffer.wrap(mapper.writeValueAsBytes(segmentMetadata)));
+      progress.stopSection("metadata.drd");
     }
-    progress.stopSection("metadata.drd");
   }
 
   private static void writeColumn(

@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment.realtime;
 
@@ -22,11 +24,11 @@ import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.parsers.ParseException;
+import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.Committer;
-import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.FirehoseFactoryV2;
+import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
@@ -44,7 +46,6 @@ import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
 import io.druid.segment.realtime.plumber.Sink;
 import io.druid.utils.Runnables;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -210,7 +211,7 @@ public class RealtimeManagerTest
 
     Assert.assertEquals(1, realtimeManager2.getMetrics("testV2").processed());
     Assert.assertEquals(1, realtimeManager2.getMetrics("testV2").thrownAway());
-    Assert.assertEquals(1, realtimeManager2.getMetrics("testV2").unparseable());
+    Assert.assertEquals(2, realtimeManager2.getMetrics("testV2").unparseable());
     Assert.assertTrue(plumber2.isStartedJob());
     Assert.assertTrue(plumber2.isFinishedJob());
     Assert.assertEquals(1, plumber2.getPersistCount());
@@ -339,11 +340,14 @@ public class RealtimeManagerTest
     private final Iterator<TestInputRowHolder> rows;
     private InputRow currRow;
     private boolean stop;
+
     private TestFirehoseV2(Iterator<TestInputRowHolder> rows)
     {
       this.rows = rows;
     }
-    private void nextMessage() {
+
+    private void nextMessage()
+    {
       currRow = null;
       while (currRow == null) {
         final TestInputRowHolder holder = rows.next();

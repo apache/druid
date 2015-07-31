@@ -1,39 +1,31 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.firehose.kafka;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.google.common.collect.Maps;
-import com.metamx.common.logger.Logger;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
-
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
+import com.metamx.common.logger.Logger;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Committer;
 import io.druid.data.input.FirehoseFactoryV2;
@@ -41,10 +33,20 @@ import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.firehose.kafka.KafkaSimpleConsumer.BytesMessageWithOffset;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class KafkaEightSimpleConsumerFirehoseFactory implements
     FirehoseFactoryV2<ByteBufferInputRowParser>
 {
-  private static final Logger log = new Logger(
+  private static final EmittingLogger log = new EmittingLogger(
       KafkaEightSimpleConsumerFirehoseFactory.class
   );
 
@@ -64,12 +66,12 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
   private final int queueBufferLength;
 
   @JsonProperty
-  private boolean earliest;
+  private final boolean earliest;
 
   private final List<PartitionConsumerWorker> consumerWorkers = new CopyOnWriteArrayList<>();
   private static final int DEFAULT_QUEUE_BUFFER_LENGTH = 20000;
-  private static final String RESET_TO_LATEST = "latest";
   private static final int CONSUMER_FETCH_TIMEOUT = 10000;
+
   @JsonCreator
   public KafkaEightSimpleConsumerFirehoseFactory(
       @JsonProperty("brokerList") List<String> brokerList,
@@ -77,19 +79,43 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       @JsonProperty("clientId") String clientId,
       @JsonProperty("feed") String feed,
       @JsonProperty("queueBufferLength") Integer queueBufferLength,
-      @JsonProperty("resetBehavior") String resetBehavior
+      @JsonProperty("resetOffsetToEarliest") Boolean resetOffsetToEarliest
   )
   {
     this.brokerList = brokerList;
+    Preconditions.checkArgument(
+        brokerList != null && brokerList.size() > 0,
+        "brokerList is null/empty"
+    );
+
     this.partitionIdList = partitionIdList;
+    Preconditions.checkArgument(
+        partitionIdList != null && partitionIdList.size() > 0,
+        "partitionIdList is null/empty"
+    );
+
+
     this.clientId = clientId;
+    Preconditions.checkArgument(
+        clientId != null && !clientId.isEmpty(),
+        "clientId is null/empty"
+    );
+
     this.feed = feed;
+    Preconditions.checkArgument(
+        feed != null && !feed.isEmpty(),
+        "feed is null/empty"
+    );
 
     this.queueBufferLength = queueBufferLength == null ? DEFAULT_QUEUE_BUFFER_LENGTH : queueBufferLength;
+    Preconditions.checkArgument(queueBufferLength > 0, "queueBufferLength must be positive number");
     log.info("queueBufferLength loaded as[%s]", this.queueBufferLength);
 
-    this.earliest = RESET_TO_LATEST.equalsIgnoreCase(resetBehavior) ? false : true;
-    log.info("Default behavior of cosumer set to earliest? [%s]", this.earliest);
+    this.earliest = resetOffsetToEarliest == null ? true : resetOffsetToEarliest.booleanValue();
+    log.info(
+        "if old offsets are not known, data from partition will be read from [%s] available offset.",
+        this.earliest ? "earliest" : "latest"
+    );
   }
 
   private Map<Integer, Long> loadOffsetFromPreviousMetaData(Object lastCommit)
@@ -113,7 +139,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       }
       log.info("Loaded offset map[%s]", offsetMap);
     } else {
-      log.error("Unable to cast lastCommit to Map");
+      log.makeAlert("Unable to cast lastCommit to Map for feed [%s]", feed);
     }
     return offsetMap;
   }
@@ -123,20 +149,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
   {
     final Map<Integer, Long> lastOffsets = loadOffsetFromPreviousMetaData(lastCommit);
 
-    Set<String> newDimExclus = Sets.union(
-        firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
-        Sets.newHashSet("feed")
-    );
-    final ByteBufferInputRowParser theParser = firehoseParser.withParseSpec(
-        firehoseParser.getParseSpec()
-                      .withDimensionsSpec(
-                          firehoseParser.getParseSpec()
-                                        .getDimensionsSpec()
-                                        .withDimensionExclusions(
-                                            newDimExclus
-                                        )
-                      )
-    );
     for (Integer partition : partitionIdList) {
       final KafkaSimpleConsumer kafkaSimpleConsumer = new KafkaSimpleConsumer(
           feed, partition, clientId, brokerList, earliest
@@ -148,7 +160,9 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       consumerWorkers.add(worker);
     }
 
-    final LinkedBlockingQueue<BytesMessageWithOffset> messageQueue = new LinkedBlockingQueue<BytesMessageWithOffset>(queueBufferLength);
+    final LinkedBlockingQueue<BytesMessageWithOffset> messageQueue = new LinkedBlockingQueue<BytesMessageWithOffset>(
+        queueBufferLength
+    );
     log.info("Kicking off all consumers");
     for (PartitionConsumerWorker worker : consumerWorkers) {
       worker.go(messageQueue);
@@ -157,15 +171,13 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
 
     return new FirehoseV2()
     {
-      private ConcurrentMap<Integer, Long> lastOffsetPartitions;
-      private volatile boolean stop;
-      private volatile boolean interrupted;
-
+      private Map<Integer, Long> lastOffsetPartitions;
+      private volatile boolean stopped;
       private volatile BytesMessageWithOffset msg = null;
       private volatile InputRow row = null;
 
       {
-        lastOffsetPartitions = Maps.newConcurrentMap();
+        lastOffsetPartitions = Maps.newHashMap();
         lastOffsetPartitions.putAll(lastOffsets);
       }
 
@@ -178,7 +190,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       @Override
       public boolean advance()
       {
-        if (stop) {
+        if (stopped) {
           return false;
         }
 
@@ -196,22 +208,22 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
             }
 
             msg = messageQueue.take();
-            interrupted = false;
 
             final byte[] message = msg.message();
-            row = message == null ? null : theParser.parse(ByteBuffer.wrap(message));
+            row = message == null ? null : firehoseParser.parse(ByteBuffer.wrap(message));
           }
         }
         catch (InterruptedException e) {
-          interrupted = true;
-          log.info(e, "Interrupted when taken from queue");
+          //Let the caller decide whether to stop or continue when thread is interrupted.
+          log.warn(e, "Thread Interrupted while taking from queue, propagating the interrupt");
+          Thread.currentThread().interrupt();
         }
       }
 
       @Override
       public InputRow currRow()
       {
-        if (interrupted) {
+        if (stopped) {
           return null;
         }
         return row;
@@ -242,9 +254,9 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       public void close() throws IOException
       {
         log.info("Stopping kafka 0.8 simple firehose");
-        stop = true;
+        stopped = true;
         for (PartitionConsumerWorker t : consumerWorkers) {
-          t.close();
+          Closeables.close(t, true);
         }
       }
     };
@@ -268,7 +280,8 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       this.startOffset = startOffset;
     }
 
-    public void go(final LinkedBlockingQueue<BytesMessageWithOffset> messageQueue) {
+    public void go(final LinkedBlockingQueue<BytesMessageWithOffset> messageQueue)
+    {
       thread = new Thread()
       {
         @Override

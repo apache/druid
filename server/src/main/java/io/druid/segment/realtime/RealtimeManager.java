@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment.realtime;
 
@@ -158,7 +160,8 @@ public class RealtimeManager implements QuerySegmentWalker
                 Iterable<FireChief> chiefsOfDataSource = chiefs.get(input);
                 return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
                     factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(), // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
+                        MoreExecutors.sameThreadExecutor(),
+                        // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
                         Iterables.transform(
                             chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
                             {
@@ -217,10 +220,10 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    public FirehoseV2 initFirehose(Object metaData)
+    public FirehoseV2 initFirehoseV2(Object metaData)
     {
       synchronized (this) {
-        if (firehose == null && firehoseV2 == null) {
+        if (firehoseV2 == null) {
           try {
             log.info("Calling the FireDepartment and getting a FirehoseV2.");
             firehoseV2 = fireDepartment.connect(metaData);
@@ -230,7 +233,7 @@ public class RealtimeManager implements QuerySegmentWalker
             throw Throwables.propagate(e);
           }
         } else {
-          log.warn("Firehose already connected, skipping initFirehoseV2().");
+          log.warn("FirehoseV2 already connected, skipping initFirehoseV2().");
         }
 
         return firehoseV2;
@@ -266,7 +269,7 @@ public class RealtimeManager implements QuerySegmentWalker
         Object metadata = plumber.startJob();
 
         if (fireDepartment.checkFirehoseV2()) {
-          firehoseV2 = initFirehose(metadata);
+          firehoseV2 = initFirehoseV2(metadata);
           runFirehoseV2(firehoseV2);
         } else {
           firehose = initFirehose();
@@ -306,8 +309,8 @@ public class RealtimeManager implements QuerySegmentWalker
         firehose.start();
       }
       catch (Exception e) {
-      	log.error(e, "Failed to start firehoseV2");
-      	return;
+        log.error(e, "Failed to start firehoseV2");
+        return;
       }
       long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
       log.info("FirehoseV2 started with nextFlush [%s]", nextFlush);
@@ -322,7 +325,7 @@ public class RealtimeManager implements QuerySegmentWalker
               numRows = plumber.add(inputRow);
             }
             catch (IndexSizeExceededException e) {
-              log.info("Index limit exceeded: %s", e.getMessage());
+              log.debug(e, "Index limit exceeded: %s", e.getMessage());
               nextFlush = doIncrementalPersist(firehose.makeCommitter(), intermediatePersistPeriod);
               continue;
             }
@@ -332,10 +335,13 @@ public class RealtimeManager implements QuerySegmentWalker
             } else {
               metrics.incrementProcessed();
             }
+          } else {
+            log.debug("thrown away null input row, considering unparseable");
+            metrics.incrementUnparseable();
           }
         }
         catch (Exception e) {
-          log.makeAlert(e, "Some exception got thrown while processing rows.  Ignoring and continuing.")
+          log.makeAlert(e, "Unknown exception, Ignoring and continuing.")
              .addData("inputRow", inputRow);
         }
 
@@ -343,18 +349,22 @@ public class RealtimeManager implements QuerySegmentWalker
           haveRow = firehose.advance();
         }
         catch (Exception e) {
-          log.debug(e, "thrown away line due to exception, considering unparseable");
+          log.debug(e, "exception in firehose.advance(), considering unparseable row");
           metrics.incrementUnparseable();
           continue;
         }
 
         try {
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
+          final Sink sink = inputRow != null ? plumber.getSink(inputRow.getTimestampFromEpoch()) : null;
           if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
             nextFlush = doIncrementalPersist(firehose.makeCommitter(), intermediatePersistPeriod);
           }
-        } catch (Exception e) {
-          log.makeAlert(e, "An exception happened while queue to persist!?  We hope it is transient. Ignore and continue.");
+        }
+        catch (Exception e) {
+          log.makeAlert(
+              e,
+              "An exception happened while queue to persist!?  We hope it is transient. Ignore and continue."
+          );
         }
       }
     }
@@ -364,7 +374,6 @@ public class RealtimeManager implements QuerySegmentWalker
       plumber.persist(committer);
       return new DateTime().plus(intermediatePersistPeriod).getMillis();
     }
-
 
     private void runFirehose(Firehose firehose)
     {
@@ -381,7 +390,6 @@ public class RealtimeManager implements QuerySegmentWalker
 
             if (inputRow == null) {
               log.debug("thrown away null input row, considering unparseable");
-              log.info("thrown away null input row, considering unparseable");
               metrics.incrementUnparseable();
               continue;
             }

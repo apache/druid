@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment;
 
@@ -27,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.Hashing;
 import com.metamx.common.Pair;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
@@ -149,7 +150,8 @@ public class SchemalessIndex
 
         try {
           theIndex.add(new MapBasedInputRow(timestamp, dims, event));
-        } catch(IndexSizeExceededException e) {
+        }
+        catch (IndexSizeExceededException e) {
           Throwables.propagate(e);
         }
 
@@ -186,12 +188,15 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, topFile, indexSpec);
-        IndexMerger.persist(bottom, bottomFile, indexSpec);
+        IndexMerger.persist(top, topFile, null, indexSpec);
+        IndexMerger.persist(bottom, bottomFile, null, indexSpec);
 
         mergedIndex = io.druid.segment.IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
-                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)), METRIC_AGGS, mergedFile, indexSpec
+                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
+                METRIC_AGGS,
+                mergedFile,
+                indexSpec
             )
         );
 
@@ -233,7 +238,10 @@ public class SchemalessIndex
 
         QueryableIndex index = IndexIO.loadIndex(
             IndexMerger.mergeQueryableIndex(
-                Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)), METRIC_AGGS, mergedFile, indexSpec
+                Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)),
+                METRIC_AGGS,
+                mergedFile,
+                indexSpec
             )
         );
 
@@ -350,7 +358,7 @@ public class SchemalessIndex
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          IndexMerger.persist(rowIndex, tmpFile, indexSpec);
+          IndexMerger.persist(rowIndex, tmpFile, null, indexSpec);
           rowPersistedIndexes.add(IndexIO.loadIndex(tmpFile));
         }
       }
@@ -410,7 +418,7 @@ public class SchemalessIndex
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      IndexMerger.persist(index, theFile, indexSpec);
+      IndexMerger.persist(index, theFile, null, indexSpec);
     }
 
     return filesToMap;
