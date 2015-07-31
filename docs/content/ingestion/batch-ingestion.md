@@ -79,7 +79,7 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
     },
     "metadataUpdateSpec" : {
       "type":"mysql",
-      "connectURI" : "jdbc:metadata storage://localhost:3306/druid",
+      "connectURI" : "jdbc:mysql://localhost:3306/druid",
       "password" : "diurd",
       "segmentTable" : "druid_segments",
       "user" : "druid"

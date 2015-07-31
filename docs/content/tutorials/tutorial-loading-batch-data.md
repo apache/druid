@@ -59,9 +59,9 @@ The following events should exist in the file:
 
 #### Set Up a Druid Cluster
 
-To index the data, we are going to need an indexing service, a historical node, and a coordinator node.
+To index the data, we are going to need the overlord, a historical node, and a coordinator node.
 
-Note: If Zookeeper and MySQL aren't running, you'll have to start them again as described in [The Druid Cluster](../tutorials/tutorial-the-druid-cluster.html).
+Note: If Zookeeper isn't running, you'll have to start it again as described in [The Druid Cluster](../tutorials/tutorial-the-druid-cluster.html).
 
 To start the Indexing Service:
 
