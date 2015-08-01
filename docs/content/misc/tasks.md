@@ -200,33 +200,33 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 
             ]
           }
-        },
-        "metricsSpec": [
-          {
-            "type": "count",
-            "name": "count"
-          },
-          {
-            "type": "doubleSum",
-            "name": "added",
-            "fieldName": "added"
-          },
-          {
-            "type": "doubleSum",
-            "name": "deleted",
-            "fieldName": "deleted"
-          },
-          {
-            "type": "doubleSum",
-            "name": "delta",
-            "fieldName": "delta"
-          }
-        ],
-        "granularitySpec": {
-          "type": "uniform",
-          "segmentGranularity": "DAY",
-          "queryGranularity": "NONE"
         }
+      },
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "count"
+        },
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "NONE"
       }
     },
     "ioConfig": {
