@@ -35,7 +35,7 @@ Configuration:
 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 
 -Ddruid.indexer.queue.startDelay=PT0M
--Ddruid.indexer.runner.javaOpts="-server -Xmx1g"
+-Ddruid.indexer.runner.javaOpts=-server -Xmx1g
 -Ddruid.indexer.fork.property.druid.processing.numThreads=1
 -Ddruid.indexer.fork.property.druid.computation.buffer.size=100000000
 ```
