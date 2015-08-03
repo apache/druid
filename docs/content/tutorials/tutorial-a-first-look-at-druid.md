@@ -95,6 +95,26 @@ cp conf/zoo_sample.cfg conf/zoo.cfg
 cd ..
 ```
 
+#### Set up Mysql
+* Download and install mysql database [http://www.mysql.com/downloads/](http://www.mysql.com/downloads/)
+* Add the user 
+
+```
+druid@druid
+
+```
+
+* Add the following line into the druid configuration
+
+```bash
+
+#file: /config/_common/common.runtime.properties
+
+druid.metadata.storage.connector.createTables=true
+
+```
+
+
 Running Example Scripts
 -----------------------
 
