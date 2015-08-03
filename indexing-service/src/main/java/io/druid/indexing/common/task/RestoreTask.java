@@ -29,6 +29,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import io.druid.timeline.DataSegment;
+import java.util.Map;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -40,13 +41,15 @@ public class RestoreTask extends AbstractFixedIntervalTask
   public RestoreTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
         makeId(id, "restore", dataSource, interval),
         dataSource,
-        interval
+        interval,
+        context
     );
   }
 

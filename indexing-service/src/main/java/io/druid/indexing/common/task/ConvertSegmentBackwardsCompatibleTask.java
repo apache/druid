@@ -27,7 +27,8 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
         segment,
         indexSpec,
         force == null ? false : force,
-        validate ==null ? false : validate
+        validate ==null ? false : validate,
+        null
     );
   }
 
@@ -43,7 +44,7 @@ public class ConvertSegmentBackwardsCompatibleTask extends ConvertSegmentTask
         @JsonProperty("validate") Boolean validate
     )
     {
-      super(groupId, segment, indexSpec, force, validate);
+      super(groupId, segment, indexSpec, force, validate, null);
     }
   }
 }

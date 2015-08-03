@@ -195,7 +195,7 @@ public class OverlordResourceTest
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
 
     final String taskId_0 = "0";
-    NoopTask task_0 = new NoopTask(taskId_0, 0, 0, null, null);
+    NoopTask task_0 = new NoopTask(taskId_0, 0, 0, null, null, null);
     response = overlordResource.taskPost(task_0);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("task", taskId_0), response.getEntity());
@@ -227,7 +227,7 @@ public class OverlordResourceTest
 
     // Manually insert task in taskStorage
     final String taskId_1 = "1";
-    NoopTask task_1 = new NoopTask(taskId_1, 0, 0, null, null);
+    NoopTask task_1 = new NoopTask(taskId_1, 0, 0, null, null, null);
     taskStorage.insert(task_1, TaskStatus.running(taskId_1));
     // Wait for task runner to run task_1
     runTaskCountDownLatches[Integer.parseInt(taskId_1)].await();

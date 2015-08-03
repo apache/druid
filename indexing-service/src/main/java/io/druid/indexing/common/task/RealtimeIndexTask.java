@@ -52,6 +52,7 @@ import io.druid.segment.realtime.plumber.Sink;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
+import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -108,14 +109,16 @@ public class RealtimeIndexTask extends AbstractTask
   public RealtimeIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
-      @JsonProperty("spec") FireDepartment fireDepartment
+      @JsonProperty("spec") FireDepartment fireDepartment,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
         id == null ? makeTaskId(fireDepartment) : id,
         String.format("index_realtime_%s", makeDatasource(fireDepartment)),
         taskResource == null ? new TaskResource(makeTaskId(fireDepartment), 1) : taskResource,
-        makeDatasource(fireDepartment)
+        makeDatasource(fireDepartment),
+        context
     );
     this.spec = fireDepartment;
   }

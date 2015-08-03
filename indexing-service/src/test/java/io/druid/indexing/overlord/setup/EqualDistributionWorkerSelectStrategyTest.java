@@ -49,7 +49,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 Sets.<String>newHashSet()
             )
         ),
-        new NoopTask(null, 1, 0, null, null)
+        new NoopTask(null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()

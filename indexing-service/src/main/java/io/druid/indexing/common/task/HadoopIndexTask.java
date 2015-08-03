@@ -45,6 +45,7 @@ import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.timeline.DataSegment;
+import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -88,7 +89,8 @@ public class HadoopIndexTask extends HadoopTask
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
       @JsonProperty("classpathPrefix") String classpathPrefix,
-      @JacksonInject ObjectMapper jsonMapper
+      @JacksonInject ObjectMapper jsonMapper,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -96,7 +98,8 @@ public class HadoopIndexTask extends HadoopTask
         getTheDataSource(spec),
         hadoopDependencyCoordinates == null
         ? (hadoopCoordinates == null ? null : ImmutableList.of(hadoopCoordinates))
-        : hadoopDependencyCoordinates
+        : hadoopDependencyCoordinates,
+        context
     );
 
 

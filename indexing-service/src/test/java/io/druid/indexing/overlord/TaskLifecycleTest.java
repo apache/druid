@@ -484,7 +484,8 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        TestUtils.MAPPER
+        TestUtils.MAPPER,
+        null
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -540,7 +541,8 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory()),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        TestUtils.MAPPER
+        TestUtils.MAPPER,
+        null
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -610,7 +612,7 @@ public class TaskLifecycleTest
       segmentFiles.add(file);
     }
 
-    final Task killTask = new KillTask(null, "test_kill_task", new Interval("2011-04-01/P4D"));
+    final Task killTask = new KillTask(null, "test_kill_task", new Interval("2011-04-01/P4D"), null);
 
     final TaskStatus status = runTask(killTask);
     Assert.assertEquals("merged statusCode", TaskStatus.Status.SUCCESS, status.getStatusCode());
@@ -675,7 +677,8 @@ public class TaskLifecycleTest
         "id1",
         new TaskResource("id1", 1),
         "ds",
-        new Interval("2012-01-01/P1D")
+        new Interval("2012-01-01/P1D"),
+        null
     )
     {
       @Override
@@ -713,7 +716,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadInterval() throws Exception
   {
-    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"), null)
     {
       @Override
       public String getType()
@@ -747,7 +750,7 @@ public class TaskLifecycleTest
   @Test
   public void testBadVersion() throws Exception
   {
-    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"))
+    final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", new Interval("2012-01-01/P1D"), null)
     {
       @Override
       public String getType()
@@ -823,7 +826,8 @@ public class TaskLifecycleTest
     RealtimeIndexTask realtimeIndexTask = new RealtimeIndexTask(
         taskId,
         new TaskResource(taskId, 1),
-        fireDepartment
+        fireDepartment,
+        null
     );
     tq.add(realtimeIndexTask);
     //wait for task to process events and publish segment
@@ -864,7 +868,8 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        TestUtils.MAPPER
+        TestUtils.MAPPER,
+        null
     );
 
     final long startTime = System.currentTimeMillis();

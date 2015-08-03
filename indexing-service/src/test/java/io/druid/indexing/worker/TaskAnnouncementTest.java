@@ -47,7 +47,8 @@ public class TaskAnnouncementTest
         new TaskResource("rofl", 2),
         new FireDepartment(
             new DataSchema("foo", null, new AggregatorFactory[0], null),
-            new RealtimeIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
+            new RealtimeIOConfig(
+                new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
             {
               @Override
               public Plumber findPlumber(
@@ -56,8 +57,13 @@ public class TaskAnnouncementTest
               {
                 return null;
               }
-            }, null), null
-        )
+
+            },
+                null
+            ),
+            null
+        ),
+        null
     );
     final TaskStatus status = TaskStatus.running(task.getId());
     final TaskAnnouncement announcement = TaskAnnouncement.create(task, status);

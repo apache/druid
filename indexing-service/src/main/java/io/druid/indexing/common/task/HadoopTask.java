@@ -38,6 +38,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 
 public abstract class HadoopTask extends AbstractTask
@@ -53,9 +54,14 @@ public abstract class HadoopTask extends AbstractTask
 
   private final List<String> hadoopDependencyCoordinates;
 
-  protected HadoopTask(String id, String dataSource, List<String> hadoopDependencyCoordinates)
+  protected HadoopTask(
+      String id,
+      String dataSource,
+      List<String> hadoopDependencyCoordinates,
+      Map<String, Object> context
+  )
   {
-    super(id, dataSource);
+    super(id, dataSource, context);
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
   }
 

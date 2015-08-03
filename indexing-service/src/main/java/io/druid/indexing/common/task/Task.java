@@ -24,6 +24,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import java.util.Map;
 
 /**
  * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
@@ -138,4 +139,9 @@ public interface Task
    * @throws Exception if this task failed
    */
   public TaskStatus run(TaskToolbox toolbox) throws Exception;
+
+  public Map<String, Object> getContext();
+
+  public Object getContextValue(String key);
+
 }

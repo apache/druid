@@ -45,13 +45,15 @@ public class MoveTask extends AbstractFixedIntervalTask
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("target") Map<String, Object> targetLoadSpec
+      @JsonProperty("target") Map<String, Object> targetLoadSpec,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
         makeId(id, "move", dataSource, interval),
         dataSource,
-        interval
+        interval,
+        context
     );
     this.targetLoadSpec = targetLoadSpec;
   }

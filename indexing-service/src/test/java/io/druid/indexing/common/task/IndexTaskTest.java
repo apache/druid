@@ -122,7 +122,8 @@ public class IndexTaskTest
                 indexSpec
             )
         ),
-        new DefaultObjectMapper()
+        new DefaultObjectMapper(),
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask);
@@ -182,7 +183,8 @@ public class IndexTaskTest
             ),
             null
         ),
-        new DefaultObjectMapper()
+        new DefaultObjectMapper(),
+        null
     );
 
     List<DataSegment> segments = runTask(indexTask);
@@ -290,7 +292,8 @@ public class IndexTaskTest
             ),
             null
         ),
-        new DefaultObjectMapper()
+        new DefaultObjectMapper(),
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask);

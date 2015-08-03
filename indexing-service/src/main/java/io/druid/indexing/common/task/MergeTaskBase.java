@@ -62,7 +62,12 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
   private static final EmittingLogger log = new EmittingLogger(MergeTaskBase.class);
 
-  protected MergeTaskBase(final String id, final String dataSource, final List<DataSegment> segments)
+  protected MergeTaskBase(
+      final String id,
+      final String dataSource,
+      final List<DataSegment> segments,
+      Map<String, Object> context
+  )
   {
     super(
         // _not_ the version, just something uniqueish
@@ -70,7 +75,8 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
             "merge_%s_%s", computeProcessingID(dataSource, segments), new DateTime().toString()
         ),
         dataSource,
-        computeMergedInterval(segments)
+        computeMergedInterval(segments),
+        context
     );
 
     // Verify segment list is nonempty
@@ -249,19 +255,19 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     final String segmentIDs = Joiner.on("_").join(
         Iterables.transform(
             Ordering.natural().sortedCopy(segments), new Function<DataSegment, String>()
-        {
-          @Override
-          public String apply(DataSegment x)
-          {
-            return String.format(
-                "%s_%s_%s_%s",
-                x.getInterval().getStart(),
-                x.getInterval().getEnd(),
-                x.getVersion(),
-                x.getShardSpec().getPartitionNum()
-            );
-          }
-        }
+            {
+              @Override
+              public String apply(DataSegment x)
+              {
+                return String.format(
+                    "%s_%s_%s_%s",
+                    x.getInterval().getStart(),
+                    x.getInterval().getEnd(),
+                    x.getVersion(),
+                    x.getShardSpec().getPartitionNum()
+                );
+              }
+            }
         )
     );
 
