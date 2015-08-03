@@ -19,7 +19,6 @@
 
 package io.druid.server.namespace;
 
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,19 +26,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Json;
 import io.druid.initialization.DruidModule;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 
 import java.io.IOException;
 import java.util.List;
