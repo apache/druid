@@ -16,7 +16,7 @@ Namespaced lookups are appropriate for lookups which are not possible to pass at
  druid.query.extraction.namespaceList=\
    [{ "type":"uri", "namespace":"some_uri_lookup","uri": "file:/tmp/prefix/",\
    "namespaceParseSpec":\
-     {"type":"csv","columns":["key","value"]},\
+     {"format":"csv","columns":["key","value"]},\
    "pollPeriod":"PT5M"},\
    { "type":"jdbc", "namespace":"some_jdbc_lookup",\
    "connectorConfig":{"createTables":true,"connectURI":"jdbc:mysql://localhost:3306/druid","user":"druid","password":"diurd"},\
