@@ -146,23 +146,23 @@ SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 FROM <datasource> GROUP BY DIM1, 
 
 **Example**
 
-Determine the number of distinct categories items are assigned to.
+Determine the number of distinct countries people are living in or have come from.
 
 ```json
 {
   "type": "cardinality",
-  "name": "distinct_values",
-  "fieldNames": [ "main_category", "secondary_category" ]
+  "name": "distinct_countries",
+  "fieldNames": [ "coutry_of_origin", "country_of_residence" ]
 }
 ```
 
-Determine the number of distinct   are assigned to.
+Determine the number of distinct people (i.e. combinations of first and last name).
 
 ```json
 {
   "type": "cardinality",
-  "name": "distinct_values",
-  "fieldNames": [ "", "secondary_category" ],
+  "name": "distinct_people",
+  "fieldNames": [ "first_name", "last_name" ],
   "byRow" : true
 }
 ```
