@@ -105,10 +105,7 @@ The following matches dimension values in `[product_1, product_3, product_5]` fo
                     "product_5": "bar_1",
                     "product_3": "bar_1"
                 }
-            },
-            "replaceMissingValueWith": "",
-            "retainMissingValue": false,
-            "injective": false
+            }
         }
     }
 }

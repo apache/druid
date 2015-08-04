@@ -31,6 +31,8 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
+import java.util.BitSet;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -50,8 +52,36 @@ public class ExtractionFilter implements Filter
 
   private List<Filter> makeFilters(BitmapIndexSelector selector)
   {
-    final Indexed<String> allDimVals = selector.getDimensionValues(dimension);
+    Indexed<String> allDimVals = selector.getDimensionValues(dimension);
     final List<Filter> filters = Lists.newArrayList();
+    if (allDimVals == null) {
+      allDimVals = new Indexed<String>()
+      {
+        @Override
+        public Iterator<String> iterator()
+        {
+          return null;
+        }
+
+        @Override
+        public Class<? extends String> getClazz()
+        {
+          return null;
+        }
+
+        @Override
+        public int size() { return 1; }
+
+        @Override
+        public String get(int index) { return null;}
+
+        @Override
+        public int indexOf(String value)
+        {
+          return 0;
+        }
+      };
+    }
     if (allDimVals != null) {
       for (int i = 0; i < allDimVals.size(); i++) {
         String dimVal = allDimVals.get(i);
@@ -59,8 +89,6 @@ public class ExtractionFilter implements Filter
           filters.add(new SelectorFilter(dimension, dimVal));
         }
       }
-    } else if (value.equals(Strings.nullToEmpty(fn.apply(null)))) {
-      filters.add(new SelectorFilter(dimension, null));
     }
     return filters;
   }
@@ -98,6 +126,12 @@ public class ExtractionFilter implements Filter
     if (dimensionSelector == null) {
       return new BooleanValueMatcher(value.equals(Strings.nullToEmpty(fn.apply(null))));
     } else {
+      final BitSet bitSetOfIds = new BitSet(dimensionSelector.getValueCardinality());
+      for (int i = 0; i < dimensionSelector.getValueCardinality(); i++) {
+        if (value.equals(Strings.nullToEmpty(fn.apply(dimensionSelector.lookupName(i))))) {
+          bitSetOfIds.set(i);
+        }
+      }
       return new ValueMatcher()
       {
         @Override
@@ -106,7 +140,7 @@ public class ExtractionFilter implements Filter
           final IndexedInts row = dimensionSelector.getRow();
           final int size = row.size();
           for (int i = 0; i < size; ++i) {
-            if (value.equals(Strings.nullToEmpty(fn.apply(dimensionSelector.lookupName(row.get(i)))))) {
+            if (bitSetOfIds.get(row.get(i))) {
               return true;
             }
           }

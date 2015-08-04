@@ -72,6 +72,7 @@ public class SimpleDictionaryEncodedColumn
   @Override
   public String lookupName(int id)
   {
+    //Empty to Null will ensure that null and empty are equivalent for extraction function
     return Strings.emptyToNull(cachedLookups.get(id));
   }
 
