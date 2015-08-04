@@ -140,7 +140,7 @@ public class CacheDistributionTest
   }
 
   private static MemcachedNode dummyNode(String host, int port) {
-    SocketAddress address = new InetSocketAddress(host, port);
+    SocketAddress address = InetSocketAddress.createUnresolved(host, port);
     MemcachedNode node = EasyMock.createNiceMock(MemcachedNode.class);
     EasyMock.expect(node.getSocketAddress()).andReturn(address).anyTimes();
     EasyMock.replay(node);
