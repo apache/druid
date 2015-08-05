@@ -38,7 +38,7 @@ import io.druid.data.input.Rows;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.LoggingProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
@@ -464,7 +464,7 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMaker.persist(
+      return IndexMerger.persist(
           index, interval, file, config.getIndexSpec(), progressIndicator
       );
     }
@@ -476,7 +476,7 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMaker.mergeQueryableIndex(
+      return IndexMerger.mergeQueryableIndex(
           indexes, aggs, file, config.getIndexSpec(), progressIndicator
       );
     }
