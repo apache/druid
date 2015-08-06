@@ -257,14 +257,14 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           @Override
           public Sequence<T> get()
           {
-            ArrayList<Pair<Interval, Sequence<T>>> sequencesByInterval = Lists.newArrayList();
+            ArrayList<Sequence<T>> sequencesByInterval = Lists.newArrayList();
             addSequencesFromCache(sequencesByInterval);
             addSequencesFromServer(sequencesByInterval);
 
             return mergeCachedAndUncachedSequences(sequencesByInterval, toolChest);
           }
 
-          private void addSequencesFromCache(ArrayList<Pair<Interval, Sequence<T>>> listOfSequences)
+          private void addSequencesFromCache(ArrayList<Sequence<T>> listOfSequences)
           {
             if (strategy == null) {
               return;
@@ -301,11 +301,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                     }
                   }
               );
-              listOfSequences.add(Pair.of(cachedResultPair.lhs, Sequences.map(cachedSequence, pullFromCacheFunction)));
+              listOfSequences.add(Sequences.map(cachedSequence, pullFromCacheFunction));
             }
           }
 
-          private void addSequencesFromServer(ArrayList<Pair<Interval, Sequence<T>>> listOfSequences)
+          private void addSequencesFromServer(ArrayList<Sequence<T>> listOfSequences)
           {
             listOfSequences.ensureCapacity(listOfSequences.size() + serverSegments.size());
 
@@ -326,7 +326,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               }
 
               final MultipleSpecificSegmentSpec segmentSpec = new MultipleSpecificSegmentSpec(descriptors);
-              final List<Interval> intervals = segmentSpec.getIntervals();
 
               final Sequence<T> resultSeqToAdd;
               if (!server.isAssignable() || !populateCache || isBySegment) { // Direct server queryable
@@ -466,12 +465,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                 );
               }
 
-              listOfSequences.add(
-                  Pair.of(
-                      new Interval(intervals.get(0).getStart(), intervals.get(intervals.size() - 1).getEnd()),
-                      resultSeqToAdd
-                  )
-              );
+              listOfSequences.add(resultSeqToAdd);
             }
           }
         }// End of Supplier
@@ -479,7 +473,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   protected Sequence<T> mergeCachedAndUncachedSequences(
-      List<Pair<Interval, Sequence<T>>> sequencesByInterval,
+      List<Sequence<T>> sequencesByInterval,
       QueryToolChest<T, Query<T>> toolChest
   )
   {
@@ -489,17 +483,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     return toolChest.mergeSequencesUnordered(
         Sequences.simple(
-            Lists.transform(
-                sequencesByInterval,
-                new Function<Pair<Interval, Sequence<T>>, Sequence<T>>()
-                {
-                  @Override
-                  public Sequence<T> apply(Pair<Interval, Sequence<T>> input)
-                  {
-                    return input.rhs;
-                  }
-                }
-            )
+                sequencesByInterval
         )
     );
   }
