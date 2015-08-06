@@ -64,14 +64,14 @@ public class DimValHolder
   public static class Builder
   {
     private Object topNMetricVal;
-    private String dirName;
+    private String dimName;
     private Object dimValIndex;
     private Map<String, Object> metricValues;
 
     public Builder()
     {
       topNMetricVal = null;
-      dirName = null;
+      dimName = null;
       dimValIndex = null;
       metricValues = null;
     }
@@ -82,9 +82,9 @@ public class DimValHolder
       return this;
     }
 
-    public Builder withDirName(String dirName)
+    public Builder withDimName(String dimName)
     {
-      this.dirName = dirName;
+      this.dimName = dimName;
       return this;
     }
 
@@ -102,7 +102,7 @@ public class DimValHolder
 
     public DimValHolder build()
     {
-      return new DimValHolder(topNMetricVal, dirName, dimValIndex, metricValues);
+      return new DimValHolder(topNMetricVal, dimName, dimValIndex, metricValues);
     }
   }
 }

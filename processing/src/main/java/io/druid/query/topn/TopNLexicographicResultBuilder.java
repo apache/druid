@@ -17,14 +17,16 @@
 
 package io.druid.query.topn;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.MinMaxPriorityQueue;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
+import java.util.Arrays;
+import java.util.PriorityQueue;
 import org.joda.time.DateTime;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -34,12 +36,15 @@ import java.util.Map;
  */
 public class TopNLexicographicResultBuilder implements TopNResultBuilder
 {
+  private static final int LOOP_UNROLL_COUNT = 8;
+
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String previousStop;
   private final Comparator comparator;
-  private final List<AggregatorFactory> aggFactories;
-  private MinMaxPriorityQueue<DimValHolder> pQueue = null;
+  private final String[] aggFactoryNames;
+  private final PriorityQueue<DimValHolder> pQueue;
+  private final int threshold;
 
   public TopNLexicographicResultBuilder(
       DateTime timestamp,
@@ -54,9 +59,22 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
     this.dimSpec = dimSpec;
     this.previousStop = previousStop;
     this.comparator = comparator;
-    this.aggFactories = aggFactories;
-
-    instantiatePQueue(threshold, comparator);
+    this.aggFactoryNames = TopNQueryQueryToolChest.extractFactoryName(aggFactories);
+    this.threshold = threshold;
+    this.pQueue = new PriorityQueue<>(
+        threshold + 1,
+        new Comparator<DimValHolder>()
+        {
+          @Override
+          public int compare(
+              DimValHolder o1,
+              DimValHolder o2
+          )
+          {
+            return comparator.compare(o2.getDimName(), o1.getDimName());
+          }
+        }
+    );
   }
 
   @Override
@@ -66,16 +84,42 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
       Object[] metricVals
   )
   {
-    Map<String, Object> metricValues = Maps.newLinkedHashMap();
+    final Map<String, Object> metricValues = Maps.newHashMapWithExpectedSize(metricVals.length + 1);
 
-    if (comparator.compare(dimName, previousStop) > 0) {
+    if (shouldAdd(dimName)) {
       metricValues.put(dimSpec.getOutputName(), dimName);
-      Iterator<AggregatorFactory> aggsIter = aggFactories.iterator();
-      for (Object metricVal : metricVals) {
-        metricValues.put(aggsIter.next().getName(), metricVal);
+      final int extra = metricVals.length % LOOP_UNROLL_COUNT;
+      switch (extra) {
+        case 7:
+          metricValues.put(aggFactoryNames[6], metricVals[6]);
+        case 6:
+          metricValues.put(aggFactoryNames[5], metricVals[5]);
+        case 5:
+          metricValues.put(aggFactoryNames[4], metricVals[4]);
+        case 4:
+          metricValues.put(aggFactoryNames[3], metricVals[3]);
+        case 3:
+          metricValues.put(aggFactoryNames[2], metricVals[2]);
+        case 2:
+          metricValues.put(aggFactoryNames[1], metricVals[1]);
+        case 1:
+          metricValues.put(aggFactoryNames[0], metricVals[0]);
+      }
+      for (int i = extra; i < metricVals.length; i += LOOP_UNROLL_COUNT) {
+        metricValues.put(aggFactoryNames[i + 0], metricVals[i + 0]);
+        metricValues.put(aggFactoryNames[i + 1], metricVals[i + 1]);
+        metricValues.put(aggFactoryNames[i + 2], metricVals[i + 2]);
+        metricValues.put(aggFactoryNames[i + 3], metricVals[i + 3]);
+        metricValues.put(aggFactoryNames[i + 4], metricVals[i + 4]);
+        metricValues.put(aggFactoryNames[i + 5], metricVals[i + 5]);
+        metricValues.put(aggFactoryNames[i + 6], metricVals[i + 6]);
+        metricValues.put(aggFactoryNames[i + 7], metricVals[i + 7]);
       }
 
-      pQueue.add(new DimValHolder.Builder().withDirName(dimName).withMetricValues(metricValues).build());
+      pQueue.add(new DimValHolder.Builder().withDimName(dimName).withMetricValues(metricValues).build());
+      if (pQueue.size() > threshold) {
+        pQueue.poll();
+      }
     }
 
     return this;
@@ -84,12 +128,18 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   @Override
   public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
   {
-    pQueue.add(
-        new DimValHolder.Builder().withDirName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
-                                  .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
-                                  .build()
-    );
+    String dimensionValue = dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName());
 
+    if (shouldAdd(dimensionValue)) {
+      pQueue.add(
+          new DimValHolder.Builder().withDimName(dimensionValue)
+                                    .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
+                                    .build()
+      );
+      if (pQueue.size() > threshold) {
+        pQueue.poll();
+      }
+    }
     return this;
   }
 
@@ -103,28 +153,43 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   public Result<TopNResultValue> build()
   {
     // Pull out top aggregated values
-    List<Map<String, Object>> values = new ArrayList<Map<String, Object>>(pQueue.size());
-    while (!pQueue.isEmpty()) {
-      values.add(pQueue.remove().getMetricValues());
-    }
-
-    return new Result<TopNResultValue>(timestamp, new TopNResultValue(values));
-  }
-
-  private void instantiatePQueue(int threshold, final Comparator comparator)
-  {
-    this.pQueue = MinMaxPriorityQueue.orderedBy(
+    final DimValHolder[] holderValueArray = pQueue.toArray(new DimValHolder[0]);
+    Arrays.sort(
+        holderValueArray,
         new Comparator<DimValHolder>()
         {
           @Override
-          public int compare(
-              DimValHolder o1,
-              DimValHolder o2
-          )
+          public int compare(DimValHolder o1, DimValHolder o2)
           {
             return comparator.compare(o1.getDimName(), o2.getDimName());
           }
         }
-    ).maximumSize(threshold).create();
+
+    );
+    return new Result(
+        timestamp, new TopNResultValue(
+        Lists.transform(
+            Arrays.asList(holderValueArray),
+            new Function<DimValHolder, Object>()
+            {
+              @Override
+              public Object apply(DimValHolder dimValHolder)
+              {
+                return dimValHolder.getMetricValues();
+              }
+            }
+        )
+    )
+    );
   }
+
+  private boolean shouldAdd(String dimName)
+  {
+    final boolean belowThreshold = pQueue.size() < threshold;
+    final boolean belowMax = belowThreshold
+                             || comparator.compare(pQueue.peek().getTopNMetricVal(), dimName) < 0;
+    // Only add if dimName is after previousStop
+    return belowMax && (previousStop == null || comparator.compare(dimName, previousStop) > 0);
+  }
+
 }

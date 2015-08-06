@@ -41,7 +41,6 @@ import java.util.PriorityQueue;
  */
 public class TopNNumericResultBuilder implements TopNResultBuilder
 {
-
   private final DateTime timestamp;
   private final DimensionSpec dimSpec;
   private final String metricName;
@@ -166,7 +165,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(topNMetricVal)) {
       DimValHolder dimValHolder = new DimValHolder.Builder()
           .withTopNMetricVal(topNMetricVal)
-          .withDirName(dimName)
+          .withDimName(dimName)
           .withDimValIndex(dimValIndex)
           .withMetricValues(metricValues)
           .build();
@@ -195,7 +194,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     if (shouldAdd(dimValue)) {
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
-          .withDirName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
+          .withDimName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
           .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
           .build();
       pQueue.add(valHolder);
