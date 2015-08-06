@@ -53,7 +53,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Field;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -139,7 +138,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   }
 
 
-  @Test(timeout = 500)
+  @Test(timeout = 5_000)
   public void testSimpleSubmission() throws ExecutionException, InterruptedException
   {
     URIExtractionNamespace namespace = new URIExtractionNamespace(
@@ -159,7 +158,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     }
   }
 
-  @Test(timeout = 500)
+  @Test(timeout = 5_000)
   public void testRepeatSubmission() throws ExecutionException, InterruptedException
   {
     final int repeatCount = 5;
@@ -167,6 +166,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final AtomicLong ranCount = new AtomicLong(0l);
     final long totalRunCount;
     final long start;
+    final CountDownLatch latch = new CountDownLatch(repeatCount);
     try {
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           "ns",
@@ -186,16 +186,18 @@ public class NamespaceExtractionCacheManagerExecutorsTest
             @Override
             public void run()
             {
-              manager.getPostRunnable(namespace, factory, cacheId).run();
-              ranCount.incrementAndGet();
+              try {
+                manager.getPostRunnable(namespace, factory, cacheId).run();
+                ranCount.incrementAndGet();
+              }
+              finally {
+                latch.countDown();
+              }
             }
           },
           cacheId
       );
-
-      while (ranCount.get() < repeatCount) {
-        Thread.sleep(0, 100);
-      }
+      latch.await();
       long minEnd = start + ((repeatCount - 1) * delay);
       long end = System.currentTimeMillis();
       Assert.assertTrue(
@@ -248,7 +250,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     executorService.shutdown();
   }
 
-  @Test(timeout = 500)
+  @Test(timeout = 5_000)
   public void testDelete()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
   {
@@ -264,6 +266,8 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       throws InterruptedException
   {
     final CountDownLatch latch = new CountDownLatch(5);
+    final CountDownLatch latchMore = new CountDownLatch(10);
+
     final AtomicLong runs = new AtomicLong(0);
     long prior = 0;
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
@@ -283,17 +287,22 @@ public class NamespaceExtractionCacheManagerExecutorsTest
               @Override
               public void run()
               {
-                if (!Thread.interrupted()) {
-                  manager.getPostRunnable(namespace, factory, cacheId).run();
-                } else {
-                  Thread.currentThread().interrupt();
+                try {
+                  if (!Thread.interrupted()) {
+                    manager.getPostRunnable(namespace, factory, cacheId).run();
+                  } else {
+                    Thread.currentThread().interrupt();
+                  }
+                  if (!Thread.interrupted()) {
+                    runs.incrementAndGet();
+                  } else {
+                    Thread.currentThread().interrupt();
+                  }
                 }
-                if (!Thread.interrupted()) {
-                  runs.incrementAndGet();
-                } else {
-                  Thread.currentThread().interrupt();
+                finally {
+                  latch.countDown();
+                  latchMore.countDown();
                 }
-                latch.countDown();
               }
             },
             cacheId
@@ -303,7 +312,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     Assert.assertFalse(future.isDone());
     Assert.assertTrue(fnCache.containsKey(ns));
     prior = runs.get();
-    Thread.sleep(20);
+    latchMore.await();
     Assert.assertTrue(runs.get() > prior);
 
     Assert.assertTrue(manager.implData.containsKey(ns));
@@ -318,12 +327,11 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     Assert.assertEquals(prior, runs.get());
   }
 
-  @Test(timeout = 500)
+  @Test(timeout = 5_000)
   public void testShutdown()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
   {
     final CountDownLatch latch = new CountDownLatch(1);
-    final NamespaceExtractionCacheManager onHeap;
     final ListenableFuture future;
     final AtomicLong runs = new AtomicLong(0);
     long prior = 0;
@@ -359,7 +367,9 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       Assert.assertFalse(future.isCancelled());
       Assert.assertFalse(future.isDone());
       prior = runs.get();
-      Thread.sleep(50);
+      while (runs.get() <= prior) {
+        Thread.sleep(50);
+      }
       Assert.assertTrue(runs.get() > prior);
     }
     finally {
@@ -377,7 +387,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     Assert.assertTrue(((ListeningScheduledExecutorService) execField.get(manager)).isTerminated());
   }
 
-  @Test(timeout = 500)
+  @Test(timeout = 5_000)
   public void testRunCount()
       throws InterruptedException, ExecutionException
   {
@@ -426,7 +436,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
               },
               cacheId
           );
-      latch.countDown();
+      latch.await();
       Thread.sleep(20);
     }
     finally {
