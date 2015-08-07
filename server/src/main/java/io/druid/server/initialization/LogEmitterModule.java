@@ -42,7 +42,7 @@ public class LogEmitterModule implements Module
   }
 
   @Provides @ManageLifecycle @Named(EMITTER_TYPE)
-  public Emitter makeEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
+  public final Emitter makeEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
   {
     return new LoggingEmitter(config.get(), jsonMapper);
   }

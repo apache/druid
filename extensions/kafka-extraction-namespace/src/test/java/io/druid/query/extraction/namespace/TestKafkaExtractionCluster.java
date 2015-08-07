@@ -31,9 +31,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
-import com.google.inject.multibindings.Multibinder;
-import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
@@ -58,10 +55,6 @@ import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingServer;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
 import org.apache.zookeeper.CreateMode;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -97,16 +90,18 @@ public class TestKafkaExtractionCluster
   private static Injector injector;
 
 
-
   public static class KafkaFactoryProvider implements Provider<ExtractionNamespaceFunctionFactory<?>>
   {
     private final KafkaExtractionManager kafkaExtractionManager;
+
     @Inject
     public KafkaFactoryProvider(
         KafkaExtractionManager kafkaExtractionManager
-    ){
+    )
+    {
       this.kafkaExtractionManager = kafkaExtractionManager;
     }
+
     @Override
     public ExtractionNamespaceFunctionFactory<?> get()
     {
@@ -222,6 +217,10 @@ public class TestKafkaExtractionCluster
     }
 
     System.setProperty("druid.extensions.searchCurrentClassloader", "false");
+    final Properties consumerProperties = new Properties(kafkaProperties);
+    consumerProperties.put("zookeeper.connect", zkTestServer.getConnectString() + "/kafka");
+    consumerProperties.put("zookeeper.session.timeout.ms", "10000");
+    consumerProperties.put("zookeeper.sync.time.ms", "200");
 
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjectorWithModules(
@@ -239,15 +238,11 @@ public class TestKafkaExtractionCluster
             new KafkaExtractionNamespaceModule()
             {
               @Override
-              public Properties getProperties(
+              protected Properties getPropertiesInner(
                   @Json ObjectMapper mapper,
                   Properties systemProperties
               )
               {
-                final Properties consumerProperties = new Properties(kafkaProperties);
-                consumerProperties.put("zookeeper.connect", zkTestServer.getConnectString() + "/kafka");
-                consumerProperties.put("zookeeper.session.timeout.ms", "10000");
-                consumerProperties.put("zookeeper.sync.time.ms", "200");
                 return consumerProperties;
               }
             }
@@ -287,7 +282,8 @@ public class TestKafkaExtractionCluster
       if (zkClient.exists("/kafka")) {
         try {
           zkClient.deleteRecursive("/kafka");
-        }catch(org.I0Itec.zkclient.exception.ZkException ex){
+        }
+        catch (org.I0Itec.zkclient.exception.ZkException ex) {
           log.warn(ex, "error deleting /kafka zk node");
         }
       }
@@ -296,12 +292,13 @@ public class TestKafkaExtractionCluster
     if (null != zkTestServer) {
       zkTestServer.stop();
     }
-    if(tmpDir.exists()){
+    if (tmpDir.exists()) {
       FileUtils.deleteDirectory(tmpDir);
     }
   }
 
-  private static final Properties makeProducerProperties(){
+  private static final Properties makeProducerProperties()
+  {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(kafkaProperties);
     kafkaProducerProperties.put(
@@ -327,7 +324,16 @@ public class TestKafkaExtractionCluster
     final Producer<byte[], byte[]> producer = new Producer<byte[], byte[]>(new ProducerConfig(kafkaProducerProperties));
     try {
       checkServer();
-      final ConcurrentMap<String, Function<String, String>> fnFn = injector.getInstance(Key.get(new TypeLiteral<ConcurrentMap<String, Function<String, String>>>(){}, Names.named("namespaceExtractionFunctionCache")));
+      final ConcurrentMap<String, Function<String, String>> fnFn = injector.getInstance(
+          Key.get(
+              new TypeLiteral<ConcurrentMap<String, Function<String, String>>>()
+              {
+              },
+              Names.named(
+                  "namespaceExtractionFunctionCache"
+              )
+          )
+      );
       KafkaExtractionNamespace extractionNamespace = new KafkaExtractionNamespace(topicName, namespace);
 
       Assert.assertEquals(null, fnFn.get(extractionNamespace.getNamespace()).apply("foo"));

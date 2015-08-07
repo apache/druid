@@ -60,7 +60,7 @@ public class DruidProcessingModule implements Module
   @Provides
   @BackgroundCaching
   @LazySingleton
-  public ExecutorService getBackgroundExecutorService(
+  public final ExecutorService getBackgroundExecutorService(
       CacheConfig cacheConfig
   )
   {
@@ -81,7 +81,7 @@ public class DruidProcessingModule implements Module
   @Provides
   @Processing
   @ManageLifecycle
-  public ExecutorService getProcessingExecutorService(
+  public final ExecutorService getProcessingExecutorService(
       ExecutorServiceConfig config,
       ServiceEmitter emitter,
       Lifecycle lifecycle
@@ -100,7 +100,7 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public final StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     try {
       long maxDirectMemory = VMUtils.getMaxDirectMemory();

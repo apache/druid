@@ -45,7 +45,7 @@ public class CuratorModule implements Module
   }
 
   @Provides @LazySingleton
-  public CuratorFramework makeCurator(CuratorConfig config, Lifecycle lifecycle) throws IOException
+  public final CuratorFramework makeCurator(CuratorConfig config, Lifecycle lifecycle) throws IOException
   {
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()

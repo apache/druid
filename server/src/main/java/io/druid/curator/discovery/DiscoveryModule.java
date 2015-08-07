@@ -145,7 +145,7 @@ public class DiscoveryModule implements Module
   @Provides
   @LazySingleton
   @Named(NAME)
-  public CuratorServiceAnnouncer getServiceAnnouncer(
+  public final CuratorServiceAnnouncer getServiceAnnouncer(
       final CuratorServiceAnnouncer announcer,
       final Injector injector,
       final Set<KeyHolder<DruidNode>> nodesToAnnounce,
@@ -190,7 +190,7 @@ public class DiscoveryModule implements Module
 
   @Provides
   @LazySingleton
-  public ServiceDiscovery<Void> getServiceDiscovery(
+  public final ServiceDiscovery<Void> getServiceDiscovery(
       CuratorFramework curator,
       CuratorDiscoveryConfig config,
       Lifecycle lifecycle
@@ -233,7 +233,7 @@ public class DiscoveryModule implements Module
 
   @Provides
   @LazySingleton
-  public ServerDiscoveryFactory getServerDiscoveryFactory(
+  public final ServerDiscoveryFactory getServerDiscoveryFactory(
       ServiceDiscovery<Void> serviceDiscovery
   )
   {

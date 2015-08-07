@@ -72,14 +72,14 @@ public class DruidSecondaryModule implements Module
   }
 
   @Provides @LazySingleton @Json
-  public ObjectMapper getJsonMapper(final Injector injector)
+  public final ObjectMapper getJsonMapper(final Injector injector)
   {
     setupJackson(injector, jsonMapper);
     return jsonMapper;
   }
 
   @Provides @LazySingleton @Smile
-  public ObjectMapper getSmileMapper(Injector injector)
+  public final ObjectMapper getSmileMapper(Injector injector)
   {
     setupJackson(injector, smileMapper);
     return smileMapper;

@@ -118,7 +118,7 @@ public class CliBridge extends ServerRunnable
           @Provides
           @LazySingleton
           @Bridge
-          public CuratorFramework getBridgeCurator(final BridgeCuratorConfig bridgeCuratorConfig, Lifecycle lifecycle)
+          public final CuratorFramework getBridgeCurator(final BridgeCuratorConfig bridgeCuratorConfig, Lifecycle lifecycle)
           {
             final CuratorFramework framework =
                 CuratorFrameworkFactory.builder()
@@ -156,7 +156,7 @@ public class CliBridge extends ServerRunnable
 
           @Provides
           @ManageLifecycle
-          public ServerDiscoverySelector getServerDiscoverySelector(
+          public final ServerDiscoverySelector getServerDiscoverySelector(
               DruidClusterBridgeConfig config,
               ServerDiscoveryFactory factory
 
@@ -168,7 +168,7 @@ public class CliBridge extends ServerRunnable
           @Provides
           @ManageLifecycle
           @Bridge
-          public Announcer getBridgeAnnouncer(
+          public final Announcer getBridgeAnnouncer(
               @Bridge CuratorFramework curator
           )
           {
@@ -178,7 +178,7 @@ public class CliBridge extends ServerRunnable
           @Provides
           @ManageLifecycleLast
           @Bridge
-          public AbstractDataSegmentAnnouncer getBridgeDataSegmentAnnouncer(
+          public final AbstractDataSegmentAnnouncer getBridgeDataSegmentAnnouncer(
               DruidServerMetadata metadata,
               BatchDataSegmentAnnouncerConfig config,
               ZkPathsConfig zkPathsConfig,
