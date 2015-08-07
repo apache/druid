@@ -10,7 +10,6 @@ This tutorial will hopefully answer these questions!
 In this tutorial, we will set up other types of Druid nodes and external dependencies for a fully functional Druid cluster. The architecture of Druid is very much like the [Megazord](http://www.youtube.com/watch?v=7mQuHh1X4H4) from the popular 90s show Mighty Morphin' Power Rangers. Each Druid node has a specific purpose and the nodes come together to form a fully functional system.
 
 ## Downloading Druid
-
 If you followed the first tutorial, you should already have Druid downloaded. If not, let's go back and do that first.
 
 You can download the latest version of druid [here](http://druid.io/downloads.html). You can also [Build From Source](../development/build.html) and grab the tarball from services/target/druid-<version>-bin.tar.gz.
@@ -28,7 +27,7 @@ Druid requires 3 external dependencies.
 * A "metadata storage" to hold configuration and metadata information. This is generally a small, shared database like MySQL or Postgres. For prototyping or experimentation on a single machine, Druid can use a local instance of [Apache Derby](http://db.apache.org/derby/).
 * [Apache Zookeeper](http://zookeeper.apache.org/) for coordination among different pieces of the cluster.
 
-For deep storage, we will use the local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, Derby is used, but for production Mysql or PostgreSQL etc should be used.
+For deep storage, we will use the local disk in this tutorial, but for production, HDFS and S3 are popular options. For the metadata storage, Derby is used in this tutorial, but for production MySQL or PostgreSQL etc should be used.
 
 #### Set up Zookeeper
 

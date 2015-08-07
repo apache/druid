@@ -6,7 +6,7 @@ Production Cluster Configuration
 
 __This configuration is an example of what a production cluster could look like. Many other hardware combinations are possible! Cheaper hardware is absolutely possible.__
 
-This production Druid cluster assumes that metadata storage and Zookeeper are already set up. The deep storage that is used for examples is S3 and memcached is used for a distributed cache.
+This production Druid cluster assumes that metadata storage and Zookeeper are already set up. The deep storage that is used for examples is S3 and memcached is used as a distributed cache.
 
 The nodes that respond to queries (Historical, Broker, and Middle manager nodes) will use as many cores as are available, depending on usage, so it is best to keep these on dedicated machines. The upper limit of effectively utilized cores is not well characterized yet and would depend on types of queries, query load, and the schema. Historical daemons should have a heap a size of at least 1GB per core for normal usage, but could be squeezed into a smaller heap for testing. Since in-memory caching is essential for good performance, even more RAM is better. Broker nodes will use RAM for caching, so they do more than just route queries. SSDs are highly recommended for Historical nodes not all data is loaded in available memory.
 
@@ -327,4 +327,57 @@ druid.processing.buffer.sizeBytes=2147483647
 druid.processing.numThreads=31
 
 druid.server.http.numThreads=50
+```
+
+### Real-time Node
+
+Run:
+
+```
+io.druid.cli.Main server realtime
+```
+
+Hardware (this is a little overkill):
+
+```
+r3.8xlarge (Cores: 32, Memory: 244 GB, SSD - this hardware is way overkill for the real-time node but we choose it for simplicity)
+```
+
+JVM Configuration:
+
+```
+-server
+-Xmx13g
+-Xms13g
+-XX:NewSize=2g
+-XX:MaxNewSize=2g
+-XX:MaxDirectMemorySize=9g
+-XX:+UseConcMarkSweepGC
+-XX:+PrintGCDetails
+-XX:+PrintGCTimeStamps
+-XX:+HeapDumpOnOutOfMemoryError
+
+-Duser.timezone=UTC
+-Dfile.encoding=UTF-8
+-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+-Djava.io.tmpdir=/mnt/tmp
+
+-Dcom.sun.management.jmxremote.port=17071
+-Dcom.sun.management.jmxremote.authenticate=false
+-Dcom.sun.management.jmxremote.ssl=false
+```
+
+Runtime.properties:
+
+```
+druid.host=#{IP_ADDR}
+druid.port=8080
+druid.service=druid/prod/realtime
+
+druid.processing.buffer.sizeBytes=1073741824
+druid.processing.numThreads=7
+
+druid.server.http.numThreads=50
+
+druid.monitoring.monitors=["io.druid.segment.realtime.RealtimeMetricsMonitor", "com.metamx.metrics.JvmMonitor"]
 ```
