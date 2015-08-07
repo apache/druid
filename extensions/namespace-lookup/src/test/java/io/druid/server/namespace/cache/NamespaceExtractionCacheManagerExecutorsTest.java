@@ -280,6 +280,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         null
     );
     final String cacheId = UUID.randomUUID().toString();
+    final CountDownLatch latchBeforeMore = new CountDownLatch(1);
     ListenableFuture<?> future =
         manager.schedule(
             namespace, factory, new Runnable()
@@ -301,17 +302,29 @@ public class NamespaceExtractionCacheManagerExecutorsTest
                 }
                 finally {
                   latch.countDown();
-                  latchMore.countDown();
+                  try {
+                    if (latch.getCount() == 0) {
+                      latchBeforeMore.await();
+                    }
+                  }
+                  catch (InterruptedException e) {
+                    log.debug("Interrupted");
+                    Thread.currentThread().interrupt();
+                  }
+                  finally {
+                    latchMore.countDown();
+                  }
                 }
               }
             },
             cacheId
         );
     latch.await();
+    prior = runs.get();
+    latchBeforeMore.countDown();
     Assert.assertFalse(future.isCancelled());
     Assert.assertFalse(future.isDone());
     Assert.assertTrue(fnCache.containsKey(ns));
-    prior = runs.get();
     latchMore.await();
     Assert.assertTrue(runs.get() > prior);
 
