@@ -82,14 +82,14 @@ public class ExtractionFilter implements Filter
         }
       };
     }
-    if (allDimVals != null) {
-      for (int i = 0; i < allDimVals.size(); i++) {
-        String dimVal = allDimVals.get(i);
-        if (value.equals(Strings.nullToEmpty(fn.apply(dimVal)))) {
-          filters.add(new SelectorFilter(dimension, dimVal));
-        }
+
+    for (int i = 0; i < allDimVals.size(); i++) {
+      String dimVal = allDimVals.get(i);
+      if (value.equals(Strings.nullToEmpty(fn.apply(dimVal)))) {
+        filters.add(new SelectorFilter(dimension, dimVal));
       }
     }
+
     return filters;
   }
 
