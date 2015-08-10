@@ -69,11 +69,12 @@
         <apache.curator.version>2.8.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
-        <druid.api.version>0.3.9</druid.api.version>
+        <druid.api.version>0.3.10</druid.api.version>
         <jackson.version>2.4.4</jackson.version>
         <log4j.version>2.2</log4j.version>
         <slf4j.version>1.7.10</slf4j.version>
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
+        <guice.version>4.0</guice.version>
     </properties>
 
     <modules>
@@ -235,17 +236,17 @@
             <dependency>
                 <groupId>com.google.inject</groupId>
                 <artifactId>guice</artifactId>
-                <version>4.0-beta</version>
+                <version>${guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-servlet</artifactId>
-                <version>4.0-beta</version>
+                <version>${guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-multibindings</artifactId>
-                <version>4.0-beta</version>
+                <version>${guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.icu</groupId>

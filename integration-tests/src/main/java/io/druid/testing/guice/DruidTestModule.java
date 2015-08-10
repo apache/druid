@@ -44,7 +44,7 @@ public class DruidTestModule implements Module
 
   @Provides
   @LazySingleton
-  public ServiceEmitter getServiceEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
+  public final ServiceEmitter getServiceEmitter(Supplier<LoggingEmitterConfig> config, ObjectMapper jsonMapper)
   {
     return new ServiceEmitter("", "", new LoggingEmitter(config.get(), jsonMapper));
   }

@@ -138,7 +138,7 @@ public class CliCoordinator extends ServerRunnable
 
           @Provides
           @LazySingleton
-          public LoadQueueTaskMaster getLoadQueueTaskMaster(
+          public final LoadQueueTaskMaster getLoadQueueTaskMaster(
               CuratorFramework curator,
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,

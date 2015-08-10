@@ -106,7 +106,7 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
+  public final Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
   {
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
 
@@ -145,7 +145,7 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @Singleton
-  public JacksonJsonProvider getJacksonJsonProvider(@Json ObjectMapper objectMapper)
+  public final JacksonJsonProvider getJacksonJsonProvider(@Json ObjectMapper objectMapper)
   {
     final JacksonJsonProvider provider = new JacksonJsonProvider();
     provider.setMapper(objectMapper);
