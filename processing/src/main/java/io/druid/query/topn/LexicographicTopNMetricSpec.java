@@ -41,6 +41,10 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
     @Override
     public int compare(String s, String s2)
     {
+      // Avoid conversion to bytes for equal references
+      if(s == s2){
+        return 0;
+      }
       // null first
       if (s == null) {
         return -1;
@@ -48,6 +52,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       if (s2 == null) {
         return 1;
       }
+
       return UnsignedBytes.lexicographicalComparator().compare(
           StringUtils.toUtf8(s),
           StringUtils.toUtf8(s2)
