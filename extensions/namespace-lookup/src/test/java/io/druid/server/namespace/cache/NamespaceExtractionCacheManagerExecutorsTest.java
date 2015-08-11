@@ -138,7 +138,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   }
 
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testSimpleSubmission() throws ExecutionException, InterruptedException
   {
     URIExtractionNamespace namespace = new URIExtractionNamespace(
@@ -158,7 +158,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     }
   }
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testRepeatSubmission() throws ExecutionException, InterruptedException
   {
     final int repeatCount = 5;
@@ -217,7 +217,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   }
 
 
-  @Test(timeout = 10_000)
+  @Test(timeout = 50_000)
   public void testConcurrentDelete() throws ExecutionException, InterruptedException
   {
     final int threads = 5;
@@ -250,7 +250,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     executorService.shutdown();
   }
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testDelete()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
   {
@@ -340,7 +340,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     Assert.assertEquals(prior, runs.get());
   }
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testShutdown()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
   {
@@ -400,7 +400,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     Assert.assertTrue(((ListeningScheduledExecutorService) execField.get(manager)).isTerminated());
   }
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testRunCount()
       throws InterruptedException, ExecutionException
   {
