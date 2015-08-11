@@ -18,12 +18,13 @@
 package io.druid.collections;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
@@ -33,7 +34,7 @@ public class StupidPool<T>
 
   private final Supplier<T> generator;
 
-  private final LinkedList<T> objects = Lists.newLinkedList();
+  private final Queue<T> objects = new ConcurrentLinkedQueue<>();
 
   public StupidPool(
       Supplier<T> generator
@@ -44,18 +45,13 @@ public class StupidPool<T>
 
   public ResourceHolder<T> take()
   {
-    synchronized (objects) {
-      if (objects.size() > 0) {
-        return new ObjectResourceHolder(objects.removeFirst());
-      }
-    }
-
-    return new ObjectResourceHolder(generator.get());
+    final T obj = objects.poll();
+    return obj == null ? new ObjectResourceHolder(generator.get()) : new ObjectResourceHolder(obj);
   }
 
   private class ObjectResourceHolder implements ResourceHolder<T>
   {
-    private boolean closed = false;
+    private AtomicBoolean closed = new AtomicBoolean(false);
     private final T object;
 
     public ObjectResourceHolder(final T object)
@@ -63,10 +59,12 @@ public class StupidPool<T>
       this.object = object;
     }
 
+    // WARNING: it is entirely possible for a caller to hold onto the object and call ObjectResourceHolder.close,
+    // Then still use that object even though it will be offered to someone else in StupidPool.take
     @Override
-    public synchronized T get()
+    public T get()
     {
-      if (closed) {
+      if (closed.get()) {
         throw new ISE("Already Closed!");
       }
 
@@ -74,24 +72,27 @@ public class StupidPool<T>
     }
 
     @Override
-    public synchronized void close() throws IOException
+    public void close() throws IOException
     {
-      if (closed) {
+      if (!closed.compareAndSet(false, true)) {
         log.warn(new ISE("Already Closed!"), "Already closed");
         return;
       }
-
-      synchronized (objects) {
-        closed = true;
-        objects.addLast(object);
+      if (!objects.offer(object)) {
+        log.warn(new ISE("Queue offer failed"), "Could not offer object [%s] back into the queue", object);
       }
     }
 
     @Override
     protected void finalize() throws Throwable
     {
-      if (! closed) {
-        log.warn("Not closed!  Object was[%s]. Allowing gc to prevent leak.", object);
+      try {
+        if (!closed.get()) {
+          log.warn("Not closed!  Object was[%s]. Allowing gc to prevent leak.", object);
+        }
+      }
+      finally {
+        super.finalize();
       }
     }
   }

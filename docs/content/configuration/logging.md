@@ -33,6 +33,12 @@ An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sa
     <Root level="info">
       <AppenderRef ref="Console"/>
     </Root>
+
+    <!-- Uncomment to enable logging of all HTTP requests
+    <Logger name="io.druid.jetty.RequestLog" additivity="false" level="DEBUG">
+        <AppenderRef ref="Console"/>
+    </Logger>
+    -->
   </Loggers>
 </Configuration>
 ```

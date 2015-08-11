@@ -76,11 +76,13 @@ The following path is used for service discovery. It is **not** affected by `dru
 
 ### Request Logging
 
-All nodes that can serve queries can also log the requests they see.
+All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter. How to log every request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter. How to log every query request.|noop|
+
+Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
 #### File Request Logging
 
@@ -148,6 +150,7 @@ These properties specify the jdbc connection and other configuration around the 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.metadata.storage.type`|The type of metadata storage to use. Choose from "mysql", "postgres", or "derby".|derby|
+|`druid.metadata.storage.connector.connectURI`|The jdbc uri for the database to connect to|none|
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
 |`druid.metadata.storage.connector.password`|The password to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
@@ -213,18 +216,20 @@ This deep storage is used to interface with Cassandra.
 
 ### Caching
 
-If you are using a distributed cache such as memcached, you can include the configuration here.
+You can enable caching of results at the broker/historical using following configurations.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.(broker/historical).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.(broker/historical).cache.useCache`|Whether to use cache for getting query results.|false|
+|`druid.(broker/historical).cache.populateCache`|Whether to populate cache.|false|
 
 #### Local Cache
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
+|`druid.cache.sizeInBytes`|Maximum cache size in bytes. You must set this if you enabled populateCache/useCache, or else cache size of zero wouldn't really cache anything.|0|
 |`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
 |`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 

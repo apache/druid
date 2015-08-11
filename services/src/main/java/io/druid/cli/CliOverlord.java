@@ -254,7 +254,7 @@ public class CliOverlord extends ServerRunnable
       root.addFilter(GuiceFilter.class, "/druid/*", null);
 
       HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{root});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
 
       server.setHandler(handlerList);
     }

@@ -22,6 +22,8 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.multibindings.MapBinder;
+import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -76,6 +78,11 @@ public class HdfsStorageDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
+             .addBinding(SCHEME)
+             .to(HdfsFileTimestampVersionFinder.class)
+             .in(LazySingleton.class);
+
     Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPuller.class).in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);

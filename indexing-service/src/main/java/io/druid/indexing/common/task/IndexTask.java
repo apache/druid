@@ -39,7 +39,6 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -267,8 +266,7 @@ public class IndexTask extends AbstractFixedIntervalTask
               inputRow
           );
           collector.add(
-              hashFunction.hashBytes(HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(groupKey))
-                          .asBytes()
+              hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asBytes()
           );
         }
       }
@@ -290,13 +288,7 @@ public class IndexTask extends AbstractFixedIntervalTask
       shardSpecs.add(new NoneShardSpec());
     } else {
       for (int i = 0; i < numberOfShards; ++i) {
-        shardSpecs.add(
-            new HashBasedNumberedShardSpec(
-                i,
-                numberOfShards,
-                HadoopDruidIndexerConfig.jsonMapper
-            )
-        );
+        shardSpecs.add(new HashBasedNumberedShardSpec(i, numberOfShards, jsonMapper));
       }
     }
 

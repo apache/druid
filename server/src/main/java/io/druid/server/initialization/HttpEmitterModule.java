@@ -60,7 +60,7 @@ public class HttpEmitterModule implements Module
   @Provides
   @ManageLifecycle
   @Named("http")
-  public Emitter getEmitter(
+  public final Emitter getEmitter(
       Supplier<HttpEmitterConfig> config,
       @Nullable SSLContext sslContext,
       Lifecycle lifecycle,

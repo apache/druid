@@ -200,33 +200,33 @@ The indexing service can also run real-time tasks. These tasks effectively trans
 
             ]
           }
-        },
-        "metricsSpec": [
-          {
-            "type": "count",
-            "name": "count"
-          },
-          {
-            "type": "doubleSum",
-            "name": "added",
-            "fieldName": "added"
-          },
-          {
-            "type": "doubleSum",
-            "name": "deleted",
-            "fieldName": "deleted"
-          },
-          {
-            "type": "doubleSum",
-            "name": "delta",
-            "fieldName": "delta"
-          }
-        ],
-        "granularitySpec": {
-          "type": "uniform",
-          "segmentGranularity": "DAY",
-          "queryGranularity": "NONE"
         }
+      },
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "count"
+        },
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "NONE"
       }
     },
     "ioConfig": {
@@ -331,20 +331,63 @@ Misc. Tasks
 -----------
 
 ### Version Converter Task
+The convert task suite takes active segments and will recompress them using a new IndexSpec. This is handy when doing activities like migrating from Concise to Roaring, or adding dimension compression to old segments.
 
-These tasks convert segments from an existing older index version to the latest index version. The available grammar is:
+Upon success the new segments will have the same version as the old segment with `_converted` appended. A convert task may be run against the same interval for the same datasource multiple times. Each execution will append another `_converted` to the version for the segments
 
+There are two types of conversion tasks. One is the Hadoop convert task, and the other is the indexing service convert task. The Hadoop convert task runs on a hadoop cluster, and simply leaves a task monitor on the indexing service (similar to the hadoop batch task). The indexing service convert task runs the actual conversion on the indexing service.
+####Hadoop Convert Segment Task
 ```json
 {
-    "type": "version_converter",
-    "id": <task_id>,
-    "groupId" : <task_group_id>,
-    "dataSource": <task_datasource>,
-    "interval" : <segment_interval>,
-    "segment": <JSON DataSegment object to convert>
+  "type": "hadoop_convert_segment",
+  "dataSource":"some_datasource",
+  "interval":"2013/2015",
+  "indexSpec":{"bitmap":{"type":"concise"},"dimensionCompression":"lz4","metricCompression":"lz4"},
+  "force": true,
+  "validate": false,
+  "distributedSuccessCache":"hdfs://some-hdfs-nn:9000/user/jobrunner/cache",
+  "jobPriority":"VERY_LOW",
+  "segmentOutputPath":"s3n://somebucket/somekeyprefix"
 }
 ```
 
+The values are described below.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|Convert task identifier|Yes: `hadoop_convert_segment`|
+|`dataSource`|String|The datasource to search for segments|Yes|
+|`interval`|Interval string|The interval in the datasource to look for segments|Yes|
+|`indexSpec`|json|The compression specification for the index|Yes|
+|`force`|boolean|Forces the convert task to continue even if binary versions indicate it has been updated recently (you probably want to do this)|No|
+|`validate`|boolean|Runs validation between the old and new segment before reporting task success|No|
+|`distributedSuccessCache`|URI|A location where hadoop should put intermediary files.|Yes|
+|`jobPriority`|`org.apache.hadoop.mapred.JobPriority` as String|The priority to set for the hadoop job|No|
+|`segmentOutputPath`|URI|A base uri for the segment to be placed. Same format as other places a segment output path is needed|Yes|
+
+
+####Indexing Service Convert Segment Task
+```json
+{
+  "type": "convert_segment",
+  "dataSource":"some_datasource",
+  "interval":"2013/2015",
+  "indexSpec":{"bitmap":{"type":"concise"},"dimensionCompression":"lz4","metricCompression":"lz4"},
+  "force": true,
+  "validate": false
+}
+```
+
+|Field|Type|Description|Required (default)|
+|-----|----|-----------|--------|
+|`type`|String|Convert task identifier|Yes: `convert_segment`|
+|`dataSource`|String|The datasource to search for segments|Yes|
+|`interval`|Interval string|The interval in the datasource to look for segments|Yes|
+|`indexSpec`|json|The compression specification for the index|Yes|
+|`force`|boolean|Forces the convert task to continue even if binary versions indicate it has been updated recently (you probably want to do this)|No (false)|
+|`validate`|boolean|Runs validation between the old and new segment before reporting task success|No (true)|
+
+Unlike the hadoop convert task, the indexing service task draws its output path from the indexing service's configuration.
 ### Noop Task
 
 These tasks start, sleep for a time and are used only for testing. The available grammar is:

@@ -98,7 +98,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       );
     }
     catch (ServiceException e) {
-      throw new SegmentLoadingException(e, "Unable to move segment[%s]", segment.getIdentifier());
+      throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getIdentifier(), e);
     }
   }
 

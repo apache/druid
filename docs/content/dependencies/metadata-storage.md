@@ -16,6 +16,22 @@ The following metadata storages are supported:
 
 To choose a metadata storage to use, set the `druid.extensions` config to include the module for the metadata storage.
 
+
+## Set up MySQL
+
+1. If you don't already have it, download MySQL Community Server here: [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/).
+2. Install MySQL.
+3. Create a druid user and database.
+
+```bash
+mysql -u root
+```
+
+```sql
+GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
+CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
+```
+
 Segments Table
 --------------
 

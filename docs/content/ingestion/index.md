@@ -93,7 +93,7 @@ If `type` is not included, the parser defaults to `string`.
 
 ### ParseSpec
 
-If `type` is not included, the parseSpec defaults to `tsv`.
+If `format` is not included, the parseSpec defaults to `tsv`.
 
 #### JSON ParseSpec
 
@@ -146,7 +146,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| dimensions | JSON String array | The names of the dimensions. | yes |
+| dimensions | JSON String array | The names of the dimensions. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as dimension columns. | yes |
 | dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
 | spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
 

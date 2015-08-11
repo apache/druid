@@ -25,7 +25,6 @@ import io.druid.server.http.OverlordProxyServlet;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -34,6 +33,7 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
+import org.eclipse.jetty.util.resource.ResourceCollection;
 
 /**
  */
@@ -56,8 +56,13 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(holderPwd, "/");
     if(config.getConsoleStatic() == null) {
-      root.setBaseResource(Resource.newClassPathResource("static"));
+      ResourceCollection staticResources = new ResourceCollection(
+          Resource.newClassPathResource("io/druid/console"),
+          Resource.newClassPathResource("static")
+      );
+      root.setBaseResource(staticResources);
     } else {
+      // used for console development
       root.setResourceBase(config.getConsoleStatic());
     }
     JettyServerInitUtils.addExtensionFilters(root, injector);
@@ -77,8 +82,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
     root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");
+
     HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(new Handler[]{root});
+    handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
 
     server.setHandler(handlerList);
   }

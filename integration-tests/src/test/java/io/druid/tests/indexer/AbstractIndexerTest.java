@@ -28,7 +28,6 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
@@ -74,10 +73,13 @@ public abstract class AbstractIndexerTest
 
   protected String getTaskAsString(String file) throws IOException
   {
-    InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
-    StringWriter writer = new StringWriter();
-    IOUtils.copy(inputStream, writer, "UTF-8");
-    return writer.toString();
+    final InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
+    try {
+      return IOUtils.toString(inputStream, "UTF-8");
+    }
+    finally {
+      IOUtils.closeQuietly(inputStream);
+    }
   }
 
 }

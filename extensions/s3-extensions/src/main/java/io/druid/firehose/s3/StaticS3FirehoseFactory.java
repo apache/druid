@@ -144,4 +144,26 @@ public class StaticS3FirehoseFactory implements FirehoseFactory<StringInputRowPa
         firehoseParser
     );
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    StaticS3FirehoseFactory factory = (StaticS3FirehoseFactory) o;
+
+    return !(uris != null ? !uris.equals(factory.uris) : factory.uris != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return uris != null ? uris.hashCode() : 0;
+  }
 }

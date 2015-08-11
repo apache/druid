@@ -19,8 +19,10 @@
 
 package io.druid.indexing.overlord.http;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -65,12 +67,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 public class OverlordResourceTest
@@ -85,7 +89,8 @@ public class OverlordResourceTest
   private CountDownLatch announcementLatch;
   private DruidNode druidNode;
   private OverlordResource overlordResource;
-  private CountDownLatch[] taskCountDownLatches;
+  private CountDownLatch[] taskCompletionCountDownLatches;
+  private CountDownLatch[] runTaskCountDownLatches;
 
   private void setupServerAndCurator() throws Exception
   {
@@ -121,9 +126,12 @@ public class OverlordResourceTest
     EasyMock.replay(taskLockbox, taskActionClientFactory);
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    taskCountDownLatches = new CountDownLatch[2];
-    taskCountDownLatches[0] = new CountDownLatch(1);
-    taskCountDownLatches[1] = new CountDownLatch(1);
+    runTaskCountDownLatches = new CountDownLatch[2];
+    runTaskCountDownLatches[0] = new CountDownLatch(1);
+    runTaskCountDownLatches[1] = new CountDownLatch(1);
+    taskCompletionCountDownLatches = new CountDownLatch[2];
+    taskCompletionCountDownLatches[0] = new CountDownLatch(1);
+    taskCompletionCountDownLatches[1] = new CountDownLatch(1);
     announcementLatch = new CountDownLatch(1);
     IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null, null);
     setupServerAndCurator();
@@ -143,7 +151,7 @@ public class OverlordResourceTest
           @Override
           public TaskRunner build()
           {
-            return new MockTaskRunner(taskCountDownLatches);
+            return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
           }
         },
         new ResourceManagementSchedulerFactory()
@@ -186,7 +194,7 @@ public class OverlordResourceTest
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
 
-    String taskId_0 = "0";
+    final String taskId_0 = "0";
     NoopTask task_0 = new NoopTask(taskId_0, 0, 0, null, null);
     response = overlordResource.taskPost(task_0);
     Assert.assertEquals(200, response.getStatus());
@@ -213,17 +221,23 @@ public class OverlordResourceTest
     );
 
     // Simulate completion of task_0
-    taskCountDownLatches[Integer.parseInt(taskId_0)].countDown();
+    taskCompletionCountDownLatches[Integer.parseInt(taskId_0)].countDown();
     // Wait for taskQueue to handle success status of task_0
     waitForTaskStatus(taskId_0, TaskStatus.Status.SUCCESS);
 
     // Manually insert task in taskStorage
-    String taskId_1 = "1";
+    final String taskId_1 = "1";
     NoopTask task_1 = new NoopTask(taskId_1, 0, 0, null, null);
     taskStorage.insert(task_1, TaskStatus.running(taskId_1));
+    // Wait for task runner to run task_1
+    runTaskCountDownLatches[Integer.parseInt(taskId_1)].await();
+
+    response = overlordResource.getRunningTasks();
+    // 1 task that was manually inserted should be in running state
+    Assert.assertEquals(1, (((List) response.getEntity()).size()));
 
     // Simulate completion of task_1
-    taskCountDownLatches[Integer.parseInt(taskId_1)].countDown();
+    taskCompletionCountDownLatches[Integer.parseInt(taskId_1)].countDown();
     // Wait for taskQueue to handle success status of task_1
     waitForTaskStatus(taskId_1, TaskStatus.Status.SUCCESS);
 
@@ -257,44 +271,48 @@ public class OverlordResourceTest
 
   public static class MockTaskRunner implements TaskRunner
   {
-    private CountDownLatch[] taskLatches;
-    private Map<Integer, TaskRunnerWorkItem> taskRunnerWorkItems;
-    private Map<Integer, TaskRunnerWorkItem> runningTaskRunnerWorkItems;
+    private CountDownLatch[] completionLatches;
+    private CountDownLatch[] runLatches;
+    private ConcurrentHashMap<String, TaskRunnerWorkItem> taskRunnerWorkItems;
+    private List<String> runningTasks;
 
-    public MockTaskRunner(CountDownLatch[] taskLatches)
+    public MockTaskRunner(CountDownLatch[] runLatches, CountDownLatch[] completionLatches)
     {
-      this.taskLatches = taskLatches;
-      this.taskRunnerWorkItems = new HashMap<>();
-      this.runningTaskRunnerWorkItems = new HashMap<>();
+      this.runLatches = runLatches;
+      this.completionLatches = completionLatches;
+      this.taskRunnerWorkItems = new ConcurrentHashMap<>();
+      this.runningTasks = new ArrayList<>();
     }
 
     @Override
-    public ListenableFuture<TaskStatus> run(final Task task)
+    public synchronized ListenableFuture<TaskStatus> run(final Task task)
     {
-      final int taskId = Integer.parseInt(task.getId());
+      final String taskId = task.getId();
       ListenableFuture<TaskStatus> future = MoreExecutors.listeningDecorator(
-          Execs.singleThreaded(
-              "noop_test_task_exec_%s"
-          )
+        Execs.singleThreaded(
+            "noop_test_task_exec_%s"
+        )
       ).submit(
-          new Callable<TaskStatus>()
+        new Callable<TaskStatus>()
+        {
+          @Override
+          public TaskStatus call() throws Exception
           {
-            @Override
-            public TaskStatus call() throws Exception
-            {
-              try {
-                taskLatches[taskId].await();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException("Thread was interrupted!");
-              }
-              runningTaskRunnerWorkItems.remove(taskId);
-              return TaskStatus.success(task.getId());
-            }
+            // adding of task to list of runningTasks should be done before count down as
+            // getRunningTasks may not include the task for which latch has been counted down
+            // Count down to let know that task is actually running
+            // this is equivalent of getting process holder to run task in ForkingTaskRunner
+            runningTasks.add(taskId);
+            runLatches[Integer.parseInt(taskId)].countDown();
+            // Wait for completion count down
+            completionLatches[Integer.parseInt(taskId)].await();
+            taskRunnerWorkItems.remove(taskId);
+            runningTasks.remove(taskId);
+            return TaskStatus.success(taskId);
           }
+        }
       );
-      TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(task.getId(), future);
-      runningTaskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
+      TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(taskId, future);
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
       return future;
     }
@@ -303,9 +321,21 @@ public class OverlordResourceTest
     public void shutdown(String taskid) {}
 
     @Override
-    public Collection<? extends TaskRunnerWorkItem> getRunningTasks()
+    public synchronized Collection<? extends TaskRunnerWorkItem> getRunningTasks()
     {
-      return runningTaskRunnerWorkItems.values();
+      List runningTaskList = Lists.transform(
+        runningTasks,
+        new Function<String, TaskRunnerWorkItem>()
+        {
+          @Nullable
+          @Override
+          public TaskRunnerWorkItem apply(String input)
+          {
+            return taskRunnerWorkItems.get(input);
+          }
+        }
+      );
+      return runningTaskList;
     }
 
     @Override

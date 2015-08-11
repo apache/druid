@@ -25,18 +25,24 @@ import io.druid.indexing.common.config.FileTaskLogsConfig;
 import io.druid.tasklogs.TaskLogs;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import org.junit.rules.TemporaryFolder;
 
 public class FileTaskLogsTest
 {
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void testSimple() throws Exception
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = temporaryFolder.newFolder();
     try {
       final File logDir = new File(tmpDir, "druid/logs");
       final File logFile = new File(tmpDir, "log");
@@ -59,7 +65,7 @@ public class FileTaskLogsTest
   @Test
   public void testPushTaskLogDirCreationFails() throws Exception
   {
-    final File tmpDir = Files.createTempDir();
+    final File tmpDir = temporaryFolder.newFolder();
     
     try {
       IOException thrown = null;

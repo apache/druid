@@ -63,7 +63,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       }
     }
     catch (ServiceException e) {
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]", segment.getIdentifier());
+      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e);
     }
   }
 }
