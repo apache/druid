@@ -18,6 +18,7 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -245,6 +246,12 @@ public class HadoopDruidIndexerConfig
   public HadoopIngestionSpec getSchema()
   {
     return schema;
+  }
+
+  @JsonIgnore
+  public PathSpec getPathSpec()
+  {
+    return pathSpec;
   }
 
   public String getDataSource()

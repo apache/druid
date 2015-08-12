@@ -42,12 +42,10 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.DatasourceInputFormat;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.server.DruidNode;
@@ -67,6 +65,7 @@ import java.util.List;
 public class DatasourcePathSpecTest
 {
   private DatasourceIngestionSpec ingestionSpec;
+  private List<DataSegment> segments;
 
   public DatasourcePathSpecTest()
   {
@@ -78,13 +77,44 @@ public class DatasourcePathSpecTest
         null,
         null
     );
+
+    segments = ImmutableList.of(
+        new DataSegment(
+            ingestionSpec.getDataSource(),
+            Interval.parse("2000/3000"),
+            "ver",
+            ImmutableMap.<String, Object>of(
+                "type", "local",
+                "path", "/tmp/index.zip"
+            ),
+            ImmutableList.of("product"),
+            ImmutableList.of("visited_sum", "unique_hosts"),
+            new NoneShardSpec(),
+            9,
+            12334
+        ),
+        new DataSegment(
+            ingestionSpec.getDataSource(),
+            Interval.parse("2050/3000"),
+            "ver",
+            ImmutableMap.<String, Object>of(
+                "type", "hdfs",
+                "path", "/tmp/index.zip"
+            ),
+            ImmutableList.of("product"),
+            ImmutableList.of("visited_sum", "unique_hosts"),
+            new NoneShardSpec(),
+            9,
+            12335
+        )
+    );
   }
 
   @Test
   public void testSerde() throws Exception
   {
-    final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator = EasyMock.createMock(
-        IndexerMetadataStorageCoordinator.class
+    final UsedSegmentLister segmentList = EasyMock.createMock(
+        UsedSegmentLister.class
     );
 
     Injector injector = Initialization.makeInjectorWithModules(
@@ -95,7 +125,7 @@ public class DatasourcePathSpecTest
               @Override
               public void configure(Binder binder)
               {
-                binder.bind(IndexerMetadataStorageCoordinator.class).toInstance(indexerMetadataStorageCoordinator);
+                binder.bind(UsedSegmentLister.class).toInstance(segmentList);
                 JsonConfigProvider.bindInstance(
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null)
                 );
@@ -107,8 +137,8 @@ public class DatasourcePathSpecTest
     ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
 
     DatasourcePathSpec expected = new DatasourcePathSpec(
-        indexerMetadataStorageCoordinator,
         jsonMapper,
+        null,
         ingestionSpec,
         Long.valueOf(10)
     );
@@ -116,8 +146,17 @@ public class DatasourcePathSpecTest
     Assert.assertEquals(expected, actual);
 
     expected = new DatasourcePathSpec(
-        indexerMetadataStorageCoordinator,
         jsonMapper,
+        null,
+        ingestionSpec,
+        null
+    );
+    actual = jsonMapper.readValue(jsonMapper.writeValueAsString(expected), PathSpec.class);
+    Assert.assertEquals(expected, actual);
+
+    expected = new DatasourcePathSpec(
+        jsonMapper,
+        segments,
         ingestionSpec,
         null
     );
@@ -161,46 +200,13 @@ public class DatasourcePathSpecTest
         )
     );
 
-    List<DataSegment> segments = ImmutableList.of(
-        new DataSegment(
-            ingestionSpec.getDataSource(),
-            Interval.parse("2000/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "local",
-                "path", "/tmp/index.zip"
-            ),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            12334
-        ),
-        new DataSegment(
-            ingestionSpec.getDataSource(),
-            Interval.parse("2050/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "hdfs",
-                "path", "/tmp/index.zip"
-            ),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            12335
-        )
-    );
 
-    IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator = EasyMock.createMock(IndexerMetadataStorageCoordinator.class);
-    EasyMock.expect(indexerMetadataStorageCoordinator.getUsedSegmentsForInterval(ingestionSpec.getDataSource(), ingestionSpec.getInterval())).andReturn(segments);
-    EasyMock.replay(indexerMetadataStorageCoordinator);
 
     ObjectMapper mapper = new DefaultObjectMapper();
 
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
-        indexerMetadataStorageCoordinator,
         mapper,
+        segments,
         ingestionSpec,
         null
     );

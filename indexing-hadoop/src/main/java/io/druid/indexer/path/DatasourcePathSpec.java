@@ -22,8 +22,8 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -31,7 +31,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.DatasourceInputFormat;
-import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.fs.Path;
@@ -46,21 +45,20 @@ public class DatasourcePathSpec implements PathSpec
 {
   private static final Logger logger = new Logger(DatasourcePathSpec.class);
 
-  private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private ObjectMapper mapper;
-
-  private DatasourceIngestionSpec ingestionSpec;
-  private long maxSplitSize;
+  private final ObjectMapper mapper;
+  private final DatasourceIngestionSpec ingestionSpec;
+  private final long maxSplitSize;
+  private final List<DataSegment> segments;
 
   public DatasourcePathSpec(
-      @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject ObjectMapper mapper,
+      @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("ingestionSpec") DatasourceIngestionSpec spec,
       @JsonProperty("maxSplitSize") Long maxSplitSize
   )
   {
-    this.indexerMetadataStorageCoordinator = Preconditions.checkNotNull(indexerMetadataStorageCoordinator, "null indexerMetadataStorageCoordinator");
     this.mapper = Preconditions.checkNotNull(mapper, "null mapper");
+    this.segments = segments;
     this.ingestionSpec = Preconditions.checkNotNull(spec, "null ingestionSpec");
 
     if(maxSplitSize == null) {
@@ -68,6 +66,12 @@ public class DatasourcePathSpec implements PathSpec
     } else {
       this.maxSplitSize = maxSplitSize.longValue();
     }
+  }
+
+  @JsonProperty
+  public List<DataSegment> getSegments()
+  {
+    return segments;
   }
 
   @JsonProperty
@@ -87,10 +91,8 @@ public class DatasourcePathSpec implements PathSpec
       HadoopDruidIndexerConfig config, Job job
   ) throws IOException
   {
-    final List<DataSegment> segments = indexerMetadataStorageCoordinator.getUsedSegmentsForInterval(
-        ingestionSpec.getDataSource(),
-        ingestionSpec.getInterval()
-    );
+    Preconditions.checkArgument(segments != null && !segments.isEmpty(), "no segments provided");
+
     logger.info(
         "Found total [%d] segments for [%s]  in interval [%s]",
         segments.size(),
@@ -98,7 +100,8 @@ public class DatasourcePathSpec implements PathSpec
         ingestionSpec.getInterval()
     );
 
-    if (ingestionSpec.getDimensions() == null) {
+    DatasourceIngestionSpec updatedIngestionSpec = ingestionSpec;
+    if (updatedIngestionSpec.getDimensions() == null) {
       List<String> dims;
       if (config.getParser().getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
         dims = config.getParser().getParseSpec().getDimensionsSpec().getDimensions();
@@ -128,10 +131,10 @@ public class DatasourcePathSpec implements PathSpec
             )
         );
       }
-      ingestionSpec = ingestionSpec.withDimensions(dims);
+      updatedIngestionSpec = updatedIngestionSpec.withDimensions(dims);
     }
 
-    if (ingestionSpec.getMetrics() == null) {
+    if (updatedIngestionSpec.getMetrics() == null) {
       Set<String> metrics = Sets.newHashSet();
       final AggregatorFactory[] cols = config.getSchema().getDataSchema().getAggregators();
       if (cols != null) {
@@ -139,10 +142,10 @@ public class DatasourcePathSpec implements PathSpec
           metrics.add(col.getName());
         }
       }
-      ingestionSpec = ingestionSpec.withMetrics(Lists.newArrayList(metrics));
+      updatedIngestionSpec = updatedIngestionSpec.withMetrics(Lists.newArrayList(metrics));
     }
 
-    job.getConfiguration().set(DatasourceInputFormat.CONF_DRUID_SCHEMA, mapper.writeValueAsString(ingestionSpec));
+    job.getConfiguration().set(DatasourceInputFormat.CONF_DRUID_SCHEMA, mapper.writeValueAsString(updatedIngestionSpec));
     job.getConfiguration().set(DatasourceInputFormat.CONF_INPUT_SEGMENTS, mapper.writeValueAsString(segments));
     job.getConfiguration().set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, String.valueOf(maxSplitSize));
     MultipleInputs.addInputPath(job, new Path("/dummy/tobe/ignored"), DatasourceInputFormat.class);
@@ -165,7 +168,10 @@ public class DatasourcePathSpec implements PathSpec
     if (maxSplitSize != that.maxSplitSize) {
       return false;
     }
-    return ingestionSpec.equals(that.ingestionSpec);
+    if (!ingestionSpec.equals(that.ingestionSpec)) {
+      return false;
+    }
+    return !(segments != null ? !segments.equals(that.segments) : that.segments != null);
 
   }
 
@@ -174,6 +180,7 @@ public class DatasourcePathSpec implements PathSpec
   {
     int result = ingestionSpec.hashCode();
     result = 31 * result + (int) (maxSplitSize ^ (maxSplitSize >>> 32));
+    result = 31 * result + (segments != null ? segments.hashCode() : 0);
     return result;
   }
 }

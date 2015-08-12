@@ -471,11 +471,15 @@ public class TaskSerdeTest
         ),
         null,
         null,
-        "blah"
+        "blah",
+        jsonMapper
     );
 
     final String json = jsonMapper.writeValueAsString(task);
-    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
+
+    InjectableValues inject = new InjectableValues.Std()
+        .addValue(ObjectMapper.class, jsonMapper);
+    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.reader(Task.class).with(inject).readValue(json);
 
     Assert.assertEquals("foo", task.getDataSource());
 

@@ -19,8 +19,16 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.indexer.hadoop.DatasourceIngestionSpec;
+import io.druid.indexer.path.UsedSegmentLister;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
+import io.druid.timeline.DataSegment;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -91,4 +99,45 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         config
     );
   }
+
+  public static HadoopIngestionSpec updateSegmentListIfDatasourcePathSpecIsUsed(
+      HadoopIngestionSpec spec,
+      ObjectMapper jsonMapper,
+      UsedSegmentLister segmentLister
+  )
+      throws IOException
+  {
+    String dataSource = "dataSource";
+    String type = "type";
+    String multi = "multi";
+    String children = "children";
+    String segments = "segments";
+    String ingestionSpec = "ingestionSpec";
+
+    Map<String, Object> pathSpec = spec.getIOConfig().getPathSpec();
+    Map<String, Object> datasourcePathSpec = null;
+    if(pathSpec.get(type).equals(dataSource)) {
+      datasourcePathSpec = pathSpec;
+    } else if(pathSpec.get(type).equals(multi)) {
+      List<Map<String, Object>> childPathSpecs = (List<Map<String, Object>>) pathSpec.get(children);
+      for(Map<String, Object> childPathSpec : childPathSpecs) {
+        if (childPathSpec.get(type).equals(dataSource)) {
+          datasourcePathSpec = childPathSpec;
+          break;
+        }
+      }
+    }
+    if (datasourcePathSpec != null) {
+      Map<String, Object> ingestionSpecMap = (Map<String, Object>) datasourcePathSpec.get(ingestionSpec);
+      DatasourceIngestionSpec ingestionSpecObj = jsonMapper.convertValue(ingestionSpecMap, DatasourceIngestionSpec.class);
+      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForInterval(
+          ingestionSpecObj.getDataSource(),
+          ingestionSpecObj.getInterval()
+      );
+      datasourcePathSpec.put(segments, segmentsList);
+    }
+
+    return spec;
+  }
+
 }
