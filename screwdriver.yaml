@@ -1,0 +1,160 @@
+# Note: If this file is modified then make sure appropriate updates are made to master branch as well.
+# Differences between master and metamx:
+# 1. The values in the settings, i.e. SMOKE_HOST, PROMOTE_HOST, DRUID_PKG_NAME, DRUID_INABOX_PKG_NAME and HDFS_BASE_DIR
+# 2. master branch triggers ci-cluster while metamx branch doesn't
+# 3. master branch publishes ci tests package while metamx branch doesn't
+# 4. metamx branch disables test results and coverage reports
+platform: java
+
+shared:
+  notifications:
+    email: greyhawk@yahoo-inc.com
+
+  settings:
+    SSH_OPTIONS: "-o StrictHostKeyChecking=no -o CheckHostIP=no -o UserKnownHostsFile=/dev/null"
+    # Change only the variables' values below to replicate this pipeline
+    SMOKE_HOST: "fifteeneugene.corp.sg3.yahoo.com"
+    PROMOTE_HOST: "druid-launcher-003.adx.bf1.yahoo.com"
+    DRUID_PKG_NAME: "druid_dev"
+    DRUID_INABOX_PKG_NAME: "druid_inabox_dev"
+    HDFS_BASE_DIR: "metamx_greyhawk_ci_0_7"
+
+  build_containers: [oracle-jdk8-current]
+
+  plugins:
+    test_results:
+      enabled: false
+    coverage:
+      enabled: false
+    build_timeout: 120
+    resource: HIGH
+
+  steps:
+    druid_code_build:
+      description: create druid code jars
+      command: mvn install
+jobs:
+  pull-request:
+    order:
+      - init
+      - druid_code_build
+  component:
+    order:
+      - init
+      - compute_druid_version
+      - set_druid_version
+      - druid_code_build
+      - clone_druid_pkg
+      - set_config_files
+      - druid_pkg_code_build
+      - show_tree
+      - check_druid_jars_version
+      - clone_ci_tests_pkg
+      - ci_tests_code_build
+      - create_druid_yinst_pkg
+      - create_druid_inabox_yinst_pkg
+      - create_ci_tests_yinst_pkg
+      - clean_yinst_pkg_smoke
+      - scp_druid_yinst_pkg_smoke
+      - scp_druid_inabox_pkg_smoke
+      - scp_ci_tests_pkg_smoke
+      - smoke
+      - clean_yinst_pkg_promote
+      - scp_druid_yinst_pkg_promote
+      - scp_druid_inabox_pkg_promote
+      - scp_ci_tests_pkg_promote
+      - promote
+      - check_origin_url
+      - publish_druid_yinst_pkg
+      - publish_druid_inabox_yinst_pkg
+    steps:
+      compute_druid_version:
+        description: compute the hash for druid version
+        command: >
+          echo $(fgrep '<version>' pom.xml | sed -n 2p | grep -oP '\d+\.\d+\.\d+')-$(date '+%s')-$(git rev-parse --short HEAD)-${BUILD_NUMBER} > druid.version &&
+          if [ ! -s druid.version ]; then echo 'Error: druid.version is empty!' && exit 1; else echo "druid.version is `cat druid.version`"; fi || exit $?
+      set_druid_version:
+        description: set druid jars version
+        command: mvn org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.version`"
+      clone_druid_pkg:
+        description: clone druid package
+        command: git clone git@git.corp.yahoo.com:greyhawk/druid_package.git
+      set_config_files:
+        description: call setup_flags_n_vars.sh (comes from druid_package repo) to replace placeholded embedded in the yicf files with meaningful names
+        command: >
+          cd druid_package &&
+          sh ./screwdriver/update_vars.sh ${SD_SETTING_DRUID_PKG_NAME} ${SD_SETTING_DRUID_INABOX_PKG_NAME} ${SD_SETTING_HDFS_BASE_DIR} &&
+          git diff &&
+          git commit -a -m "commit to make yinst_create happy" || exit $?
+      druid_pkg_code_build:
+        description: copy dependencies for druid_package
+        command: mvn -f druid_package/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
+      show_tree:
+        description: tree under root
+        command: tree .
+      check_druid_jars_version:
+        description: check whether downloaded druid jars have correct version (check_version.sh comes from druid_package repo)
+        command: sh druid_package/screwdriver/check_version.sh "`cat druid.version`" druid_package/ydruid_package/target/dependency
+      clone_ci_tests_pkg:
+        description: clone ci_tests package
+        command: git clone git@git.corp.yahoo.com:greyhawk/ci_tests.git
+      ci_tests_code_build:
+        description: build ci tests and copy its dependencies
+        command: mvn -f ci_tests/pom.xml package dependency:copy-dependencies
+      create_druid_yinst_pkg:
+        description: create the yinst package from druid_packcage
+        command: >
+          cd druid_package &&
+          mkdir yinst_package_druid_dir &&
+          yinst_create -r ydruid_package/druid.yicf --target_dir=yinst_package_druid_dir || exit $?
+      create_druid_inabox_yinst_pkg:
+        description: create the yinst package for druid_inabox
+        command: >
+          cd druid_package &&
+          mkdir yinst_package_druid_inabox_dir &&
+          yinst_create -r druid_inabox/druid_inabox.yicf --target_dir=yinst_package_druid_inabox_dir || exit $?
+      create_ci_tests_yinst_pkg:
+        description: create yinst ci tests package
+        command: >
+          cd ci_tests &&
+          mkdir yinst_package_ci_tests_dir &&
+          yinst_create -r greyhawk_ci_tests.yicf --target_dir=yinst_package_ci_tests_dir || exit $?
+      clean_yinst_pkg_smoke:
+        description: clean up yinst packages stored on smoke test machine
+        command: ssh ${SD_SETTING_SSH_OPTIONS} ${SD_SETTING_SMOKE_HOST} "rm -f *.tgz"
+      scp_druid_yinst_pkg_smoke:
+        description: scp yinst test package to smoke test machine
+        command: scp ${SD_SETTING_SSH_OPTIONS} druid_package/yinst_package_druid_dir/*.tgz ${SD_SETTING_SMOKE_HOST}:~
+      scp_druid_inabox_pkg_smoke:
+        description: scp druid_inabox test package to smoke test machine
+        command: scp ${SD_SETTING_SSH_OPTIONS} druid_package/yinst_package_druid_inabox_dir/*.tgz ${SD_SETTING_SMOKE_HOST}:~
+      scp_ci_tests_pkg_smoke:
+        description: scp ci_tests package to smoke test machine
+        command: scp ${SD_SETTING_SSH_OPTIONS} ci_tests/yinst_package_ci_tests_dir/*.tgz ${SD_SETTING_SMOKE_HOST}:~
+      smoke:
+        description: run ci-tests on smoke test machine
+        command: sh druid_package/ci_tests_runner/bin/run_ci_tests.sh ${SD_SETTING_SMOKE_HOST} smoke
+      clean_yinst_pkg_promote:
+        description: clean up yinst packages stored on promote test machine
+        command: ssh ${SD_SETTING_SSH_OPTIONS} ${SD_SETTING_PROMOTE_HOST} "rm -f *.tgz"
+      scp_druid_yinst_pkg_promote:
+        description: scp druid yinst package to promote test machine
+        command: scp ${SD_SETTING_SSH_OPTIONS} druid_package/yinst_package_druid_dir/*.tgz ${SD_SETTING_PROMOTE_HOST}:~
+      scp_druid_inabox_pkg_promote:
+        description: scp druid_inabox package to promote test machine
+        command: scp ${SD_SETTING_SSH_OPTIONS} druid_package/yinst_package_druid_inabox_dir/*.tgz ${SD_SETTING_PROMOTE_HOST}:~
+      scp_ci_tests_pkg_promote:
+        description: scp ci tests package to promote test machine
+        command: scp ${SD_SETTING_SSH_OPTIONS} ci_tests/yinst_package_ci_tests_dir/*.tgz ${SD_SETTING_PROMOTE_HOST}:~
+      promote:
+        description: run ci-tests on promote test machine
+        command: sh druid_package/ci_tests_runner/bin/run_ci_tests.sh ${SD_SETTING_PROMOTE_HOST} promote
+      check_origin_url:
+        description: check whether the origin url is indeed git@git.corp.yahoo.com:greyhawk/druid.git
+        command: git config remote.origin.url | grep '^git@git.corp.yahoo.com:greyhawk/druid.git$' > /dev/null
+      publish_druid_yinst_pkg:
+        description: publish druid yinst package to test branch on dist
+        command: dist_install -batch -branch test -os rhel-6.x --nomail druid_package/yinst_package_druid_dir/*
+      publish_druid_inabox_yinst_pkg:
+        description: publish druid_inabox yinst package to test branch on dist
+        command: dist_install -batch -branch test -os rhel-6.x --nomail druid_package/yinst_package_druid_inabox_dir/*
