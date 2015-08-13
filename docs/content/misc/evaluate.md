@@ -34,17 +34,66 @@ The code to reproduce the results in the blog post are all open source. The blog
 
 ## Colocating Druid Processes for a POC
 
-Not all Druid node processes need to run on separate machines. You can set up a small cluster with colocated processes to load several gigabytes of data.
+Not all Druid node processes need to run on separate machines. You can set up a small cluster with colocated processes to load several gigabytes of data. Please note this cluster is not highly available.
 
 It is recommended you follow the [example production configuration](../configuration/production-cluster.html) for an actual production setup.
 
-1. node1: [Coordinator](../design/coordinator.html) + metadata store + zookeeper
-2. node2: [Broker](../design/broker.html) + [Historical](../design/historical.html)
-3. node3: [Overlord](../design/indexing-service.html)
+The deep storage to use in this POC example can be S3 or HDFS.
+
+1. node1: [Coordinator](../design/coordinator.html) + metadata store + zookeeper. 
+Example hardware: EC2 c3.2xlarge node (8 cores, Intel Xeon E5-2680 v2 @ 2.80GHz and 15GB of RAM).
+
+See [here](../configuration/production-cluster.html) for the runtime.properties. Some example JVM configs for this hardware:
+
+```
+-server
+-Xmx6g
+-Xms6g
+-XX:NewSize=512m
+-XX:MaxNewSize=512m
+-XX:+UseConcMarkSweepGC
+```
+
+2. node2: [Broker](../design/broker.html)
+Example hardware: EC2 c3.2xlarge node (8 cores, Intel Xeon E5-2680 v2 @ 2.80GHz and 15GB of RAM). 
+[Example configs](https://github.com/druid-io/druid-benchmark/tree/master/config) (see broker-* files).  
+
+2. node3: [Historical](../design/historical.html).
+Example hardware: EC2 m3.2xlarge instances (8 cores, Intel Xeon E5-2670 v2 @ 2.50GHz with 160GB SSD and 30GB of RAM)
+[Example configs](https://github.com/druid-io/druid-benchmark/tree/master/config) (see compute-* files).
+ 
+3. node4 (optional): [Real-time](../design/realtime.html) node or [Overlord](../design/indexing-service.html) (depending on how you choose to ingest data).
+Example hardware: EC2 c3.2xlarge node (8 cores, Intel Xeon E5-2680 v2 @ 2.80GHz and 15GB of RAM).
+
+For the real-time node, see [here](../configuration/production-cluster.html) for the runtime.properties. Use with the following JVM configs:
+
+```
+-server
+-Xmx8g
+-Xms8g
+-XX:NewSize=1g
+-XX:MaxNewSize=1g
+-XX:+UseConcMarkSweepGC
+```
+
+For the overlord running in local mode to do all ingestion, see [here](../configuration/production-cluster.html) for the runtime.properties. Use with the following JVM configs:
+
+```
+-server
+-Xmx2g
+-Xms2g
+-XX:NewSize=256m
+-XX:MaxNewSize=256m
+```
+
+The size of the runner javaOpts can be bumped up:
+
+```
+druid.indexer.runner.javaOpts="-server -Xmx6g -Xms6g -XX:NewSize=256m -XX:MaxNewSize=256m"
+```
 
 The coordination pieces (coordinator, metadata store, ZK) can be colocated on the same node. These processes do not require many resources, even for reasonably large clusters.
  
-The query pieces (broker + historical) can be colocated. You can add more of these nodes if your data doesn't fit on a single machine. Make sure to allocate enough heap/off-heap size to both processes.
+You can add more historical nodes if your data doesn't fit on a single machine.
 
 For small ingest workloads, you can run the overlord in local mode to load your data.
-
