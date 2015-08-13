@@ -24,14 +24,18 @@ This data set is composed of three distinct components. If you are acquainted wi
 * **Timestamp column**: We treat timestamp separately because all of our queries
  center around the time axis.
 
-* **Dimension columns**: We have four dimensions of publisher, advertiser, gender, and country.
+* **Dimension columns**: Dimensions are string attributes of an event, and the columns most commonly used in filtering the data. 
+We have four dimensions in our example data set: publisher, advertiser, gender, and country.
 They each represent an axis of the data that we’ve chosen to slice across.
 
-* **Metric columns**: These are clicks and price. These represent values, usually numeric,
-which are derived from an aggregation operation – such as count, sum, and mean.
+* **Metric columns**: Metrics are columns used in aggregations and computations. In our example, the metrics are clicks and price. 
+Metrics are usually numeric values, and computations include operations such as count, sum, and mean. 
 Also known as measures in standard OLAP terminology.
 
-Individually, the events are not very interesting, however, summarizations of this type of data can yield many useful insights.
+## Roll-up
+
+The individual events in our example data set are not very interesting because there may be trillions of such events. 
+However, summarizations of this type of data can yield many useful insights.
 Druid summarizes this raw data at ingestion time using a process we refer to as "roll-up".
 Roll-up is a first-level aggregation operation over a selected set of dimensions, equivalent to (in pseudocode):
 
@@ -47,12 +51,10 @@ The compacted version of our original raw data looks something like this:
      2011-01-01T02:00:00Z  bieberfever.com    google.com  Male   UK      3194        170    34.01
 
 In practice, we see that rolling up data can dramatically reduce the size of data that needs to be stored (up to a factor of 100).
+Druid will roll up data as it is ingested to minimize the amount of raw data that needs to be stored. 
 This storage reduction does come at a cost; as we roll up data, we lose the ability to query individual events. Phrased another way,
-the rollup granularity is the minimum granularity you will be able to query data at. Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data.
-The lowest `queryGranularity` is millisecond.
-
-Druid is designed to perform single table operations and does not currently support joins.
-Although many production setups instrument joins at the ETL level, data must be denormalized before it is loaded into Druid.
+the rollup granularity is the minimum granularity you will be able to explore data at and events are floored to this granularity. 
+Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data. The lowest supported `queryGranularity` is millisecond.
 
 ## Sharding the Data
 
@@ -75,7 +77,9 @@ Segments are self-contained containers for the time interval of data they hold. 
 contain data stored in compressed column orientations, along with the indexes for those columns. Druid queries only understand how to
 scan segments.
 
-Segments are uniquely identified by a datasource, interval, version, and an optional partition number.
+Segments are uniquely identified by a datasource, interval, version, and an optional partition number. 
+Examining our example segments, the segments are named following this convention: `dataSource_interval_version_partitionNumber`
+
 
 ## Indexing the Data
 
@@ -93,6 +97,13 @@ Druid indexes data on a per shard (segment) level.
 Druid has two means of ingestion, real-time and batch. Real-time ingestion in Druid is best effort. Exactly once semantics are not guaranteed with real-time ingestion in Druid, although we have it on our roadmap to support this.
 Batch ingestion provides exactly once guarantees and segments created via batch processing will accurately reflect the ingested data.
 One common approach to operating Druid is to have a real-time pipeline for recent insights, and a batch pipeline for the accurate copy of the data.
+
+## Querying the Data
+
+Druid's native query language is JSON over HTTP, although the community has contributed query libraries in [numerous languages](../development/libraries.html), including SQL.
+
+Druid is designed to perform single table operations and does not currently support joins.
+Many production setups do joins at ETL because data must be denormalized before loading into Druid.
 
 ## The Druid Cluster
 
