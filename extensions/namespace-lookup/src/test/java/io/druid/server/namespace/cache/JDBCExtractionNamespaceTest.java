@@ -196,7 +196,7 @@ public class JDBCExtractionNamespaceTest
     );
   }
 
-  @Test(timeout = 500)
+  @Test(timeout = 60_000)
   public void testMapping()
       throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
              InterruptedException
@@ -232,7 +232,7 @@ public class JDBCExtractionNamespaceTest
   }
 
 
-  @Test(timeout = 500)
+  @Test(timeout = 60_000)
   public void testSkipOld()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
@@ -270,7 +270,7 @@ public class JDBCExtractionNamespaceTest
     extractionCacheManager.delete(namespace);
   }
 
-  @Test(timeout = 500)
+  @Test(timeout = 60_000)
   public void testFindNew()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
