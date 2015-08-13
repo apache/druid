@@ -129,7 +129,8 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
           host,
           EVENT_RECEIVER_SERVICE_NAME,
           jsonMapper,
-          httpClient
+          httpClient,
+          smileMapper
       );
       client.postEventsFromFile(EVENT_DATA_FILE);
     }
