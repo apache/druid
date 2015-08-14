@@ -43,7 +43,7 @@ This returns the value produced by the specified [aggregator](../querying/aggreg
 `fieldName` refers to the output name of the aggregator given in the [aggregations](../querying/aggregations.html) portion of the query.
 
 ```json
-{ "type" : "fieldAccess", "fieldName" : <aggregator_name> }
+{ "type" : "fieldAccess", "name": <output_name>, "fieldName" : <aggregator_name> }
 ```
 
 ### Constant post-aggregator
