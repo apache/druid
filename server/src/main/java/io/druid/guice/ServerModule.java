@@ -48,7 +48,7 @@ public class ServerModule implements DruidModule
   }
 
   @Provides @LazySingleton
-  public final ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
+  public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
   {
     return ScheduledExecutors.createFactory(lifecycle);
   }

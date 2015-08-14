@@ -40,7 +40,7 @@ public class JacksonConfigManagerModule implements Module
   }
 
   @Provides @ManageLifecycle
-  public final ConfigManager getConfigManager(
+  public ConfigManager getConfigManager(
       final MetadataStorageConnector dbConnector,
       final Supplier<MetadataStorageTablesConfig> dbTables,
       final Supplier<ConfigManagerConfig> config,

@@ -67,7 +67,7 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public final MonitorScheduler getMonitorScheduler(
+  public MonitorScheduler getMonitorScheduler(
       Supplier<DruidMonitorSchedulerConfig> config,
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,

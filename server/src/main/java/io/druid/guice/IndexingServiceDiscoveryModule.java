@@ -38,7 +38,7 @@ public class IndexingServiceDiscoveryModule implements Module
   @Provides
   @IndexingService
   @ManageLifecycle
-  public final ServerDiscoverySelector getServiceProvider(
+  public ServerDiscoverySelector getServiceProvider(
       IndexingServiceSelectorConfig config,
       ServerDiscoveryFactory serverDiscoveryFactory
   )

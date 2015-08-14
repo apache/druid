@@ -39,7 +39,7 @@ public class NoopEmitterModule implements Module
   @Provides
   @ManageLifecycle
   @Named(EMITTER_TYPE)
-  public final Emitter makeEmitter()
+  public Emitter makeEmitter()
   {
     return new NoopEmitter();
   }

@@ -52,7 +52,7 @@ public class MetadataStorageTablesConfigTest
 
           @Provides
           @LazySingleton
-          public final ObjectMapper jsonMapper()
+          public ObjectMapper jsonMapper()
           {
             return new DefaultObjectMapper();
           }
