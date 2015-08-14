@@ -93,7 +93,7 @@ public class CliRouter extends ServerRunnable
 
           @Provides
           @ManageLifecycle
-          public final ServerDiscoverySelector getCoordinatorServerDiscoverySelector(
+          public ServerDiscoverySelector getCoordinatorServerDiscoverySelector(
               TieredBrokerConfig config,
               ServerDiscoveryFactory factory
 

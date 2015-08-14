@@ -39,7 +39,7 @@ public class ConfigModule implements Module
   }
 
   @Provides @LazySingleton
-  public final ConfigurationObjectFactory makeFactory(Properties props)
+  public ConfigurationObjectFactory makeFactory(Properties props)
   {
     return Config.createFactory(props);
   }

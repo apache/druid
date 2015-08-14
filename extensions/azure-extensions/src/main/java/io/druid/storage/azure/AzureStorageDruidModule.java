@@ -98,7 +98,7 @@ public class AzureStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public final CloudBlobClient getCloudBlobClient(final AzureAccountConfig config)
+  public CloudBlobClient getCloudBlobClient(final AzureAccountConfig config)
       throws URISyntaxException, InvalidKeyException
   {
     CloudStorageAccount account = CloudStorageAccount.parse(
@@ -115,7 +115,7 @@ public class AzureStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public final AzureStorage getAzureStorageContainer(
+  public AzureStorage getAzureStorageContainer(
       final CloudBlobClient cloudBlobClient
   )
   {

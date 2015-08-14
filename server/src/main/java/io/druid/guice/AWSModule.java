@@ -38,14 +38,14 @@ public class AWSModule implements Module
 
   @Provides
   @LazySingleton
-  public final AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
+  public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
     return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(config);
   }
 
   @Provides
   @LazySingleton
-  public final AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
+  public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
   {
     return new AmazonEC2Client(credentials);
   }
