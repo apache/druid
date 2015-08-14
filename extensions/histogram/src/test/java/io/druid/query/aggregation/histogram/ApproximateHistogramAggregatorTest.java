@@ -18,7 +18,7 @@
 package io.druid.query.aggregation.histogram;
 
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.TestFloatColumnSelector;
+import io.druid.query.aggregation.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 
 public class ApproximateHistogramAggregatorTest
 {
-  private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
+  private void aggregateBuffer(TestObjectColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
   {
     agg.aggregate(buf, position);
     selector.increment();
@@ -35,22 +35,22 @@ public class ApproximateHistogramAggregatorTest
   @Test
   public void testBufferAggregate() throws Exception
   {
-    final float[] values = {23, 19, 10, 16, 36, 2, 9, 32, 30, 45};
     final int resolution = 5;
     final int numBuckets = 5;
 
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+    final int numInputs = 10;
+    final TestObjectColumnSelector selector = new TestObjectColumnSelector(23f, 19f, 10f, 16f, 36f, 2f, 9f, 32f, 30f, 45f);
 
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
-        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY
+        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, false
     );
-    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, false, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
     int position = 0;
 
     agg.init(buf, position);
-    for (int i = 0; i < values.length; i++) {
+    for (int i = 0; i < numInputs; i++) {
       aggregateBuffer(selector, agg, buf, position);
     }
 

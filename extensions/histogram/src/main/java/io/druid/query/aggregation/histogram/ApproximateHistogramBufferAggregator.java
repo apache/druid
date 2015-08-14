@@ -18,20 +18,22 @@
 package io.druid.query.aggregation.histogram;
 
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
 
 import java.nio.ByteBuffer;
 
 public class ApproximateHistogramBufferAggregator implements BufferAggregator
 {
-  private final FloatColumnSelector selector;
+  private final ObjectColumnSelector selector;
+  private final boolean ignoreNullValue;
   private final int resolution;
   private final float lowerLimit;
   private final float upperLimit;
 
-  public ApproximateHistogramBufferAggregator(FloatColumnSelector selector, int resolution, float lowerLimit, float upperLimit)
+  public ApproximateHistogramBufferAggregator(ObjectColumnSelector selector, boolean ignoreNullValue, int resolution, float lowerLimit, float upperLimit)
   {
     this.selector = selector;
+    this.ignoreNullValue = ignoreNullValue;
     this.resolution = resolution;
     this.lowerLimit = lowerLimit;
     this.upperLimit = upperLimit;
@@ -61,14 +63,18 @@ public class ApproximateHistogramBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
+    Object val = selector.get();
 
-    ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
-    h0.offer(selector.get());
+    if(val != null || !ignoreNullValue) {
+      ByteBuffer mutationBuffer = buf.duplicate();
+      mutationBuffer.position(position);
 
-    mutationBuffer.position(position);
-    h0.toBytesDense(mutationBuffer);
+      ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
+      h0.offer(ApproximateHistogramAggregatorFactory.convertToFloat(val));
+
+      mutationBuffer.position(position);
+      h0.toBytesDense(mutationBuffer);
+    }
   }
 
   @Override

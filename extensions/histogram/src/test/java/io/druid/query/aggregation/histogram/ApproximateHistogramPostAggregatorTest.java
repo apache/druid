@@ -17,7 +17,7 @@
 
 package io.druid.query.aggregation.histogram;
 
-import io.druid.query.aggregation.TestFloatColumnSelector;
+import io.druid.query.aggregation.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,8 +26,6 @@ import java.util.Map;
 
 public class ApproximateHistogramPostAggregatorTest
 {
-  static final float[] VALUES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-
   protected ApproximateHistogram buildHistogram(int size, float[] values)
   {
     ApproximateHistogram h = new ApproximateHistogram(size);
@@ -40,11 +38,12 @@ public class ApproximateHistogramPostAggregatorTest
   @Test
   public void testCompute()
   {
-    ApproximateHistogram ah = buildHistogram(10, VALUES);
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(VALUES);
+    float[] values = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    ApproximateHistogram ah = buildHistogram(10, values);
+    final TestObjectColumnSelector selector = new TestObjectColumnSelector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
-    ApproximateHistogramAggregator agg = new ApproximateHistogramAggregator("price", selector, 10, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
-    for (int i = 0; i < VALUES.length; i++) {
+    ApproximateHistogramAggregator agg = new ApproximateHistogramAggregator("price", selector, false, 10, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+    for (int i = 0; i < values.length; i++) {
       agg.aggregate();
       selector.increment();
     }

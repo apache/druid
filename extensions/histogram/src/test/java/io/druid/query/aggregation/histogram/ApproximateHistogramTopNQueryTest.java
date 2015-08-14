@@ -27,8 +27,8 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
@@ -45,7 +45,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +102,8 @@ public class ApproximateHistogramTopNQueryTest
         10,
         5,
         Float.NEGATIVE_INFINITY,
-        Float.POSITIVE_INFINITY
+        Float.POSITIVE_INFINITY,
+        false
     );
 
     TopNQuery query = new TopNQueryBuilder()
