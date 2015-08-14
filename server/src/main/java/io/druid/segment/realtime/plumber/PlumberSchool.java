@@ -30,7 +30,8 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RealtimePlumberSchool.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "realtime", value = RealtimePlumberSchool.class),
-    @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class)
+    @JsonSubTypes.Type(name = "flushing", value = FlushingPlumberSchool.class),
+    @JsonSubTypes.Type(name = "tokyoDrift", value = RealtimePlumberSchoolTokyoDrift.class)
 })
 public interface PlumberSchool
 {
