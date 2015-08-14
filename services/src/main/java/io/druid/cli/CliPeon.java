@@ -223,6 +223,8 @@ public class CliPeon extends GuiceRunnable
             )
         );
         injector.getInstance(ExecutorLifecycle.class).join();
+        // Explicitly call lifecycle stop, dont rely on shutdown hook.
+        lifecycle.stop();
       }
       catch (Throwable t) {
         log.error(t, "Error when starting up.  Failing.");
