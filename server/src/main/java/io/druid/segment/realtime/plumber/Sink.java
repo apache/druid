@@ -44,8 +44,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- */
 public class Sink implements Iterable<FireHydrant>
 {
 
@@ -56,6 +54,7 @@ public class Sink implements Iterable<FireHydrant>
   private final String version;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
   private volatile FireHydrant currHydrant;
+  private volatile boolean writable = true;
 
   public Sink(
       Interval interval,
@@ -120,6 +119,10 @@ public class Sink implements Iterable<FireHydrant>
     }
 
     synchronized (hydrantLock) {
+      if (!writable) {
+        return -1;
+      }
+
       IncrementalIndex index = currHydrant.getIndex();
       if (index == null) {
         return -1; // the hydrant was swapped without being replaced
@@ -130,8 +133,8 @@ public class Sink implements Iterable<FireHydrant>
 
   public boolean canAppendRow()
   {
-    synchronized (currHydrant) {
-      return currHydrant != null && currHydrant.getIndex().canAppendRow();
+    synchronized (hydrantLock) {
+      return writable && currHydrant != null && currHydrant.getIndex().canAppendRow();
     }
   }
 
@@ -140,6 +143,11 @@ public class Sink implements Iterable<FireHydrant>
     synchronized (hydrantLock) {
       return hydrants.size() == 1 && currHydrant.getIndex().isEmpty();
     }
+  }
+
+  public boolean isWritable()
+  {
+    return writable;
   }
 
   /**
@@ -155,7 +163,19 @@ public class Sink implements Iterable<FireHydrant>
   public boolean swappable()
   {
     synchronized (hydrantLock) {
-      return currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
+      return writable && currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
+    }
+  }
+
+  public boolean finished()
+  {
+    return !writable;
+  }
+
+  public void finishWriting()
+  {
+    synchronized (hydrantLock) {
+      writable = false;
     }
   }
 
@@ -198,15 +218,21 @@ public class Sink implements Iterable<FireHydrant>
 
     final FireHydrant old;
     synchronized (hydrantLock) {
-      old = currHydrant;
-      int newCount = 0;
-      int numHydrants = hydrants.size();
-      if (numHydrants > 0) {
-        FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
-        newCount = lastHydrant.getCount() + 1;
+      if (writable) {
+        old = currHydrant;
+        int newCount = 0;
+        int numHydrants = hydrants.size();
+        if (numHydrants > 0) {
+          FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
+          newCount = lastHydrant.getCount() + 1;
+        }
+        currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
+        hydrants.add(currHydrant);
+      } else {
+        // Oops, someone called finishWriting while we were making this new index.
+        newIndex.close();
+        throw new ISE("finishWriting() called during swap");
       }
-      currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
-      hydrants.add(currHydrant);
     }
 
     return old;
@@ -220,7 +246,7 @@ public class Sink implements Iterable<FireHydrant>
         new Predicate<FireHydrant>()
         {
           @Override
-          public boolean apply(@Nullable FireHydrant input)
+          public boolean apply(FireHydrant input)
           {
             final IncrementalIndex index = input.getIndex();
             return index == null || index.size() != 0;

@@ -40,12 +40,16 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final int defaultMaxRowsInMemory = 500000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
-  private static final File defaultBasePersistDirectory = Files.createTempDir();
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
+
+  private static File defaultBasePersistDirectory()
+  {
+    return Files.createTempDir();
+  }
 
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig()
@@ -54,7 +58,7 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultMaxRowsInMemory,
         defaultIntermediatePersistPeriod,
         defaultWindowPeriod,
-        defaultBasePersistDirectory,
+        defaultBasePersistDirectory(),
         defaultVersioningPolicy,
         defaultRejectionPolicyFactory,
         defaultMaxPendingPersists,
@@ -91,7 +95,7 @@ public class RealtimeTuningConfig implements TuningConfig
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
     this.windowPeriod = windowPeriod == null ? defaultWindowPeriod : windowPeriod;
-    this.basePersistDirectory = basePersistDirectory == null ? defaultBasePersistDirectory : basePersistDirectory;
+    this.basePersistDirectory = basePersistDirectory == null ? defaultBasePersistDirectory() : basePersistDirectory;
     this.versioningPolicy = versioningPolicy == null ? defaultVersioningPolicy : versioningPolicy;
     this.rejectionPolicyFactory = rejectionPolicyFactory == null
                                   ? defaultRejectionPolicyFactory
@@ -181,6 +185,21 @@ public class RealtimeTuningConfig implements TuningConfig
         rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
+        indexSpec
+    );
+  }
+
+  public RealtimeTuningConfig withShardSpec(ShardSpec newShardSpec)
+  {
+    return new RealtimeTuningConfig(
+        maxRowsInMemory,
+        intermediatePersistPeriod,
+        windowPeriod,
+        basePersistDirectory,
+        versioningPolicy,
+        rejectionPolicyFactory,
+        maxPendingPersists,
+        newShardSpec,
         indexSpec
     );
   }
