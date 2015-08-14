@@ -39,13 +39,13 @@ public class JacksonModule implements Module
   }
 
   @Provides @LazySingleton @Json
-  public final ObjectMapper jsonMapper()
+  public ObjectMapper jsonMapper()
   {
     return new DefaultObjectMapper();
   }
 
   @Provides @LazySingleton @Smile
-  public final ObjectMapper smileMapper()
+  public ObjectMapper smileMapper()
   {
     final SmileFactory smileFactory = new SmileFactory();
     smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);

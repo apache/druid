@@ -95,14 +95,14 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public final AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
+  public AWSCredentialsProvider getAWSCredentialsProvider(final AWSCredentialsConfig config)
   {
     return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(config);
   }
 
   @Provides
   @LazySingleton
-  public final RestS3Service getRestS3Service(AWSCredentialsProvider provider)
+  public RestS3Service getRestS3Service(AWSCredentialsProvider provider)
   {
     if(provider.getCredentials() instanceof com.amazonaws.auth.AWSSessionCredentials) {
       return new RestS3Service(new AWSSessionCredentialsAdapter(provider));

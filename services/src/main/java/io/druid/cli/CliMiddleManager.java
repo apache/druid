@@ -99,7 +99,7 @@ public class CliMiddleManager extends ServerRunnable
 
           @Provides
           @LazySingleton
-          public final Worker getWorker(@Self DruidNode node, WorkerConfig config)
+          public Worker getWorker(@Self DruidNode node, WorkerConfig config)
           {
             return new Worker(
                 node.getHostAndPort(),

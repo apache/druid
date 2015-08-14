@@ -164,14 +164,14 @@ public class NamespacedExtractionModule implements DruidModule
   @Provides
   @Named("namespaceVersionMap")
   @LazySingleton
-  public final ConcurrentMap<String, String> getVersionMap()
+  public ConcurrentMap<String, String> getVersionMap()
   {
     return new ConcurrentHashMap<>();
   }
 
   @Provides
   @Named("namespaceExtractionFunctionCache")
-  public final ConcurrentMap<String, Function<String, String>> getFnCache()
+  public ConcurrentMap<String, Function<String, String>> getFnCache()
   {
     return fnCache;
   }
@@ -179,7 +179,7 @@ public class NamespacedExtractionModule implements DruidModule
   @Provides
   @Named("dimExtractionNamespace")
   @LazySingleton
-  public final Function<String, Function<String, String>> getFunctionMaker(
+  public Function<String, Function<String, String>> getFunctionMaker(
       @Named("namespaceExtractionFunctionCache")
       final ConcurrentMap<String, Function<String, String>> fnCache
   )

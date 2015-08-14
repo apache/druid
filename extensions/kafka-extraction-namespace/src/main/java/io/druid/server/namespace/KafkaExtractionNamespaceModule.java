@@ -71,15 +71,7 @@ public class KafkaExtractionNamespaceModule implements DruidModule
   @Provides
   @Named("renameKafkaProperties")
   @LazySingleton
-  public final Properties getProperties(
-      @Json ObjectMapper mapper,
-      Properties systemProperties
-  ){
-    return getPropertiesInner(mapper, systemProperties);
-  }
-
-  // Protected for use in unit tests
-  protected Properties getPropertiesInner(
+  public Properties getProperties(
       @Json ObjectMapper mapper,
       Properties systemProperties
   )
@@ -106,7 +98,7 @@ public class KafkaExtractionNamespaceModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public final KafkaExtractionNamespaceFactory factoryFactory(
+  public KafkaExtractionNamespaceFactory factoryFactory(
       KafkaExtractionManager kafkaManager
   )
   {
