@@ -19,7 +19,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.ObjectColumnSelector;
 
 import java.util.Comparator;
 
@@ -40,7 +40,8 @@ public class ApproximateHistogramAggregator implements Aggregator
   }
 
   private final String name;
-  private final FloatColumnSelector selector;
+  private final ObjectColumnSelector selector;
+  private final boolean ignoreNullValue;
   private final int resolution;
   private final float lowerLimit;
   private final float upperLimit;
@@ -49,7 +50,8 @@ public class ApproximateHistogramAggregator implements Aggregator
 
   public ApproximateHistogramAggregator(
       String name,
-      FloatColumnSelector selector,
+      ObjectColumnSelector selector,
+      boolean ignoreNullValue,
       int resolution,
       float lowerLimit,
       float upperLimit
@@ -57,6 +59,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   {
     this.name = name;
     this.selector = selector;
+    this.ignoreNullValue = ignoreNullValue;
     this.resolution = resolution;
     this.lowerLimit = lowerLimit;
     this.upperLimit = upperLimit;
@@ -66,7 +69,11 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
+    Object val = selector.get();
+
+    if(val != null || !ignoreNullValue) {
+      histogram.offer(ApproximateHistogramAggregatorFactory.convertToFloat(val));
+    }
   }
 
   @Override

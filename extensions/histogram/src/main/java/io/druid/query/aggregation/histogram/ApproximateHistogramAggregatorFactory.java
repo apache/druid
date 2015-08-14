@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.metamx.common.StringUtils;
+import com.metamx.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
@@ -50,6 +51,8 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   protected final float lowerLimit;
   protected final float upperLimit;
 
+  protected final boolean ignoreNullValue;
+
   @JsonCreator
   public ApproximateHistogramAggregatorFactory(
       @JsonProperty("name") String name,
@@ -57,7 +60,8 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
       @JsonProperty("resolution") Integer resolution,
       @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") Float lowerLimit,
-      @JsonProperty("upperLimit") Float upperLimit
+      @JsonProperty("upperLimit") Float upperLimit,
+      @JsonProperty("ignoreNullValue") Boolean ignoreNullValue
 
   )
   {
@@ -67,6 +71,7 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
     this.numBuckets = numBuckets == null ? ApproximateHistogram.DEFAULT_BUCKET_SIZE : numBuckets;
     this.lowerLimit = lowerLimit == null ? Float.NEGATIVE_INFINITY : lowerLimit;
     this.upperLimit = upperLimit == null ? Float.POSITIVE_INFINITY : upperLimit;
+    this.ignoreNullValue = ignoreNullValue == null ? false : ignoreNullValue.booleanValue();
 
     Preconditions.checkArgument(this.resolution > 0, "resolution must be greater than 1");
     Preconditions.checkArgument(this.numBuckets > 0, "numBuckets must be greater than 1");
@@ -78,7 +83,8 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   {
     return new ApproximateHistogramAggregator(
         name,
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeObjectColumnSelector(fieldName),
+        ignoreNullValue,
         resolution,
         lowerLimit,
         upperLimit
@@ -89,7 +95,8 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramBufferAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeObjectColumnSelector(fieldName),
+        ignoreNullValue,
         resolution,
         lowerLimit,
         upperLimit
@@ -124,7 +131,8 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
             resolution,
             numBuckets,
             lowerLimit,
-            upperLimit
+            upperLimit,
+            ignoreNullValue
         )
     );
   }
@@ -234,6 +242,26 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   public Object getAggregatorStartValue()
   {
     return new ApproximateHistogram(resolution);
+  }
+
+  public static final float convertToFloat(Object metricValue)
+  {
+    if (metricValue == null) {
+      return 0.0f;
+    }
+
+    if (metricValue instanceof Number) {
+      return ((Number) metricValue).floatValue();
+    } else if (metricValue instanceof String) {
+      try {
+        return Float.valueOf(((String) metricValue).replace(",", ""));
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse metric value[%s]", metricValue);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", metricValue.getClass());
+    }
   }
 
   @Override
