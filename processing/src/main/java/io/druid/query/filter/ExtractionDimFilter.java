@@ -43,7 +43,6 @@ public class ExtractionDimFilter implements DimFilter
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
-    Preconditions.checkArgument(value != null, "value must not be null");
     Preconditions.checkArgument(extractionFn != null || dimExtractionFn != null, "extraction function must not be null");
 
     this.dimension = dimension;

@@ -46,7 +46,7 @@ public class ExtractionFilter implements Filter
   public ExtractionFilter(String dimension, String value, ExtractionFn fn)
   {
     this.dimension = dimension;
-    this.value = value;
+    this.value = Strings.nullToEmpty(value);
     this.fn = fn;
   }
 
