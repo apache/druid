@@ -164,7 +164,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       // We need the inner incremental index to have all the columns required by the outer query
-      final GroupByQuery innerQuery = new GroupByQuery.Builder(query)
+      final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
           .setAggregatorSpecs(aggs)
           .setInterval(subquery.getIntervals())
           .setPostAggregatorSpecs(Lists.<PostAggregator>newArrayList())
