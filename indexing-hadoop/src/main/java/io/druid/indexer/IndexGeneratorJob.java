@@ -35,6 +35,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
+import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -139,8 +140,6 @@ public class IndexGeneratorJob implements Jobby
 
       JobHelper.injectSystemProperties(job);
 
-      JobHelper.setInputFormat(job, config);
-
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
 
@@ -235,6 +234,7 @@ public class IndexGeneratorJob implements Jobby
     private static final HashFunction hashFunction = Hashing.murmur3_128();
 
     private AggregatorFactory[] aggregators;
+    private AggregatorFactory[] combiningAggs;
 
     @Override
     protected void setup(Context context)
@@ -242,6 +242,10 @@ public class IndexGeneratorJob implements Jobby
     {
       super.setup(context);
       aggregators = config.getSchema().getDataSchema().getAggregators();
+      combiningAggs = new AggregatorFactory[aggregators.length];
+      for (int i = 0; i < aggregators.length; ++i) {
+        combiningAggs[i] = aggregators[i].getCombiningFactory();
+      }
     }
 
     @Override
@@ -268,6 +272,14 @@ public class IndexGeneratorJob implements Jobby
           )
       ).asBytes();
 
+      // type SegmentInputRow serves as a marker that these InputRow instances have already been combined
+      // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
+      // data
+      byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
+                                  InputRowSerde.toBytes(inputRow, combiningAggs)
+                                                                      :
+                                  InputRowSerde.toBytes(inputRow, aggregators);
+
       context.write(
           new SortableBytes(
               bucket.get().toGroupKey(),
@@ -277,7 +289,7 @@ public class IndexGeneratorJob implements Jobby
                         .put(hashedDimensions)
                         .array()
           ).toBytesWritable(),
-          new BytesWritable(InputRowSerde.toBytes(inputRow, aggregators))
+          new BytesWritable(serializedInputRow)
       );
     }
   }

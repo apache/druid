@@ -32,6 +32,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.JobHelper;
+import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.timeline.DataSegment;
@@ -42,7 +43,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobPriority;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -62,15 +62,10 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.Progressable;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -470,10 +465,10 @@ public class HadoopConverterJob
     ) throws IOException, InterruptedException
     {
       final InputSplit split = context.getInputSplit();
-      if (!(split instanceof DataSegmentSplit)) {
+      if (!(split instanceof DatasourceInputSplit)) {
         throw new IAE(
             "Unexpected split type. Expected [%s] was [%s]",
-            DataSegmentSplit.class.getCanonicalName(),
+            DatasourceInputSplit.class.getCanonicalName(),
             split.getClass().getCanonicalName()
         );
       }
@@ -481,13 +476,13 @@ public class HadoopConverterJob
       final String tmpDirLoc = context.getConfiguration().get(TMP_FILE_LOC_KEY);
       final File tmpDir = Paths.get(tmpDirLoc).toFile();
 
-      final DataSegment segment = ((DataSegmentSplit) split).getDataSegment();
+      final DataSegment segment  = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments());
 
       final HadoopDruidConverterConfig config = converterConfigFromConfiguration(context.getConfiguration());
 
       context.setStatus("DOWNLOADING");
       context.progress();
-      final Path inPath = new Path(getURIFromSegment(segment));
+      final Path inPath = new Path(JobHelper.getURIFromSegment(segment));
       final File inDir = new File(tmpDir, "in");
 
       if (inDir.exists() && !inDir.delete()) {
@@ -559,38 +554,6 @@ public class HadoopConverterJob
       context.getConfiguration().set(TMP_FILE_LOC_KEY, tmpFile.getAbsolutePath());
     }
 
-    private static URI getURIFromSegment(DataSegment dataSegment)
-    {
-      // There is no good way around this...
-      // TODO: add getURI() to URIDataPuller
-      final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
-      final String type = loadSpec.get("type").toString();
-      final URI segmentLocURI;
-      if ("s3_zip".equals(type)) {
-        segmentLocURI = URI.create(String.format("s3n://%s/%s", loadSpec.get("bucket"), loadSpec.get("key")));
-      } else if ("hdfs".equals(type)) {
-        segmentLocURI = URI.create(loadSpec.get("path").toString());
-      } else if ("local".equals(type)) {
-        try {
-          segmentLocURI = new URI("file", null, loadSpec.get("path").toString(), null, null);
-        }
-        catch (URISyntaxException e) {
-          throw new ISE(e, "Unable to form simple file uri");
-        }
-      } else {
-        try {
-          throw new IAE(
-              "Cannot figure out loadSpec %s",
-              HadoopDruidConverterConfig.jsonMapper.writeValueAsString(loadSpec)
-          );
-        }
-        catch (JsonProcessingException e) {
-          throw new ISE("Cannot write Map with json mapper");
-        }
-      }
-      return segmentLocURI;
-    }
-
     @Override
     protected void cleanup(
         Context context
@@ -601,50 +564,6 @@ public class HadoopConverterJob
       FileUtils.deleteDirectory(tmpDir);
       context.progress();
       context.setStatus("Clean");
-    }
-  }
-
-  public static class DataSegmentSplit extends InputSplit implements Writable
-  {
-    private DataSegment dataSegment = null;
-
-    public DataSegmentSplit()
-    {
-      // For serialization purposes
-    }
-
-    public DataSegmentSplit(@NotNull DataSegment dataSegment)
-    {
-      this.dataSegment = Preconditions.checkNotNull(dataSegment, "dataSegment");
-    }
-
-    @Override
-    public long getLength() throws IOException, InterruptedException
-    {
-      return dataSegment.getSize();
-    }
-
-    @Override
-    public String[] getLocations() throws IOException, InterruptedException
-    {
-      return new String[]{};
-    }
-
-    protected DataSegment getDataSegment()
-    {
-      return dataSegment;
-    }
-
-    @Override
-    public void write(DataOutput out) throws IOException
-    {
-      out.write(HadoopDruidConverterConfig.jsonMapper.writeValueAsString(dataSegment).getBytes());
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException
-    {
-      dataSegment = HadoopDruidConverterConfig.jsonMapper.readValue(in.readLine(), DataSegment.class);
     }
   }
 
@@ -665,7 +584,7 @@ public class HadoopConverterJob
             @Override
             public InputSplit apply(DataSegment input)
             {
-              return new DataSegmentSplit(input);
+              return new DatasourceInputSplit(ImmutableList.of(input));
             }
           }
       );

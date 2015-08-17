@@ -20,6 +20,7 @@ package io.druid.indexer.updater;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.PasswordProvider;
 
 import javax.validation.constraints.NotNull;
@@ -77,5 +78,21 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
         return passwordProvider == null ? null : passwordProvider.getPassword();
       }
     };
+  }
+
+  //Note: Currently it only supports configured segmentTable, other tables should be added if needed
+  //by the code using this
+  public MetadataStorageTablesConfig getMetadataStorageTablesConfig()
+  {
+    return new MetadataStorageTablesConfig(
+        null,
+        segmentTable,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 }

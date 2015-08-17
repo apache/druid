@@ -74,6 +74,7 @@ import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -461,8 +462,8 @@ public class IngestSegmentFirehoseFactoryTest
   {
     Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
     Integer rowcount = 0;
-    try (final IngestSegmentFirehoseFactory.IngestSegmentFirehose firehose =
-             (IngestSegmentFirehoseFactory.IngestSegmentFirehose)
+    try (final IngestSegmentFirehose firehose =
+             (IngestSegmentFirehose)
                  factory.connect(rowParser)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();

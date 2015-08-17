@@ -17,10 +17,12 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -33,17 +35,22 @@ import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
+import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
+import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 public class HadoopIndexTask extends HadoopTask
@@ -56,9 +63,13 @@ public class HadoopIndexTask extends HadoopTask
   }
 
   @JsonIgnore
-  private final HadoopIngestionSpec spec;
+  private HadoopIngestionSpec spec;
+
   @JsonIgnore
   private final String classpathPrefix;
+
+  @JsonIgnore
+  private final ObjectMapper jsonMapper;
 
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
@@ -76,7 +87,8 @@ public class HadoopIndexTask extends HadoopTask
       @JsonProperty("spec") HadoopIngestionSpec spec,
       @JsonProperty("hadoopCoordinates") String hadoopCoordinates,
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
-      @JsonProperty("classpathPrefix") String classpathPrefix
+      @JsonProperty("classpathPrefix") String classpathPrefix,
+      @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(
@@ -102,6 +114,7 @@ public class HadoopIndexTask extends HadoopTask
     );
 
     this.classpathPrefix = classpathPrefix;
+    this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMappper");
   }
 
   @Override
@@ -151,6 +164,11 @@ public class HadoopIndexTask extends HadoopTask
   {
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
+
+    spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+        spec,
+        jsonMapper,
+        new OverlordActionBasedUsedSegmentLister(toolbox));
 
     final String config = invokeForeignLoader(
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessing",

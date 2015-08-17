@@ -30,14 +30,24 @@ import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.command.Arguments;
 import io.airlift.command.Command;
+import io.druid.guice.LazySingleton;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
+import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
+import io.druid.indexer.hadoop.DatasourceIngestionSpec;
+import io.druid.indexer.path.DatasourcePathSpec;
+import io.druid.indexer.path.MetadataStoreBasedUsedSegmentLister;
+import io.druid.indexer.path.MultiplePathSpec;
+import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
+import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
 
 import java.io.File;
 import java.net.URI;
@@ -84,6 +94,10 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
 
             binder.bind(new TypeLiteral<Supplier<MetadataStorageConnectorConfig>>() {})
                   .toInstance(metadataSpec);
+            binder.bind(MetadataStorageTablesConfig.class).toInstance(metadataSpec.getMetadataStorageTablesConfig());
+            binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(
+                LazySingleton.class
+            );
           }
         }
     );
@@ -95,10 +109,22 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
     try {
       Injector injector = makeInjector();
 
-      MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema().getIOConfig().getMetadataUpdateSpec();
+      config = getHadoopDruidIndexerConfig();
+
+      MetadataStorageUpdaterJobSpec metadataSpec = config.getSchema().getIOConfig().getMetadataUpdateSpec();
       // override metadata storage type based on HadoopIOConfig
       Preconditions.checkNotNull(metadataSpec.getType(), "type in metadataUpdateSpec must not be null");
       injector.getInstance(Properties.class).setProperty("druid.metadata.storage.type", metadataSpec.getType());
+
+      config = HadoopDruidIndexerConfig.fromSpec(
+          HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+              config.getSchema(),
+              HadoopDruidIndexerConfig.jsonMapper,
+              new MetadataStoreBasedUsedSegmentLister(
+                  injector.getInstance(IndexerMetadataStorageCoordinator.class)
+              )
+          )
+      );
 
       List<Jobby> jobs = Lists.newArrayList();
       jobs.add(new HadoopDruidDetermineConfigurationJob(config));

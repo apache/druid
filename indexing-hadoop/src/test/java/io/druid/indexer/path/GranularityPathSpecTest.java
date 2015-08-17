@@ -76,18 +76,18 @@ public class GranularityPathSpecTest
   }
 
   @Test
-  public void testDeserialization() throws Exception
+  public void testSerdeCustomInputFormat() throws Exception
   {
-    testDeserialization("/test/path", "*.test", "pat_pat", Granularity.SECOND, TextInputFormat.class);
+    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, TextInputFormat.class);
   }
 
   @Test
-  public void testDeserializationNoInputFormat() throws Exception
+  public void testSerdeNoInputFormat() throws Exception
   {
-    testDeserialization("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
+    testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
   }
 
-  private void testDeserialization(
+  private void testSerde(
       String inputPath,
       String filePattern,
       String pathFormat,
@@ -114,7 +114,7 @@ public class GranularityPathSpecTest
     }
     sb.append("\"type\" : \"granularity\"}");
 
-    GranularityPathSpec pathSpec = (GranularityPathSpec)jsonMapper.readValue(sb.toString(), PathSpec.class);
+    GranularityPathSpec pathSpec = (GranularityPathSpec) StaticPathSpecTest.readWriteRead(sb.toString(), jsonMapper);
     Assert.assertEquals(inputFormat, pathSpec.getInputFormat());
     Assert.assertEquals(inputPath, pathSpec.getInputPath());
     Assert.assertEquals(filePattern, pathSpec.getFilePattern());
