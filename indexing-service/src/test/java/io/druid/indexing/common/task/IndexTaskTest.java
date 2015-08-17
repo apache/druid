@@ -79,6 +79,7 @@ public class IndexTaskTest
 
     IndexTask indexTask = new IndexTask(
         null,
+        null,
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
                 "test",
@@ -143,6 +144,7 @@ public class IndexTaskTest
     writer.close();
 
     IndexTask indexTask = new IndexTask(
+        null,
         null,
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
@@ -249,6 +251,7 @@ public class IndexTaskTest
     writer.close();
 
     IndexTask indexTask = new IndexTask(
+        null,
         null,
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
