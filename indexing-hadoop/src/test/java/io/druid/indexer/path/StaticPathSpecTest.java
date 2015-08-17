@@ -21,8 +21,6 @@ package io.druid.indexer.path;
 
 import io.druid.jackson.DefaultObjectMapper;
 
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,18 +32,18 @@ public class StaticPathSpecTest
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  public void testDeserialization() throws Exception
+  public void testSerdeCustomInputFormat() throws Exception
   {
-    testDeserialization("/sample/path", TextInputFormat.class);
+    testSerde("/sample/path", TextInputFormat.class);
   }
 
   @Test
   public void testDeserializationNoInputFormat() throws Exception
   {
-    testDeserialization("/sample/path", null);
+    testSerde("/sample/path", null);
   }
 
-  private void testDeserialization(String path, Class inputFormat) throws Exception
+  private void testSerde(String path, Class inputFormat) throws Exception
   {
     StringBuilder sb = new StringBuilder();
     sb.append("{\"paths\" : \"");
@@ -57,13 +55,22 @@ public class StaticPathSpecTest
       sb.append("\",");
     }
     sb.append("\"type\" : \"static\"}");
-    StaticPathSpec pathSpec = (StaticPathSpec)jsonMapper.readValue(sb.toString(), PathSpec.class);
+
+    StaticPathSpec pathSpec = (StaticPathSpec) readWriteRead(sb.toString(), jsonMapper);
     Assert.assertEquals(inputFormat, pathSpec.getInputFormat());
-    
-    Job job = Job.getInstance();
-    pathSpec.addInputPaths(null, job);
-    Assert.assertEquals(
-        "file:" + path,
-        job.getConfiguration().get(FileInputFormat.INPUT_DIR));
+    Assert.assertEquals(path, pathSpec.getPaths());
+  }
+
+  public static final PathSpec readWriteRead(String jsonStr, ObjectMapper jsonMapper) throws Exception
+  {
+    return jsonMapper.readValue(
+        jsonMapper.writeValueAsString(
+            jsonMapper.readValue(
+                jsonStr,
+                PathSpec.class
+            )
+        ),
+        PathSpec.class
+    );
   }
 }
