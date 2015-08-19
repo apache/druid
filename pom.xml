@@ -102,6 +102,10 @@
         <module>extensions/azure-extensions</module>
         <module>extensions/namespace-lookup</module>
         <module>extensions/kafka-extraction-namespace</module>
+
+        <!-- distribution packaging -->
+        <module>extensions-distribution</module>
+        <module>distribution</module>
     </modules>
 
     <dependencyManagement>
@@ -683,7 +687,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.4</version>
+                    <version>2.5.5</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
