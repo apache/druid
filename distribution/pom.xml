@@ -61,6 +61,7 @@
                         </goals>
                         <configuration>
                             <finalName>${project.parent.artifactId}-${project.parent.version}</finalName>
+                            <tarLongFileMode>posix</tarLongFileMode>
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>
                             </descriptors>
