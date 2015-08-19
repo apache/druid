@@ -44,14 +44,17 @@ especially with long tails, since that's where the approximation will be worse.
 
 ### Creating approxiate histogram sketches at ingestion time
 
-To use this feature, an "approxHistogram" aggregator must be included at
-indexing time. The ingestion aggregator can only apply to numeric values. To
-query for results, an "approxHistogramFold" aggregator must be included in the
+To use this feature, an "approxHistogram" or "approxHistogramFold" aggregator must be included at
+indexing time. The ingestion aggregator can only apply to numeric values. If you use "approxHistogram"
+then any input rows missing the value will be considered to have a value of 0, while with "approxHistogramFold"
+such rows will be ignored.
+
+To query for results, an "approxHistogramFold" aggregator must be included in the
 query.
 
 ```json
 {
-  "type" : "approxHistogram(ingestion), approxHistogramFold(query)",
+  "type" : "approxHistogram or approxHistogramFold (at ingestion time), approxHistogramFold (at query time)",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "resolution" : <integer>,
