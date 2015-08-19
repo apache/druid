@@ -6,6 +6,7 @@ shopt -s expand_aliases
 trap "exit 1" 1 2 3 15
 
 SCRIPT_DIR=`dirname $0`
+MAVEN_DIR="${SCRIPT_DIR}/extensions-repo"
 
 if [[ ! -d "${SCRIPT_DIR}/lib" || ! -d "${SCRIPT_DIR}/config" ]]; then
   echo "This script appears to be running from the source location. It must be run from its deployed location."
@@ -36,6 +37,8 @@ fi
 #  start process
 JAVA_ARGS="-Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
 JAVA_ARGS="${JAVA_ARGS} -Ddruid.realtime.specFile=${SPEC_FILE}"
+JAVA_ARGS="${JAVA_ARGS} -Ddruid.extensions.localRepository=${MAVEN_DIR}"
+JAVA_ARGS="${JAVA_ARGS} -Ddruid.extensions.remoteRepositories=[]"
 
 DRUID_CP=${EXAMPLE_LOC}
 #For a pull
