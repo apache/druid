@@ -69,6 +69,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -98,6 +99,14 @@ public class IndexGeneratorJob implements Jobby
         publishedSegmentsBuilder.add(segment);
         log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
       }
+    }
+    catch (FileNotFoundException e) {
+      log.error(
+          "[%s] SegmentDescriptorInfo is not found usually when indexing process did not produce any segments meaning"
+          + " either there was no input data to process or all the input events were discarded due to some error",
+          e.getMessage()
+      );
+      Throwables.propagate(e);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
