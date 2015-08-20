@@ -29,6 +29,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharSource;
+import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.CloseQuietly;
@@ -62,10 +63,13 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Iterator;
@@ -145,6 +149,25 @@ public class AggregationTestHelper
     }
   }
 
+  public Sequence<Row> createIndexAndRunQueryOnSegment(
+      InputStream inputDataStream,
+      String parserJson,
+      String aggregators,
+      long minTimestamp,
+      QueryGranularity gran,
+      int maxRowCount,
+      String groupByQueryJson
+  ) throws Exception
+  {
+    File segmentDir = Files.createTempDir();
+    try {
+      createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
+      return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
+    } finally {
+      FileUtils.deleteDirectory(segmentDir);
+    }
+  }
+
   public void createIndex(
       File inputDataFile,
       String parserJson,
@@ -155,27 +178,52 @@ public class AggregationTestHelper
       int maxRowCount
   ) throws Exception
   {
-    StringInputRowParser parser = mapper.readValue(parserJson, StringInputRowParser.class);
-
-    LineIterator iter = FileUtils.lineIterator(inputDataFile, "UTF-8");
-
-    List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
-        aggregators,
-        new TypeReference<List<AggregatorFactory>>()
-        {
-        }
-    );
-
     createIndex(
-        iter,
-        parser,
-        aggregatorSpecs.toArray(new AggregatorFactory[0]),
+        new FileInputStream(inputDataFile),
+        parserJson,
+        aggregators,
         outDir,
         minTimestamp,
         gran,
-        true,
         maxRowCount
     );
+  }
+
+  public void createIndex(
+      InputStream inputDataStream,
+      String parserJson,
+      String aggregators,
+      File outDir,
+      long minTimestamp,
+      QueryGranularity gran,
+      int maxRowCount
+  ) throws Exception
+  {
+    try {
+      StringInputRowParser parser = mapper.readValue(parserJson, StringInputRowParser.class);
+
+      LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
+      List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
+          aggregators,
+          new TypeReference<List<AggregatorFactory>>()
+          {
+          }
+      );
+
+      createIndex(
+          iter,
+          parser,
+          aggregatorSpecs.toArray(new AggregatorFactory[0]),
+          outDir,
+          minTimestamp,
+          gran,
+          true,
+          maxRowCount
+      );
+    }
+    finally {
+      Closeables.close(inputDataStream, true);
+    }
   }
 
   public void createIndex(
