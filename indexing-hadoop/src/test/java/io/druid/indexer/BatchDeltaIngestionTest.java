@@ -145,15 +145,29 @@ public class BatchDeltaIngestionTest
   @Test
   public void testDeltaIngestion() throws Exception
   {
-    File dataFile = temporaryFolder.newFile();
+    File tmpDir = temporaryFolder.newFolder();
+
+    File dataFile1 = new File(tmpDir, "data1");
     FileUtils.writeLines(
-        dataFile,
+        dataFile1,
         ImmutableList.of(
             "2014102200,a.example.com,a.example.com,90",
-            "2014102201,b.example.com,b.example.com,25",
+            "2014102201,b.example.com,b.example.com,25"
+        )
+    );
+
+    File dataFile2 = new File(tmpDir, "data2");
+    FileUtils.writeLines(
+        dataFile2,
+        ImmutableList.of(
             "2014102202,c.example.com,c.example.com,70"
         )
     );
+
+    //using a hadoop glob path to test that it continues to work with hadoop MultipleInputs usage and not
+    //affected by
+    //https://issues.apache.org/jira/browse/MAPREDUCE-5061
+    String inputPath = tmpDir.getPath() + "/{data1,data2}";
 
     HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
         ImmutableMap.<String, Object>of(
@@ -178,7 +192,7 @@ public class BatchDeltaIngestionTest
                     "type",
                     "static",
                     "paths",
-                    dataFile.getCanonicalPath()
+                    inputPath
                 )
             )
         ),
