@@ -40,7 +40,6 @@ import io.druid.collections.StupidResourceHolder;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
-import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
@@ -336,7 +335,7 @@ public class MemcachedCache implements Cache
           .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
           .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
           .setDaemon(true)
-          .setFailureMode(FailureMode.Cancel)
+          .setFailureMode(config.getFailureMode())
           .setTranscoder(transcoder)
           .setShouldOptimize(true)
           .setOpQueueMaxBlockTime(config.getTimeout())

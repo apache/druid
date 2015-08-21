@@ -110,3 +110,4 @@ You can optionally only configure caching to be enabled on the broker by setting
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
 |`druid.cache.numConnections`|Number of memcached connections to use.|1|
+|`druid.cache.failureMode`|Failure mode when there is a problem communicating with memcached(`cancel` or `retry`)|`cancel`|

@@ -17,13 +17,61 @@
 
 package io.druid.client.cache;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import net.spy.memcached.DefaultConnectionFactory;
+import net.spy.memcached.FailureMode;
+import org.apache.commons.lang.WordUtils;
 
 import javax.validation.constraints.NotNull;
 
 public class MemcachedCacheConfig
 {
+  public static class FailureModeWrapper {
+    final FailureMode wrappedFailureMode;
+
+    public FailureModeWrapper(FailureMode failureMode)
+    {
+      Preconditions.checkNotNull(failureMode);
+      this.wrappedFailureMode = failureMode;
+    }
+
+    @JsonCreator
+    public static FailureModeWrapper fromJsonString(String name) {
+      return new FailureModeWrapper(FailureMode.valueOf(WordUtils.capitalize(name)));
+    }
+
+    @JsonValue
+    public String toJsonString() {
+      return wrappedFailureMode.name().toLowerCase();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      FailureModeWrapper that = (FailureModeWrapper) o;
+
+      return wrappedFailureMode == that.wrappedFailureMode;
+
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return wrappedFailureMode.hashCode();
+    }
+  }
+
   // default to 30 day expiration for cache entries
   // values greater than 30 days are interpreted by memcached as absolute POSIX timestamps instead of duration
   @JsonProperty
@@ -54,6 +102,10 @@ public class MemcachedCacheConfig
   // size of memcached connection pool
   @JsonProperty
   private int numConnections = 1;
+
+  @JsonProperty
+  // Connection interruptions can result in failures
+  private FailureModeWrapper failureMode = new FailureModeWrapper(FailureMode.Cancel);
 
   public int getExpiration()
   {
@@ -93,5 +145,65 @@ public class MemcachedCacheConfig
   public int getNumConnections()
   {
     return numConnections;
+  }
+
+  public FailureMode getFailureMode()
+  {
+    return failureMode.wrappedFailureMode;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MemcachedCacheConfig that = (MemcachedCacheConfig) o;
+
+    if (expiration != that.expiration) {
+      return false;
+    }
+    if (timeout != that.timeout) {
+      return false;
+    }
+    if (maxObjectSize != that.maxObjectSize) {
+      return false;
+    }
+    if (readBufferSize != that.readBufferSize) {
+      return false;
+    }
+    if (maxOperationQueueSize != that.maxOperationQueueSize) {
+      return false;
+    }
+    if (numConnections != that.numConnections) {
+      return false;
+    }
+    if (hosts != null ? !hosts.equals(that.hosts) : that.hosts != null) {
+      return false;
+    }
+    if (memcachedPrefix != null ? !memcachedPrefix.equals(that.memcachedPrefix) : that.memcachedPrefix != null) {
+      return false;
+    }
+    return !(failureMode != null ? !failureMode.equals(that.failureMode) : that.failureMode != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = expiration;
+    result = 31 * result + timeout;
+    result = 31 * result + (hosts != null ? hosts.hashCode() : 0);
+    result = 31 * result + maxObjectSize;
+    result = 31 * result + readBufferSize;
+    result = 31 * result + (memcachedPrefix != null ? memcachedPrefix.hashCode() : 0);
+    result = 31 * result + (int) (maxOperationQueueSize ^ (maxOperationQueueSize >>> 32));
+    result = 31 * result + numConnections;
+    result = 31 * result + (failureMode != null ? failureMode.hashCode() : 0);
+    return result;
   }
 }
