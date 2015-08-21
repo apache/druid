@@ -149,7 +149,7 @@ These properties specify the jdbc connection and other configuration around the 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.metadata.storage.type`|The type of metadata storage to use. Choose from "mysql", "postgres", or "derby".|derby|
+|`druid.metadata.storage.type`|The type of metadata storage to use. Choose from "mysql", "postgresql", or "derby".|derby|
 |`druid.metadata.storage.connector.connectURI`|The jdbc uri for the database to connect to|none|
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
 |`druid.metadata.storage.connector.password`|The password to connect with.|none|
