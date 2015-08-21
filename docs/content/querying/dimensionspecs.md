@@ -167,6 +167,7 @@ Example for the `__time` dimension:
 
 ### Lookup lookup extraction function
 Explicit lookups allow you to specify a set of keys and values to use when performing the extraction
+
 ```json
 {
   "type":"lookup",

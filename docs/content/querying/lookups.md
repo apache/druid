@@ -1,3 +1,6 @@
+---
+layout: doc_page
+---
 # Lookups
 
 Lookups are a concept in Druid where dimension values are (optionally) replaced with a new value. See [dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, a "key" refers to a dimension value to match, and a "value" refers to its replacement. So if you wanted to rename `appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value would be `Super Mega Awesome App`. 
@@ -36,6 +39,7 @@ The cache is populated in different ways depending on the settings below. In gen
 
 ## URI namespace update
 The remapping values for each namespaced lookup can be specified by json as per
+
 ```json
 {
   "type":"uri",
@@ -73,6 +77,7 @@ The `namespaceParseSpec` can be one of a number of values. Each of the examples 
 |`valueColumn`|The name of the column containing the value|no|The second column|
 
 *example input*
+
 ```
 bar,something,foo
 bat,something2,baz
@@ -80,6 +85,7 @@ truck,something3,buck
 ```
 
 *example namespaceParseSpec*
+
 ```json
 "namespaceParseSpec": {
   "format": "csv",
@@ -100,6 +106,7 @@ truck,something3,buck
 
 
 *example input*
+
 ```
 bar|something,1|foo
 bat|something,2|baz
@@ -107,6 +114,7 @@ truck|something,3|buck
 ```
 
 *example namespaceParseSpec*
+
 ```json
 "namespaceParseSpec": {
   "format": "tsv",
@@ -125,6 +133,7 @@ truck|something,3|buck
 |`valueFieldName`|The field name of the value|yes|null|
 
 *example input*
+
 ```json
 {"key": "foo", "value": "bar", "somethingElse" : "something"}
 {"key": "baz", "value": "bat", "somethingElse" : "something"}
@@ -132,6 +141,7 @@ truck|something,3|buck
 ```
 
 *example namespaceParseSpec*
+
 ```json
 "namespaceParseSpec": {
   "format": "customJson",
@@ -153,12 +163,12 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 ```
 
 *example namespaceParseSpec*
+
 ```json
 "namespaceParseSpec":{
   "type": "simpleJson"
 }
 ```
-
 
 ## JDBC namespaced lookup
 
@@ -173,6 +183,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`valueColumn`|The column in `table` which contains the values|Yes||
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
+
 ```json
 {
   "type":"jdbc",
@@ -193,6 +204,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 # Kafka namespaced lookup
 If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8). This requires the following extension: "io.druid.extensions:kafka-extraction-namespace"
+
 ```json
 {
   "type":"kafka",

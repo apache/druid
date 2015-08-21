@@ -17,10 +17,14 @@ SSDs are highly recommended for historical and real-time nodes if you are not ru
 
 Although Druid supports schema-less ingestion of dimensions, because of [https://github.com/druid-io/druid/issues/658](https://github.com/druid-io/druid/issues/658), you may sometimes get bigger segments than necessary. To ensure segments are as compact as possible, providing dimension names in lexicographic order is recommended.
 
-
 # Use Timeseries and TopN Queries Instead of GroupBy Where Possible
 
 Timeseries and TopN queries are much more optimized and significantly faster than groupBy queries for their designed use cases. Issuing multiple topN or timeseries queries from your application can potentially be more efficient than a single groupBy query.
+
+# Segment sizes matter
+
+Segments should generally be between 300MB-700MB in size. Too many small segments results in inefficient CPU utilizations and 
+too many large segments impacts query performance, most notably with TopN queries.
 
 # Read FAQs
 
