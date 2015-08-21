@@ -274,7 +274,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
                         "query/time",
                         requestTime,
                         "success",
-                        true
+                        result.isSucceeded()
                     )
                 )
             )
