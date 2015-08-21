@@ -27,7 +27,6 @@
     </formats>
     <repositories>
         <repository>
-            <includeMetadata>true</includeMetadata>
             <includes>
                 <include>io.druid.extensions:*</include>
             </includes>
