@@ -18,4 +18,4 @@ if [ ! -z "`s3cmd ls "$S3PATH/$TAR"`" ]; then
   exit 2
 fi
 
-s3cmd put services/target/$TAR $S3PATH/$TAR
+s3cmd put distribution/target/$TAR $S3PATH/$TAR
