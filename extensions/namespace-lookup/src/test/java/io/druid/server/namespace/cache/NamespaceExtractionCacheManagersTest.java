@@ -157,8 +157,13 @@ public class NamespaceExtractionCacheManagersTest
           @Override
           public void onFailure(Throwable t)
           {
-            log.error(t, "Error waiting");
-            throw Throwables.propagate(t);
+            try {
+              log.error(t, "Error waiting");
+              throw Throwables.propagate(t);
+            }
+            finally {
+              latch.countDown();
+            }
           }
         }
     );
