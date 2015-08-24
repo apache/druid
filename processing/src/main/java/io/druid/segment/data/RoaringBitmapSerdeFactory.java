@@ -17,6 +17,8 @@
 
 package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Ordering;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -31,7 +33,21 @@ import java.nio.ByteBuffer;
 public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 {
   private static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableRoaringBitmapObjectStrategy();
-  private static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
+  private final BitmapFactory bitmapFactory;
+  private final boolean compressRunOnSerialization;
+
+  @JsonCreator
+  public RoaringBitmapSerdeFactory(@JsonProperty("compressRunOnSerialization") boolean compressRunOnSerialization)
+  {
+    this.compressRunOnSerialization = compressRunOnSerialization;
+    this. bitmapFactory = new RoaringBitmapFactory(compressRunOnSerialization);
+  }
+
+  @JsonProperty
+  public boolean getcompressRunOnSerialization()
+  {
+    return compressRunOnSerialization;
+  }
 
   @Override
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy()
@@ -102,18 +118,30 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
   @Override
   public String toString()
   {
-    return "RoaringBitmapSerdeFactory{}";
+    return "RoaringBitmapSerdeFactory{" +
+           "compressRunOnSerialization=" + compressRunOnSerialization +
+           '}';
   }
 
   @Override
   public boolean equals(Object o)
   {
-    return this == o || o instanceof RoaringBitmapSerdeFactory;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    RoaringBitmapSerdeFactory that = (RoaringBitmapSerdeFactory) o;
+
+    return compressRunOnSerialization == that.compressRunOnSerialization;
+
   }
 
   @Override
   public int hashCode()
   {
-    return 0;
+    return (compressRunOnSerialization ? 1 : 0);
   }
 }

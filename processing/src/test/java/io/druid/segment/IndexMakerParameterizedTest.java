@@ -69,7 +69,7 @@ public class IndexMakerParameterizedTest
     return Collections2.transform(
         Sets.cartesianProduct(
             ImmutableList.of(
-                ImmutableSet.of(new RoaringBitmapSerdeFactory(), new ConciseBitmapSerdeFactory()),
+                ImmutableSet.of(new RoaringBitmapSerdeFactory(true), new ConciseBitmapSerdeFactory()),
                 ImmutableSet.of(
                     CompressedObjectStrategy.CompressionStrategy.LZ4,
                     CompressedObjectStrategy.CompressionStrategy.LZF

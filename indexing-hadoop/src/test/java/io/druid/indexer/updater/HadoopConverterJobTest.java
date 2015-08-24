@@ -373,7 +373,7 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(true), "uncompressed", "uncompressed"),
             oldSemgments,
             true,
             tmpDir.toURI(),
@@ -476,7 +476,7 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(true), "uncompressed", "uncompressed"),
             oldSemgments,
             true,
             tmpDir.toURI(),
