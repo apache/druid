@@ -50,12 +50,6 @@ public class BitmapSerdeFactoryTest
   {
     Assert.assertTrue(
         mapper.readValue(
-            "{\"type\":\"roaring\"}",
-            BitmapSerdeFactory.class
-        ) instanceof RoaringBitmapSerdeFactory
-    );
-    Assert.assertTrue(
-        mapper.readValue(
             "{\"type\":\"roaring\"}}",
             BitmapSerdeFactory.class
         ) instanceof RoaringBitmapSerdeFactory
