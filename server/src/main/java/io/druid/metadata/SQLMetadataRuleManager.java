@@ -32,7 +32,6 @@ import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
@@ -377,7 +376,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         return false;
       }
     }
-
+    try {
+      poll();
+    }
+    catch (Exception e) {
+      log.error(e, String.format("Exception while polling for rules after overriding the rule for %s", dataSource));
+    }
     return true;
   }
 
