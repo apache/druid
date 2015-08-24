@@ -85,14 +85,25 @@ public class StaticPathSpec implements PathSpec
       Class<? extends InputFormat> inputFormatClass
   )
   {
-    if (inputFormatClass == null) {
+    if (path == null) {
+      return;
+    }
+
+    Class<? extends InputFormat> inputFormatClassToUse = inputFormatClass;
+    if (inputFormatClassToUse == null) {
       if (config.isCombineText()) {
-        MultipleInputs.addInputPath(job, new Path(path), CombineTextInputFormat.class);
+        inputFormatClassToUse = CombineTextInputFormat.class;
       } else {
-        MultipleInputs.addInputPath(job, new Path(path), TextInputFormat.class);
+        inputFormatClassToUse = TextInputFormat.class;
       }
-    } else {
-      MultipleInputs.addInputPath(job, new Path(path), inputFormatClass);
+    }
+
+    // Due to https://issues.apache.org/jira/browse/MAPREDUCE-5061 we can't directly do
+    // MultipleInputs.addInputPath(job, path, inputFormatClassToUse)
+    // but have to handle hadoop glob path ourselves correctly
+    // This change and HadoopGlobPathSplitter.java can be removed once the hadoop issue is fixed
+    for (StringBuilder sb : HadoopGlobPathSplitter.splitGlob(path)) {
+      MultipleInputs.addInputPath(job, new Path(sb.toString()), inputFormatClassToUse);
     }
   }
 
