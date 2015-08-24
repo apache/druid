@@ -46,14 +46,17 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   private static final Logger log = new Logger(BitmapCreationBenchmark.class);
 
   @Parameterized.Parameters
-  public static List<Class<? extends BitmapSerdeFactory>[]> factoryClasses()
+  public static List<BitmapSerdeFactory[]> factoryClasses()
   {
-    return Arrays.<Class<? extends BitmapSerdeFactory>[]>asList(
-        (Class<? extends BitmapSerdeFactory>[]) Arrays.<Class<? extends BitmapSerdeFactory>>asList(
-            ConciseBitmapSerdeFactory.class
+    return Arrays.<BitmapSerdeFactory[]>asList(
+        (BitmapSerdeFactory[]) Arrays.<BitmapSerdeFactory>asList(
+            new ConciseBitmapSerdeFactory()
         ).toArray(),
-        (Class<? extends BitmapSerdeFactory>[]) Arrays.<Class<? extends BitmapSerdeFactory>>asList(
-            RoaringBitmapSerdeFactory.class
+        (BitmapSerdeFactory[]) Arrays.<BitmapSerdeFactory>asList(
+            new RoaringBitmapSerdeFactory(false)
+        ).toArray(),
+        (BitmapSerdeFactory[]) Arrays.<BitmapSerdeFactory>asList(
+            new RoaringBitmapSerdeFactory(true)
         ).toArray()
     );
   }
@@ -61,12 +64,11 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   final BitmapFactory factory;
   final ObjectStrategy<ImmutableBitmap> objectStrategy;
 
-  public BitmapCreationBenchmark(Class<? extends BitmapSerdeFactory> clazz)
+  public BitmapCreationBenchmark(BitmapSerdeFactory bitmapSerdeFactory)
       throws IllegalAccessException, InstantiationException
   {
-    BitmapSerdeFactory serdeFactory = clazz.newInstance();
-    factory = serdeFactory.getBitmapFactory();
-    objectStrategy = serdeFactory.getObjectStrategy();
+    factory = bitmapSerdeFactory.getBitmapFactory();
+    objectStrategy = bitmapSerdeFactory.getObjectStrategy();
   }
 
   private static final int numBits = 100000;
@@ -78,9 +80,9 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   @AfterClass
   public static void cleanupAfterClass()
   {
-    List<Class<? extends BitmapSerdeFactory>[]> classes = factoryClasses();
-    for (int i = 0; i < classes.size(); ++i) {
-      log.info("Entry [%d] is %s", i, classes.get(i)[0].getCanonicalName());
+    List<BitmapSerdeFactory[]> factories = factoryClasses();
+    for (int i = 0; i < factories.size(); ++i) {
+      log.info("Entry [%d] is %s", i, factories.get(i)[0]);
     }
   }
 

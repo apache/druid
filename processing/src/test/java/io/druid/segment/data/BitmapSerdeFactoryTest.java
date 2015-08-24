@@ -24,23 +24,59 @@ import org.junit.Test;
 
 public class BitmapSerdeFactoryTest
 {
+  private final ObjectMapper mapper = new DefaultObjectMapper();
+
   @Test
   public void testSerialization() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals("{\"type\":\"roaring\"}", mapper.writeValueAsString(new RoaringBitmapSerdeFactory()));
+    Assert.assertEquals(
+        "{\"type\":\"roaring\",\"compressRunOnSerialization\":false}",
+        mapper.writeValueAsString(new RoaringBitmapSerdeFactory(false))
+    );
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new ConciseBitmapSerdeFactory()));
     Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(BitmapSerde.createLegacyFactory()));
-    Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory()));
-    Assert.assertEquals("{\"type\":\"concise\"}", mapper.writeValueAsString(new BitmapSerde.LegacyBitmapSerdeFactory()));
+    Assert.assertEquals(
+        "{\"type\":\"concise\"}",
+        mapper.writeValueAsString(new BitmapSerde.DefaultBitmapSerdeFactory())
+    );
+    Assert.assertEquals(
+        "{\"type\":\"concise\"}",
+        mapper.writeValueAsString(new BitmapSerde.LegacyBitmapSerdeFactory())
+    );
   }
 
   @Test
   public void testDeserialization() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertTrue(mapper.readValue("{\"type\":\"roaring\"}", BitmapSerdeFactory.class) instanceof RoaringBitmapSerdeFactory);
-    Assert.assertTrue(mapper.readValue("{\"type\":\"concise\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
-    Assert.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
+    Assert.assertTrue(
+        mapper.readValue(
+            "{\"type\":\"roaring\"}}",
+            BitmapSerdeFactory.class
+        ) instanceof RoaringBitmapSerdeFactory
+    );
+    Assert.assertTrue(
+        mapper.readValue(
+            "{\"type\":\"concise\"}",
+            BitmapSerdeFactory.class
+        ) instanceof ConciseBitmapSerdeFactory
+    );
+    Assert.assertTrue(
+        mapper.readValue(
+            "{\"type\":\"BitmapSerde$SomeRandomClass\"}",
+            BitmapSerdeFactory.class
+        ) instanceof ConciseBitmapSerdeFactory
+    );
+  }
+
+  @Test
+  public void testRoaringBitmapFactorySerde() throws Exception
+  {
+
+    RoaringBitmapSerdeFactory bitmapSerdeFactory = (RoaringBitmapSerdeFactory) mapper.readValue(
+        "{\"type\":\"roaring\",\"compressRunOnSerialization\":true}}",
+        BitmapSerdeFactory.class
+    );
+    Assert.assertTrue(bitmapSerdeFactory.getcompressRunOnSerialization());
+
   }
 }

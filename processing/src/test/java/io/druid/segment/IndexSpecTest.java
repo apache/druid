@@ -43,7 +43,7 @@ public class IndexSpecTest
     final String json = "{ \"bitmap\" : { \"type\" : \"roaring\" }, \"dimensionCompression\" : \"lz4\", \"metricCompression\" : \"lzf\" }";
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
-    Assert.assertEquals(new RoaringBitmapSerdeFactory(), spec.getBitmapSerdeFactory());
+    Assert.assertEquals(new RoaringBitmapSerdeFactory(true), spec.getBitmapSerdeFactory());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZF, spec.getMetricCompressionStrategy());
 
