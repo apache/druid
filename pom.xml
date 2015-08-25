@@ -559,7 +559,7 @@
             <dependency>
                 <groupId>com.ircclouds.irc</groupId>
                 <artifactId>irc-api</artifactId>
-                <version>1.0-0011</version>
+                <version>1.0-0014</version>
             </dependency>
             <dependency>
                 <groupId>com.maxmind.geoip2</groupId>
