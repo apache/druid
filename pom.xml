@@ -327,11 +327,6 @@
                 <version>3.0.0</version>
             </dependency>
             <dependency>
-                <groupId>com.jamesmurty.utils</groupId>
-                <artifactId>java-xmlbuilder</artifactId>
-                <version>0.4</version>
-            </dependency>
-            <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi</artifactId>
                 <version>2.32</version>
@@ -483,14 +478,7 @@
             <dependency>
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
-                <version>0.9.3</version>
-                <exclusions>
-                    <exclusion>
-                        <!-- exclude artifact not available in maven central -->
-                        <groupId>com.centerkey.utils</groupId>
-                        <artifactId>barebonesbrowserlaunch</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>0.9.4</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
