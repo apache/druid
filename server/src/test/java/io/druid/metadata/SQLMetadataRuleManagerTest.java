@@ -17,11 +17,9 @@
 
 package io.druid.metadata;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
@@ -29,18 +27,14 @@ import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.audit.SQLAuditManager;
 import io.druid.server.audit.SQLAuditManagerConfig;
-import io.druid.server.coordinator.rules.ForeverDropRule;
-import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
-import io.druid.server.coordinator.rules.PeriodLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.metrics.NoopServiceEmitter;
-import junit.framework.Assert;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -81,6 +75,30 @@ public class SQLMetadataRuleManagerTest
         connector,
         auditManager
     );
+  }
+
+  @Test
+  public void testRuleInsert()
+  {
+    List<Rule> rules = Arrays.<Rule>asList(
+        new IntervalLoadRule(
+            new Interval("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        )
+    );
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    // New rule should be be reflected in the in memory rules map immediately after being set by user
+    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Assert.assertEquals(1, allRules.size());
+    Assert.assertEquals(1, allRules.get("test_dataSource").size());
+    Assert.assertEquals(rules.get(0), allRules.get("test_dataSource").get(0));
   }
 
   @Test
