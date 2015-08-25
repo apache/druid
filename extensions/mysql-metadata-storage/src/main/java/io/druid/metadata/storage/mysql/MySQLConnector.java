@@ -77,11 +77,11 @@ public class MySQLConnector extends SQLMetadataConnector
   {
     // ensure database defaults to utf8, otherwise bail
     boolean isUtf8 = handle
-                .createQuery("SHOW VARIABLES where variable_name = 'character_set_database' and value = 'utf8'")
-                .list()
-                .size() == 1;
+                         .createQuery("SHOW VARIABLES where variable_name = 'character_set_database' and value = 'utf8'")
+                         .list()
+                         .size() == 1;
 
-    if(!isUtf8) {
+    if (!isUtf8) {
       throw new ISE(
           "Database default character set is not UTF-8." + System.lineSeparator()
           + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
@@ -97,11 +97,10 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected boolean isTransientException(Throwable e)
+  protected boolean connectorIsTransientException(Throwable e)
   {
     return e instanceof MySQLTransientException
-           || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317)
-        ;
+           || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */);
   }
 
   @Override

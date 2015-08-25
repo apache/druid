@@ -118,7 +118,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public DBI getDBI() { return dbi; }
 
   @Override
-  protected boolean isTransientException(Throwable e)
+  protected boolean connectorIsTransientException(Throwable e)
   {
     if(e instanceof SQLException) {
       final String sqlState = ((SQLException) e).getSQLState();

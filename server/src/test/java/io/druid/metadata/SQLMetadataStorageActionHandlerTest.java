@@ -40,11 +40,12 @@ public class SQLMetadataStorageActionHandlerTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
-  private SQLMetadataStorageActionHandler<Map<String, Integer>,Map<String, Integer>,Map<String, String>,Map<String, Integer>> handler;
+  private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
 
   @Before
-  public void setUp() throws Exception {
-    MetadataStorageConnectorConfig config =  new MetadataStorageConnectorConfig();
+  public void setUp() throws Exception
+  {
+    MetadataStorageConnectorConfig config = new MetadataStorageConnectorConfig();
 
     connector = new TestDerbyConnector(
         Suppliers.ofInstance(config),
@@ -67,38 +68,48 @@ public class SQLMetadataStorageActionHandlerTest
         jsonMapper,
         new MetadataStorageActionHandlerTypes<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>>()
         {
-      @Override
-      public TypeReference<Map<String, Integer>> getEntryType()
-      {
-        return new TypeReference<Map<String, Integer>>() {};
-      }
+          @Override
+          public TypeReference<Map<String, Integer>> getEntryType()
+          {
+            return new TypeReference<Map<String, Integer>>()
+            {
+            };
+          }
 
-      @Override
-      public TypeReference<Map<String, Integer>> getStatusType()
-      {
-        return new TypeReference<Map<String, Integer>>() {};
-      }
+          @Override
+          public TypeReference<Map<String, Integer>> getStatusType()
+          {
+            return new TypeReference<Map<String, Integer>>()
+            {
+            };
+          }
 
-      @Override
-      public TypeReference<Map<String, String>> getLogType()
-      {
-        return new TypeReference<Map<String, String>>() {};
-      }
+          @Override
+          public TypeReference<Map<String, String>> getLogType()
+          {
+            return new TypeReference<Map<String, String>>()
+            {
+            };
+          }
 
-      @Override
-      public TypeReference<Map<String, Integer>> getLockType()
-      {
-        return new TypeReference<Map<String, Integer>>() {};
-      }
-    },
+          @Override
+          public TypeReference<Map<String, Integer>> getLockType()
+          {
+            return new TypeReference<Map<String, Integer>>()
+            {
+            };
+          }
+        },
         entryType,
         entryTable,
         logTable,
-        lockTable);
+        lockTable
+    );
   }
 
   @After
-  public void tearDown() {
+  public void tearDown()
+  {
     connector.tearDown();
   }
 
@@ -240,7 +251,7 @@ public class SQLMetadataStorageActionHandlerTest
     );
 
     long lockId = locks.keySet().iterator().next();
-    Assert.assertTrue(handler.removeLock(lockId));
+    handler.removeLock(lockId);
     locks.remove(lockId);
 
     final Map<Long, Map<String, Integer>> updated = handler.getLocks(entryId);
