@@ -104,9 +104,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * Remove the lock with the given lock id.
    *
    * @param lockId lock id
-   * @return true if the lock was removed, false if the given lock id did not exist
    */
-  public boolean removeLock(long lockId);
+  public void removeLock(long lockId);
 
   /**
    * Add a log to the entry with the given id.

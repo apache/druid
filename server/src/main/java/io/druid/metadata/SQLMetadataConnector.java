@@ -17,9 +17,12 @@
 
 package io.druid.metadata;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.ISE;
+import com.metamx.common.RetryUtils;
 import com.metamx.common.logger.Logger;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.Batch;
@@ -28,11 +31,17 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.DBIException;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
+import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLTransientException;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -41,32 +50,43 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
+  private final Predicate<Throwable> shouldRetry;
 
-  public SQLMetadataConnector(Supplier<MetadataStorageConnectorConfig> config,
-                              Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+  public SQLMetadataConnector(
+      Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
   )
   {
     this.config = config;
     this.tablesConfigSupplier = tablesConfigSupplier;
+    this.shouldRetry = new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable e)
+      {
+        return isTransientException(e);
+      }
+    };
   }
 
   /**
    * SQL type to use for payload data (e.g. JSON blobs).
    * Must be a binary type, which values can be accessed using ResultSet.getBytes()
-   *
+   * <p/>
    * The resulting string will be interpolated into the table creation statement, e.g.
    * <code>CREATE TABLE druid_table ( payload <type> NOT NULL, ... )</code>
    *
    * @return String representing the SQL type
    */
-  protected String getPayloadType() {
+  protected String getPayloadType()
+  {
     return PAYLOAD_TYPE;
   }
 
   /**
    * Auto-incrementing SQL type to use for IDs
    * Must be an integer type, which values will be automatically set by the database
-   *
+   * <p/>
    * The resulting string will be interpolated into the table creation statement, e.g.
    * <code>CREATE TABLE druid_table ( id <type> NOT NULL, ... )</code>
    *
@@ -78,7 +98,56 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract boolean tableExists(Handle handle, final String tableName);
 
-  protected boolean isTransientException(Throwable e) {
+  public <T> T retryWithHandle(final HandleCallback<T> callback)
+  {
+    final Callable<T> call = new Callable<T>()
+    {
+      @Override
+      public T call() throws Exception
+      {
+        return getDBI().withHandle(callback);
+      }
+    };
+    final int maxTries = 10;
+    try {
+      return RetryUtils.retry(call, shouldRetry, maxTries);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public <T> T retryTransaction(final TransactionCallback<T> callback)
+  {
+    final Callable<T> call = new Callable<T>()
+    {
+      @Override
+      public T call() throws Exception
+      {
+        return getDBI().inTransaction(callback);
+      }
+    };
+    final int maxTries = 10;
+    try {
+      return RetryUtils.retry(call, shouldRetry, maxTries);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public final boolean isTransientException(Throwable e)
+  {
+    return e != null && (e instanceof SQLTransientException
+                         || e instanceof SQLRecoverableException
+                         || e instanceof UnableToObtainConnectionException
+                         || connectorIsTransientException(e)
+                         || (e instanceof SQLException && isTransientException(e.getCause()))
+                         || (e instanceof DBIException && isTransientException(e.getCause())));
+  }
+
+  protected boolean connectorIsTransientException(Throwable e)
+  {
     return false;
   }
 
@@ -94,7 +163,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
               if (!tableExists(handle, tableName)) {
                 log.info("Creating table[%s]", tableName);
                 final Batch batch = handle.createBatch();
-                for(String s : sql) {
+                for (String s : sql) {
                   batch.add(s);
                 }
                 batch.execute();
