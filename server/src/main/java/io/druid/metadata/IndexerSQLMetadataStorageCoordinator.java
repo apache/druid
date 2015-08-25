@@ -29,6 +29,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -259,17 +261,59 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    return connector.getDBI().inTransaction(
+    return announceHistoricalSegments(segments, null, null);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public Set<DataSegment> announceHistoricalSegments(
+      final Set<DataSegment> segments,
+      final Object oldCommitMetadata,
+      final Object newCommitMetadata
+  ) throws IOException
+  {
+    // Segments must all be from the same dataSource.
+    if (segments.isEmpty()) {
+      throw new IllegalArgumentException("segment set must not be empty");
+    }
+
+    final String dataSource = segments.iterator().next().getDataSource();
+    for (DataSegment segment : segments) {
+      if (!dataSource.equals(segment.getDataSource())) {
+        throw new IllegalArgumentException("segments must all be from the same dataSource");
+      }
+    }
+
+    return connector.retryTransaction(
         new TransactionCallback<Set<DataSegment>>()
         {
           @Override
-          public Set<DataSegment> inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+          public Set<DataSegment> inTransaction(
+              final Handle handle,
+              final TransactionStatus transactionStatus
+          ) throws Exception
           {
             final Set<DataSegment> inserted = Sets.newHashSet();
 
             for (final DataSegment segment : segments) {
               if (announceHistoricalSegment(handle, segment)) {
                 inserted.add(segment);
+              }
+            }
+
+            if (newCommitMetadata != null) {
+              final boolean success = updateDataSourceMetadataWithHandle(
+                  handle,
+                  dataSource,
+                  oldCommitMetadata,
+                  newCommitMetadata
+              );
+
+              if (!success) {
+                // RuntimeException => no retries (there's no point; this will never succeed)
+                throw new RuntimeException("dataSource metadata transaction check failed");
               }
             }
 
@@ -478,10 +522,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Attempts to insert a single segment to the database. If the segment already exists, will do nothing. Meant
-   * to be called from within a transaction.
+   * Attempts to insert a single segment to the database. If the segment already exists, will do nothing; although,
+   * this checking is imperfect and callers must be prepared to retry their entire transaction on exceptions.
    *
-   * @return true if the segment was added, false otherwise
+   * @return true if the segment was added, false if it already existed
    */
   private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
   {
@@ -491,38 +535,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         return false;
       }
 
-      // Try/catch to work around races due to SELECT -> INSERT. Avoid ON DUPLICATE KEY since it's not portable.
-      try {
-        handle.createStatement(
-            String.format(
-                "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-                + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                dbTables.getSegmentsTable()
-            )
-        )
-              .bind("id", segment.getIdentifier())
-              .bind("dataSource", segment.getDataSource())
-              .bind("created_date", new DateTime().toString())
-              .bind("start", segment.getInterval().getStart().toString())
-              .bind("end", segment.getInterval().getEnd().toString())
-              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-              .bind("version", segment.getVersion())
-              .bind("used", true)
-              .bind("payload", jsonMapper.writeValueAsBytes(segment))
-              .execute();
+      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
+      // Avoiding ON DUPLICATE KEY since it's not portable.
+      // Avoiding try/catch since it may cause inadvertent transaction-splitting.
+      handle.createStatement(
+          String.format(
+              "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              dbTables.getSegmentsTable()
+          )
+      )
+            .bind("id", segment.getIdentifier())
+            .bind("dataSource", segment.getDataSource())
+            .bind("created_date", new DateTime().toString())
+            .bind("start", segment.getInterval().getStart().toString())
+            .bind("end", segment.getInterval().getEnd().toString())
+            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+            .bind("version", segment.getVersion())
+            .bind("used", true)
+            .bind("payload", jsonMapper.writeValueAsBytes(segment))
+            .execute();
 
-        log.info("Published segment [%s] to DB", segment.getIdentifier());
-      }
-      catch (Exception e) {
-        if (e.getCause() instanceof SQLException && segmentExists(handle, segment)) {
-          log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
-        } else {
-          throw e;
-        }
-      }
+      log.info("Published segment [%s] to DB", segment.getIdentifier());
     }
-    catch (IOException e) {
-      log.error(e, "Exception inserting into DB");
+    catch (Exception e) {
+      log.error(e, "Exception inserting segment [%s] into DB", segment.getIdentifier());
       throw e;
     }
 
@@ -541,6 +578,126 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         .map(StringMapper.FIRST)
         .list()
         .isEmpty();
+  }
+
+  /**
+   * Read dataSource metadata. Returns null if there is no metadata.
+   */
+  public Object getDataSourceMetadata(final String dataSource)
+  {
+    final byte[] bytes = connector.lookup(
+        dbTables.getDataSourceTable(),
+        "dataSource",
+        "commit_metadata_payload",
+        dataSource
+    );
+
+    try {
+      return jsonMapper.readValue(bytes, Object.class);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
+   */
+  private byte[] getDataSourceMetadataWithHandleAsBytes(
+      final Handle handle,
+      final String dataSource
+  )
+  {
+    return connector.lookupWithHandle(
+        handle,
+        dbTables.getDataSourceTable(),
+        "dataSource",
+        "commit_metadata_payload",
+        dataSource
+    );
+  }
+
+  /**
+   * Compare-and-swap dataSource metadata in a transaction.
+   * <p/>
+   * Returns true if successful or false if nothing was actually modified because the oldCommitMetadata did not match.
+   * oldCommitMetadata can be null, in which case we'll expect there to be no metadata row existing for this dataSource.
+   */
+  private <T> boolean updateDataSourceMetadataWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final T oldCommitMetadata,
+      final T newCommitMetadata
+  ) throws IOException
+  {
+    Preconditions.checkNotNull(dataSource, "dataSource");
+    Preconditions.checkNotNull(newCommitMetadata, "newCommitMetadata");
+
+    final byte[] oldCommitMetadataBytesFromDb = getDataSourceMetadataWithHandleAsBytes(handle, dataSource);
+    final String oldCommitMetadataSha1FromDb;
+    if (oldCommitMetadataBytesFromDb == null) {
+      oldCommitMetadataSha1FromDb = null;
+    } else {
+      oldCommitMetadataSha1FromDb = BaseEncoding.base16().encode(
+          Hashing.sha1().hashBytes(oldCommitMetadataBytesFromDb).asBytes()
+      );
+    }
+
+    final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(newCommitMetadata);
+    final String newCommitMetadataSha1 = BaseEncoding.base16().encode(
+        Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
+    );
+
+    if (oldCommitMetadata == null) {
+      // Expecting no old metadata; confirm it doesn't exist and then INSERT the new stuff.
+      if (oldCommitMetadataBytesFromDb != null) {
+        return false;
+      }
+
+      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
+      final int numRows = handle.createStatement(
+          String.format(
+              "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
+              + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+              dbTables.getDataSourceTable()
+          )
+      )
+                                .bind("dataSource", dataSource)
+                                .bind("created_date", new DateTime().toString())
+                                .bind("commit_metadata_payload", newCommitMetadataBytes)
+                                .bind("commit_metadata_sha1", newCommitMetadataSha1)
+                                .execute();
+
+      return numRows > 0;
+    } else {
+      // Expecting a particular old metadata; confirm the bytes in the DB really do match what we want
+      if (oldCommitMetadataBytesFromDb == null) {
+        return false;
+      }
+
+      final Object oldCommitMetadataFromDb = jsonMapper.readValue(oldCommitMetadataBytesFromDb, Object.class);
+      if (!oldCommitMetadataFromDb.equals(oldCommitMetadata)) {
+        return false;
+      }
+
+      // The bytes matched, use the SHA1 in a compare-and-swap UPDATE
+      final int numRows = handle.createStatement(
+          String.format(
+              "UPDATE %s SET "
+              + "commit_metadata_payload = :new_commit_metadata_payload, "
+              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+              + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
+              dbTables.getDataSourceTable()
+          )
+      )
+                                .bind("dataSource", dataSource)
+                                .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
+                                .bind("new_commit_metadata_payload", newCommitMetadataBytes)
+                                .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
+                                .execute();
+
+      return numRows > 0;
+    }
   }
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException

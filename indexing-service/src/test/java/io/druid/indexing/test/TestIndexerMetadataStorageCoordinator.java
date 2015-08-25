@@ -44,6 +44,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public Object getDataSourceMetadata(String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
   {
     return ImmutableList.of();
@@ -75,6 +81,17 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       }
     }
     return ImmutableSet.copyOf(added);
+  }
+
+  @Override
+  public Set<DataSegment> announceHistoricalSegments(
+      Set<DataSegment> segments,
+      Object oldCommitMetadata,
+      Object newCommitMetadata
+  ) throws IOException
+  {
+    // Don't actually compare metadata, just do it!
+    return announceHistoricalSegments(segments);
   }
 
   @Override

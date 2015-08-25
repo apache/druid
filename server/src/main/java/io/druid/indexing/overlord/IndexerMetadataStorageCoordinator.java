@@ -41,7 +41,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
+  List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
       throws IOException;
 
   /**
@@ -65,7 +65,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Allocate a new pending segment in the pending segments table. This segment identifier will never be given out
@@ -93,9 +93,31 @@ public interface IndexerMetadataStorageCoordinator
       String maxVersion
   ) throws IOException;
 
-  public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException;
+  /**
+   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
+   * with identifiers already in the metadata storage will not be added).
+   * <p/>
+   * If newCommitMetadata is set, this insertion will be atomic with a compare-and-swap on dataSource commit metadata.
+   *
+   * @param segments          set of segments to add, must all be from the same dataSource
+   * @param oldCommitMetadata old dataSource commit metadata that should be set before this insertion. If null, we'll
+   *                          expect there to not be any existing metadata.
+   * @param newCommitMetadata new dataSource commit metadata that should be set after this insertion. If null this
+   *                          insert will not involve dataSource metadata
+   *
+   * @return set of segments actually added
+   */
+  Set<DataSegment> announceHistoricalSegments(
+      Set<DataSegment> segments,
+      Object oldCommitMetadata,
+      Object newCommitMetadata
+  ) throws IOException;
 
-  public void deleteSegments(final Set<DataSegment> segments) throws IOException;
+  Object getDataSourceMetadata(String dataSource);
+
+  void updateSegmentMetadata(Set<DataSegment> segments) throws IOException;
+
+  void deleteSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Get all segments which include ONLY data within the given interval and are not flagged as used.
@@ -105,5 +127,5 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
    */
-  public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval);
+  List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
 }
