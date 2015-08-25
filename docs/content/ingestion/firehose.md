@@ -224,7 +224,7 @@ A sample ingest firehose spec is shown below -
 #### CombiningFirehose
 
 This firehose can be used to combine and merge data from a list of different firehoses.
-This can be used to merge data from more than one firehoses.
+This can be used to merge data from more than one firehose.
 
 ```json
 {
@@ -259,3 +259,27 @@ When using this firehose, events can be sent by submitting a POST request to the
 |type|This should be "receiver"|yes|
 |serviceName|name used to announce the event receiver service endpoint|yes|
 |bufferSize| size of buffer used by firehose to store events|no default(100000)|
+
+
+#### TimedShutoffFirehose
+
+This can be used to start a firehose that will shut down at a specified time.
+An example is shown below:
+
+```json
+{
+    "type"  :   "timed",
+    "shutoffTime": "2015-08-25T01:26:05.119Z",
+    "delegate": {
+          "type": "receiver",
+          "serviceName": "eventReceiverServiceName",
+          "bufferSize": 100000
+     }
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "timed"|yes|
+|shutoffTime|time at which the firehose should shut down, in ISO8601 format|yes|
+|delegate|firehose to use|yes|
