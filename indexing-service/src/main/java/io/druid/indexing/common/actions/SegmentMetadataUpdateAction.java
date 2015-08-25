@@ -59,7 +59,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
       Task task, TaskActionToolbox toolbox
   ) throws IOException
   {
-    toolbox.verifyTaskLocksAndSinglePartitionSettitude(task, segments, true);
+    toolbox.verifyTaskLocks(task, segments);
     toolbox.getIndexerMetadataStorageCoordinator().updateSegmentMetadata(segments);
 
     // Emit metrics

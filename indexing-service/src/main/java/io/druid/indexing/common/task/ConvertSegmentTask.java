@@ -378,7 +378,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
-      actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)).withAllowOlderVersions(true));
+      actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
     } else {
       log.info("Conversion failed.");
     }

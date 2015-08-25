@@ -83,24 +83,19 @@ public class TaskActionToolbox
     return true;
   }
 
-  public void verifyTaskLocksAndSinglePartitionSettitude(
+  public void verifyTaskLocks(
       final Task task,
-      final Set<DataSegment> segments,
-      final boolean allowOlderVersions
+      final Set<DataSegment> segments
   )
   {
-    if (!taskLockCoversSegments(task, segments, allowOlderVersions)) {
+    if (!taskLockCoversSegments(task, segments)) {
       throw new ISE("Segments not covered by locks for task: %s", task.getId());
-    }
-    if (!segmentsAreFromSamePartitionSet(segments)) {
-      throw new ISE("Segments are not in the same partition set: %s", segments);
     }
   }
 
   public boolean taskLockCoversSegments(
       final Task task,
-      final Set<DataSegment> segments,
-      final boolean allowOlderVersions
+      final Set<DataSegment> segments
   )
   {
     // Verify that each of these segments falls under some lock
@@ -110,22 +105,18 @@ public class TaskActionToolbox
     // NOTE: insert some segments from the task but not others.
 
     final List<TaskLock> taskLocks = getTaskLockbox().findLocksForTask(task);
-    for(final DataSegment segment : segments) {
+    for (final DataSegment segment : segments) {
       final boolean ok = Iterables.any(
           taskLocks, new Predicate<TaskLock>()
-      {
-        @Override
-        public boolean apply(TaskLock taskLock)
-        {
-          final boolean versionOk = allowOlderVersions
-                                    ? taskLock.getVersion().compareTo(segment.getVersion()) >= 0
-                                    : taskLock.getVersion().equals(segment.getVersion());
-
-          return versionOk
-                 && taskLock.getDataSource().equals(segment.getDataSource())
-                 && taskLock.getInterval().contains(segment.getInterval());
-        }
-      }
+          {
+            @Override
+            public boolean apply(TaskLock taskLock)
+            {
+              return taskLock.getDataSource().equals(segment.getDataSource())
+                     && taskLock.getInterval().contains(segment.getInterval())
+                     && taskLock.getVersion().compareTo(segment.getVersion()) >= 0;
+            }
+          }
       );
 
       if (!ok) {
