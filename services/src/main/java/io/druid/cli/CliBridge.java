@@ -25,7 +25,7 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import io.airlift.command.Command;
+import io.airlift.airline.Command;
 import io.druid.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
