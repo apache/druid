@@ -144,6 +144,7 @@ public class IndexTask extends AbstractFixedIntervalTask
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") IndexIngestionSpec ingestionSchema,
       @JacksonInject ObjectMapper jsonMapper
   )
@@ -151,6 +152,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     super(
         // _not_ the version, just something uniqueish
         makeId(id, ingestionSchema),
+        taskResource,
         makeDataSource(ingestionSchema),
         makeInterval(ingestionSchema)
     );

@@ -480,6 +480,7 @@ public class TaskLifecycleTest
   {
     final Task indexTask = new IndexTask(
         null,
+        null,
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
                 "foo",
@@ -534,6 +535,7 @@ public class TaskLifecycleTest
   public void testIndexTaskFailure() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         null,
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
@@ -857,6 +859,7 @@ public class TaskLifecycleTest
   public void testResumeTasks() throws Exception
   {
     final Task indexTask = new IndexTask(
+        null,
         null,
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
