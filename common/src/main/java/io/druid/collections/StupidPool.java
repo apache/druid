@@ -34,7 +34,7 @@ public class StupidPool<T>
 
   private final Supplier<T> generator;
 
-  private final Queue<T> objects = new ConcurrentLinkedQueue<>();
+  private final Queue<ObjectResourceHolder> objects = new ConcurrentLinkedQueue<>();
 
   public StupidPool(
       Supplier<T> generator
@@ -45,8 +45,8 @@ public class StupidPool<T>
 
   public ResourceHolder<T> take()
   {
-    final T obj = objects.poll();
-    return obj == null ? new ObjectResourceHolder(generator.get()) : new ObjectResourceHolder(obj);
+    final ObjectResourceHolder obj = objects.poll();
+    return obj == null ? new ObjectResourceHolder(generator.get()) : obj.refresh();
   }
 
   private class ObjectResourceHolder implements ResourceHolder<T>
@@ -71,6 +71,12 @@ public class StupidPool<T>
       return object;
     }
 
+    private ObjectResourceHolder refresh()
+    {
+      closed.set(false);
+      return this;
+    }
+
     @Override
     public void close() throws IOException
     {
@@ -78,7 +84,7 @@ public class StupidPool<T>
         log.warn(new ISE("Already Closed!"), "Already closed");
         return;
       }
-      if (!objects.offer(object)) {
+      if (!objects.offer(this)) {
         log.warn(new ISE("Queue offer failed"), "Could not offer object [%s] back into the queue", object);
       }
     }
