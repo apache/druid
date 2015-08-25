@@ -70,7 +70,7 @@
         <jetty.version>9.2.13.v20150730</jetty.version>
         <jersey.version>1.19</jersey.version>
         <druid.api.version>0.3.11</druid.api.version>
-        <jackson.version>2.4.4</jackson.version>
+        <jackson.version>2.6.1</jackson.version>
         <log4j.version>2.2</log4j.version>
         <slf4j.version>1.7.10</slf4j.version>
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
