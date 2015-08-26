@@ -31,6 +31,7 @@ Proper funcitonality of Namespaced lookups requires the following extension to b
 
 ## Cache Settings
 The following are settings used by the nodes which service queries when setting namespaces (broker, peon, historical)
+
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.extraction.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
@@ -240,6 +241,8 @@ The following are the handling for kafka consumer properties in `druid.query.ren
 |`auto.offset.reset`|Setting to get the entire kafka rename stream. Cannot be overridden|`smallest`|
 
 ## Testing the kafka rename functionality
-To test this setup, you can send key/value pairs to a kafka stream via the following producer console
+To test this setup, you can send key/value pairs to a kafka stream via the following producer console:
+
 `./bin/kafka-console-producer.sh --property parse.key=true --property key.separator="->" --broker-list localhost:9092 --topic testTopic`
+
 Renames can then be published as `OLD_VAL->NEW_VAL` followed by newline (enter or return)
