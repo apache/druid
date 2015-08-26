@@ -17,7 +17,7 @@
 
 package io.druid.cli;
 
-import io.airlift.command.Command;
+import io.airlift.airline.Command;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
 import io.druid.server.StatusResource;

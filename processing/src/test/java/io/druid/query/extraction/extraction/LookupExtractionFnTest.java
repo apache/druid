@@ -33,7 +33,6 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -79,12 +78,6 @@ public class LookupExtractionFnTest
     this.replaceMissing = Strings.emptyToNull(replaceMissing);
     this.retainMissing = retainMissing;
     this.injective = injective;
-  }
-
-  @BeforeClass
-  public static void setUpStatic()
-  {
-    OBJECT_MAPPER.registerSubtypes(LookupExtractionFn.class);
   }
 
   @Test
