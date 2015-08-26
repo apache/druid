@@ -14,6 +14,7 @@ h2. Data Ingestion
 * "Data Formats":../ingestion/data-formats.html
 * "Data Schema":../ingestion/index.html
 * "Schema Design":../ingestion/schema-design.html
+* "Schema Changes":../ingestion/schema-changes.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
 * "FAQ":../ingestion/faq.html
@@ -36,6 +37,7 @@ h2. Querying
 ** "DimensionSpecs":../querying/dimensionspecs.html
 ** "Context":../querying/query-context.html
 * "SQL":../querying/sql.html
+* "Joins":../querying/joins.html
 
 h2. Design
 * "Overview":../design/design.html
@@ -60,6 +62,7 @@ h2. Operations
 * "Alerts":../operations/alerts.html
 * "Updating the Cluster":../operations/rolling-updates.html
 * "Different Hadoop Versions":../operations/other-hadoop.html
+* "Multitenancy Considerations":../operations/multitenancy.html
 * "Performance FAQ":../operations/performance-faq.html
 
 h2. Configuration
@@ -73,6 +76,7 @@ h2. Configuration
 * "Simple Cluster Configuration":../configuration/simple-cluster.html
 * "Production Cluster Configuration":../configuration/production-cluster.html
 * "Production Hadoop Configuration":../configuration/hadoop.html
+* "Production Zookeeper Configuration":../configuration/zookeeper.html
 
 h2. Development
 * "Libraries":../development/libraries.html

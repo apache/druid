@@ -30,27 +30,25 @@ import io.druid.timeline.DataSegment;
 import java.io.IOException;
 import java.util.Set;
 
+/**
+ * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
+ * your task for the segment intervals.
+ * <p/>
+ * Word of warning: Very large "segments" sets can cause oversized audit log entries, which is bad because it means
+ * that the task cannot actually complete. Callers should avoid this by avoiding inserting too many segments in the
+ * same action.
+ */
 public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
   @JsonIgnore
   private final Set<DataSegment> segments;
 
-  @JsonIgnore
-  private final boolean allowOlderVersions;
-
-  public SegmentInsertAction(Set<DataSegment> segments)
-  {
-    this(segments, false);
-  }
-
   @JsonCreator
   public SegmentInsertAction(
-      @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("allowOlderVersions") boolean allowOlderVersions
+      @JsonProperty("segments") Set<DataSegment> segments
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
-    this.allowOlderVersions = allowOlderVersions;
   }
 
   @JsonProperty
@@ -59,26 +57,17 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
     return segments;
   }
 
-  @JsonProperty
-  public boolean isAllowOlderVersions()
-  {
-    return allowOlderVersions;
-  }
-
-  public SegmentInsertAction withAllowOlderVersions(boolean _allowOlderVersions)
-  {
-    return new SegmentInsertAction(segments, _allowOlderVersions);
-  }
-
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>() {};
+    return new TypeReference<Set<DataSegment>>()
+    {
+    };
   }
 
   @Override
   public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocksAndSinglePartitionSettitude(task, segments, true);
+    toolbox.verifyTaskLocks(task, segments);
 
     final Set<DataSegment> retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(segments);
 
