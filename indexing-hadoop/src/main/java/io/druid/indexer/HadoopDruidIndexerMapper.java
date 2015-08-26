@@ -25,6 +25,7 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -101,11 +102,15 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
 
   public final static InputRow parseInputRow(Object value, InputRowParser parser)
   {
-    if(parser instanceof StringInputRowParser && value instanceof Text) {
+    if (parser instanceof StringInputRowParser && value instanceof Text) {
       //Note: This is to ensure backward compatibility with 0.7.0 and before
       return ((StringInputRowParser) parser).parse(value.toString());
-    } else if(value instanceof InputRow) {
-      return (InputRow)value;
+    } else if (parser instanceof StringInputRowParser && value instanceof BytesWritable) {
+      BytesWritable valueBytes = (BytesWritable) value;
+      ByteBuffer valueBuffer = ByteBuffer.wrap(valueBytes.getBytes(), 0, valueBytes.getLength());
+      return ((StringInputRowParser) parser).parse(valueBuffer);
+    } else if (value instanceof InputRow) {
+      return (InputRow) value;
     } else {
       return parser.parse(value);
     }
