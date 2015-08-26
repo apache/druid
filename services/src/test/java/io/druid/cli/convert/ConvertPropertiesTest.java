@@ -25,7 +25,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Rule;
 
-import io.airlift.command.Cli;
+import io.airlift.airline.Cli;
 
 import org.junit.rules.TemporaryFolder;
 

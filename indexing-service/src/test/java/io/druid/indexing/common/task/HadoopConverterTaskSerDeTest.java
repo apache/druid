@@ -30,7 +30,6 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,7 +39,7 @@ import java.util.Map;
 
 public class HadoopConverterTaskSerDeTest
 {
-  private static ObjectMapper objectMapper;
+  private static ObjectMapper objectMapper = new DefaultObjectMapper();
   private static final String TASK_ID = "task id";
   private static final String DATA_SOURCE = "datasource";
   private static final Interval INTERVAL = Interval.parse("2010/2011");
@@ -68,17 +67,6 @@ public class HadoopConverterTaskSerDeTest
   private static final String PRIORITY = "0";
   private static final String OUTPUT_PATH = "/dev/null";
   private static final String CLASSPATH_PREFIX = "something:where:I:need:stuff";
-
-  @BeforeClass
-  public static void setUpStatic()
-  {
-    objectMapper = new DefaultObjectMapper();
-    objectMapper.registerSubtypes(
-        HadoopConverterTask.class,
-        HadoopConverterTask.ConverterSubTask.class,
-        ShardSpec.class
-    );
-  }
 
   @Test
   public void testSimpleConverterTaskSerDe() throws IOException

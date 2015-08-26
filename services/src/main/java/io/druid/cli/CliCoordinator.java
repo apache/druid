@@ -25,7 +25,7 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
-import io.airlift.command.Command;
+import io.airlift.airline.Command;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
