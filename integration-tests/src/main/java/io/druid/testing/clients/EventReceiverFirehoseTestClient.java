@@ -19,6 +19,7 @@ package io.druid.testing.clients;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.api.client.util.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
@@ -44,14 +45,22 @@ public class EventReceiverFirehoseTestClient
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String chatID;
+  private final ObjectMapper smileMapper;
 
-  public EventReceiverFirehoseTestClient(String host, String chatID, ObjectMapper jsonMapper, HttpClient httpClient)
+  public EventReceiverFirehoseTestClient(
+      String host,
+      String chatID,
+      ObjectMapper jsonMapper,
+      HttpClient httpClient,
+      ObjectMapper smileMapper
+  )
   {
     this.host = host;
     this.jsonMapper = jsonMapper;
     this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
     this.httpClient = httpClient;
     this.chatID = chatID;
+    this.smileMapper = smileMapper;
   }
 
   private String getURL()
@@ -70,15 +79,15 @@ public class EventReceiverFirehoseTestClient
    *
    * @return
    */
-  public int postEvents(Collection<Map<String, Object>> events)
+  public int postEvents(Collection<Map<String, Object>> events, ObjectMapper objectMapper, String mediaType)
   {
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
               HttpMethod.POST, new URL(getURL())
           ).setContent(
-              MediaType.APPLICATION_JSON,
-              this.jsonMapper.writeValueAsBytes(events)
+              mediaType,
+              objectMapper.writeValueAsBytes(events)
           ),
           responseHandler
       ).get();
@@ -91,7 +100,7 @@ public class EventReceiverFirehoseTestClient
             response.getContent()
         );
       }
-      Map<String, Integer> responseData = jsonMapper.readValue(
+      Map<String, Integer> responseData = objectMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Integer>>()
           {
           }
@@ -103,18 +112,31 @@ public class EventReceiverFirehoseTestClient
     }
   }
 
+  /**
+   * Reads each events from file and post them to the indexing service.
+   * Uses both smileMapper and jsonMapper to send events alternately.
+   *
+   * @param file location of file to post events from
+   *
+   * @return number of events sent to the indexing service
+   */
   public int postEventsFromFile(String file)
   {
-    try {
-      BufferedReader reader = new BufferedReader(
-          new InputStreamReader(
-              EventReceiverFirehoseTestClient.class.getResourceAsStream(
-                  file
-              )
-          )
-      );
+    try (
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(
+                EventReceiverFirehoseTestClient.class.getResourceAsStream(
+                    file
+                )
+            )
+        );
+    ) {
+
       String s;
       Collection<Map<String, Object>> events = new ArrayList<Map<String, Object>>();
+      // Test sending events using both jsonMapper and smileMapper.
+      // sends events one by one using both jsonMapper and smileMapper.
+      int totalEventsPosted = 0;
       while ((s = reader.readLine()) != null) {
         events.add(
             (Map<String, Object>) this.jsonMapper.readValue(
@@ -123,12 +145,19 @@ public class EventReceiverFirehoseTestClient
                 }
             )
         );
+        ObjectMapper mapper = (totalEventsPosted % 2 == 0) ? jsonMapper : smileMapper;
+        String mediaType = (totalEventsPosted % 2 == 0)
+                           ? MediaType.APPLICATION_JSON
+                           : SmileMediaTypes.APPLICATION_JACKSON_SMILE;
+        totalEventsPosted += postEvents(events, mapper, mediaType);
+        ;
+        events = new ArrayList<>();
       }
-      int eventsPosted = postEvents(events);
-      if (eventsPosted != events.size()) {
-        throw new ISE("All events not posted, expected : %d actual : %d", events.size(), eventsPosted);
+
+      if (totalEventsPosted != events.size()) {
+        throw new ISE("All events not posted, expected : %d actual : %d", events.size(), totalEventsPosted);
       }
-      return eventsPosted;
+      return totalEventsPosted;
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

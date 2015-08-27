@@ -159,7 +159,8 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           host,
           EVENT_RECEIVER_SERVICE_PREFIX + id,
           jsonMapper,
-          httpClient
+          httpClient,
+          smileMapper
       );
       client.postEventsFromFile(UNION_DATA_FILE);
     }

@@ -19,6 +19,8 @@ package io.druid.tests.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Smile;
 import io.druid.testing.clients.CoordinatorResourceTestClient;
 import io.druid.testing.clients.OverlordResourceTestClient;
 import io.druid.testing.utils.FromFileTestQueryHelper;
@@ -38,8 +40,11 @@ public abstract class AbstractIndexerTest
   @Inject
   protected OverlordResourceTestClient indexer;
   @Inject
+  @Json
   protected ObjectMapper jsonMapper;
-
+  @Inject
+  @Smile
+  protected ObjectMapper smileMapper;
   @Inject
   protected FromFileTestQueryHelper queryHelper;
 
