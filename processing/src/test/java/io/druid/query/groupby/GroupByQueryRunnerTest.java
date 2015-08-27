@@ -91,6 +91,7 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -319,7 +320,6 @@ public class GroupByQueryRunnerTest
   }
 
 
-
   @Test
   public void testGroupByWithSimpleRenameRetainMissingNonInjective()
   {
@@ -492,7 +492,10 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), false, "MISSING", true), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map), false, "MISSING", true),
+                    null
                 )
             )
         )
@@ -2416,6 +2419,60 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
                 new DoubleMaxAggregatorFactory("idx", "idx")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx", 2900.0),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx", 2505.0)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+
+  @Test
+  public void testDifferentGroupingSubqueryWithFilter()
+  {
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "quality")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new DoubleMaxAggregatorFactory("idx", "idx")
+            )
+        )
+        .setDimFilter(
+            new OrDimFilter(
+                Lists.<DimFilter>newArrayList(
+                    new SelectorDimFilter("quality", "automotive"),
+                    new SelectorDimFilter("quality", "premium"),
+                    new SelectorDimFilter("quality", "mezzanine"),
+                    new SelectorDimFilter("quality", "business"),
+                    new SelectorDimFilter("quality", "entertainment"),
+                    new SelectorDimFilter("quality", "health"),
+                    new SelectorDimFilter("quality", "news"),
+                    new SelectorDimFilter("quality", "technology"),
+                    new SelectorDimFilter("quality", "travel")
+                )
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
