@@ -69,7 +69,7 @@
         <apache.curator.version>2.8.0</apache.curator.version>
         <jetty.version>9.2.13.v20150730</jetty.version>
         <jersey.version>1.19</jersey.version>
-        <druid.api.version>0.3.11</druid.api.version>
+        <druid.api.version>0.3.12</druid.api.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.3</log4j.version>
