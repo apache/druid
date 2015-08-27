@@ -106,7 +106,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, force, validate);
   }
 
-  private static String makeId(String dataSource, Interval interval)
+  protected static String makeId(String dataSource, Interval interval)
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(interval, "interval");
@@ -248,7 +248,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
           @Override
           public Task apply(DataSegment input)
           {
-            return new SubTask(groupId, segment, indexSpec, force, validate);
+            return new SubTask(groupId, input, indexSpec, force, validate);
           }
         }
     );

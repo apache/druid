@@ -17,11 +17,13 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import java.io.IOException;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -31,16 +33,16 @@ import org.junit.Test;
  */
 public class ConvertSegmentTaskTest
 {
+  private DefaultObjectMapper jsonMapper = new DefaultObjectMapper();
+
   @Test
   public void testSerializationSimple() throws Exception
   {
     final String dataSource = "billy";
     final Interval interval = new Interval(new DateTime().minus(1000), new DateTime());
 
-    DefaultObjectMapper jsonMapper = new DefaultObjectMapper();
 
     ConvertSegmentTask task = ConvertSegmentTask.create(dataSource, interval, null, false, true);
-
     Task task2 = jsonMapper.readValue(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task), Task.class);
     Assert.assertEquals(task, task2);
 
@@ -60,5 +62,31 @@ public class ConvertSegmentTaskTest
 
     task2 = jsonMapper.readValue(jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task), Task.class);
     Assert.assertEquals(task, task2);
+  }
+
+  @Test
+  public void testdeSerializationFromJsonString() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"type\" : \"convert_segment\",\n"
+                  + "  \"dataSource\" : \"billy\",\n"
+                  + "  \"interval\" : \"2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z\"\n"
+                  + "}";
+    ConvertSegmentTask task = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
+    Assert.assertEquals("billy", task.getDataSource());
+    Assert.assertEquals(new Interval("2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z"), task.getInterval());
+  }
+
+  @Test
+  public void testSerdeBackwardsCompatible() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"type\" : \"version_converter\",\n"
+                  + "  \"dataSource\" : \"billy\",\n"
+                  + "  \"interval\" : \"2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z\"\n"
+                  + "}";
+    ConvertSegmentTask task = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
+    Assert.assertEquals("billy", task.getDataSource());
+    Assert.assertEquals(new Interval("2015-08-27T00:00:00.000Z/2015-08-28T00:00:00.000Z"), task.getInterval());
   }
 }
