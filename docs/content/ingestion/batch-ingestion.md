@@ -176,7 +176,9 @@ It is a type of inputSpec that reads data already stored inside druid. It is use
 |maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. Default is none. |no|
 
 Here is what goes inside "ingestionSpec"
+
 |Field|Type|Description|Required|
+|-----|----|-----------|--------|
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |interval|String|A string representing ISO-8601 Intervals.|yes|
 |granularity|String|Defines the granularity of the query while loading data. Default value is "none".See [Granularities](../querying/granularities.html).|no|
