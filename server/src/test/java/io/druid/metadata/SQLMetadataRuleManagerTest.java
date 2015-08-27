@@ -32,9 +32,9 @@ import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Assert;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -44,8 +44,10 @@ import java.util.Map;
 
 public class SQLMetadataRuleManagerTest
 {
+  @org.junit.Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
+  private MetadataStorageTablesConfig tablesConfig;
   private SQLMetadataRuleManager ruleManager;
   private AuditManager auditManager;
   private final ObjectMapper mapper = new DefaultObjectMapper();
@@ -54,10 +56,8 @@ public class SQLMetadataRuleManagerTest
   @Before
   public void setUp()
   {
-    connector = new TestDerbyConnector(
-        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        Suppliers.ofInstance(tablesConfig)
-    );
+    connector = derbyConnectorRule.getConnector();
+    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createAuditTable();
     auditManager = new SQLAuditManager(
         connector,
@@ -116,7 +116,7 @@ public class SQLMetadataRuleManagerTest
     ruleManager.overrideRule(
         "test_dataSource",
         rules,
-       auditInfo
+        auditInfo
     );
     // fetch rules from metadata storage
     ruleManager.poll();
@@ -127,8 +127,8 @@ public class SQLMetadataRuleManagerTest
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("test_dataSource", "rules", null);
     Assert.assertEquals(1, auditEntries.size());
     AuditEntry entry = auditEntries.get(0);
-    Assert.assertEquals(mapper.writeValueAsString(rules),entry.getPayload());
-    Assert.assertEquals(auditInfo,entry.getAuditInfo());
+    Assert.assertEquals(mapper.writeValueAsString(rules), entry.getPayload());
+    Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals("test_dataSource", entry.getKey());
   }
 

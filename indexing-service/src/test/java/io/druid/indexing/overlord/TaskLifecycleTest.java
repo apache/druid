@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -74,8 +73,6 @@ import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -164,6 +161,9 @@ public class TaskLifecycleTest
       IR("2010-01-02T01", "a", "b", 2),
       IR("2010-01-02T01", "a", "c", 1)
   );
+
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private final String taskStorageType;
 
@@ -343,15 +343,7 @@ public class TaskLifecycleTest
           }
       );
     } else if (taskStorageType.equals("MetadataTaskStorage")) {
-      MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
-      testDerbyConnector = new TestDerbyConnector(
-          Suppliers.ofInstance(
-              new MetadataStorageConnectorConfig()
-          ),
-          Suppliers.ofInstance(
-              tablesConfig
-          )
-      );
+      testDerbyConnector = derbyConnectorRule.getConnector();
       mapper = new DefaultObjectMapper();
       mapper.registerSubtypes(
           new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
@@ -363,7 +355,7 @@ public class TaskLifecycleTest
       ts = new MetadataTaskStorage(
           testDerbyConnector,
           new TaskStorageConfig(null),
-          new SQLMetadataStorageActionHandlerFactory(testDerbyConnector, tablesConfig, mapper)
+          new SQLMetadataStorageActionHandlerFactory(testDerbyConnector, derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper)
       );
     } else {
       throw new RuntimeException(String.format("Unknown task storage type [%s]", taskStorageType));
@@ -470,9 +462,6 @@ public class TaskLifecycleTest
   public void tearDown()
   {
     tq.stop();
-    if (testDerbyConnector != null) {
-      testDerbyConnector.tearDown();
-    }
   }
 
   @Test

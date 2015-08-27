@@ -19,7 +19,6 @@
 
 package io.druid.indexer.updater;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -81,7 +80,6 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -92,95 +90,14 @@ public class HadoopConverterJobTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private String storageLocProperty = null;
   private File tmpSegmentDir = null;
 
   private static final String DATASOURCE = "testDatasource";
   private static final String STORAGE_PROPERTY_KEY = "druid.storage.storageDirectory";
-  private final MetadataStorageUpdaterJobSpec metadataStorageUpdaterJobSpc = new MetadataStorageUpdaterJobSpec()
-  {
-    @Override
-    @JsonProperty
-    public String getSegmentTable()
-    {
-      return "druid_segments";
-    }
-
-    @Override
-    @JsonProperty
-    public String getType()
-    {
-      return "derby";
-    }
-
-    @JsonProperty
-    public String getConnectURI()
-    {
-      return "jdbc:derby:memory:druidTest;create=true";
-    }
-
-    @JsonProperty
-    public String getUser()
-    {
-      return "sb";
-    }
-
-    @JsonProperty
-    public String getPassword()
-    {
-      return "sb";
-    }
-
-    @Override
-    public MetadataStorageConnectorConfig get()
-    {
-      return new MetadataStorageConnectorConfig()
-      {
-
-        public boolean isCreateTables()
-        {
-          return true;
-        }
-
-        public String getHost()
-        {
-          return "localhost";
-        }
-
-        public int getPort()
-        {
-          return -1;
-        }
-
-        public String getConnectURI()
-        {
-          return "jdbc:derby:memory:druidTest;create=true";
-        }
-
-        public String getUser()
-        {
-          return "sb";
-        }
-
-        public String getPassword()
-        {
-          return "sb";
-        }
-
-        @Override
-        public String toString()
-        {
-          return "DbConnectorConfig{" +
-                 "createTables=" + isCreateTables() +
-                 ", connectURI='" + getConnectURI() + '\'' +
-                 ", user='" + getUser() + '\'' +
-                 ", passwordProvider=" + getPassword() +
-                 '}';
-        }
-
-      };
-    }
-  };
 
   private Supplier<MetadataStorageTablesConfig> metadataStorageTablesConfigSupplier;
   private DerbyConnector connector;
@@ -201,6 +118,20 @@ public class HadoopConverterJobTest
   @Before
   public void setUp() throws Exception
   {
+    final MetadataStorageUpdaterJobSpec metadataStorageUpdaterJobSpec = new MetadataStorageUpdaterJobSpec()
+    {
+      @Override
+      public String getSegmentTable()
+      {
+        return derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+      }
+
+      @Override
+      public MetadataStorageConnectorConfig get()
+      {
+        return derbyConnectorRule.getMetadataConnectorConfig();
+      }
+    };
     final File scratchFileDir = temporaryFolder.newFolder();
     storageLocProperty = System.getProperty(STORAGE_PROPERTY_KEY);
     tmpSegmentDir = temporaryFolder.newFolder();
@@ -249,7 +180,7 @@ public class HadoopConverterJobTest
                     "type", "static",
                     "paths", tmpInputFile.getAbsolutePath()
                 ),
-                metadataStorageUpdaterJobSpc,
+                metadataStorageUpdaterJobSpec,
                 tmpSegmentDir.getAbsolutePath()
             ),
             new HadoopTuningConfig(
@@ -273,34 +204,8 @@ public class HadoopConverterJobTest
             )
         )
     );
-    metadataStorageTablesConfigSupplier =
-        new Supplier<MetadataStorageTablesConfig>()
-        {
-          @Override
-          public MetadataStorageTablesConfig get()
-          {
-            return MetadataStorageTablesConfig.fromBase("druid");
-          }
-        };
-    connector = new TestDerbyConnector(
-        new Supplier<MetadataStorageConnectorConfig>()
-        {
-          @Override
-          public MetadataStorageConnectorConfig get()
-          {
-            return metadataStorageUpdaterJobSpc.get();
-          }
-        },
-        new Supplier<MetadataStorageTablesConfig>()
-        {
-
-          @Override
-          public MetadataStorageTablesConfig get()
-          {
-            return new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null);
-          }
-        }
-    );
+    metadataStorageTablesConfigSupplier = derbyConnectorRule.metadataTablesConfigSupplier();
+    connector = derbyConnectorRule.getConnector();
     try {
       connector.getDBI().withHandle(
           new HandleCallback<Void>()
@@ -313,7 +218,8 @@ public class HadoopConverterJobTest
             }
           }
       );
-    } catch (CallbackFailedException e){
+    }
+    catch (CallbackFailedException e) {
       // Who cares
     }
     List<Jobby> jobs = ImmutableList.of(
@@ -322,7 +228,7 @@ public class HadoopConverterJobTest
           @Override
           public boolean run()
           {
-            connector.createSegmentTable(connector.getDBI(), "druid_segments");
+            connector.createSegmentTable(connector.getDBI(), metadataStorageUpdaterJobSpec.getSegmentTable());
             return true;
           }
         },

@@ -18,7 +18,6 @@
 package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,13 +29,16 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 
 public class MetadataSegmentManagerTest
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private SQLMetadataSegmentManager manager;
-  private TestDerbyConnector connector;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private final DataSegment segment1 = new DataSegment(
@@ -74,23 +76,18 @@ public class MetadataSegmentManagerTest
   @Before
   public void setUp() throws Exception
   {
-    final Supplier<MetadataStorageTablesConfig> dbTables = Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("test"));
-
-    connector = new TestDerbyConnector(
-        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        dbTables
-    );
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
 
     manager = new SQLMetadataSegmentManager(
         jsonMapper,
         Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
-        dbTables,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );
 
     SQLMetadataSegmentPublisher publisher = new SQLMetadataSegmentPublisher(
         jsonMapper,
-        dbTables.get(),
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
         connector
     );
 
@@ -98,12 +95,6 @@ public class MetadataSegmentManagerTest
 
     publisher.publishSegment(segment1);
     publisher.publishSegment(segment2);
-  }
-
-  @After
-  public void tearDown() throws Exception
-  {
-    connector.tearDown();
   }
 
   @Test
