@@ -18,20 +18,18 @@
 package io.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Suppliers;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.server.metrics.NoopServiceEmitter;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -41,8 +39,10 @@ import java.util.List;
 
 public class SQLAuditManagerTest
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
   private AuditManager auditManager;
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
@@ -51,14 +51,11 @@ public class SQLAuditManagerTest
   @Before
   public void setUp() throws Exception
   {
-    connector = new TestDerbyConnector(
-        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        Suppliers.ofInstance(tablesConfig)
-    );
+    connector = derbyConnectorRule.getConnector();
     connector.createAuditTable();
     auditManager = new SQLAuditManager(
         connector,
-        Suppliers.ofInstance(tablesConfig),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopServiceEmitter(),
         mapper,
         new SQLAuditManagerConfig()
@@ -99,7 +96,12 @@ public class SQLAuditManagerTest
         new DateTime("2013-01-01T00:00:00Z")
     );
     auditManager.doAudit(entry);
-    byte[] payload = connector.lookup(tablesConfig.getAuditTable(), "audit_key", "payload", "testKey");
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        "testKey"
+    );
     AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
     Assert.assertEquals(entry, dbEntry);
 
@@ -136,7 +138,7 @@ public class SQLAuditManagerTest
   @After
   public void cleanup()
   {
-    dropTable(tablesConfig.getAuditTable());
+    dropTable(derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable());
   }
 
   private void dropTable(final String tableName)

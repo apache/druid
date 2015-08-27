@@ -20,16 +20,15 @@ package io.druid.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.common.Pair;
 import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -37,20 +36,16 @@ import java.util.Map;
 
 public class SQLMetadataStorageActionHandlerTest
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig = MetadataStorageTablesConfig.fromBase("test");
   private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
 
   @Before
   public void setUp() throws Exception
   {
-    MetadataStorageConnectorConfig config = new MetadataStorageConnectorConfig();
-
-    connector = new TestDerbyConnector(
-        Suppliers.ofInstance(config),
-        Suppliers.ofInstance(tablesConfig)
-    );
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
 
     final String entryType = "entry";
     final String entryTable = "entries";
@@ -105,12 +100,6 @@ public class SQLMetadataStorageActionHandlerTest
         logTable,
         lockTable
     );
-  }
-
-  @After
-  public void tearDown()
-  {
-    connector.tearDown();
   }
 
   @Test
