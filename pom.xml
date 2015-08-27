@@ -70,7 +70,8 @@
         <jetty.version>9.2.13.v20150730</jetty.version>
         <jersey.version>1.19</jersey.version>
         <druid.api.version>0.3.11</druid.api.version>
-        <jackson.version>2.6.1</jackson.version>
+        <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
+        <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.3</log4j.version>
         <slf4j.version>1.7.12</slf4j.version>
         <hadoop.compile.version>2.3.0</hadoop.compile.version>

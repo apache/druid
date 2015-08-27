@@ -48,7 +48,7 @@ class JodaStuff
     module.addSerializer(DateTime.class, ToStringSerializer.instance);
     module.addDeserializer(Interval.class, new JodaStuff.IntervalDeserializer());
     module.addSerializer(Interval.class, ToStringSerializer.instance);
-    JsonDeserializer<?> periodDeserializer = new PeriodDeserializer(true);
+    JsonDeserializer<?> periodDeserializer = new PeriodDeserializer();
     module.addDeserializer(Period.class, (JsonDeserializer<Period>) periodDeserializer);
     module.addSerializer(Period.class, ToStringSerializer.instance);
     module.addDeserializer(Duration.class, new DurationDeserializer());
