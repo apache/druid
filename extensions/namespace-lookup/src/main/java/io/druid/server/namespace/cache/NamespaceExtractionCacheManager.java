@@ -148,9 +148,9 @@ public abstract class NamespaceExtractionCacheManager
     );
   }
 
-  protected void waitForServiceToEnd(long time, TimeUnit unit) throws InterruptedException
+  protected boolean waitForServiceToEnd(long time, TimeUnit unit) throws InterruptedException
   {
-    listeningScheduledExecutorService.awaitTermination(time, unit);
+    return listeningScheduledExecutorService.awaitTermination(time, unit);
   }
 
 
