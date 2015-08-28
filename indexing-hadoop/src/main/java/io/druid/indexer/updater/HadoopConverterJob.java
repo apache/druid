@@ -33,6 +33,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.hadoop.DatasourceInputSplit;
+import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.timeline.DataSegment;
@@ -476,7 +477,7 @@ public class HadoopConverterJob
       final String tmpDirLoc = context.getConfiguration().get(TMP_FILE_LOC_KEY);
       final File tmpDir = Paths.get(tmpDirLoc).toFile();
 
-      final DataSegment segment  = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments());
+      final DataSegment segment  = Iterables.getOnlyElement(((DatasourceInputSplit) split).getSegments()).getSegment();
 
       final HadoopDruidConverterConfig config = converterConfigFromConfiguration(context.getConfiguration());
 
@@ -584,7 +585,7 @@ public class HadoopConverterJob
             @Override
             public InputSplit apply(DataSegment input)
             {
-              return new DatasourceInputSplit(ImmutableList.of(input));
+              return new DatasourceInputSplit(ImmutableList.of(WindowedDataSegment.of(input)));
             }
           }
       );

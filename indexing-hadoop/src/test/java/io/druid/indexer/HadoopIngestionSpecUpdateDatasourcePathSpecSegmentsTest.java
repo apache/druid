@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
+import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.indexer.path.DatasourcePathSpec;
 import io.druid.indexer.path.MultiplePathSpec;
 import io.druid.indexer.path.PathSpec;
@@ -40,7 +41,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,32 +48,30 @@ import java.util.Map;
 public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
 {
   private final String testDatasource = "test";
-  private final Interval testDatasourceInterval = new Interval("1970/2000");
-
+  private final Interval testDatasourceInterval = new Interval("1970/3000");
+  private final Interval testDatasourceIntervalPartial = new Interval("2050/3000");
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
-  private final List<DataSegment> segments = ImmutableList.of(
-      new DataSegment(
-          "test1",
-          Interval.parse("2000/3000"),
-          "ver",
-          ImmutableMap.<String, Object>of(
-              "type", "local",
-              "path", "/tmp/index1.zip"
-          ),
-          ImmutableList.of("host"),
-          ImmutableList.of("visited_sum", "unique_hosts"),
-          new NoneShardSpec(),
-          9,
-          2
-      )
+  private static final DataSegment SEGMENT = new DataSegment(
+      "test1",
+      Interval.parse("2000/3000"),
+      "ver",
+      ImmutableMap.<String, Object>of(
+          "type", "local",
+          "path", "/tmp/index1.zip"
+      ),
+      ImmutableList.of("host"),
+      ImmutableList.of("visited_sum", "unique_hosts"),
+      new NoneShardSpec(),
+      9,
+      2
   );
 
   @Test
   public void testupdateSegmentListIfDatasourcePathSpecIsUsedWithNoDatasourcePathSpec() throws Exception
   {
     PathSpec pathSpec = new StaticPathSpec("/xyz", null);
-    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(pathSpec);
+    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(pathSpec, null);
     Assert.assertTrue(config.getPathSpec() instanceof StaticPathSpec);
   }
 
@@ -86,8 +84,34 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
         new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null),
         null
     );
-    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(pathSpec);
-    Assert.assertEquals(segments, ((DatasourcePathSpec) config.getPathSpec()).getSegments());
+    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
+        pathSpec,
+        testDatasourceInterval
+    );
+    Assert.assertEquals(
+        ImmutableList.of(WindowedDataSegment.of(SEGMENT)),
+        ((DatasourcePathSpec) config.getPathSpec()).getSegments()
+    );
+  }
+
+  @Test
+  public void testupdateSegmentListIfDatasourcePathSpecIsUsedWithJustDatasourcePathSpecAndPartialInterval()
+      throws Exception
+  {
+    PathSpec pathSpec = new DatasourcePathSpec(
+        jsonMapper,
+        null,
+        new DatasourceIngestionSpec(testDatasource, testDatasourceIntervalPartial, null, null, null, null),
+        null
+    );
+    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
+        pathSpec,
+        testDatasourceIntervalPartial
+    );
+    Assert.assertEquals(
+        ImmutableList.of(new WindowedDataSegment(SEGMENT, testDatasourceIntervalPartial)),
+        ((DatasourcePathSpec) config.getPathSpec()).getSegments()
+    );
   }
 
   @Test
@@ -104,15 +128,19 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             )
         )
     );
-    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(pathSpec);
+    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
+        pathSpec,
+        testDatasourceInterval
+    );
     Assert.assertEquals(
-        segments,
+        ImmutableList.of(WindowedDataSegment.of(SEGMENT)),
         ((DatasourcePathSpec) ((MultiplePathSpec) config.getPathSpec()).getChildren().get(1)).getSegments()
     );
   }
 
   private HadoopDruidIndexerConfig testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
-      PathSpec datasourcePathSpec
+      PathSpec datasourcePathSpec,
+      Interval jobInterval
   )
       throws Exception
   {
@@ -144,8 +172,8 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
 
     UsedSegmentLister segmentLister = EasyMock.createMock(UsedSegmentLister.class);
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForInterval(testDatasource, testDatasourceInterval)
-    ).andReturn(segments);
+        segmentLister.getUsedSegmentsForInterval(testDatasource, jobInterval)
+    ).andReturn(ImmutableList.of(SEGMENT));
     EasyMock.replay(segmentLister);
 
     spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(spec, jsonMapper, segmentLister);

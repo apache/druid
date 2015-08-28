@@ -42,6 +42,7 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.DatasourceInputFormat;
+import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -65,7 +66,7 @@ import java.util.List;
 public class DatasourcePathSpecTest
 {
   private DatasourceIngestionSpec ingestionSpec;
-  private List<DataSegment> segments;
+  private List<WindowedDataSegment> segments;
 
   public DatasourcePathSpecTest()
   {
@@ -79,33 +80,37 @@ public class DatasourcePathSpecTest
     );
 
     segments = ImmutableList.of(
-        new DataSegment(
-            ingestionSpec.getDataSource(),
-            Interval.parse("2000/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "local",
-                "path", "/tmp/index.zip"
-            ),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            12334
+        WindowedDataSegment.of(
+            new DataSegment(
+                ingestionSpec.getDataSource(),
+                Interval.parse("2000/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "local",
+                    "path", "/tmp/index.zip"
+                ),
+                ImmutableList.of("product"),
+                ImmutableList.of("visited_sum", "unique_hosts"),
+                new NoneShardSpec(),
+                9,
+                12334
+            )
         ),
-        new DataSegment(
-            ingestionSpec.getDataSource(),
-            Interval.parse("2050/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "hdfs",
-                "path", "/tmp/index.zip"
-            ),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            12335
+        WindowedDataSegment.of(
+            new DataSegment(
+                ingestionSpec.getDataSource(),
+                Interval.parse("2050/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "hdfs",
+                    "path", "/tmp/index.zip"
+                ),
+                ImmutableList.of("product"),
+                ImmutableList.of("visited_sum", "unique_hosts"),
+                new NoneShardSpec(),
+                9,
+                12335
+            )
         )
     );
   }
@@ -201,7 +206,6 @@ public class DatasourcePathSpecTest
     );
 
 
-
     ObjectMapper mapper = new DefaultObjectMapper();
 
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
@@ -217,19 +221,24 @@ public class DatasourcePathSpecTest
     EasyMock.replay(job);
 
     pathSpec.addInputPaths(hadoopIndexerConfig, job);
-    List<DataSegment> actualSegments = mapper.readValue(
+    List<WindowedDataSegment> actualSegments = mapper.readValue(
         config.get(DatasourceInputFormat.CONF_INPUT_SEGMENTS),
-        new TypeReference<List<DataSegment>>()
+        new TypeReference<List<WindowedDataSegment>>()
         {
         }
     );
 
     Assert.assertEquals(segments, actualSegments);
 
-    DatasourceIngestionSpec actualIngestionSpec = mapper.readValue(config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA), DatasourceIngestionSpec.class);
-    Assert.assertEquals(ingestionSpec
-                            .withDimensions(ImmutableList.of("product"))
-                            .withMetrics(ImmutableList.of("visited_sum")),
-                        actualIngestionSpec);
+    DatasourceIngestionSpec actualIngestionSpec = mapper.readValue(
+        config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA),
+        DatasourceIngestionSpec.class
+    );
+    Assert.assertEquals(
+        ingestionSpec
+            .withDimensions(ImmutableList.of("product"))
+            .withMetrics(ImmutableList.of("visited_sum")),
+        actualIngestionSpec
+    );
   }
 }

@@ -36,9 +36,8 @@ import io.druid.indexer.JobHelper;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
-import io.druid.segment.StorageAdapter;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
-import io.druid.timeline.DataSegment;
+import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -70,18 +69,18 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   {
     spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.jsonMapper);
 
-    List<DataSegment> segments = ((DatasourceInputSplit) split).getSegments();
+    List<WindowedDataSegment> segments = ((DatasourceInputSplit) split).getSegments();
 
-    List<StorageAdapter> adapters = Lists.transform(
+    List<WindowedStorageAdapter> adapters = Lists.transform(
         segments,
-        new Function<DataSegment, StorageAdapter>()
+        new Function<WindowedDataSegment, WindowedStorageAdapter>()
         {
           @Override
-          public StorageAdapter apply(DataSegment segment)
+          public WindowedStorageAdapter apply(WindowedDataSegment segment)
           {
             try {
-              logger.info("Getting storage path for segment [%s]", segment.getIdentifier());
-              Path path = new Path(JobHelper.getURIFromSegment(segment));
+              logger.info("Getting storage path for segment [%s]", segment.getSegment().getIdentifier());
+              Path path = new Path(JobHelper.getURIFromSegment(segment.getSegment()));
 
               logger.info("Fetch segment files from [%s]", path);
 
@@ -96,7 +95,10 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
               indexes.add(index);
               numRows += index.getNumRows();
 
-              return new QueryableIndexStorageAdapter(index);
+              return new WindowedStorageAdapter(
+                  new QueryableIndexStorageAdapter(index),
+                  segment.getInterval()
+              );
             }
             catch (IOException ex) {
               throw Throwables.propagate(ex);
@@ -110,7 +112,6 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
         spec.getDimensions(),
         spec.getMetrics(),
         spec.getFilter(),
-        spec.getInterval(),
         spec.getGranularity()
     );
 

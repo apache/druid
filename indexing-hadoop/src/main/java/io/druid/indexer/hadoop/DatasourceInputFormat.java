@@ -20,7 +20,6 @@
 package io.druid.indexer.hadoop;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
@@ -56,9 +55,9 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     Configuration conf = context.getConfiguration();
 
     String segmentsStr = Preconditions.checkNotNull(conf.get(CONF_INPUT_SEGMENTS), "No segments found to read");
-    List<DataSegment> segments = HadoopDruidIndexerConfig.jsonMapper.readValue(
+    List<WindowedDataSegment> segments = HadoopDruidIndexerConfig.jsonMapper.readValue(
         segmentsStr,
-        new TypeReference<List<DataSegment>>()
+        new TypeReference<List<WindowedDataSegment>>()
         {
         }
     );
@@ -75,12 +74,12 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       //are combined appropriately
       Collections.sort(
           segments,
-          new Comparator<DataSegment>()
+          new Comparator<WindowedDataSegment>()
           {
             @Override
-            public int compare(DataSegment s1, DataSegment s2)
+            public int compare(WindowedDataSegment s1, WindowedDataSegment s2)
             {
-              return Long.compare(s1.getSize(), s2.getSize());
+              return Long.compare(s1.getSegment().getSize(), s2.getSegment().getSize());
             }
           }
       );
@@ -88,18 +87,18 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 
     List<InputSplit> splits = Lists.newArrayList();
 
-    List<DataSegment> list = new ArrayList<>();
+    List<WindowedDataSegment> list = new ArrayList<>();
     long size = 0;
 
-    for (DataSegment segment : segments) {
-      if (size + segment.getSize() > maxSize && size > 0) {
+    for (WindowedDataSegment segment : segments) {
+      if (size + segment.getSegment().getSize() > maxSize && size > 0) {
         splits.add(new DatasourceInputSplit(list));
         list = Lists.newArrayList();
         size = 0;
       }
 
       list.add(segment);
-      size += segment.getSize();
+      size += segment.getSegment().getSize();
     }
 
     if (list.size() > 0) {
