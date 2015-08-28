@@ -68,7 +68,7 @@ public class LegacyIndexGeneratorJob extends IndexGeneratorJob
         IncrementalIndex index, Interval interval, File file, ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMerger.persist(index, interval, file, config.getIndexSpec(), progressIndicator);
+      return IndexMerger.persist(index, interval, file, null, config.getIndexSpec(), progressIndicator);
     }
 
     @Override

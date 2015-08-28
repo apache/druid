@@ -249,7 +249,7 @@ public class AggregationTestHelper
           index.add(parser.parse(row));
         }
       }
-      IndexMerger.persist(index, outDir, new IndexSpec());
+      IndexMerger.persist(index, outDir, null, new IndexSpec());
     }
   }
 

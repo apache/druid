@@ -61,6 +61,7 @@ public class EmptyIndexTest
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
         new AggregatorFactory[0],
         tmpDir,
+        null,
         new IndexSpec()
     );
 

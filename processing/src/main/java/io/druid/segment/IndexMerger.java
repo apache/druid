@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment;
 
@@ -127,9 +129,14 @@ public class IndexMerger
   }
 
 
-  public static File persist(final IncrementalIndex index, File outDir, IndexSpec indexSpec) throws IOException
+  public static File persist(
+      final IncrementalIndex index,
+      File outDir,
+      Map<String, Object> segmentMetadata,
+      IndexSpec indexSpec
+  ) throws IOException
   {
-    return persist(index, index.getInterval(), outDir, indexSpec);
+    return persist(index, index.getInterval(), outDir, segmentMetadata, indexSpec);
   }
 
   /**
@@ -148,16 +155,18 @@ public class IndexMerger
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
+      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator());
+    return persist(index, dataInterval, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
   public static File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
+      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -195,6 +204,7 @@ public class IndexMerger
         ),
         index.getMetricAggs(),
         outDir,
+        segmentMetadata,
         indexSpec,
         progress
     );
@@ -229,22 +239,28 @@ public class IndexMerger
         ),
         metricAggs,
         outDir,
+        null,
         indexSpec,
         progress
     );
   }
 
   public static File merge(
-      List<IndexableAdapter> indexes, final AggregatorFactory[] metricAggs, File outDir, IndexSpec indexSpec
+      List<IndexableAdapter> indexes,
+      final AggregatorFactory[] metricAggs,
+      File outDir,
+      Map<String, Object> segmentMetadata,
+      IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(indexes, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
+    return merge(indexes, metricAggs, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
   public static File merge(
       List<IndexableAdapter> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
+      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -333,7 +349,16 @@ public class IndexMerger
       }
     };
 
-    return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
+    return makeIndexFiles(
+        indexes,
+        outDir,
+        progress,
+        mergedDimensions,
+        mergedMetrics,
+        segmentMetadata,
+        rowMergerFn,
+        indexSpec
+    );
   }
 
   // Faster than IndexMaker
@@ -354,6 +379,7 @@ public class IndexMerger
           progress,
           Lists.newArrayList(adapter.getDimensionNames()),
           Lists.newArrayList(adapter.getMetricNames()),
+          null,
           new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
           {
             @Nullable
@@ -445,7 +471,7 @@ public class IndexMerger
       }
     };
 
-    return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, rowMergerFn, indexSpec);
+    return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
   }
 
   private static File makeIndexFiles(
@@ -454,6 +480,7 @@ public class IndexMerger
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
+      final Map<String, Object> segmentMetadata,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
       final IndexSpec indexSpec
   ) throws IOException
@@ -900,6 +927,13 @@ public class IndexMerger
         )
     );
 
+    if (segmentMetadata != null && !segmentMetadata.isEmpty()) {
+      writeMetadataToFile( new File(v8OutDir, "metadata.drd"), segmentMetadata);
+      log.info("wrote metadata.drd in outDir[%s].", v8OutDir);
+
+      expectedFiles.add("metadata.drd");
+    }
+
     Map<String, File> files = Maps.newLinkedHashMap();
     for (String fileName : expectedFiles) {
       files.put(fileName, new File(v8OutDir, fileName));
@@ -1272,5 +1306,32 @@ public class IndexMerger
       }
     }
     return true;
+  }
+
+  private static void writeMetadataToFile(File metadataFile, Map<String, Object> metadata) throws IOException
+  {
+    FileOutputStream metadataFileOutputStream = null;
+    FileChannel metadataFilechannel = null;
+    try {
+      metadataFileOutputStream = new FileOutputStream(metadataFile);
+      metadataFilechannel = metadataFileOutputStream.getChannel();
+
+      byte[] metadataBytes = mapper.writeValueAsBytes(metadata);
+      if (metadataBytes.length != metadataFilechannel.write(ByteBuffer.wrap(metadataBytes))) {
+        throw new IOException("Failed to write metadata for file");
+      }
+    }
+    finally {
+      if (metadataFilechannel != null) {
+        metadataFilechannel.close();
+        metadataFilechannel = null;
+      }
+
+      if (metadataFileOutputStream != null) {
+        metadataFileOutputStream.close();
+        metadataFileOutputStream = null;
+      }
+    }
+    IndexIO.checkFileSize(metadataFile);
   }
 }

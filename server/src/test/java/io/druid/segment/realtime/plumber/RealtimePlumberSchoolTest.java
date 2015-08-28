@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment.realtime.plumber;
 
@@ -25,6 +27,7 @@ import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -45,12 +48,13 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import junit.framework.Assert;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -71,6 +75,7 @@ public class RealtimePlumberSchoolTest
 {
   private final RejectionPolicyFactory rejectionPolicy;
   private RealtimePlumber plumber;
+  private RealtimePlumberSchool realtimePlumberSchool;
   private DataSegmentAnnouncer announcer;
   private SegmentPublisher segmentPublisher;
   private DataSegmentPusher dataSegmentPusher;
@@ -169,7 +174,7 @@ public class RealtimePlumberSchoolTest
         null
     );
 
-    RealtimePlumberSchool realtimePlumberSchool = new RealtimePlumberSchool(
+    realtimePlumberSchool = new RealtimePlumberSchool(
         emitter,
         new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()),
         dataSegmentPusher,
@@ -187,10 +192,31 @@ public class RealtimePlumberSchoolTest
   public void tearDown() throws Exception
   {
     EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
+    FileUtils.deleteDirectory(
+        new File(
+            tuningConfig.getBasePersistDirectory(),
+            schema.getDataSource()
+        )
+    );
   }
 
   @Test(timeout = 60000)
   public void testPersist() throws Exception
+  {
+    testPersist(null);
+  }
+
+  @Test(timeout = 60000)
+  public void testPersistWithCommitMetadata() throws Exception
+  {
+    final Object commitMetadata = "dummyCommitMetadata";
+    testPersist(commitMetadata);
+
+    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics);
+    Assert.assertEquals(commitMetadata, plumber.startJob());
+  }
+
+  private void testPersist(final Object commitMetadata) throws Exception
   {
     final MutableBoolean committed = new MutableBoolean(false);
     plumber.getSinks()
@@ -203,22 +229,43 @@ public class RealtimePlumberSchoolTest
                    new DateTime("2014-12-01T12:34:56.789").toString()
                )
            );
-    plumber.startJob();
+    Assert.assertNull(plumber.startJob());
+
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
     plumber.add(row);
-    plumber.persist(
-        new Runnable()
-        {
-          @Override
-          public void run()
+
+    if (commitMetadata != null) {
+      plumber.persist(
+          new Committer()
           {
-            committed.setValue(true);
+            @Override
+            public Object getMetadata()
+            {
+              return commitMetadata;
+            }
+
+            @Override
+            public void run()
+            {
+              committed.setValue(true);
+            }
           }
-        }
-    );
+      );
+    } else {
+      plumber.persist(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              committed.setValue(true);
+            }
+          }
+      );
+    }
 
     while (!committed.booleanValue()) {
       Thread.sleep(100);

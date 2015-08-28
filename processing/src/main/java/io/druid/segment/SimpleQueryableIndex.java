@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment;
 
@@ -37,6 +39,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final BitmapFactory bitmapFactory;
   private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
+  private final Map<String, Object> metadata;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
@@ -44,7 +47,8 @@ public class SimpleQueryableIndex implements QueryableIndex
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
       Map<String, Column> columns,
-      SmooshedFileMapper fileMapper
+      SmooshedFileMapper fileMapper,
+      Map<String, Object> metadata
   )
   {
     Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
@@ -54,6 +58,7 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.bitmapFactory = bitmapFactory;
     this.columns = columns;
     this.fileMapper = fileMapper;
+    this.metadata = metadata;
   }
 
   @Override
@@ -96,5 +101,11 @@ public class SimpleQueryableIndex implements QueryableIndex
   public void close() throws IOException
   {
     fileMapper.close();
+  }
+
+  @Override
+  public Map<String, Object> getMetaData()
+  {
+    return metadata;
   }
 }
