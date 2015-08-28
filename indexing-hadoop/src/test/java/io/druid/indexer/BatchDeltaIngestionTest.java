@@ -22,10 +22,11 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 import com.metamx.common.Granularity;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
@@ -34,8 +35,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
-import io.druid.indexer.path.DatasourcePathSpec;
-import io.druid.indexer.path.UsedSegmentLister;
+import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -48,6 +48,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
+import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.commons.io.FileUtils;
@@ -65,42 +66,45 @@ import java.util.Map;
 
 public class BatchDeltaIngestionTest
 {
-  public final
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private ObjectMapper mapper;
-  private Interval interval;
-  private List<DataSegment> segments;
+  private static final ObjectMapper MAPPER;
+  private static final Interval INTERVAL_FULL = new Interval("2014-10-22T00:00:00Z/P1D");
+  private static final Interval INTERVAL_PARTIAL = new Interval("2014-10-22T00:00:00Z/PT2H");
+  private static final DataSegment SEGMENT;
 
-  public BatchDeltaIngestionTest() throws IOException
-  {
-    mapper = new DefaultObjectMapper();
-    mapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
-    InjectableValues inject = new InjectableValues.Std().addValue(ObjectMapper.class, mapper);
-    mapper.setInjectableValues(inject);
+  static {
+    MAPPER = new DefaultObjectMapper();
+    MAPPER.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
+    InjectableValues inject = new InjectableValues.Std().addValue(ObjectMapper.class, MAPPER);
+    MAPPER.setInjectableValues(inject);
 
-    this.interval = new Interval("2014-10-22T00:00:00Z/P1D");
-    segments = ImmutableList.of(
-        new DefaultObjectMapper()
-            .readValue(
-                this.getClass().getClassLoader().getResource("test-segment/descriptor.json"),
-                DataSegment.class
-            )
-            .withLoadSpec(
-                ImmutableMap.<String, Object>of(
-                    "type",
-                    "local",
-                    "path",
-                    this.getClass().getClassLoader().getResource("test-segment/index.zip").getPath()
-                )
-            )
-    );
+    try {
+      SEGMENT = new DefaultObjectMapper()
+          .readValue(
+              BatchDeltaIngestionTest.class.getClassLoader().getResource("test-segment/descriptor.json"),
+              DataSegment.class
+          )
+          .withLoadSpec(
+              ImmutableMap.<String, Object>of(
+                  "type",
+                  "local",
+                  "path",
+                  BatchDeltaIngestionTest.class.getClassLoader().getResource("test-segment/index.zip").getPath()
+              )
+          );
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   @Test
   public void testReindexing() throws Exception
   {
+    List<WindowedDataSegment> segments = ImmutableList.of(new WindowedDataSegment(SEGMENT, INTERVAL_FULL));
+
     HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
         ImmutableMap.<String, Object>of(
             "type",
@@ -110,7 +114,7 @@ public class BatchDeltaIngestionTest
                 "dataSource",
                 "xyz",
                 "interval",
-                interval
+                INTERVAL_FULL
             ),
             "segments",
             segments
@@ -139,7 +143,47 @@ public class BatchDeltaIngestionTest
         )
     );
 
-    testIngestion(config, expectedRows);
+    testIngestion(config, expectedRows, Iterables.getOnlyElement(segments));
+  }
+
+  @Test
+  public void testReindexingWithPartialWindow() throws Exception
+  {
+    List<WindowedDataSegment> segments = ImmutableList.of(new WindowedDataSegment(SEGMENT, INTERVAL_PARTIAL));
+
+    HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
+        ImmutableMap.<String, Object>of(
+            "type",
+            "dataSource",
+            "ingestionSpec",
+            ImmutableMap.of(
+                "dataSource",
+                "xyz",
+                "interval",
+                INTERVAL_FULL
+            ),
+            "segments",
+            segments
+        ),
+        temporaryFolder.newFolder()
+    );
+
+    List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
+        ImmutableMap.<String, Object>of(
+            "time", DateTime.parse("2014-10-22T00:00:00.000Z"),
+            "host", ImmutableList.of("a.example.com"),
+            "visited_sum", 100L,
+            "unique_hosts", 1.0d
+        ),
+        ImmutableMap.<String, Object>of(
+            "time", DateTime.parse("2014-10-22T01:00:00.000Z"),
+            "host", ImmutableList.of("b.example.com"),
+            "visited_sum", 150L,
+            "unique_hosts", 1.0d
+        )
+    );
+
+    testIngestion(config, expectedRows, Iterables.getOnlyElement(segments));
   }
 
   @Test
@@ -169,6 +213,8 @@ public class BatchDeltaIngestionTest
     //https://issues.apache.org/jira/browse/MAPREDUCE-5061
     String inputPath = tmpDir.getPath() + "/{data1,data2}";
 
+    List<WindowedDataSegment> segments = ImmutableList.of(new WindowedDataSegment(SEGMENT, INTERVAL_FULL));
+
     HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
         ImmutableMap.<String, Object>of(
             "type",
@@ -183,7 +229,7 @@ public class BatchDeltaIngestionTest
                         "dataSource",
                         "xyz",
                         "interval",
-                        interval
+                        INTERVAL_FULL
                     ),
                     "segments",
                     segments
@@ -220,11 +266,14 @@ public class BatchDeltaIngestionTest
         )
     );
 
-    testIngestion(config, expectedRows);
+    testIngestion(config, expectedRows, Iterables.getOnlyElement(segments));
   }
 
-  private void testIngestion(HadoopDruidIndexerConfig config, List<ImmutableMap<String, Object>> expectedRowsGenerated)
-      throws Exception
+  private void testIngestion(
+      HadoopDruidIndexerConfig config,
+      List<ImmutableMap<String, Object>> expectedRowsGenerated,
+      WindowedDataSegment windowedDataSegment
+  ) throws Exception
   {
     IndexGeneratorJob job = new LegacyIndexGeneratorJob(config);
     JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
@@ -234,8 +283,8 @@ public class BatchDeltaIngestionTest
             "%s/%s/%s_%s/%s/0",
             config.getSchema().getIOConfig().getSegmentOutputPath(),
             config.getSchema().getDataSchema().getDataSource(),
-            interval.getStart().toString(),
-            interval.getEnd().toString(),
+            INTERVAL_FULL.getStart().toString(),
+            INTERVAL_FULL.getEnd().toString(),
             config.getSchema().getTuningConfig().getVersion()
         )
     );
@@ -247,10 +296,10 @@ public class BatchDeltaIngestionTest
     Assert.assertTrue(descriptor.exists());
     Assert.assertTrue(indexZip.exists());
 
-    DataSegment dataSegment = mapper.readValue(descriptor, DataSegment.class);
+    DataSegment dataSegment = MAPPER.readValue(descriptor, DataSegment.class);
     Assert.assertEquals("website", dataSegment.getDataSource());
     Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getVersion());
-    Assert.assertEquals(interval, dataSegment.getInterval());
+    Assert.assertEquals(INTERVAL_FULL, dataSegment.getInterval());
     Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
     Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
     Assert.assertEquals("host", dataSegment.getDimensions().get(0));
@@ -269,11 +318,10 @@ public class BatchDeltaIngestionTest
     StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
     Firehose firehose = new IngestSegmentFirehose(
-        ImmutableList.of(adapter),
+        ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
         null,
-        interval,
         QueryGranularity.NONE
     );
 
@@ -305,7 +353,7 @@ public class BatchDeltaIngestionTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
+                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(INTERVAL_FULL)
                 )
             ),
             new HadoopIOConfig(
@@ -337,7 +385,7 @@ public class BatchDeltaIngestionTest
 
     config.setShardSpecs(
         ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(
-            interval.getStart(),
+            INTERVAL_FULL.getStart(),
             ImmutableList.of(
                 new HadoopyShardSpec(
                     new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.jsonMapper),
@@ -352,6 +400,7 @@ public class BatchDeltaIngestionTest
 
   private void verifyRows(List<ImmutableMap<String, Object>> expectedRows, List<InputRow> actualRows)
   {
+    System.out.println("actualRows = " + actualRows);
     Assert.assertEquals(expectedRows.size(), actualRows.size());
 
     for (int i = 0; i < expectedRows.size(); i++) {
