@@ -170,7 +170,7 @@ public class IndexMakerTest
     }
     tmpDir = Files.createTempDir();
     persistTmpDir = new File(tmpDir, "persistDir");
-    IndexMerger.persist(toPersist, persistTmpDir, INDEX_SPEC);
+    IndexMerger.persist(toPersist, persistTmpDir, null, INDEX_SPEC);
   }
 
   @After
@@ -180,9 +180,39 @@ public class IndexMakerTest
   }
 
   @Test
+  public void testPersistWithSegmentMetadata() throws IOException
+  {
+    File outDir = Files.createTempDir();
+    QueryableIndex index = null;
+    try {
+      outDir = Files.createTempDir();
+      Map<String, Object> segmentMetadata = ImmutableMap.<String, Object>of("key", "value");
+      index = IndexIO.loadIndex(IndexMaker.persist(toPersist, outDir, segmentMetadata, INDEX_SPEC));
+
+      Assert.assertEquals(segmentMetadata, index.getMetaData());
+    }
+    finally {
+      if (index != null) {
+        index.close();
+        ;
+      }
+
+      if (outDir != null) {
+        FileUtils.deleteDirectory(outDir);
+      }
+    }
+  }
+
+  @Test
   public void testSimpleReprocess() throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(closer.closeLater(IndexIO.loadIndex(persistTmpDir)));
+    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
+        closer.closeLater(
+            IndexIO.loadIndex(
+                persistTmpDir
+            )
+        )
+    );
     Assert.assertEquals(events.size(), adapter.getNumRows());
     reprocessAndValidate(persistTmpDir, new File(tmpDir, "reprocessed"));
   }
@@ -212,7 +242,13 @@ public class IndexMakerTest
   @Test
   public void testIdempotentReprocess() throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(closer.closeLater(IndexIO.loadIndex(persistTmpDir)));
+    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
+        closer.closeLater(
+            IndexIO.loadIndex(
+                persistTmpDir
+            )
+        )
+    );
     Assert.assertEquals(events.size(), adapter.getNumRows());
     final File tmpDir1 = new File(tmpDir, "reprocessed1");
     reprocessAndValidate(persistTmpDir, tmpDir1);
@@ -231,7 +267,13 @@ public class IndexMakerTest
   @Test
   public void testSimpleAppend() throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(closer.closeLater(IndexIO.loadIndex(persistTmpDir)));
+    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
+        closer.closeLater(
+            IndexIO.loadIndex(
+                persistTmpDir
+            )
+        )
+    );
     Assert.assertEquals(events.size(), adapter.getNumRows());
     appendAndValidate(persistTmpDir, new File(tmpDir, "reprocessed"));
   }
@@ -239,7 +281,13 @@ public class IndexMakerTest
   @Test
   public void testIdempotentAppend() throws IOException
   {
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(closer.closeLater(IndexIO.loadIndex(persistTmpDir)));
+    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(
+        closer.closeLater(
+            IndexIO.loadIndex(
+                persistTmpDir
+            )
+        )
+    );
     Assert.assertEquals(events.size(), adapter.getNumRows());
     final File tmpDir1 = new File(tmpDir, "reprocessed1");
     appendAndValidate(persistTmpDir, tmpDir1);

@@ -17,6 +17,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -27,8 +28,10 @@ public interface Plumber
   /**
    * Perform any initial setup. Should be called before using any other methods, and should be paired
    * with a corresponding call to {@link #finishJob}.
+   *
+   * @return the metadata of the "newest" segment that might have previously been persisted
    */
-  public void startJob();
+  public Object startJob();
 
   /**
    * @param row - the row to insert
@@ -44,6 +47,7 @@ public interface Plumber
    *
    * @param commitRunnable code to run after persisting data
    */
+  void persist(Committer commitRunnable);
   void persist(Runnable commitRunnable);
 
   /**

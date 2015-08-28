@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment.realtime;
 
@@ -22,8 +24,11 @@ import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.parsers.ParseException;
+import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.FirehoseFactoryV2;
+import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
@@ -59,8 +64,11 @@ import java.util.concurrent.TimeUnit;
 public class RealtimeManagerTest
 {
   private RealtimeManager realtimeManager;
+  private RealtimeManager realtimeManager2;
   private DataSchema schema;
+  private DataSchema schema2;
   private TestPlumber plumber;
+  private TestPlumber plumber2;
 
   @Before
   public void setUp() throws Exception
@@ -74,6 +82,12 @@ public class RealtimeManagerTest
 
     schema = new DataSchema(
         "test",
+        null,
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
+    );
+    schema2 = new DataSchema(
+        "testV2",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
@@ -95,6 +109,28 @@ public class RealtimeManagerTest
           )
           {
             return plumber;
+          }
+        },
+        null
+    );
+    RealtimeIOConfig ioConfig2 = new RealtimeIOConfig(
+        null,
+        new PlumberSchool()
+        {
+          @Override
+          public Plumber findPlumber(
+              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+          )
+          {
+            return plumber2;
+          }
+        },
+        new FirehoseFactoryV2()
+        {
+          @Override
+          public FirehoseV2 connect(InputRowParser parser, Object arg1) throws IOException, ParseException
+          {
+            return new TestFirehoseV2(rows.iterator());
           }
         }
     );
@@ -125,6 +161,18 @@ public class RealtimeManagerTest
         ),
         null
     );
+    plumber2 = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema2, tuningConfig, new DateTime().toString()));
+
+    realtimeManager2 = new RealtimeManager(
+        Arrays.<FireDepartment>asList(
+            new FireDepartment(
+                schema2,
+                ioConfig2,
+                tuningConfig
+            )
+        ),
+        null
+    );
   }
 
   @Test
@@ -146,6 +194,27 @@ public class RealtimeManagerTest
     Assert.assertTrue(plumber.isStartedJob());
     Assert.assertTrue(plumber.isFinishedJob());
     Assert.assertEquals(1, plumber.getPersistCount());
+  }
+
+  @Test
+  public void testRunV2() throws Exception
+  {
+    realtimeManager2.start();
+
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    while (realtimeManager2.getMetrics("testV2").processed() != 1) {
+      Thread.sleep(100);
+      if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
+        throw new ISE("Realtime manager should have completed processing 2 events!");
+      }
+    }
+
+    Assert.assertEquals(1, realtimeManager2.getMetrics("testV2").processed());
+    Assert.assertEquals(1, realtimeManager2.getMetrics("testV2").thrownAway());
+    Assert.assertEquals(2, realtimeManager2.getMetrics("testV2").unparseable());
+    Assert.assertTrue(plumber2.isStartedJob());
+    Assert.assertTrue(plumber2.isFinishedJob());
+    Assert.assertEquals(1, plumber2.getPersistCount());
   }
 
   private TestInputRowHolder makeRow(final long timestamp)
@@ -266,6 +335,74 @@ public class RealtimeManagerTest
     }
   }
 
+  private static class TestFirehoseV2 implements FirehoseV2
+  {
+    private final Iterator<TestInputRowHolder> rows;
+    private InputRow currRow;
+    private boolean stop;
+
+    private TestFirehoseV2(Iterator<TestInputRowHolder> rows)
+    {
+      this.rows = rows;
+    }
+
+    private void nextMessage()
+    {
+      currRow = null;
+      while (currRow == null) {
+        final TestInputRowHolder holder = rows.next();
+        currRow = holder == null ? null : holder.getRow();
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+    }
+
+    @Override
+    public boolean advance()
+    {
+      stop = !rows.hasNext();
+      if (stop) {
+        return false;
+      }
+
+      nextMessage();
+      return true;
+    }
+
+    @Override
+    public InputRow currRow()
+    {
+      return currRow;
+    }
+
+    @Override
+    public Committer makeCommitter()
+    {
+      return new Committer()
+      {
+        @Override
+        public Object getMetadata()
+        {
+          return null;
+        }
+
+        @Override
+        public void run()
+        {
+        }
+      };
+    }
+
+    @Override
+    public void start() throws Exception
+    {
+      nextMessage();
+    }
+  }
+
   private static class TestPlumber implements Plumber
   {
     private final Sink sink;
@@ -296,9 +433,10 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void startJob()
+    public Object startJob()
     {
       startedJob = true;
+      return null;
     }
 
     @Override
@@ -341,6 +479,12 @@ public class RealtimeManagerTest
     public void finishJob()
     {
       finishedJob = true;
+    }
+
+    @Override
+    public void persist(Committer commitRunnable)
+    {
+      persistCount++;
     }
   }
 }

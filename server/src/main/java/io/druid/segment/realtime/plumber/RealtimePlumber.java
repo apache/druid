@@ -1,19 +1,21 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment.realtime.plumber;
 
@@ -22,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -40,6 +43,7 @@ import io.druid.client.ServerView;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
+import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.Query;
@@ -121,6 +125,8 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
 
+  private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
+  private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
 
   public RealtimePlumber(
       DataSchema schema,
@@ -171,15 +177,17 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public void startJob()
+  public Object startJob()
   {
     computeBaseDir(schema).mkdirs();
     initializeExecutors();
-    bootstrapSinksFromDisk();
+    Object retVal = bootstrapSinksFromDisk();
     registerServerViewCallback();
     startPersistThread();
     // Push pending sinks bootstrapped from previous run
     mergeAndPush();
+
+    return retVal;
   }
 
   @Override
@@ -333,6 +341,27 @@ public class RealtimePlumber implements Plumber
   @Override
   public void persist(final Runnable commitRunnable)
   {
+    persist(
+        new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return null;
+          }
+
+          @Override
+          public void run()
+          {
+            commitRunnable.run();
+          }
+        }
+    );
+  }
+
+  @Override
+  public void persist(final Committer committer)
+  {
     final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
     for (Sink sink : sinks.values()) {
       if (sink.swappable()) {
@@ -344,17 +373,55 @@ public class RealtimePlumber implements Plumber
 
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
+
+    final Map<String, Object> metadata = committer.getMetadata() == null ? null :
+                                         ImmutableMap.of(
+                                             COMMIT_METADATA_KEY,
+                                             committer.getMetadata(),
+                                             COMMIT_METADATA_TIMESTAMP_KEY,
+                                             System.currentTimeMillis()
+                                         );
+
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
         {
           @Override
           public void doRun()
           {
+            /* Note:
+            If plumber crashes after storing a subset of all the hydrants then we will lose data and next
+            time we will start with the commitMetadata stored in those hydrants.
+            option#1:
+            maybe it makes sense to store the metadata outside the segments in a separate file. This is because the
+            commit metadata isn't really associated with an individual segment-- it's associated with a set of segments
+            that are persisted at the same time or maybe whole datasource. So storing it in the segments is asking for problems.
+            Sort of like this:
+
+            {
+              "metadata" : {"foo": "bar"},
+              "segments": [
+                {"id": "datasource_2000_2001_2000_1", "hydrant": 10},
+                {"id": "datasource_2001_2002_2001_1", "hydrant": 12},
+              ]
+            }
+            When a realtime node crashes and starts back up, it would delete any hydrants numbered higher than the
+            ones in the commit file.
+
+            option#2
+            We could also just include the set of segments for the same chunk of metadata in more metadata on each
+            of the segments. we might also have to think about the hand-off in terms of the full set of segments being
+            handed off instead of individual segments being handed off (that is, if one of the set succeeds in handing
+            off and the others fail, the real-time would believe that it needs to re-ingest the data).
+             */
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
-                metrics.incrementRowOutputCount(persistHydrant(pair.lhs, schema, pair.rhs));
+                metrics.incrementRowOutputCount(
+                    persistHydrant(
+                        pair.lhs, schema, pair.rhs, metadata
+                    )
+                );
               }
-              commitRunnable.run();
+              committer.run();
             }
             catch (Exception e) {
               metrics.incrementFailedPersists();
@@ -413,11 +480,16 @@ public class RealtimePlumber implements Plumber
               return;
             }
 
+            /*
+            Note: it the plumber crashes after persisting a subset of hydrants then might duplicate data as these
+            hydrants will be read but older commitMetadata will be used. fixing this possibly needs structural
+            changes to plumber.
+             */
             for (FireHydrant hydrant : sink) {
               synchronized (hydrant) {
                 if (!hydrant.hasSwapped()) {
                   log.info("Hydrant[%s] hasn't swapped yet, swapping. Sink[%s]", hydrant, sink);
-                  final int rowCount = persistHydrant(hydrant, schema, interval);
+                  final int rowCount = persistHydrant(hydrant, schema, interval, null);
                   metrics.incrementRowOutputCount(rowCount);
                 }
               }
@@ -450,12 +522,13 @@ public class RealtimePlumber implements Plumber
               }
 
               QueryableIndex index = IndexIO.loadIndex(mergedFile);
+              log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
                   sink.getSegment().withDimensions(Lists.newArrayList(index.getAvailableDimensions()))
               );
-
+              log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);
 
               if (!isPushedMarker.createNewFile()) {
@@ -565,20 +638,22 @@ public class RealtimePlumber implements Plumber
     }
   }
 
-  protected void bootstrapSinksFromDisk()
+  protected Object bootstrapSinksFromDisk()
   {
     final VersioningPolicy versioningPolicy = config.getVersioningPolicy();
 
     File baseDir = computeBaseDir(schema);
     if (baseDir == null || !baseDir.exists()) {
-      return;
+      return null;
     }
 
     File[] files = baseDir.listFiles();
     if (files == null) {
-      return;
+      return null;
     }
 
+    Object metadata = null;
+    long latestCommitTime = 0;
     for (File sinkDir : files) {
       Interval sinkInterval = new Interval(sinkDir.getName().replace("_", "/"));
 
@@ -611,7 +686,7 @@ public class RealtimePlumber implements Plumber
             }
           }
       );
-
+      boolean isCorrupted = false;
       try {
         List<FireHydrant> hydrants = Lists.newArrayList();
         for (File segmentDir : sinkFiles) {
@@ -623,7 +698,43 @@ public class RealtimePlumber implements Plumber
           if (Ints.tryParse(segmentDir.getName()) == null) {
             continue;
           }
-
+          QueryableIndex queryableIndex = null;
+          try {
+            queryableIndex = IndexIO.loadIndex(segmentDir);
+          }
+          catch (IOException e) {
+            log.error(e, "Problem loading segmentDir from disk.");
+            isCorrupted = true;
+          }
+          if (isCorrupted) {
+            try {
+              File corruptSegmentDir = computeCorruptedFileDumpDir(segmentDir, schema);
+              log.info("Renaming %s to %s", segmentDir.getAbsolutePath(), corruptSegmentDir.getAbsolutePath());
+              FileUtils.copyDirectory(segmentDir, corruptSegmentDir);
+              FileUtils.deleteDirectory(segmentDir);
+            }
+            catch (Exception e1) {
+              log.error(e1, "Failed to rename %s", segmentDir.getAbsolutePath());
+            }
+            //Note: skipping corrupted segment might lead to dropping some data. This strategy should be changed
+            //at some point.
+            continue;
+          }
+          Map<String, Object> segmentMetadata = queryableIndex.getMetaData();
+          if (segmentMetadata != null) {
+            Object timestampObj = segmentMetadata.get(COMMIT_METADATA_TIMESTAMP_KEY);
+            if (timestampObj != null) {
+              long timestamp = ((Long) timestampObj).longValue();
+              if (timestamp > latestCommitTime) {
+                log.info(
+                    "Found metaData [%s] with latestCommitTime [%s] greater than previous recorded [%s]",
+                    queryableIndex.getMetaData(), timestamp, latestCommitTime
+                );
+                latestCommitTime = timestamp;
+                metadata = queryableIndex.getMetaData().get(COMMIT_METADATA_KEY);
+              }
+            }
+          }
           hydrants.add(
               new FireHydrant(
                   new QueryableIndexSegment(
@@ -634,13 +745,12 @@ public class RealtimePlumber implements Plumber
                           versioningPolicy.getVersion(sinkInterval),
                           config.getShardSpec()
                       ),
-                      IndexIO.loadIndex(segmentDir)
+                      queryableIndex
                   ),
                   Integer.parseInt(segmentDir.getName())
               )
           );
         }
-
         Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
@@ -657,6 +767,7 @@ public class RealtimePlumber implements Plumber
            .emit();
       }
     }
+    return metadata;
   }
 
   protected void startPersistThread()
@@ -798,6 +909,14 @@ public class RealtimePlumber implements Plumber
     return new File(config.getBasePersistDirectory(), schema.getDataSource());
   }
 
+  protected File computeCorruptedFileDumpDir(File persistDir, DataSchema schema)
+  {
+    return new File(
+        persistDir.getAbsolutePath()
+                  .replace(schema.getDataSource(), "corrupted" + File.pathSeparator + schema.getDataSource())
+    );
+  }
+
   protected File computePersistDir(DataSchema schema, Interval interval)
   {
     return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
@@ -812,7 +931,12 @@ public class RealtimePlumber implements Plumber
    *
    * @return the number of rows persisted
    */
-  protected int persistHydrant(FireHydrant indexToPersist, DataSchema schema, Interval interval)
+  protected int persistHydrant(
+      FireHydrant indexToPersist,
+      DataSchema schema,
+      Interval interval,
+      Map<String, Object> metaData
+  )
   {
     synchronized (indexToPersist) {
       if (indexToPersist.hasSwapped()) {
@@ -824,9 +948,10 @@ public class RealtimePlumber implements Plumber
       }
 
       log.info(
-          "DataSource[%s], Interval[%s], persisting Hydrant[%s]",
+          "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
+          metaData,
           indexToPersist
       );
       try {
@@ -834,16 +959,19 @@ public class RealtimePlumber implements Plumber
 
         final File persistedFile;
         final IndexSpec indexSpec = config.getIndexSpec();
+
         if (config.isPersistInHeap()) {
           persistedFile = IndexMaker.persist(
               indexToPersist.getIndex(),
               new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
+              metaData,
               indexSpec
           );
         } else {
           persistedFile = IndexMerger.persist(
               indexToPersist.getIndex(),
               new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
+              metaData,
               indexSpec
           );
         }

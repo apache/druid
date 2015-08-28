@@ -1,22 +1,25 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to Metamarkets Group Inc. (Metamarkets) under one
+* or more contributor license agreements. See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership. Metamarkets licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License. You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied. See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -201,7 +204,13 @@ public class IndexIO
     return convertSegment(toConvert, converted, indexSpec, false, true);
   }
 
-  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec, boolean forceIfCurrent, boolean validate)
+  public static boolean convertSegment(
+      File toConvert,
+      File converted,
+      IndexSpec indexSpec,
+      boolean forceIfCurrent,
+      boolean validate
+  )
       throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
@@ -230,7 +239,7 @@ public class IndexIO
       default:
         if (forceIfCurrent) {
           IndexMerger.convert(toConvert, converted, indexSpec);
-          if(validate){
+          if (validate) {
             DefaultIndexIOHandler.validateTwoSegments(toConvert, converted);
           }
           return true;
@@ -253,7 +262,7 @@ public class IndexIO
       IndexableAdapter adapter2
   )
   {
-    if(rb1.getTimestamp() != rb2.getTimestamp()){
+    if (rb1.getTimestamp() != rb2.getTimestamp()) {
       throw new SegmentValidationException(
           "Timestamp mismatch. Expected %d found %d",
           rb1.getTimestamp(), rb2.getTimestamp()
@@ -466,8 +475,8 @@ public class IndexIO
 
     public static void validateTwoSegments(File dir1, File dir2) throws IOException
     {
-      try(QueryableIndex queryableIndex1 = loadIndex(dir1)) {
-        try(QueryableIndex queryableIndex2 = loadIndex(dir2)) {
+      try (QueryableIndex queryableIndex1 = loadIndex(dir1)) {
+        try (QueryableIndex queryableIndex2 = loadIndex(dir2)) {
           validateTwoSegments(
               new QueryableIndexIndexableAdapter(queryableIndex1),
               new QueryableIndexIndexableAdapter(queryableIndex2)
@@ -852,14 +861,12 @@ public class IndexIO
       Set<String> columns = Sets.newTreeSet();
       columns.addAll(Lists.newArrayList(dims9));
       columns.addAll(Lists.newArrayList(availableMetrics));
-
       GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.STRING_STRATEGY);
 
       final String segmentBitmapSerdeFactoryString = mapper.writeValueAsString(segmentBitmapSerdeFactory);
 
       final long numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16
                             + serializerUtils.getSerializedStringByteSize(segmentBitmapSerdeFactoryString);
-
       final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
       cols.writeToChannel(writer);
       dims9.writeToChannel(writer);
@@ -867,6 +874,11 @@ public class IndexIO
       serializerUtils.writeLong(writer, dataInterval.getEndMillis());
       serializerUtils.writeString(writer, segmentBitmapSerdeFactoryString);
       writer.close();
+
+      final ByteBuffer metadataBuffer = v8SmooshedFiles.mapFile("metadata.drd");
+      if (metadataBuffer != null) {
+        v9Smoosher.add("metadata.drd", metadataBuffer);
+      }
 
       log.info("Skipped files[%s]", skippedFiles);
 
@@ -970,7 +982,8 @@ public class IndexIO
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
           columns,
-          index.getFileMapper()
+          index.getFileMapper(),
+          null
       );
     }
   }
@@ -999,6 +1012,7 @@ public class IndexIO
       final GenericIndexed<String> dims = GenericIndexed.read(indexBuffer, GenericIndexed.STRING_STRATEGY);
       final Interval dataInterval = new Interval(indexBuffer.getLong(), indexBuffer.getLong());
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
+
       /**
        * This is a workaround for the fact that in v8 segments, we have no information about the type of bitmap
        * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
@@ -1010,6 +1024,22 @@ public class IndexIO
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
+      Map<String, Object> metadata = null;
+      ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+      if (metadataBB != null) {
+        try {
+          metadata = mapper.readValue(
+              serializerUtils.readBytes(metadataBB, metadataBB.remaining()),
+              new TypeReference<Map<String, Object>>()
+              {
+              }
+          );
+        }
+        catch (IOException ex) {
+          throw new IOException("Failed to read metadata", ex);
+        }
+      }
+
       Map<String, Column> columns = Maps.newHashMap();
 
       for (String columnName : cols) {
@@ -1019,7 +1049,7 @@ public class IndexIO
       columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time")));
 
       final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles
+          dataInterval, cols, dims, segmentBitmapSerdeFactory.getBitmapFactory(), columns, smooshedFiles, metadata
       );
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);

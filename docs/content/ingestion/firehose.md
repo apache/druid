@@ -260,7 +260,6 @@ When using this firehose, events can be sent by submitting a POST request to the
 |serviceName|name used to announce the event receiver service endpoint|yes|
 |bufferSize| size of buffer used by firehose to store events|no default(100000)|
 
-
 #### TimedShutoffFirehose
 
 This can be used to start a firehose that will shut down at a specified time.
@@ -283,3 +282,5 @@ An example is shown below:
 |type|This should be "timed"|yes|
 |shutoffTime|time at which the firehose should shut down, in ISO8601 format|yes|
 |delegate|firehose to use|yes|
+=======
+

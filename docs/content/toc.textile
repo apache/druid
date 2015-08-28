@@ -90,6 +90,7 @@ h2. Development
 ** "Select Query":../development/select-query.html
 ** "Approximate Histograms and Quantiles":../development/approximate-histograms.html
 ** "Router node":../development/router.html
+** "New Kafka Firehose":../development/kafka-simple-consumer-firehose.html
 
 h2. Misc
 * "Papers & Talks":../misc/papers-and-talks.html
