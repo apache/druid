@@ -19,30 +19,28 @@
 
 package io.druid.indexer.hadoop;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Preconditions;
+import io.druid.indexer.HadoopDruidIndexerConfig;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.InputSplit;
+
+import javax.validation.constraints.NotNull;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Preconditions;
-import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.timeline.DataSegment;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.InputSplit;
-
-import javax.validation.constraints.NotNull;
-
 public class DatasourceInputSplit extends InputSplit implements Writable
 {
-  private List<DataSegment> segments = null;
+  private List<WindowedDataSegment> segments = null;
 
   //required for deserialization
   public DatasourceInputSplit()
   {
   }
 
-  public DatasourceInputSplit(@NotNull List<DataSegment> segments)
+  public DatasourceInputSplit(@NotNull List<WindowedDataSegment> segments)
   {
     Preconditions.checkArgument(segments != null && segments.size() > 0, "no segments");
     this.segments = segments;
@@ -52,8 +50,8 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   public long getLength() throws IOException, InterruptedException
   {
     long size = 0;
-    for (DataSegment segment : segments) {
-      size += segment.getSize();
+    for (WindowedDataSegment segment : segments) {
+      size += segment.getSegment().getSize();
     }
     return size;
   }
@@ -64,7 +62,7 @@ public class DatasourceInputSplit extends InputSplit implements Writable
     return new String[]{};
   }
 
-  public List<DataSegment> getSegments()
+  public List<WindowedDataSegment> getSegments()
   {
     return segments;
   }
@@ -80,7 +78,7 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   {
     segments = HadoopDruidIndexerConfig.jsonMapper.readValue(
         in.readUTF(),
-        new TypeReference<List<DataSegment>>()
+        new TypeReference<List<WindowedDataSegment>>()
         {
         }
     );

@@ -37,13 +37,11 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.utils.Runnables;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -55,21 +53,27 @@ public class IngestSegmentFirehose implements Firehose
 {
   private volatile Yielder<InputRow> rowYielder;
 
-  public IngestSegmentFirehose(List<StorageAdapter> adapters, final List<String> dims, final List<String> metrics, final DimFilter dimFilter, final Interval interval, final QueryGranularity granularity)
+  public IngestSegmentFirehose(
+      final List<WindowedStorageAdapter> adapters,
+      final List<String> dims,
+      final List<String> metrics,
+      final DimFilter dimFilter,
+      final QueryGranularity granularity
+  )
   {
     Sequence<InputRow> rows = Sequences.concat(
         Iterables.transform(
-            adapters, new Function<StorageAdapter, Sequence<InputRow>>()
+            adapters, new Function<WindowedStorageAdapter, Sequence<InputRow>>()
             {
               @Nullable
               @Override
-              public Sequence<InputRow> apply(StorageAdapter adapter)
+              public Sequence<InputRow> apply(WindowedStorageAdapter adapter)
               {
                 return Sequences.concat(
                     Sequences.map(
-                        adapter.makeCursors(
+                        adapter.getAdapter().makeCursors(
                             Filters.convertDimensionFilters(dimFilter),
-                            interval,
+                            adapter.getInterval(),
                             granularity
                         ), new Function<Cursor, Sequence<InputRow>>()
                         {
@@ -199,4 +203,5 @@ public class IngestSegmentFirehose implements Firehose
   {
     rowYielder.close();
   }
+
 }

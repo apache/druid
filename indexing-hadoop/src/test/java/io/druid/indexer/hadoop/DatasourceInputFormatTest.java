@@ -40,7 +40,7 @@ import java.util.List;
  */
 public class DatasourceInputFormatTest
 {
-  private List<DataSegment> segments;
+  private List<WindowedDataSegment> segments;
   private Configuration config;
   private JobContext context;
 
@@ -48,47 +48,53 @@ public class DatasourceInputFormatTest
   public void setUp() throws Exception
   {
     segments = ImmutableList.of(
-        new DataSegment(
-            "test1",
-            Interval.parse("2000/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "local",
-                "path", "/tmp/index1.zip"
-            ),
-            ImmutableList.of("host"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            2
+        WindowedDataSegment.of(
+            new DataSegment(
+                "test1",
+                Interval.parse("2000/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "local",
+                    "path", "/tmp/index1.zip"
+                ),
+                ImmutableList.of("host"),
+                ImmutableList.of("visited_sum", "unique_hosts"),
+                new NoneShardSpec(),
+                9,
+                2
+            )
         ),
-        new DataSegment(
-            "test2",
-            Interval.parse("2050/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "hdfs",
-                "path", "/tmp/index2.zip"
-            ),
-            ImmutableList.of("host"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            11
+        WindowedDataSegment.of(
+            new DataSegment(
+                "test2",
+                Interval.parse("2050/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "hdfs",
+                    "path", "/tmp/index2.zip"
+                ),
+                ImmutableList.of("host"),
+                ImmutableList.of("visited_sum", "unique_hosts"),
+                new NoneShardSpec(),
+                9,
+                11
+            )
         ),
-        new DataSegment(
-            "test3",
-            Interval.parse("2030/3000"),
-            "ver",
-            ImmutableMap.<String, Object>of(
-                "type", "hdfs",
-                "path", "/tmp/index3.zip"
-            ),
-            ImmutableList.of("host"),
-            ImmutableList.of("visited_sum", "unique_hosts"),
-            new NoneShardSpec(),
-            9,
-            4
+        WindowedDataSegment.of(
+            new DataSegment(
+                "test3",
+                Interval.parse("2030/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "hdfs",
+                    "path", "/tmp/index3.zip"
+                ),
+                ImmutableList.of("host"),
+                ImmutableList.of("visited_sum", "unique_hosts"),
+                new NoneShardSpec(),
+                9,
+                4
+            )
         )
     );
 
