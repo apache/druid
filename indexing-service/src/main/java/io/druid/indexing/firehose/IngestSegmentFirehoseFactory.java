@@ -41,9 +41,9 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndexStorageAdapter;
-import io.druid.segment.StorageAdapter;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
+import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -131,7 +131,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           .getTaskActionClient()
           .submit(new SegmentListUsedAction(dataSource, interval));
       final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
-      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
+      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
           Ordering.<String>natural().nullsFirst()
       );
 
@@ -142,7 +142,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           interval
       );
 
-      List<String> dims;
+      final List<String> dims;
       if (dimensions != null) {
         dims = dimensions;
       } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
@@ -189,7 +189,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
         );
       }
 
-      List<String> metricsList;
+      final List<String> metricsList;
       if (metrics != null) {
         metricsList = metrics;
       } else {
@@ -226,34 +226,35 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       }
 
 
-      final List<StorageAdapter> adapters = Lists.newArrayList(
+      final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
           Iterables.concat(
               Iterables.transform(
                   timeLineSegments,
-                  new Function<TimelineObjectHolder<String, DataSegment>, Iterable<StorageAdapter>>()
+                  new Function<TimelineObjectHolder<String, DataSegment>, Iterable<WindowedStorageAdapter>>()
                   {
                     @Override
-                    public Iterable<StorageAdapter> apply(
-                        TimelineObjectHolder<String, DataSegment> input
-                    )
+                    public Iterable<WindowedStorageAdapter> apply(final TimelineObjectHolder<String, DataSegment> holder)
                     {
                       return
                           Iterables.transform(
-                              input.getObject(),
-                              new Function<PartitionChunk<DataSegment>, StorageAdapter>()
+                              holder.getObject(),
+                              new Function<PartitionChunk<DataSegment>, WindowedStorageAdapter>()
                               {
                                 @Override
-                                public StorageAdapter apply(PartitionChunk<DataSegment> input)
+                                public WindowedStorageAdapter apply(final PartitionChunk<DataSegment> input)
                                 {
                                   final DataSegment segment = input.getObject();
                                   try {
-                                    return new QueryableIndexStorageAdapter(
-                                        IndexIO.loadIndex(
-                                            Preconditions.checkNotNull(
-                                                segmentFileMap.get(segment),
-                                                "File for segment %s", segment.getIdentifier()
+                                    return new WindowedStorageAdapter(
+                                        new QueryableIndexStorageAdapter(
+                                            IndexIO.loadIndex(
+                                                Preconditions.checkNotNull(
+                                                    segmentFileMap.get(segment),
+                                                    "File for segment %s", segment.getIdentifier()
+                                                )
                                             )
-                                        )
+                                        ),
+                                        holder.getInterval()
                                     );
                                   }
                                   catch (IOException e) {
@@ -268,8 +269,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, interval, QueryGranularity.NONE);
-
+      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, QueryGranularity.NONE);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

@@ -39,21 +39,25 @@ public class DatasourceInputSplitTest
   @Test
   public void testSerde() throws Exception
   {
+    Interval interval = Interval.parse("2000/3000");
     DatasourceInputSplit expected = new DatasourceInputSplit(
         Lists.newArrayList(
-            new DataSegment(
-                "test",
-                Interval.parse("2000/3000"),
-                "ver",
-                ImmutableMap.<String, Object>of(
-                    "type", "local",
-                    "path", "/tmp/index.zip"
+            new WindowedDataSegment(
+                new DataSegment(
+                    "test",
+                    Interval.parse("2000/3000"),
+                    "ver",
+                    ImmutableMap.<String, Object>of(
+                        "type", "local",
+                        "path", "/tmp/index.zip"
+                    ),
+                    ImmutableList.of("host"),
+                    ImmutableList.of("visited_sum", "unique_hosts"),
+                    new NoneShardSpec(),
+                    9,
+                    12334
                 ),
-                ImmutableList.of("host"),
-                ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
-                9,
-                12334
+                interval
             )
         )
     );

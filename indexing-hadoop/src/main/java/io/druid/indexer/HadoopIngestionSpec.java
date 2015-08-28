@@ -20,11 +20,17 @@ package io.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
+import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.indexer.path.UsedSegmentLister;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.PartitionChunk;
 
 import java.io.IOException;
 import java.util.List;
@@ -116,25 +122,40 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
 
     Map<String, Object> pathSpec = spec.getIOConfig().getPathSpec();
     Map<String, Object> datasourcePathSpec = null;
-    if(pathSpec.get(type).equals(dataSource)) {
+    if (pathSpec.get(type).equals(dataSource)) {
       datasourcePathSpec = pathSpec;
-    } else if(pathSpec.get(type).equals(multi)) {
+    } else if (pathSpec.get(type).equals(multi)) {
       List<Map<String, Object>> childPathSpecs = (List<Map<String, Object>>) pathSpec.get(children);
-      for(Map<String, Object> childPathSpec : childPathSpecs) {
+      for (Map<String, Object> childPathSpec : childPathSpecs) {
         if (childPathSpec.get(type).equals(dataSource)) {
           datasourcePathSpec = childPathSpec;
           break;
         }
       }
     }
+
     if (datasourcePathSpec != null) {
       Map<String, Object> ingestionSpecMap = (Map<String, Object>) datasourcePathSpec.get(ingestionSpec);
-      DatasourceIngestionSpec ingestionSpecObj = jsonMapper.convertValue(ingestionSpecMap, DatasourceIngestionSpec.class);
+      DatasourceIngestionSpec ingestionSpecObj = jsonMapper.convertValue(
+          ingestionSpecMap,
+          DatasourceIngestionSpec.class
+      );
       List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForInterval(
           ingestionSpecObj.getDataSource(),
           ingestionSpecObj.getInterval()
       );
-      datasourcePathSpec.put(segments, segmentsList);
+      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+      for (DataSegment segment : segmentsList) {
+        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+      }
+      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(ingestionSpecObj.getInterval());
+      final List<WindowedDataSegment> windowedSegments = Lists.newArrayList();
+      for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
+        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+          windowedSegments.add(new WindowedDataSegment(chunk.getObject(), holder.getInterval()));
+        }
+      }
+      datasourcePathSpec.put(segments, windowedSegments);
     }
 
     return spec;
