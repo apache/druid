@@ -20,7 +20,7 @@ package io.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.api.client.util.Charsets;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.http.client.HttpClient;

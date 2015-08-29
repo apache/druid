@@ -24,7 +24,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;

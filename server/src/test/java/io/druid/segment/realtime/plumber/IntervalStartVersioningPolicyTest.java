@@ -17,8 +17,8 @@
 
 package io.druid.segment.realtime.plumber;
 
-import junit.framework.Assert;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**

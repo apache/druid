@@ -24,11 +24,11 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

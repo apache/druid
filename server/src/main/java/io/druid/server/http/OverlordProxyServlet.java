@@ -17,7 +17,7 @@
 
 package io.druid.server.http;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import io.druid.client.indexing.IndexingService;
