@@ -19,7 +19,7 @@
 
 package io.druid.indexing.hadoop;
 
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import io.druid.indexer.path.UsedSegmentLister;
 import io.druid.indexing.common.TaskToolbox;

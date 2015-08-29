@@ -18,10 +18,10 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

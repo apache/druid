@@ -20,7 +20,7 @@ package io.druid.server;
 import com.google.common.collect.ImmutableList;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.InitializationTest;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collection;

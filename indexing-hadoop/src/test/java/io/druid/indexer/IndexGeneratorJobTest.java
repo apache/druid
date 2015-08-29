@@ -22,7 +22,7 @@ package io.druid.indexer;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.api.client.util.Charsets;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -243,7 +243,8 @@ public class IndexGeneratorJobTest
     );
   }
 
-  public final @Rule TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private ObjectMapper mapper;
   private HadoopDruidIndexerConfig config;

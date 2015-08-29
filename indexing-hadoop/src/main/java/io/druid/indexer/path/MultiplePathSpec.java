@@ -20,7 +20,7 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.mapreduce.Job;
 
@@ -50,7 +50,7 @@ public class MultiplePathSpec implements PathSpec
       HadoopDruidIndexerConfig config, Job job
   ) throws IOException
   {
-    for(PathSpec spec : children) {
+    for (PathSpec spec : children) {
       spec.addInputPaths(config, job);
     }
     return job;
