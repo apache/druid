@@ -24,8 +24,8 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
-import junit.framework.Assert;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collection;

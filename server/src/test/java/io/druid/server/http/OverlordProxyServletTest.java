@@ -21,8 +21,8 @@ package io.druid.server.http;
 
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
-import junit.framework.Assert;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;

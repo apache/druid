@@ -17,8 +17,8 @@
 
 package org.testng;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
-import com.google.api.client.util.Charsets;
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.metamx.common.lifecycle.Lifecycle;

@@ -21,14 +21,14 @@ package io.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import java.util.Map;
+
 import javax.script.Compilable;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;

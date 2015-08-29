@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
 import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;

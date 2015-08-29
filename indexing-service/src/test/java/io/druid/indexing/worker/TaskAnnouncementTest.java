@@ -32,7 +32,7 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;

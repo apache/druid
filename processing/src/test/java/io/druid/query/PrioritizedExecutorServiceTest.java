@@ -20,7 +20,7 @@ package io.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.lifecycle.Lifecycle;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

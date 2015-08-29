@@ -27,8 +27,8 @@ import io.druid.data.input.Row;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;

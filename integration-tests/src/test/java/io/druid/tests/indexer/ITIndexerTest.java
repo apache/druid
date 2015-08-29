@@ -17,7 +17,7 @@
 
 package io.druid.tests.indexer;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.testing.IntegrationTestingConfig;

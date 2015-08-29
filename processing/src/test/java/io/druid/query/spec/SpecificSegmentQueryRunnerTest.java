@@ -41,9 +41,9 @@ import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesResultBuilder;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
-import junit.framework.Assert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;

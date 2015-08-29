@@ -32,10 +32,10 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
-import junit.framework.Assert;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

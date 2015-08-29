@@ -24,7 +24,7 @@ import com.google.inject.Module;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
