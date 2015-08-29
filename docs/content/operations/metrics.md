@@ -71,6 +71,14 @@ Available Metrics
 |`*/timeouts`|Number of cache timeouts.||0|
 |`*/errors`|Number of cache errors.||0|
 
+#### Memcached only metrics
+Memcached client metrics are reported as per the following. These metrics come directly from the client as opposed to from the cache retrieval layer.
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`query/cache/memcached/total`|Cache metrics unique to memcached (only if `druid.cache.type=memcached`) as their actual values|Variable|N/A|
+|`query/cache/memcached/delta`|Cache metrics unique to memcached (only if `druid.cache.type=memcached`) as their delta from the prior event emission|Variable|N/A|
+
+
 ## Ingestion Metrics
 
 |Metric|Description|Dimensions|Normal Value|

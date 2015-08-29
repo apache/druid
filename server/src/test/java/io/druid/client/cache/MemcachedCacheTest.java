@@ -17,9 +17,27 @@
 
 package io.druid.client.cache;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.inject.Binder;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
+import com.metamx.common.lifecycle.Lifecycle;
+import com.metamx.common.logger.Logger;
+import com.metamx.emitter.core.Emitter;
+import com.metamx.emitter.core.Event;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.metrics.Monitor;
+import com.metamx.metrics.MonitorScheduler;
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.ManageLifecycle;
+import io.druid.initialization.Initialization;
+import io.druid.jackson.DefaultObjectMapper;
 import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
@@ -34,11 +52,14 @@ import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 import net.spy.memcached.transcoders.Transcoder;
+import org.easymock.Capture;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -55,37 +76,119 @@ import java.util.concurrent.TimeoutException;
  */
 public class MemcachedCacheTest
 {
+  private static final Logger log = new Logger(MemcachedCacheTest.class);
   private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
   private static final byte[] HO = "hooooooooooooooooooo".getBytes();
   private MemcachedCache cache;
+  private final MemcachedCacheConfig memcachedCacheConfig = new MemcachedCacheConfig()
+  {
+    @Override
+    public String getMemcachedPrefix()
+    {
+      return "druid-memcached-test";
+    }
+
+    @Override
+    public int getTimeout()
+    {
+      return 10;
+    }
+
+    @Override
+    public int getExpiration()
+    {
+      return 3600;
+    }
+
+    @Override
+    public String getHosts()
+    {
+      return "localhost:9999";
+    }
+  };
 
   @Before
   public void setUp() throws Exception
   {
     MemcachedClientIF client = new MockMemcachedClient();
-    cache = new MemcachedCache(
-        client, new MemcachedCacheConfig()
+    cache = new MemcachedCache(client, memcachedCacheConfig);
+  }
+
+  @Test
+  public void testBasicInjection() throws Exception
+  {
+    final MemcachedCacheConfig config = new MemcachedCacheConfig()
     {
       @Override
-      public String getMemcachedPrefix()
+      public String getHosts()
       {
-        return "druid-memcached-test";
+        return "127.0.0.1:22";
       }
+    };
+    Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
+                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
 
-      @Override
-      public int getTimeout()
-      {
-        return 500;
-      }
-
-      @Override
-      public int getExpiration()
-      {
-        return 3600;
-      }
-
-    }
+                binder.bind(MemcachedCacheConfig.class).toInstance(config);
+                binder.bind(Cache.class).toProvider(MemcachedProviderWithConfig.class).in(ManageLifecycle.class);
+              }
+            }
+        )
     );
+    Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+    lifecycle.start();
+    try {
+      Cache cache = injector.getInstance(Cache.class);
+      Assert.assertEquals(MemcachedCache.class, cache.getClass());
+    }
+    finally {
+      lifecycle.stop();
+    }
+  }
+
+  @Test
+  public void testMonitor() throws Exception
+  {
+    MonitorScheduler monitorScheduler = EasyMock.createNiceMock(MonitorScheduler.class);
+    Capture<? extends Monitor> monitorCapture = Capture.newInstance();
+    monitorScheduler.addMonitor(EasyMock.capture(monitorCapture));
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(monitorScheduler);
+    MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig, monitorScheduler);
+    EasyMock.verify(monitorScheduler);
+
+    Assert.assertTrue(monitorCapture.hasCaptured());
+    final Monitor monitor = monitorCapture.getValue();
+    monitor.start();
+    Assert.assertNotNull(monitor);
+
+    Emitter emitter = EasyMock.createNiceMock(Emitter.class);
+    final Collection<Event> events = new ArrayList<>();
+    final ServiceEmitter serviceEmitter = new ServiceEmitter("service", "host", emitter)
+    {
+      @Override
+      public void emit(Event event)
+      {
+        events.add(event);
+      }
+    };
+
+    while (events.isEmpty()) {
+      Thread.sleep(memcachedCacheConfig.getTimeout());
+      Assert.assertTrue(monitor.monitor(serviceEmitter));
+    }
+
+    Assert.assertFalse(events.isEmpty());
+    ObjectMapper mapper = new DefaultObjectMapper();
+    for (Event event : events) {
+      log.debug("Found event `%s`", mapper.writeValueAsString(event.toMap()));
+    }
   }
 
   @Test
@@ -143,6 +246,26 @@ public class MemcachedCacheTest
   public int get(Cache cache, String namespace, byte[] key)
   {
     return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
+  }
+}
+
+class MemcachedProviderWithConfig extends MemcachedCacheProvider
+{
+  private final MemcachedCacheConfig config;
+  private final MonitorScheduler emitter;
+
+  @Inject
+  public MemcachedProviderWithConfig(MonitorScheduler emitter, MemcachedCacheConfig config)
+  {
+    super(emitter);
+    this.emitter = emitter;
+    this.config = config;
+  }
+
+  @Override
+  public Cache get()
+  {
+    return MemcachedCache.create(config, emitter);
   }
 }
 
@@ -864,4 +987,4 @@ class MockMemcachedClient implements MemcachedClientIF
   {
     throw new UnsupportedOperationException("not implemented");
   }
-};
+}
