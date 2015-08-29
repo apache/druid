@@ -21,6 +21,7 @@ import com.google.common.primitives.Ints;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Decompressor;
 import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
 import java.nio.ByteBuffer;
@@ -28,18 +29,16 @@ import java.nio.ByteBuffer;
 public class LZ4Transcoder extends SerializingTranscoder
 {
 
-  private final LZ4Factory lz4Factory;
+  private final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
 
   public LZ4Transcoder()
   {
     super();
-    lz4Factory = LZ4Factory.fastestJavaInstance();
   }
 
   public LZ4Transcoder(int max)
   {
     super(max);
-    lz4Factory = LZ4Factory.fastestJavaInstance();
   }
 
   @Override
@@ -67,7 +66,7 @@ public class LZ4Transcoder extends SerializingTranscoder
   {
     byte[] out = null;
     if(in != null) {
-      LZ4Decompressor decompressor = lz4Factory.decompressor();
+      LZ4FastDecompressor decompressor = lz4Factory.fastDecompressor();
 
       int size = ByteBuffer.wrap(in).getInt();
 
