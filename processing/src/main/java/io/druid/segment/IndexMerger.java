@@ -45,7 +45,6 @@ import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -522,11 +521,8 @@ public class IndexMerger
     long startTime = System.currentTimeMillis();
     File indexFile = new File(v8OutDir, "index.drd");
 
-    FileOutputStream fileOutputStream = null;
-    FileChannel channel = null;
-    try {
-      fileOutputStream = new FileOutputStream(indexFile);
-      channel = fileOutputStream.getChannel();
+    try (FileOutputStream fileOutputStream = new FileOutputStream(indexFile);
+         FileChannel channel = fileOutputStream.getChannel()) {
       channel.write(ByteBuffer.wrap(new byte[]{IndexIO.V8_VERSION}));
 
       GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
@@ -543,12 +539,6 @@ public class IndexMerger
       dataInterval = new Interval(minTime, maxTime);
       serializerUtils.writeString(channel, String.format("%s/%s", minTime, maxTime));
       serializerUtils.writeString(channel, mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory()));
-    }
-    finally {
-      CloseQuietly.close(channel);
-      channel = null;
-      CloseQuietly.close(fileOutputStream);
-      fileOutputStream = null;
     }
     IndexIO.checkFileSize(indexFile);
     log.info("outDir[%s] completed index.drd in %,d millis.", v8OutDir, System.currentTimeMillis() - startTime);
@@ -928,7 +918,7 @@ public class IndexMerger
     );
 
     if (segmentMetadata != null && !segmentMetadata.isEmpty()) {
-      writeMetadataToFile( new File(v8OutDir, "metadata.drd"), segmentMetadata);
+      writeMetadataToFile(new File(v8OutDir, "metadata.drd"), segmentMetadata);
       log.info("wrote metadata.drd in outDir[%s].", v8OutDir);
 
       expectedFiles.add("metadata.drd");
@@ -994,9 +984,7 @@ public class IndexMerger
   {
     File indexFile = new File(inDir, "index.drd");
 
-    FileChannel channel = null;
-    try {
-      channel = new FileOutputStream(indexFile).getChannel();
+    try (FileChannel channel = new FileOutputStream(indexFile).getChannel()) {
       channel.write(ByteBuffer.wrap(new byte[]{versionId}));
 
       availableDimensions.writeToChannel(channel);
@@ -1007,10 +995,6 @@ public class IndexMerger
       serializerUtils.writeString(
           channel, mapper.writeValueAsString(bitmapSerdeFactory)
       );
-    }
-    finally {
-      CloseQuietly.close(channel);
-      channel = null;
     }
     IndexIO.checkFileSize(indexFile);
   }
@@ -1310,26 +1294,12 @@ public class IndexMerger
 
   private static void writeMetadataToFile(File metadataFile, Map<String, Object> metadata) throws IOException
   {
-    FileOutputStream metadataFileOutputStream = null;
-    FileChannel metadataFilechannel = null;
-    try {
-      metadataFileOutputStream = new FileOutputStream(metadataFile);
-      metadataFilechannel = metadataFileOutputStream.getChannel();
-
+    try (FileOutputStream metadataFileOutputStream = new FileOutputStream(metadataFile);
+         FileChannel metadataFilechannel = metadataFileOutputStream.getChannel()
+    ) {
       byte[] metadataBytes = mapper.writeValueAsBytes(metadata);
       if (metadataBytes.length != metadataFilechannel.write(ByteBuffer.wrap(metadataBytes))) {
         throw new IOException("Failed to write metadata for file");
-      }
-    }
-    finally {
-      if (metadataFilechannel != null) {
-        metadataFilechannel.close();
-        metadataFilechannel = null;
-      }
-
-      if (metadataFileOutputStream != null) {
-        metadataFileOutputStream.close();
-        metadataFileOutputStream = null;
       }
     }
     IndexIO.checkFileSize(metadataFile);
