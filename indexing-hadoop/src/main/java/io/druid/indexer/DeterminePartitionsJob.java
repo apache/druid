@@ -126,6 +126,8 @@ public class DeterminePartitionsJob implements Jobby
         );
 
         JobHelper.injectSystemProperties(groupByJob);
+        config.addJobProperties(groupByJob);
+
         groupByJob.setMapperClass(DeterminePartitionsGroupByMapper.class);
         groupByJob.setMapOutputKeyClass(BytesWritable.class);
         groupByJob.setMapOutputValueClass(NullWritable.class);
@@ -137,7 +139,6 @@ public class DeterminePartitionsJob implements Jobby
         JobHelper.setupClasspath(JobHelper.distributedClassPath(config.getWorkingPath()), groupByJob);
 
         config.addInputPaths(groupByJob);
-        config.addJobProperties(groupByJob);
         config.intoConfiguration(groupByJob);
         FileOutputFormat.setOutputPath(groupByJob, config.makeGroupedDataDir());
 
@@ -163,6 +164,7 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.getConfiguration().set("io.sort.record.percent", "0.19");
 
       JobHelper.injectSystemProperties(dimSelectionJob);
+      config.addJobProperties(dimSelectionJob);
 
       if (!config.getPartitionsSpec().isAssumeGrouped()) {
         // Read grouped data from the groupByJob.
@@ -186,7 +188,6 @@ public class DeterminePartitionsJob implements Jobby
       dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().get().size());
       JobHelper.setupClasspath(JobHelper.distributedClassPath(config.getWorkingPath()), dimSelectionJob);
 
-      config.addJobProperties(dimSelectionJob);
       config.intoConfiguration(dimSelectionJob);
       FileOutputFormat.setOutputPath(dimSelectionJob, config.makeIntermediatePath());
 

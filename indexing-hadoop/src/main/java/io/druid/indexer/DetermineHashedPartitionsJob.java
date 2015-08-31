@@ -88,6 +88,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       );
 
       JobHelper.injectSystemProperties(groupByJob);
+      config.addJobProperties(groupByJob);
       groupByJob.setMapperClass(DetermineCardinalityMapper.class);
       groupByJob.setMapOutputKeyClass(LongWritable.class);
       groupByJob.setMapOutputValueClass(BytesWritable.class);
@@ -104,7 +105,6 @@ public class DetermineHashedPartitionsJob implements Jobby
       JobHelper.setupClasspath(JobHelper.distributedClassPath(config.getWorkingPath()), groupByJob);
 
       config.addInputPaths(groupByJob);
-      config.addJobProperties(groupByJob);
       config.intoConfiguration(groupByJob);
       FileOutputFormat.setOutputPath(groupByJob, config.makeGroupedDataDir());
 
