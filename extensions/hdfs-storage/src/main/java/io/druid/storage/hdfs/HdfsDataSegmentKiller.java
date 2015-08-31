@@ -44,14 +44,41 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     final FileSystem fs = checkPathAndGetFilesystem(path);
     try {
       if (path.getName().endsWith(".zip")) {
-        // delete the parent directory containing the zip file and the descriptor
-        fs.delete(path.getParent(), true);
+
+        // path format -- > .../dataSource/interval/version/partitionNum/xxx.zip
+        Path partitionNumDir = path.getParent();
+        if (!fs.delete(partitionNumDir, true)) {
+          throw new SegmentLoadingException(
+              "Unable to kill segment, failed to delete dir [%s]",
+              partitionNumDir.toString()
+          );
+        }
+
+        //try to delete other directories if possible
+        Path versionDir = partitionNumDir.getParent();
+        if (safeNonRecursiveDelete(fs, versionDir)) {
+          Path intervalDir = versionDir.getParent();
+          if (safeNonRecursiveDelete(fs, intervalDir)) {
+            Path dataSourceDir = intervalDir.getParent();
+            safeNonRecursiveDelete(fs, dataSourceDir);
+          }
+        }
       } else {
         throw new SegmentLoadingException("Unknown file type[%s]", path);
       }
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Unable to kill segment");
+    }
+  }
+
+  private boolean safeNonRecursiveDelete(FileSystem fs, Path path)
+  {
+    try {
+      return fs.delete(path, false);
+    }
+    catch (Exception ex) {
+      return false;
     }
   }
 
