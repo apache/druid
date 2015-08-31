@@ -148,6 +148,7 @@ public class IndexGeneratorJob implements Jobby
       job.getConfiguration().set("io.sort.record.percent", "0.23");
 
       JobHelper.injectSystemProperties(job);
+      config.addJobProperties(job);
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
@@ -173,7 +174,6 @@ public class IndexGeneratorJob implements Jobby
       job.setOutputFormatClass(IndexGeneratorOutputFormat.class);
       FileOutputFormat.setOutputPath(job, config.makeIntermediatePath());
 
-      config.addJobProperties(job);
       config.addInputPaths(job);
 
       // hack to get druid.processing.bitmap property passed down to hadoop job.
