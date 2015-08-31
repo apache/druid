@@ -52,6 +52,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
@@ -362,7 +363,7 @@ public class IndexGeneratorJobTest
                 false,
                 false,
                 false,
-                null,
+                ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
                 false,
                 false,
                 false,
