@@ -35,13 +35,11 @@ import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
-import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.timeline.DataSegment;
@@ -49,9 +47,7 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedSet;
 
 public class HadoopIndexTask extends HadoopTask
@@ -75,7 +71,7 @@ public class HadoopIndexTask extends HadoopTask
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
-   *             <p/>
+   *             <p>
    *             Here, we will ensure that the DbConnectorConfig field of the spec is set to null, such that the
    *             job does not push a list of published segments the database. Instead, we will use the method
    *             IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
@@ -171,7 +167,8 @@ public class HadoopIndexTask extends HadoopTask
     spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
         spec,
         jsonMapper,
-        new OverlordActionBasedUsedSegmentLister(toolbox));
+        new OverlordActionBasedUsedSegmentLister(toolbox)
+    );
 
     final String config = invokeForeignLoader(
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessing",
