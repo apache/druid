@@ -157,7 +157,7 @@ Is a type of inputSpec that expects data to be laid out in a specific path forma
 |dataGranularity|Object|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
 |inputPath|String|Base path to append the expected time path to.|yes|
 |filePattern|String|Pattern that files should match to be included.|yes|
-|pathFormat|String|Joda date-time format for each directory.|no|
+|pathFormat|String|Joda date-time format for each directory. Default value is `"'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"`, or see [Joda documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)|no|
 
 For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
 
