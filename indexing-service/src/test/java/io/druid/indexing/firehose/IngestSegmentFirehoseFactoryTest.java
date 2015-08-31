@@ -179,37 +179,7 @@ public class IngestSegmentFirehoseFactoryTest
         ts,
         new TaskActionToolbox(tl, mdc, newMockEmitter())
     );
-
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    objectMapper.registerModule(
-        new SimpleModule("testModule").registerSubtypes(LocalLoadSpec.class)
-    );
-
-    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
-    objectMapper.setAnnotationIntrospectors(
-        new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
-        ),
-        new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
-        )
-    );
-    objectMapper.setInjectableValues(
-        new GuiceInjectableValues(
-            GuiceInjectors.makeStartupInjectorWithModules(
-                ImmutableList.of(
-                    new Module()
-                    {
-                      @Override
-                      public void configure(Binder binder)
-                      {
-                        binder.bind(LocalDataSegmentPuller.class);
-                      }
-                    }
-                )
-            )
-        )
-    );
+    final ObjectMapper objectMapper = newObjectMapper();
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
         new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null),
         tac,
@@ -330,6 +300,41 @@ public class IngestSegmentFirehoseFactoryTest
       }
     }
     return values;
+  }
+
+  public static ObjectMapper newObjectMapper()
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.registerModule(
+        new SimpleModule("testModule").registerSubtypes(LocalLoadSpec.class)
+    );
+
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+    objectMapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
+        ),
+        new AnnotationIntrospectorPair(
+            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
+    );
+    objectMapper.setInjectableValues(
+        new GuiceInjectableValues(
+            GuiceInjectors.makeStartupInjectorWithModules(
+                ImmutableList.of(
+                    new Module()
+                    {
+                      @Override
+                      public void configure(Binder binder)
+                      {
+                        binder.bind(LocalDataSegmentPuller.class);
+                      }
+                    }
+                )
+            )
+        )
+    );
+    return objectMapper;
   }
 
   public IngestSegmentFirehoseFactoryTest(

@@ -20,6 +20,7 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -31,8 +32,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.DatasourceInputFormat;
+import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.timeline.DataSegment;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
@@ -48,11 +49,12 @@ public class DatasourcePathSpec implements PathSpec
   private final ObjectMapper mapper;
   private final DatasourceIngestionSpec ingestionSpec;
   private final long maxSplitSize;
-  private final List<DataSegment> segments;
+  private final List<WindowedDataSegment> segments;
 
+  @JsonCreator
   public DatasourcePathSpec(
       @JacksonInject ObjectMapper mapper,
-      @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("segments") List<WindowedDataSegment> segments,
       @JsonProperty("ingestionSpec") DatasourceIngestionSpec spec,
       @JsonProperty("maxSplitSize") Long maxSplitSize
   )
@@ -61,7 +63,7 @@ public class DatasourcePathSpec implements PathSpec
     this.segments = segments;
     this.ingestionSpec = Preconditions.checkNotNull(spec, "null ingestionSpec");
 
-    if(maxSplitSize == null) {
+    if (maxSplitSize == null) {
       this.maxSplitSize = 0;
     } else {
       this.maxSplitSize = maxSplitSize.longValue();
@@ -69,7 +71,7 @@ public class DatasourcePathSpec implements PathSpec
   }
 
   @JsonProperty
-  public List<DataSegment> getSegments()
+  public List<WindowedDataSegment> getSegments()
   {
     return segments;
   }
@@ -110,12 +112,12 @@ public class DatasourcePathSpec implements PathSpec
             Iterables.concat(
                 Iterables.transform(
                     segments,
-                    new Function<DataSegment, Iterable<String>>()
+                    new Function<WindowedDataSegment, Iterable<String>>()
                     {
                       @Override
-                      public Iterable<String> apply(DataSegment dataSegment)
+                      public Iterable<String> apply(WindowedDataSegment dataSegment)
                       {
-                        return dataSegment.getDimensions();
+                        return dataSegment.getSegment().getDimensions();
                       }
                     }
                 )

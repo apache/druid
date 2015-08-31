@@ -55,7 +55,7 @@ public class DatasourceRecordReaderTest
                 this.getClass().getClassLoader().getResource("test-segment/index.zip").getPath()
             )
         );
-    InputSplit split = new DatasourceInputSplit(Lists.newArrayList(segment));
+    InputSplit split = new DatasourceInputSplit(Lists.newArrayList(WindowedDataSegment.of(segment)));
 
     Configuration config = new Configuration();
     config.set(
