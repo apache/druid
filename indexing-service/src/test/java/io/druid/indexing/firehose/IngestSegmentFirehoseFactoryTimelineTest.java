@@ -212,7 +212,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     }
 
     try {
-      IndexMerger.persist(index, persistDir, null, new IndexSpec());
+      IndexMerger.persist(index, index.getInterval(), persistDir, new IndexSpec());
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
