@@ -183,10 +183,13 @@ Returns all rules for a specified datasource.
 
 Returns all rules for a specified datasource and includes default datasource.
 
+* `/druid/coordinator/v1/rules/history?interval=<interval>`
+
+ Returns audit history of rules for all datasources. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
 
 * `/druid/coordinator/v1/rules/{dataSourceName}/history?interval=<interval>`
 
- Returns audit history of rules. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
+ Returns audit history of rules for a specified datasource. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
 
 
 ### POST
