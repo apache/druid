@@ -331,13 +331,16 @@ public class IndexGeneratorJobTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
-                        null,
-                        ImmutableList.of("timestamp", "host", "visited_num")
-                    )
+                mapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new DimensionsSpec(ImmutableList.of("host"), null, null),
+                            null,
+                            ImmutableList.of("timestamp", "host", "visited_num")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("visited_num", "visited_num"),
@@ -345,7 +348,8 @@ public class IndexGeneratorJobTest
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
-                )
+                ),
+                mapper
             ),
             new HadoopIOConfig(
                 ImmutableMap.copyOf(inputSpec),

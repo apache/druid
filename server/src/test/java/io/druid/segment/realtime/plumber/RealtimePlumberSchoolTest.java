@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
@@ -34,8 +35,10 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.ParseSpec;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
@@ -66,6 +69,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -112,33 +116,22 @@ public class RealtimePlumberSchoolTest
     final File tmpDir = Files.createTempDir();
     tmpDir.deleteOnExit();
 
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+
     schema = new DataSchema(
         "test",
-        new InputRowParser()
-        {
-          @Override
-          public InputRow parse(Object input)
-          {
-            return null;
-          }
-
-          @Override
-          public ParseSpec getParseSpec()
-          {
-            return new JSONParseSpec(
-                new TimestampSpec("timestamp", "auto", null),
-                new DimensionsSpec(null, null, null)
-            );
-          }
-
-          @Override
-          public InputRowParser withParseSpec(ParseSpec parseSpec)
-          {
-            return null;
-          }
-        },
+        jsonMapper.convertValue(
+            new StringInputRowParser(
+                new JSONParseSpec(
+                    new TimestampSpec("timestamp", "auto", null),
+                    new DimensionsSpec(null, null, null)
+                )
+            ),
+            Map.class
+        ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+        jsonMapper
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);

@@ -336,6 +336,7 @@ public class TaskLifecycleTest
     );
     indexSpec = new IndexSpec();
 
+    mapper = new DefaultObjectMapper();
     if (taskStorageType.equals("HeapMemoryTaskStorage")) {
       ts = new HeapMemoryTaskStorage(
           new TaskStorageConfig(null)
@@ -344,7 +345,6 @@ public class TaskLifecycleTest
       );
     } else if (taskStorageType.equals("MetadataTaskStorage")) {
       testDerbyConnector = derbyConnectorRule.getConnector();
-      mapper = new DefaultObjectMapper();
       mapper.registerSubtypes(
           new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
           new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
@@ -479,7 +479,8 @@ public class TaskLifecycleTest
                     Granularity.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
-                )
+                ),
+                mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
@@ -536,7 +537,8 @@ public class TaskLifecycleTest
                     Granularity.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P1D"))
-                )
+                ),
+                mapper
             ),
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory()),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
@@ -800,7 +802,8 @@ public class TaskLifecycleTest
         "test_ds",
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null)
+        new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null),
+        mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new MockFirehoseFactory(true),
@@ -863,7 +866,8 @@ public class TaskLifecycleTest
                     Granularity.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
-                )
+                ),
+                mapper
             ),
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)

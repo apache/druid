@@ -108,26 +108,36 @@ public class DetermineHashedPartitionsJobTest
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
         new DataSchema(
             "test_schema",
-            new StringInputRowParser(
-                new DelimitedParseSpec(
-                    new TimestampSpec("ts", null, null),
-                    new DimensionsSpec(ImmutableList.of("market", "quality", "placement", "placementish"), null, null),
-                    "\t",
-                    null,
-                    Arrays.asList("ts",
-                                  "market",
-                                  "quality",
-                                  "placement",
-                                  "placementish",
-                                  "index")
-                )
+            HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                new StringInputRowParser(
+                    new DelimitedParseSpec(
+                        new TimestampSpec("ts", null, null),
+                        new DimensionsSpec(
+                            ImmutableList.of("market", "quality", "placement", "placementish"),
+                            null,
+                            null
+                        ),
+                        "\t",
+                        null,
+                        Arrays.asList(
+                            "ts",
+                            "market",
+                            "quality",
+                            "placement",
+                            "placementish",
+                            "index"
+                        )
+                    )
+                ),
+                Map.class
             ),
             new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
             new UniformGranularitySpec(
                 Granularity.DAY,
                 QueryGranularity.NONE,
                 ImmutableList.of(new Interval(interval))
-            )
+            ),
+            HadoopDruidIndexerConfig.jsonMapper
         ),
         new HadoopIOConfig(
             ImmutableMap.<String, Object>of(

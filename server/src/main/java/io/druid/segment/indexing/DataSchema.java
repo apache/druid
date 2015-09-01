@@ -17,8 +17,11 @@
 
 package io.druid.segment.indexing;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
@@ -30,6 +33,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -39,29 +44,68 @@ public class DataSchema
   private static final Logger log = new Logger(DataSchema.class);
 
   private final String dataSource;
-  private final InputRowParser parser;
+  private final Map<String, Object> parser;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
+
+  private final ObjectMapper jsonMapper;
 
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("parser") InputRowParser parser,
+      @JsonProperty("parser") Map<String, Object> parser,
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec
+      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
+      @JacksonInject ObjectMapper jsonMapper
   )
   {
-    Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
+    this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMapper.");
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
+    this.parser = parser;
 
-    this.dataSource = dataSource;
+    if (aggregators.length == 0) {
+      log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
+    }
+    this.aggregators = aggregators;
+
+    if (granularitySpec == null) {
+      log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
+      this.granularitySpec = new UniformGranularitySpec(null, null, null);
+    } else {
+      this.granularitySpec = granularitySpec;
+    }
+  }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @JsonProperty("parser")
+  public Map<String, Object> getParserMap()
+  {
+    return parser;
+  }
+
+  @JsonIgnore
+  public InputRowParser getParser()
+  {
+    if(parser == null) {
+      log.warn("No parser has been specified");
+      return null;
+    }
+
+    final InputRowParser inputRowParser = jsonMapper.convertValue(this.parser, InputRowParser.class);
 
     final Set<String> dimensionExclusions = Sets.newHashSet();
     for (AggregatorFactory aggregator : aggregators) {
       dimensionExclusions.addAll(aggregator.requiredFields());
     }
-    if (parser != null && parser.getParseSpec() != null) {
-      final DimensionsSpec dimensionsSpec = parser.getParseSpec().getDimensionsSpec();
-      final TimestampSpec timestampSpec = parser.getParseSpec().getTimestampSpec();
+
+    if (inputRowParser.getParseSpec() != null) {
+      final DimensionsSpec dimensionsSpec = inputRowParser.getParseSpec().getDimensionsSpec();
+      final TimestampSpec timestampSpec = inputRowParser.getParseSpec().getTimestampSpec();
 
       // exclude timestamp from dimensions by default, unless explicitly included in the list of dimensions
       if (timestampSpec != null) {
@@ -84,8 +128,8 @@ public class DataSchema
           );
         }
 
-        this.parser = parser.withParseSpec(
-            parser.getParseSpec()
+        return inputRowParser.withParseSpec(
+            inputRowParser.getParseSpec()
                   .withDimensionsSpec(
                       dimensionsSpec
                           .withDimensionExclusions(
@@ -94,37 +138,12 @@ public class DataSchema
                   )
         );
       } else {
-        this.parser = parser;
+        return inputRowParser;
       }
     } else {
-      log.warn("No parser or parseSpec has been specified");
-
-      this.parser = parser;
+      log.warn("No parseSpec in parser has been specified.");
+      return inputRowParser;
     }
-
-    if (aggregators.length == 0) {
-      log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
-    }
-    this.aggregators = aggregators;
-
-    if (granularitySpec == null) {
-      log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
-      this.granularitySpec = new UniformGranularitySpec(null, null, null);
-    } else {
-      this.granularitySpec = granularitySpec;
-    }
-  }
-
-  @JsonProperty
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  @JsonProperty
-  public InputRowParser getParser()
-  {
-    return parser;
   }
 
   @JsonProperty("metricsSpec")
@@ -141,6 +160,53 @@ public class DataSchema
 
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
-    return new DataSchema(dataSource, parser, aggregators, granularitySpec);
+    return new DataSchema(dataSource, parser, aggregators, granularitySpec, jsonMapper);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    DataSchema that = (DataSchema) o;
+
+    if (!dataSource.equals(that.dataSource)) {
+      return false;
+    }
+    if (parser != null ? !parser.equals(that.parser) : that.parser != null) {
+      return false;
+    }
+    // Probably incorrect - comparing Object[] arrays with Arrays.equals
+    if (!Arrays.equals(aggregators, that.aggregators)) {
+      return false;
+    }
+    return granularitySpec.equals(that.granularitySpec);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dataSource.hashCode();
+    result = 31 * result + (parser != null ? parser.hashCode() : 0);
+    result = 31 * result + Arrays.hashCode(aggregators);
+    result = 31 * result + granularitySpec.hashCode();
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DataSchema{" +
+           "dataSource='" + dataSource + '\'' +
+           ", parser=" + parser +
+           ", aggregators=" + Arrays.toString(aggregators) +
+           ", granularitySpec=" + granularitySpec +
+           '}';
   }
 }

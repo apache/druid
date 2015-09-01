@@ -17,6 +17,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
@@ -56,12 +57,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class IndexTaskTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private final IndexSpec indexSpec = new IndexSpec();
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testDeterminePartitions() throws Exception
@@ -82,21 +85,24 @@ public class IndexTaskTest
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
                 "test",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec(
-                            "ts",
-                            "auto",
-                            null
-                        ),
-                        new DimensionsSpec(
-                            Arrays.asList("ts"),
-                            Lists.<String>newArrayList(),
-                            Lists.<SpatialDimensionSchema>newArrayList()
-                        ),
-                        null,
-                        Arrays.asList("ts", "dim", "val")
-                    )
+                jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec(
+                                "ts",
+                                "auto",
+                                null
+                            ),
+                            new DimensionsSpec(
+                                Arrays.asList("ts"),
+                                Lists.<String>newArrayList(),
+                                Lists.<SpatialDimensionSchema>newArrayList()
+                            ),
+                            null,
+                            Arrays.asList("ts", "dim", "val")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("val", "val")
@@ -105,7 +111,8 @@ public class IndexTaskTest
                     Granularity.DAY,
                     QueryGranularity.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
-                )
+                ),
+                jsonMapper
             ),
             new IndexTask.IndexIOConfig(
                 new LocalFirehoseFactory(
@@ -149,21 +156,24 @@ public class IndexTaskTest
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
                 "test",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec(
-                            "ts",
-                            "auto",
-                            null
-                        ),
-                        new DimensionsSpec(
-                            Arrays.asList("ts"),
-                            Lists.<String>newArrayList(),
-                            Lists.<SpatialDimensionSchema>newArrayList()
-                        ),
-                        null,
-                        Arrays.asList("ts", "dim", "val")
-                    )
+                jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec(
+                                "ts",
+                                "auto",
+                                null
+                            ),
+                            new DimensionsSpec(
+                                Arrays.asList("ts"),
+                                Lists.<String>newArrayList(),
+                                Lists.<SpatialDimensionSchema>newArrayList()
+                            ),
+                            null,
+                            Arrays.asList("ts", "dim", "val")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("val", "val")
@@ -171,7 +181,8 @@ public class IndexTaskTest
                 new ArbitraryGranularitySpec(
                     QueryGranularity.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
-                )
+                ),
+                jsonMapper
             ),
             new IndexTask.IndexIOConfig(
                 new LocalFirehoseFactory(
@@ -257,21 +268,24 @@ public class IndexTaskTest
         new IndexTask.IndexIngestionSpec(
             new DataSchema(
                 "test",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec(
-                            "ts",
-                            "auto",
-                            null
-                        ),
-                        new DimensionsSpec(
-                            Arrays.asList("dim"),
-                            Lists.<String>newArrayList(),
-                            Lists.<SpatialDimensionSchema>newArrayList()
-                        ),
-                        null,
-                        Arrays.asList("ts", "dim", "val")
-                    )
+                jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec(
+                                "ts",
+                                "auto",
+                                null
+                            ),
+                            new DimensionsSpec(
+                                Arrays.asList("dim"),
+                                Lists.<String>newArrayList(),
+                                Lists.<SpatialDimensionSchema>newArrayList()
+                            ),
+                            null,
+                            Arrays.asList("ts", "dim", "val")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("val", "val")
@@ -280,7 +294,8 @@ public class IndexTaskTest
                     Granularity.HOUR,
                     QueryGranularity.HOUR,
                     Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
-                )
+                ),
+                jsonMapper
             ),
             new IndexTask.IndexIOConfig(
                 new LocalFirehoseFactory(

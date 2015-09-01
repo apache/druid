@@ -191,15 +191,15 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"));
+    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"), jsonMapper);
     remoteTaskRunner.run(task1);
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task2 = new TestRealtimeTask("rt2", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt2"));
+    TestRealtimeTask task2 = new TestRealtimeTask("rt2", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt2"), jsonMapper);
     remoteTaskRunner.run(task2);
 
-    TestRealtimeTask task3 = new TestRealtimeTask("rt3", new TaskResource("rt2", 1), "foo", TaskStatus.running("rt3"));
+    TestRealtimeTask task3 = new TestRealtimeTask("rt3", new TaskResource("rt2", 1), "foo", TaskStatus.running("rt3"), jsonMapper);
     remoteTaskRunner.run(task3);
 
     Assert.assertTrue(
@@ -236,15 +236,15 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"));
+    TestRealtimeTask task1 = new TestRealtimeTask("rt1", new TaskResource("rt1", 1), "foo", TaskStatus.running("rt1"), jsonMapper);
     remoteTaskRunner.run(task1);
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task2 = new TestRealtimeTask("rt2", new TaskResource("rt2", 3), "foo", TaskStatus.running("rt2"));
+    TestRealtimeTask task2 = new TestRealtimeTask("rt2", new TaskResource("rt2", 3), "foo", TaskStatus.running("rt2"), jsonMapper);
     remoteTaskRunner.run(task2);
 
-    TestRealtimeTask task3 = new TestRealtimeTask("rt3", new TaskResource("rt3", 2), "foo", TaskStatus.running("rt3"));
+    TestRealtimeTask task3 = new TestRealtimeTask("rt3", new TaskResource("rt3", 2), "foo", TaskStatus.running("rt3"), jsonMapper);
     remoteTaskRunner.run(task3);
     Assert.assertTrue(taskAnnounced(task3.getId()));
     mockWorkerRunningTask(task3);

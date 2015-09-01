@@ -23,6 +23,7 @@ import com.metamx.common.Granularity;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -48,7 +49,8 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null),
+        new DefaultObjectMapper()
     );
 
     final Interval interval = new Interval("2013-01-01/2013-01-02");

@@ -340,13 +340,16 @@ public class BatchDeltaIngestionTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
-                        null,
-                        ImmutableList.of("timestamp", "host", "host2", "visited_num")
-                    )
+                MAPPER.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new DimensionsSpec(ImmutableList.of("host"), null, null),
+                            null,
+                            ImmutableList.of("timestamp", "host", "host2", "visited_num")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("visited_sum", "visited_num"),
@@ -354,7 +357,8 @@ public class BatchDeltaIngestionTest
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(INTERVAL_FULL)
-                )
+                ),
+                MAPPER
             ),
             new HadoopIOConfig(
                 inputSpec,

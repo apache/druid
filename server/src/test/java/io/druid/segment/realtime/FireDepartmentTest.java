@@ -17,6 +17,7 @@
 
 package io.druid.segment.realtime;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -36,6 +37,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  */
@@ -45,28 +47,33 @@ public class FireDepartmentTest
   public void testSerde() throws Exception
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
 
     FireDepartment schema = new FireDepartment(
         new DataSchema(
             "foo",
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec(
-                        "timestamp",
-                        "auto",
-                        null
-                    ),
-                    new DimensionsSpec(
-                        Arrays.asList("dim1", "dim2"),
-                        null,
-                        null
+            jsonMapper.convertValue(
+                new StringInputRowParser(
+                    new JSONParseSpec(
+                        new TimestampSpec(
+                            "timestamp",
+                            "auto",
+                            null
+                        ),
+                        new DimensionsSpec(
+                            Arrays.asList("dim1", "dim2"),
+                            null,
+                            null
+                        )
                     )
-                )
+                ),
+                Map.class
             ),
             new AggregatorFactory[]{
                 new CountAggregatorFactory("count")
             },
-            new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null)
+            new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null),
+            jsonMapper
         ),
         new RealtimeIOConfig(
             null,
