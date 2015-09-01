@@ -19,7 +19,6 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Charsets;
@@ -30,10 +29,10 @@ import com.google.common.collect.Maps;
 import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -126,7 +125,15 @@ public class IndexGeneratorJobTest
                     "2014102300,i.example.com,963",
                     "2014102300,j.example.com,333"
                 ),
-                null
+                null,
+                new StringInputRowParser(
+                    new CSVParseSpec(
+                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        null,
+                        ImmutableList.of("timestamp", "host", "visited_num")
+                    )
+                )
             },
             {
                 false,
@@ -160,7 +167,15 @@ public class IndexGeneratorJobTest
                     "2014102216,q.example.com,500",
                     "2014102216,q.example.com,87"
                 ),
-                null
+                null,
+                new HadoopyStringInputRowParser(
+                    new CSVParseSpec(
+                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        null,
+                        ImmutableList.of("timestamp", "host", "visited_num")
+                    )
+                )
             },
             {
                 true,
@@ -194,7 +209,15 @@ public class IndexGeneratorJobTest
                     "2014102216,q.example.com,500",
                     "2014102216,q.example.com,87"
                 ),
-                null
+                null,
+                new StringInputRowParser(
+                    new CSVParseSpec(
+                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        null,
+                        ImmutableList.of("timestamp", "host", "visited_num")
+                    )
+                )
             },
             {
                 false,
@@ -238,7 +261,15 @@ public class IndexGeneratorJobTest
                     "2014102300,i.example.com,963",
                     "2014102300,j.example.com,333"
                 ),
-                SequenceFileInputFormat.class.getName()
+                SequenceFileInputFormat.class.getName(),
+                new HadoopyStringInputRowParser(
+                    new CSVParseSpec(
+                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        null,
+                        ImmutableList.of("timestamp", "host", "visited_num")
+                    )
+                )
             }
         }
     );
@@ -257,6 +288,7 @@ public class IndexGeneratorJobTest
   private List<String> data;
   private boolean useCombiner;
   private String inputFormatName;
+  private InputRowParser inputRowParser;
 
   public IndexGeneratorJobTest(
       boolean useCombiner,
@@ -264,7 +296,8 @@ public class IndexGeneratorJobTest
       String interval,
       Object[][][] shardInfoForEachSegment,
       List<String> data,
-      String inputFormatName
+      String inputFormatName,
+      InputRowParser inputRowParser
   ) throws IOException
   {
     this.useCombiner = useCombiner;
@@ -273,6 +306,7 @@ public class IndexGeneratorJobTest
     this.interval = new Interval(interval);
     this.data = data;
     this.inputFormatName = inputFormatName;
+    this.inputRowParser = inputRowParser;
   }
 
   private void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
@@ -305,11 +339,9 @@ public class IndexGeneratorJobTest
   @Before
   public void setUp() throws Exception
   {
-    mapper = new DefaultObjectMapper();
+    mapper = HadoopDruidIndexerConfig.jsonMapper;
     mapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     mapper.registerSubtypes(new NamedType(SingleDimensionShardSpec.class, "single"));
-    InjectableValues inject = new InjectableValues.Std().addValue(ObjectMapper.class, mapper);
-    mapper.setInjectableValues(inject);
 
     dataFile = temporaryFolder.newFile();
     tmpDir = temporaryFolder.newFolder();
@@ -332,14 +364,7 @@ public class IndexGeneratorJobTest
             new DataSchema(
                 "website",
                 mapper.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(ImmutableList.of("host"), null, null),
-                            null,
-                            ImmutableList.of("timestamp", "host", "visited_num")
-                        )
-                    ),
+                    inputRowParser,
                     Map.class
                 ),
                 new AggregatorFactory[]{
