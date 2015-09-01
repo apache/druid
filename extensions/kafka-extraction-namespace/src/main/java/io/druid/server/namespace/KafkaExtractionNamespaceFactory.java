@@ -24,13 +24,10 @@ import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  *

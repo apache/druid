@@ -80,3 +80,33 @@ The following matches any dimension values for the dimension `name` between `'ba
   "function" : "function(x) { return(x >= 'bar' && x <= 'foo') }"
 }
 ```
+
+### Extraction filter
+
+Extraction filter matches a dimension using some specific [Extraction function](./dimensionspecs.html#extraction-functions).
+The following filter matches the values for which the extraction function has transformation entry `input_key=output_value` where
+ `output_value` is equal to the filter `value` and `input_key` is present as dimension.
+
+**Example**
+The following matches dimension values in `[product_1, product_3, product_5]` for the column `product`
+
+```json
+{
+    "filter": {
+        "type": "extraction",
+        "dimension": "product",
+        "value": "bar_1",
+        "extractionFn": {
+            "type": "lookup",
+            "lookup": {
+                "type": "map",
+                "map": {
+                    "product_1": "bar_1",
+                    "product_5": "bar_1",
+                    "product_3": "bar_1"
+                }
+            }
+        }
+    }
+}
+```
