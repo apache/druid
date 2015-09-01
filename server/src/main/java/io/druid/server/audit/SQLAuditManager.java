@@ -116,13 +116,7 @@ public class SQLAuditManager implements AuditManager
   @Override
   public List<AuditEntry> fetchAuditHistory(final String key, final String type, Interval interval)
   {
-    final Interval theInterval;
-    if (interval == null) {
-      DateTime now = new DateTime();
-      theInterval = new Interval(now.minus(config.getAuditHistoryMillis()), now);
-    } else {
-      theInterval = interval;
-    }
+    final Interval theInterval = getIntervalOrDefault(interval);
     return dbi.withHandle(
         new HandleCallback<List<AuditEntry>>()
         {
@@ -135,6 +129,59 @@ public class SQLAuditManager implements AuditManager
                     getAuditTable()
                 )
             ).bind("audit_key", key)
+                         .bind("type", type)
+                         .bind("start_date", theInterval.getStart().toString())
+                         .bind("end_date", theInterval.getEnd().toString())
+                         .map(
+                             new ResultSetMapper<AuditEntry>()
+                             {
+                               @Override
+                               public AuditEntry map(int index, ResultSet r, StatementContext ctx)
+                                   throws SQLException
+                               {
+                                 try {
+                                   return jsonMapper.readValue(r.getBytes("payload"), AuditEntry.class);
+                                 }
+                                 catch (IOException e) {
+                                   throw new SQLException(e);
+                                 }
+                               }
+                             }
+                         )
+                         .list();
+          }
+        }
+    );
+  }
+
+  private Interval getIntervalOrDefault(Interval interval)
+  {
+    final Interval theInterval;
+    if (interval == null) {
+      DateTime now = new DateTime();
+      theInterval = new Interval(now.minus(config.getAuditHistoryMillis()), now);
+    } else {
+      theInterval = interval;
+    }
+    return theInterval;
+  }
+
+  @Override
+  public List<AuditEntry> fetchAuditHistory(final String type, Interval interval)
+  {
+    final Interval theInterval = getIntervalOrDefault(interval);
+    return dbi.withHandle(
+        new HandleCallback<List<AuditEntry>>()
+        {
+          @Override
+          public List<AuditEntry> withHandle(Handle handle) throws Exception
+          {
+            return handle.createQuery(
+                String.format(
+                    "SELECT payload FROM %s WHERE type = :type and created_date between :start_date and :end_date ORDER BY created_date",
+                    getAuditTable()
+                )
+            )
                          .bind("type", type)
                          .bind("start_date", theInterval.getStart().toString())
                          .bind("end_date", theInterval.getEnd().toString())

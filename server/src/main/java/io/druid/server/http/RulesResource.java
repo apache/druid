@@ -17,6 +17,7 @@
 
 package io.druid.server.http;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
@@ -79,6 +80,7 @@ public class RulesResource
     return Response.ok(databaseRuleManager.getRules(dataSourceName))
                    .build();
   }
+
   // default value is used for backwards compatibility
   @POST
   @Path("/{dataSourceName}")
@@ -112,6 +114,23 @@ public class RulesResource
     Interval theInterval = interval == null ? null : new Interval(interval);
     return Response.ok(auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval))
                    .build();
+  }
+
+  @GET
+  @Path("/history")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getDatasourceRuleHistory(
+      @QueryParam("interval") final String interval
+  )
+  {
+    try {
+      Interval theInterval = interval == null ? null : new Interval(interval);
+      return Response.ok(auditManager.fetchAuditHistory("rules", theInterval))
+                     .build();
+    }
+    catch (IllegalArgumentException e) {
+      return Response.serverError().entity(ImmutableMap.<String, Object>of("error", e.getMessage())).build();
+    }
   }
 
 }
