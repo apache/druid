@@ -62,7 +62,7 @@ public class TestDerbyConnector extends DerbyConnector
     }
   }
 
-  private static String dbSafeUUID()
+  public static String dbSafeUUID()
   {
     return UUID.randomUUID().toString().replace("-", "");
   }

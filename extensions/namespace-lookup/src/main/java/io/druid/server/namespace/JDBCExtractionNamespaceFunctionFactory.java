@@ -21,27 +21,21 @@ package io.druid.server.namespace;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.FoldController;
-import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
-import org.skife.jdbi.v2.util.StringMapper;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -82,7 +76,7 @@ public class JDBCExtractionNamespaceFunctionFactory
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
     final Long lastDBUpdate = lastUpdates(namespace);
-    if(lastDBUpdate != null && lastDBUpdate <= lastCheck){
+    if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
       return new Callable<String>()
       {
         @Override
@@ -132,23 +126,7 @@ public class JDBCExtractionNamespaceFunctionFactory
                             return new Pair<String, String>(r.getString(keyColumn), r.getString(valueColumn));
                           }
                         }
-                    ).fold(
-                        new LinkedList<Pair<String, String>>(),
-                        new Folder3<LinkedList<Pair<String, String>>, Pair<String, String>>()
-                        {
-                          @Override
-                          public LinkedList<Pair<String, String>> fold(
-                              LinkedList<Pair<String, String>> accumulator,
-                              Pair<String, String> rs,
-                              FoldController control,
-                              StatementContext ctx
-                          ) throws SQLException
-                          {
-                            accumulator.add(rs);
-                            return accumulator;
-                          }
-                        }
-                    );
+                    ).list();
               }
             }
         );

@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicReference;
 })
 public abstract class NamespaceExtractionCacheManager
 {
-  private static class NamespaceImplData
+  protected static class NamespaceImplData
   {
     public NamespaceImplData(
         final ListenableFuture<?> future,
