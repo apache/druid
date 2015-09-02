@@ -131,11 +131,12 @@ public class URIExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return String.format(
-        "URIExtractionNamespace = { namespace = %s, uri = %s, namespaceParseSpec = %s, pollPeriod = %s }",
+        "URIExtractionNamespace = { namespace = %s, uri = %s, namespaceParseSpec = %s, pollPeriod = %s, versionRegex = %s }",
         namespace,
         uri.toString(),
         namespaceParseSpec.toString(),
-        pollPeriod.toString()
+        pollPeriod.toString(),
+        versionRegex
     );
   }
 
