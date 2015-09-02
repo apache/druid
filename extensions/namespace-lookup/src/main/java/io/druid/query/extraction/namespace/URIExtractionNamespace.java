@@ -187,18 +187,18 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public Map<String, String> parse(String input)
     {
       final Map<String, Object> inner = delegate.parse(input);
-      final String k = (String) Preconditions.checkNotNull(
+      final String k = Preconditions.checkNotNull(
           inner.get(key),
           "Key column [%s] missing data in line [%s]",
           key,
           input
-      );
-      final String val = (String) Preconditions.checkNotNull(
+      ).toString(); // Just in case is long
+      final String val = Preconditions.checkNotNull(
           inner.get(value),
           "Value column [%s] missing data in line [%s]",
           value,
           input
-      );
+      ).toString();
       return ImmutableMap.<String, String>of(k, val);
     }
 
