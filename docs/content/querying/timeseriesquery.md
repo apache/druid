@@ -70,3 +70,47 @@ To pull it all together, the above query would return 2 data points, one for eac
   }
 ]
 ```
+
+#### Zero-filling
+
+Timeseries queries normally fill empty interior time buckets with zeroes. For example, if you issue a "day" granularity
+timeseries query for the interval 2012-01-01/2012-01-04, and no data exists for 2012-01-02, you will receive:
+
+```json
+[
+  {
+    "timestamp": "2012-01-01T00:00:00.000Z",
+    "result": { "sample_name1": <some_value> }
+  },
+  {
+   "timestamp": "2012-01-02T00:00:00.000Z",
+   "result": { "sample_name1": 0 }
+  },
+  {
+    "timestamp": "2012-01-03T00:00:00.000Z",
+    "result": { "sample_name1": <some_value> }
+  }
+]
+```
+
+Time buckets that lie completely outside the data interval are not zero-filled.
+
+You can disable all zero-filling with the context flag "skipEmptyBuckets". In this mode, the data point for 2012-01-02
+would be omitted from the results.
+
+A query with this context flag set would look like:
+
+```json
+{
+  "queryType": "timeseries",
+  "dataSource": "sample_datasource",
+  "granularity": "day",
+  "aggregations": [
+    { "type": "longSum", "name": "sample_name1", "fieldName": "sample_fieldName1" }
+  ],
+  "intervals": [ "2012-01-01T00:00:00.000/2012-01-04T00:00:00.000" ],
+  "context" : {
+    "skipEmptyBuckets": "true"
+  }
+}
+```
