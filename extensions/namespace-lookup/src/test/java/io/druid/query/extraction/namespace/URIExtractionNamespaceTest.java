@@ -327,12 +327,98 @@ public class URIExtractionNamespaceTest
   public void testExplicitJson() throws IOException
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
-    URIExtractionNamespace namespace = mapper.readValue("{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\", \"namespace\":\"testNamespace\"}", URIExtractionNamespace.class);
+    URIExtractionNamespace namespace = mapper.readValue(
+        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\", \"namespace\":\"testNamespace\"}",
+        URIExtractionNamespace.class
+    );
 
-    Assert.assertEquals(URIExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(), namespace.getNamespaceParseSpec().getClass().getCanonicalName());
+    Assert.assertEquals(
+        URIExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
+        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+    );
     Assert.assertEquals("file:/foo", namespace.getUri().toString());
     Assert.assertEquals("testNamespace", namespace.getNamespace());
     Assert.assertEquals("a.b.c", namespace.getVersionRegex());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
+  }
+
+  @Test
+  public void testFlatDataNumeric()
+  {
+    final String keyField = "keyField";
+    final String valueField = "valueField";
+    final int n = 341879;
+    final String nString = String.format("%d", n);
+    URIExtractionNamespace.JSONFlatDataParser parser = new URIExtractionNamespace.JSONFlatDataParser(
+        new ObjectMapper(),
+        keyField,
+        valueField
+    );
+    Assert.assertEquals(
+        "num string value",
+        ImmutableMap.of("B", nString),
+        parser.getParser()
+              .parse(
+                  String.format(
+                      "{\"%s\":\"B\", \"%s\":\"%d\", \"FOO\":\"BAR\"}",
+                      keyField,
+                      valueField,
+                      n
+                  )
+              )
+    );
+    Assert.assertEquals(
+        "num string key",
+        ImmutableMap.of(nString, "C"),
+        parser.getParser()
+              .parse(
+                  String.format(
+                      "{\"%s\":\"%d\", \"%s\":\"C\", \"FOO\":\"BAR\"}",
+                      keyField,
+                      n,
+                      valueField
+                  )
+              )
+    );
+    Assert.assertEquals(
+        "num value",
+        ImmutableMap.of("B", nString),
+        parser.getParser()
+              .parse(
+                  String.format(
+                      "{\"%s\":\"B\", \"%s\":%d, \"FOO\":\"BAR\"}",
+                      keyField,
+                      valueField,
+                      n
+                  )
+              )
+    );
+    Assert.assertEquals(
+        "num key",
+        ImmutableMap.of(nString, "C"),
+        parser.getParser()
+              .parse(
+                  String.format(
+                      "{\"%s\":%d, \"%s\":\"C\", \"FOO\":\"BAR\"}",
+                      keyField,
+                      n,
+                      valueField
+                  )
+              )
+    );
+  }
+
+  @Test
+  public void testSimpleJsonNumeric()
+  {
+    final URIExtractionNamespace.ObjectMapperFlatDataParser parser = new URIExtractionNamespace.ObjectMapperFlatDataParser(
+        registerTypes(new DefaultObjectMapper())
+    );
+    final int n = 341879;
+    final String nString = String.format("%d", n);
+    Assert.assertEquals(
+        ImmutableMap.of("key", nString),
+        parser.getParser().parse(String.format("{\"key\":%d}", n))
+    );
   }
 }
