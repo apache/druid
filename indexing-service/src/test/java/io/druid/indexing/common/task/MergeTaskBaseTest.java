@@ -41,7 +41,7 @@ public class MergeTaskBaseTest
           .add(segmentBuilder.interval(new Interval("2012-01-03/2012-01-05")).build())
           .build();
 
-  final MergeTaskBase testMergeTaskBase = new MergeTaskBase(null, "foo", segments)
+  final MergeTaskBase testMergeTaskBase = new MergeTaskBase(null, "foo", segments, null)
   {
     @Override
     protected File merge(Map<DataSegment, File> segments, File outDir) throws Exception

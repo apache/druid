@@ -123,7 +123,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     // better way to achieve this is to pass toolbox to Firehose, The instance is initialized Lazily on connect method.
     // Noop Task is just used to create the toolbox and list segments.
     final TaskToolbox toolbox = injector.getInstance(TaskToolboxFactory.class).build(
-        new NoopTask("reingest", 0, 0, null, null)
+        new NoopTask("reingest", 0, 0, null, null, null)
     );
 
     try {

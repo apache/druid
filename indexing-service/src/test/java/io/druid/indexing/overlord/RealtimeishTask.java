@@ -41,12 +41,12 @@ public class RealtimeishTask extends AbstractTask
 {
   public RealtimeishTask()
   {
-    super("rt1", "rt", new TaskResource("rt1", 1), "foo");
+    super("rt1", "rt", new TaskResource("rt1", 1), "foo", null);
   }
 
   public RealtimeishTask(String id, String groupId, TaskResource taskResource, String dataSource)
   {
-    super(id, groupId, taskResource, dataSource);
+    super(id, groupId, taskResource, dataSource, null);
   }
 
   @Override

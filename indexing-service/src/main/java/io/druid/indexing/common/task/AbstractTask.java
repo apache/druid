@@ -28,6 +28,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -49,22 +50,25 @@ public abstract class AbstractTask implements Task
   @JsonIgnore
   private final String dataSource;
 
-  protected AbstractTask(String id, String dataSource)
+  private final Map<String, Object> context;
+
+  protected AbstractTask(String id, String dataSource, Map<String, Object> context)
   {
-    this(id, id, new TaskResource(id, 1), dataSource);
+    this(id, id, new TaskResource(id, 1), dataSource, context);
   }
 
-  protected AbstractTask(String id, String groupId, String dataSource)
+  protected AbstractTask(String id, String groupId, String dataSource, Map<String, Object> context)
   {
-    this(id, groupId, new TaskResource(id, 1), dataSource);
+    this(id, groupId, new TaskResource(id, 1), dataSource, context);
   }
 
-  protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource)
+  protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource, Map<String, Object> context)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.groupId = Preconditions.checkNotNull(groupId, "groupId");
     this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.context = context;
   }
 
   public static String makeId(String id, final String typeName, String dataSource, Interval interval)
@@ -179,4 +183,18 @@ public abstract class AbstractTask implements Task
   {
     return toolbox.getTaskActionClient().submit(new LockListAction());
   }
+
+  @Override
+  @JsonProperty
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
+  @Override
+  public Object getContextValue(String key)
+  {
+    return context == null ? null : context.get(key);
+  }
+
 }

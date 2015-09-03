@@ -58,6 +58,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
+import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -146,7 +147,8 @@ public class IndexTask extends AbstractFixedIntervalTask
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") IndexIngestionSpec ingestionSchema,
-      @JacksonInject ObjectMapper jsonMapper
+      @JacksonInject ObjectMapper jsonMapper,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -154,7 +156,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         makeId(id, ingestionSchema),
         taskResource,
         makeDataSource(ingestionSchema),
-        makeInterval(ingestionSchema)
+        makeInterval(ingestionSchema),
+        context
     );
 
 

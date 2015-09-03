@@ -80,7 +80,8 @@ public class TaskSerdeTest
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        jsonMapper
+        jsonMapper,
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -124,7 +125,8 @@ public class TaskSerdeTest
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        jsonMapper
+        jsonMapper,
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -164,7 +166,8 @@ public class TaskSerdeTest
         ImmutableList.<AggregatorFactory>of(
             new CountAggregatorFactory("cnt")
         ),
-        indexSpec
+        indexSpec,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -192,7 +195,8 @@ public class TaskSerdeTest
     final KillTask task = new KillTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D")
+        new Interval("2010-01-01/P1D"),
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -216,7 +220,8 @@ public class TaskSerdeTest
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
         null,
         false,
-        true
+        true,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -242,7 +247,8 @@ public class TaskSerdeTest
         DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
         indexSpec,
         false,
-        true
+        true,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -302,7 +308,8 @@ public class TaskSerdeTest
                 null,
                 0.3F
             )
-        )
+        ),
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -351,7 +358,8 @@ public class TaskSerdeTest
         ImmutableList.of(
             DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
         ),
-        indexSpec
+        indexSpec,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -375,7 +383,8 @@ public class TaskSerdeTest
     final ArchiveTask task = new ArchiveTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D")
+        new Interval("2010-01-01/P1D"),
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -398,7 +407,8 @@ public class TaskSerdeTest
     final RestoreTask task = new RestoreTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D")
+        new Interval("2010-01-01/P1D"),
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -432,7 +442,8 @@ public class TaskSerdeTest
         ),
         indexSpec,
         false,
-        true
+        true,
+        null
     );
     final String json = jsonMapper.writeValueAsString(task);
     final ConvertSegmentTask taskFromJson = jsonMapper.readValue(json, ConvertSegmentTask.class);
@@ -457,7 +468,8 @@ public class TaskSerdeTest
         segment,
         new IndexSpec(new RoaringBitmapSerdeFactory(), "lzf", "uncompressed"),
         false,
-        true
+        true,
+        null
     );
     final String json = jsonMapper.writeValueAsString(convertSegmentTaskOriginal);
     final Task task = jsonMapper.readValue(json, Task.class);
@@ -491,7 +503,8 @@ public class TaskSerdeTest
         null,
         "foo",
         new Interval("2010-01-01/P1D"),
-        ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what")
+        ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"),
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -527,7 +540,8 @@ public class TaskSerdeTest
         null,
         null,
         "blah",
-        jsonMapper
+        jsonMapper,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);

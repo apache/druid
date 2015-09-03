@@ -63,7 +63,8 @@ public class HadoopConverterTask extends ConvertSegmentTask
       @JsonProperty("distributedSuccessCache") URI distributedSuccessCache,
       @JsonProperty("jobPriority") String jobPriority,
       @JsonProperty("segmentOutputPath") String segmentOutputPath,
-      @JsonProperty("classpathPrefix") String classpathPrefix
+      @JsonProperty("classpathPrefix") String classpathPrefix,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -78,7 +79,8 @@ public class HadoopConverterTask extends ConvertSegmentTask
         null, // Always call subtask codepath
         indexSpec,
         force,
-        validate == null ? true : validate
+        validate == null ? true : validate,
+        context
     );
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
     this.distributedSuccessCache = Preconditions.checkNotNull(distributedSuccessCache, "distributedSuccessCache");
@@ -130,13 +132,15 @@ public class HadoopConverterTask extends ConvertSegmentTask
       final Iterable<DataSegment> segments,
       final IndexSpec indexSpec,
       final boolean force,
-      final boolean validate
+      final boolean validate,
+      Map<String, Object> context
   )
   {
     return Collections.<Task>singleton(
         new ConverterSubTask(
             ImmutableList.copyOf(segments),
-            this
+            this,
+            context
         )
     );
   }
@@ -164,7 +168,8 @@ public class HadoopConverterTask extends ConvertSegmentTask
     @JsonCreator
     public ConverterSubTask(
         @JsonProperty("segments") List<DataSegment> segments,
-        @JsonProperty("parent") HadoopConverterTask parent
+        @JsonProperty("parent") HadoopConverterTask parent,
+        @JsonProperty("context") Map<String, Object> context
     )
     {
       super(
@@ -175,7 +180,8 @@ public class HadoopConverterTask extends ConvertSegmentTask
               parent.getInterval().getEnd()
           ),
           parent.getDataSource(),
-          parent.getHadoopDependencyCoordinates()
+          parent.getHadoopDependencyCoordinates(),
+          context
       );
       this.segments = segments;
       this.parent = parent;

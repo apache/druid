@@ -69,7 +69,7 @@ public class TestMergeTask extends MergeTask
       @JsonProperty("indexSpec") IndexSpec indexSpec
   )
   {
-    super(id, dataSource, segments, aggregators, indexSpec);
+    super(id, dataSource, segments, aggregators, indexSpec, null);
     this.id = id;
   }
 
