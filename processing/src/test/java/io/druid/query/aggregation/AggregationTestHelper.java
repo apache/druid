@@ -29,7 +29,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
-import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
@@ -63,9 +62,9 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -89,8 +88,11 @@ public class AggregationTestHelper
   private final GroupByQueryQueryToolChest toolChest;
   private final GroupByQueryRunnerFactory factory;
 
-  public AggregationTestHelper(List<? extends Module> jsonModulesToRegister)
+  private final TemporaryFolder tempFolder;
+
+  public AggregationTestHelper(List<? extends Module> jsonModulesToRegister, TemporaryFolder tempFoler)
   {
+    this.tempFolder = tempFoler;
     mapper = new DefaultObjectMapper();
 
     for(Module mod : jsonModulesToRegister) {
@@ -141,13 +143,9 @@ public class AggregationTestHelper
       String groupByQueryJson
   ) throws Exception
   {
-    File segmentDir = Files.createTempDir();
-    try {
-      createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
-      return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
-    } finally {
-      FileUtils.deleteDirectory(segmentDir);
-    }
+    File segmentDir = tempFolder.newFolder();
+    createIndex(inputDataFile, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
+    return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
   }
 
   public Sequence<Row> createIndexAndRunQueryOnSegment(
@@ -160,13 +158,9 @@ public class AggregationTestHelper
       String groupByQueryJson
   ) throws Exception
   {
-    File segmentDir = Files.createTempDir();
-    try {
-      createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
-      return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
-    } finally {
-      FileUtils.deleteDirectory(segmentDir);
-    }
+    File segmentDir = tempFolder.newFolder();
+    createIndex(inputDataStream, parserJson, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
+    return runQueryOnSegments(Lists.newArrayList(segmentDir), groupByQueryJson);
   }
 
   public void createIndex(
@@ -255,7 +249,7 @@ public class AggregationTestHelper
           }
         }
         catch (IndexSizeExceededException ex) {
-          File tmp = Files.createTempDir();
+          File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
           IndexMerger.persist(index, tmp, null, new IndexSpec());
           index.close();
@@ -264,7 +258,7 @@ public class AggregationTestHelper
       }
 
       if (toMerge.size() > 0) {
-        File tmp = Files.createTempDir();
+        File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
         IndexMerger.persist(index, tmp, null, new IndexSpec());
 
@@ -284,10 +278,6 @@ public class AggregationTestHelper
     finally {
       if (index != null) {
         index.close();
-      }
-
-      for (File file : toMerge) {
-        FileUtils.deleteDirectory(file);
       }
     }
   }
