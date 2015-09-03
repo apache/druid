@@ -81,11 +81,12 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       Interval interval,
       IndexSpec indexSpec,
       boolean force,
-      boolean validate
+      boolean validate,
+      Map<String, Object> context
   )
   {
     final String id = makeId(dataSource, interval);
-    return new ConvertSegmentTask(id, dataSource, interval, null, indexSpec, force, validate);
+    return new ConvertSegmentTask(id, dataSource, interval, null, indexSpec, force, validate, context);
   }
 
   /**
@@ -98,12 +99,13 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
    *
    * @return A SegmentConverterTask for the segment with the indexSpec specified.
    */
-  public static ConvertSegmentTask create(DataSegment segment, IndexSpec indexSpec, boolean force, boolean validate)
+  public static ConvertSegmentTask create(DataSegment segment, IndexSpec indexSpec, boolean force, boolean validate, Map<String, Object> context
+  )
   {
     final Interval interval = segment.getInterval();
     final String dataSource = segment.getDataSource();
     final String id = makeId(dataSource, interval);
-    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, force, validate);
+    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, force, validate, context);
   }
 
   protected static String makeId(String dataSource, Interval interval)
@@ -121,19 +123,20 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       @JsonProperty("segment") DataSegment segment,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("force") Boolean force,
-      @JsonProperty("validate") Boolean validate
+      @JsonProperty("validate") Boolean validate,
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     final boolean isForce = force == null ? false : force;
     final boolean isValidate = validate == null ? true : validate;
     if (id == null) {
       if (segment == null) {
-        return create(dataSource, interval, indexSpec, isForce, isValidate);
+        return create(dataSource, interval, indexSpec, isForce, isValidate, context);
       } else {
-        return create(segment, indexSpec, isForce, isValidate);
+        return create(segment, indexSpec, isForce, isValidate, context);
       }
     }
-    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, isForce, isValidate);
+    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, isForce, isValidate, context);
   }
 
   protected ConvertSegmentTask(
@@ -143,10 +146,11 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       DataSegment segment,
       IndexSpec indexSpec,
       boolean force,
-      boolean validate
+      boolean validate,
+      Map<String, Object> context
   )
   {
-    super(id, dataSource, interval);
+    super(id, dataSource, interval, context);
     this.segment = segment;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
     this.force = force;
@@ -224,7 +228,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       segmentsToUpdate = Collections.singleton(segment);
     }
     // Vestigial from a past time when this task spawned subtasks.
-    for (final Task subTask : generateSubTasks(getGroupId(), segmentsToUpdate, indexSpec, force, validate)) {
+    for (final Task subTask : generateSubTasks(getGroupId(), segmentsToUpdate, indexSpec, force, validate, getContext())) {
       final TaskStatus status = subTask.run(toolbox);
       if (!status.isSuccess()) {
         return TaskStatus.fromCode(getId(), status.getStatusCode());
@@ -238,7 +242,8 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       final Iterable<DataSegment> segments,
       final IndexSpec indexSpec,
       final boolean force,
-      final boolean validate
+      final boolean validate,
+      final Map<String, Object> context
   )
   {
     return Iterables.transform(
@@ -248,7 +253,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
           @Override
           public Task apply(DataSegment input)
           {
-            return new SubTask(groupId, input, indexSpec, force, validate);
+            return new SubTask(groupId, input, indexSpec, force, validate, context);
           }
         }
     );
@@ -287,7 +292,8 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         @JsonProperty("segment") DataSegment segment,
         @JsonProperty("indexSpec") IndexSpec indexSpec,
         @JsonProperty("force") Boolean force,
-        @JsonProperty("validate") Boolean validate
+        @JsonProperty("validate") Boolean validate,
+        @JsonProperty("context") Map<String, Object> context
     )
     {
       super(
@@ -300,7 +306,8 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
           ),
           groupId,
           segment.getDataSource(),
-          segment.getInterval()
+          segment.getInterval(),
+          context
       );
       this.segment = segment;
       this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;

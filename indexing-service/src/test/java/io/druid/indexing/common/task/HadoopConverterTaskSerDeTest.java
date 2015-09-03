@@ -82,7 +82,8 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         PRIORITY,
         OUTPUT_PATH,
-        CLASSPATH_PREFIX
+        CLASSPATH_PREFIX,
+        null
     );
     final String strOrig = objectMapper.writeValueAsString(orig);
     HadoopConverterTask other = objectMapper.readValue(strOrig, HadoopConverterTask.class);
@@ -106,12 +107,15 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         PRIORITY,
         OUTPUT_PATH,
-        CLASSPATH_PREFIX
+        CLASSPATH_PREFIX,
+        null
     );
     HadoopConverterTask.ConverterSubTask subTask = new HadoopConverterTask.ConverterSubTask(
         ImmutableList.of(
             DATA_SEGMENT
-        ), parent
+        ),
+        parent,
+        null
     );
     final String origString = objectMapper.writeValueAsString(subTask);
     final HadoopConverterTask.ConverterSubTask otherSub = objectMapper.readValue(
@@ -156,12 +160,15 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         PRIORITY,
         OUTPUT_PATH,
-        CLASSPATH_PREFIX
+        CLASSPATH_PREFIX,
+        null
     );
     HadoopConverterTask.ConverterSubTask subTask = new HadoopConverterTask.ConverterSubTask(
         ImmutableList.of(
             DATA_SEGMENT
-        ), parent
+        ),
+        parent,
+        null
     );
     Assert.assertEquals(parent.getType(), "hadoop_convert_segment");
     Assert.assertEquals(parent.getType() + "_sub", subTask.getType());
@@ -181,7 +188,8 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         PRIORITY,
         OUTPUT_PATH,
-        CLASSPATH_PREFIX
+        CLASSPATH_PREFIX,
+        null
     );
     Assert.assertTrue(orig.isValidate());
   }
@@ -200,6 +208,7 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         null,
         OUTPUT_PATH,
+        null,
         null
     );
     Assert.assertEquals(DATA_SOURCE, parent.getDataSource());
@@ -224,7 +233,8 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         PRIORITY,
         OUTPUT_PATH,
-        CLASSPATH_PREFIX
+        CLASSPATH_PREFIX,
+        null
     );
     orig.getSegment();
   }
@@ -243,6 +253,7 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         null,
         OUTPUT_PATH,
+        null,
         null
     );
   }
@@ -261,6 +272,7 @@ public class HadoopConverterTaskSerDeTest
         DISTRIBUTED_CACHE,
         null,
         OUTPUT_PATH,
+        null,
         null
     );
   }
@@ -279,6 +291,7 @@ public class HadoopConverterTaskSerDeTest
         null,
         null,
         OUTPUT_PATH,
+        null,
         null
     );
   }
@@ -295,6 +308,7 @@ public class HadoopConverterTaskSerDeTest
         null,
         null,
         DISTRIBUTED_CACHE,
+        null,
         null,
         null,
         null
