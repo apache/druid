@@ -186,6 +186,10 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     return delegateQueue.size();
   }
 
+  public int getDefaultPriority()
+  {
+    return defaultPriority;
+  }
 
   public static class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
       ListenableFuture<V>,
@@ -269,5 +273,63 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     {
       return Ints.compare(otherTask.getPriority(), getPriority());
     }
+  }
+
+  public static <V> PrioritizedCallable<V> wrapCallable(
+      final PrioritizedCallable<V> callable,
+      final Runnable pre,
+      final Runnable post
+  )
+  {
+    return new PrioritizedCallable<V>()
+    {
+      @Override
+      public int getPriority()
+      {
+        return callable.getPriority();
+      }
+
+      @Override
+      public V call() throws Exception
+      {
+        if (pre != null) {
+          pre.run();
+        }
+        final V retVal = callable.call();
+        if (post != null) {
+          post.run();
+        }
+        return retVal;
+      }
+    };
+  }
+
+  public static PrioritizedRunnable wrapRunnable(
+      final PrioritizedRunnable runnable,
+      final Runnable pre,
+      final Runnable post
+  )
+  {
+    return new PrioritizedRunnable()
+    {
+
+      @Override
+      public void run()
+      {
+        if (pre != null) {
+          pre.run();
+        }
+        runnable.run();
+        if (post != null) {
+          post.run();
+        }
+      }
+
+      @Override
+      public int getPriority()
+      {
+        return runnable.getPriority();
+      }
+    };
   }
 }
