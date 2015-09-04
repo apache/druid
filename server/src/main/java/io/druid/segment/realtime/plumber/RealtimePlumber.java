@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -118,6 +119,7 @@ public class RealtimePlumber implements Plumber
       String.CASE_INSENSITIVE_ORDER
   );
 
+  private volatile long nextFlush = 0;
   private volatile boolean shuttingDown = false;
   private volatile boolean stopped = false;
   private volatile boolean cleanShutdown = true;
@@ -186,22 +188,28 @@ public class RealtimePlumber implements Plumber
     startPersistThread();
     // Push pending sinks bootstrapped from previous run
     mergeAndPush();
-
+    resetNextFlush();
     return retVal;
   }
 
   @Override
-  public int add(InputRow row) throws IndexSizeExceededException
+  public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
   {
     final Sink sink = getSink(row.getTimestampFromEpoch());
     if (sink == null) {
       return -1;
     }
 
-    return sink.add(row);
+    final int numRows = sink.add(row);
+
+    if (!sink.canAppendRow() || System.currentTimeMillis() > nextFlush) {
+      persist(committerSupplier.get());
+    }
+
+    return numRows;
   }
 
-  public Sink getSink(long timestamp)
+  private Sink getSink(long timestamp)
   {
     if (!rejectionPolicy.accept(timestamp)) {
       return null;
@@ -339,27 +347,6 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public void persist(final Runnable commitRunnable)
-  {
-    persist(
-        new Committer()
-        {
-          @Override
-          public Object getMetadata()
-          {
-            return null;
-          }
-
-          @Override
-          public void run()
-          {
-            commitRunnable.run();
-          }
-        }
-    );
-  }
-
-  @Override
   public void persist(final Committer committer)
   {
     final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
@@ -442,6 +429,7 @@ public class RealtimePlumber implements Plumber
       log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
     }
     runExecStopwatch.stop();
+    resetNextFlush();
   }
 
   // Submits persist-n-merge task for a Sink to the mergeExecutor
@@ -604,6 +592,11 @@ public class RealtimePlumber implements Plumber
     if (!cleanShutdown) {
       throw new ISE("Exception occurred during persist and merge.");
     }
+  }
+
+  private void resetNextFlush()
+  {
+    nextFlush = new DateTime().plus(config.getIntermediatePersistPeriod()).getMillis();
   }
 
   protected void initializeExecutors()

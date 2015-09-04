@@ -21,6 +21,7 @@ package io.druid.segment.realtime;
 
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -48,11 +49,9 @@ import io.druid.query.UnionQueryRunner;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.Sink;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -304,7 +303,6 @@ public class RealtimeManager implements QuerySegmentWalker
 
     private void runFirehoseV2(FirehoseV2 firehose)
     {
-      final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
       try {
         firehose.start();
       }
@@ -312,8 +310,9 @@ public class RealtimeManager implements QuerySegmentWalker
         log.error(e, "Failed to start firehoseV2");
         return;
       }
-      long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-      log.info("FirehoseV2 started with nextFlush [%s]", nextFlush);
+
+      log.info("FirehoseV2 started");
+      final Supplier<Committer> committerSupplier = Committers.supplierFromFirehoseV2(firehose);
       boolean haveRow = true;
       while (haveRow) {
         InputRow inputRow = null;
@@ -321,14 +320,7 @@ public class RealtimeManager implements QuerySegmentWalker
         try {
           inputRow = firehose.currRow();
           if (inputRow != null) {
-            try {
-              numRows = plumber.add(inputRow);
-            }
-            catch (IndexSizeExceededException e) {
-              log.debug(e, "Index limit exceeded: %s", e.getMessage());
-              nextFlush = doIncrementalPersist(firehose.makeCommitter(), intermediatePersistPeriod);
-              continue;
-            }
+            numRows = plumber.add(inputRow, committerSupplier);
             if (numRows < 0) {
               metrics.incrementThrownAway();
               log.debug("Throwing away event[%s]", inputRow);
@@ -351,88 +343,50 @@ public class RealtimeManager implements QuerySegmentWalker
         catch (Exception e) {
           log.debug(e, "exception in firehose.advance(), considering unparseable row");
           metrics.incrementUnparseable();
-          continue;
-        }
-
-        try {
-          final Sink sink = inputRow != null ? plumber.getSink(inputRow.getTimestampFromEpoch()) : null;
-          if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
-            nextFlush = doIncrementalPersist(firehose.makeCommitter(), intermediatePersistPeriod);
-          }
-        }
-        catch (Exception e) {
-          log.makeAlert(
-              e,
-              "An exception happened while queue to persist!?  We hope it is transient. Ignore and continue."
-          );
         }
       }
     }
 
-    private long doIncrementalPersist(Committer committer, Period intermediatePersistPeriod)
-    {
-      plumber.persist(committer);
-      return new DateTime().plus(intermediatePersistPeriod).getMillis();
-    }
-
     private void runFirehose(Firehose firehose)
     {
-
-      final Period intermediatePersistPeriod = config.getIntermediatePersistPeriod();
-
-      long nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-
+      final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       while (firehose.hasMore()) {
-        InputRow inputRow = null;
+        final InputRow inputRow;
         try {
-          try {
-            inputRow = firehose.nextRow();
+          inputRow = firehose.nextRow();
 
-            if (inputRow == null) {
-              log.debug("thrown away null input row, considering unparseable");
-              metrics.incrementUnparseable();
-              continue;
-            }
-          }
-          catch (Exception e) {
-            log.debug(e, "thrown away line due to exception, considering unparseable");
+          if (inputRow == null) {
+            log.debug("thrown away null input row, considering unparseable");
             metrics.incrementUnparseable();
             continue;
           }
-
-          boolean lateEvent = false;
-          boolean indexLimitExceeded = false;
-          try {
-            lateEvent = plumber.add(inputRow) == -1;
-          }
-          catch (IndexSizeExceededException e) {
-            log.info("Index limit exceeded: %s", e.getMessage());
-            indexLimitExceeded = true;
-          }
-          if (indexLimitExceeded || lateEvent) {
-            metrics.incrementThrownAway();
-            log.debug("Throwing away event[%s]", inputRow);
-
-            if (indexLimitExceeded || System.currentTimeMillis() > nextFlush) {
-              plumber.persist(firehose.commit());
-              nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-            }
-
-            continue;
-          }
-          final Sink sink = plumber.getSink(inputRow.getTimestampFromEpoch());
-          if ((sink != null && !sink.canAppendRow()) || System.currentTimeMillis() > nextFlush) {
-            plumber.persist(firehose.commit());
-            nextFlush = new DateTime().plus(intermediatePersistPeriod).getMillis();
-          }
-          metrics.incrementProcessed();
         }
         catch (ParseException e) {
-          if (inputRow != null) {
-            log.error(e, "unparseable line: %s", inputRow);
-          }
+          log.debug(e, "thrown away line due to exception, considering unparseable");
           metrics.incrementUnparseable();
+          continue;
         }
+
+        boolean lateEvent = false;
+        boolean indexLimitExceeded = false;
+        try {
+          lateEvent = plumber.add(inputRow, committerSupplier) == -1;
+        }
+        catch (IndexSizeExceededException e) {
+          log.info("Index limit exceeded: %s", e.getMessage());
+          indexLimitExceeded = true;
+        }
+        if (indexLimitExceeded || lateEvent) {
+          metrics.incrementThrownAway();
+          log.debug("Throwing away event[%s]", inputRow);
+
+          if (indexLimitExceeded) {
+            plumber.persist(committerSupplier.get());
+          }
+
+          continue;
+        }
+        metrics.incrementProcessed();
       }
     }
 

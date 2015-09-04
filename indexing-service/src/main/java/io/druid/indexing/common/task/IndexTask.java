@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -34,6 +35,7 @@ import com.google.common.hash.Hashing;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -53,6 +55,7 @@ import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -118,18 +121,18 @@ public class IndexTask extends AbstractFixedIntervalTask
     );
   }
 
-  static RealtimeTuningConfig convertTuningConfig(ShardSpec spec, IndexTuningConfig config)
+  static RealtimeTuningConfig convertTuningConfig(ShardSpec shardSpec, int rowFlushBoundary, IndexSpec indexSpec)
   {
     return new RealtimeTuningConfig(
-        config.getRowFlushBoundary(),
+        rowFlushBoundary,
         null,
         null,
         null,
         null,
         null,
         null,
-        spec,
-        config.getIndexSpec(),
+        shardSpec,
+        indexSpec,
         null,
         null,
         null,
@@ -343,9 +346,15 @@ public class IndexTask extends AbstractFixedIntervalTask
       }
     };
 
+    // rowFlushBoundary for this job
+    final int myRowFlushBoundary = rowFlushBoundary > 0
+                                   ? rowFlushBoundary
+                                   : toolbox.getConfig().getDefaultRowFlushBoundary();
+
     // Create firehose + plumber
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser());
+    final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
@@ -353,14 +362,10 @@ public class IndexTask extends AbstractFixedIntervalTask
         tmpDir
     ).findPlumber(
         schema,
-        convertTuningConfig(shardSpec, ingestionSchema.getTuningConfig()),
+        convertTuningConfig(shardSpec, myRowFlushBoundary, ingestionSchema.getTuningConfig().getIndexSpec()),
         metrics
     );
 
-    // rowFlushBoundary for this job
-    final int myRowFlushBoundary = rowFlushBoundary > 0
-                                   ? rowFlushBoundary
-                                   : toolbox.getConfig().getDefaultRowFlushBoundary();
     final QueryGranularity rollupGran = ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity();
     try {
       plumber.startJob();
@@ -369,7 +374,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         final InputRow inputRow = firehose.nextRow();
 
         if (shouldIndex(shardSpec, interval, inputRow, rollupGran)) {
-          int numRows = plumber.add(inputRow);
+          int numRows = plumber.add(inputRow, committerSupplier);
           if (numRows == -1) {
             throw new ISE(
                 String.format(
@@ -379,10 +384,6 @@ public class IndexTask extends AbstractFixedIntervalTask
             );
           }
           metrics.incrementProcessed();
-
-          if (numRows >= myRowFlushBoundary) {
-            plumber.persist(firehose.commit());
-          }
         } else {
           metrics.incrementThrownAway();
         }
@@ -392,7 +393,7 @@ public class IndexTask extends AbstractFixedIntervalTask
       firehose.close();
     }
 
-    plumber.persist(firehose.commit());
+    plumber.persist(committerSupplier.get());
 
     try {
       plumber.finishJob();

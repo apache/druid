@@ -20,6 +20,7 @@
 package io.druid.segment.realtime;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
@@ -193,7 +194,7 @@ public class RealtimeManagerTest
     Assert.assertEquals(2, realtimeManager.getMetrics("test").unparseable());
     Assert.assertTrue(plumber.isStartedJob());
     Assert.assertTrue(plumber.isFinishedJob());
-    Assert.assertEquals(1, plumber.getPersistCount());
+    Assert.assertEquals(0, plumber.getPersistCount());
   }
 
   @Test
@@ -214,7 +215,7 @@ public class RealtimeManagerTest
     Assert.assertEquals(2, realtimeManager2.getMetrics("testV2").unparseable());
     Assert.assertTrue(plumber2.isStartedJob());
     Assert.assertTrue(plumber2.isFinishedJob());
-    Assert.assertEquals(1, plumber2.getPersistCount());
+    Assert.assertEquals(0, plumber2.getPersistCount());
   }
 
   private TestInputRowHolder makeRow(final long timestamp)
@@ -440,7 +441,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row) throws IndexSizeExceededException
+    public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
     {
       if (row == null) {
         return -1;
@@ -470,7 +471,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void persist(Runnable commitRunnable)
+    public void persist(Committer committer)
     {
       persistCount++;
     }
@@ -479,12 +480,6 @@ public class RealtimeManagerTest
     public void finishJob()
     {
       finishedJob = true;
-    }
-
-    @Override
-    public void persist(Committer commitRunnable)
-    {
-      persistCount++;
     }
   }
 }
