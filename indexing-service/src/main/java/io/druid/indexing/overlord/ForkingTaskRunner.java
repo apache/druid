@@ -215,15 +215,18 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
 
                               // Override task specific properties
-                              for (String propName : task.getContext().keySet()) {
-                                if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                                  command.add(
-                                      String.format(
-                                          "-D%s=%s",
-                                          propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                          task.getContextValue(propName)
-                                      )
-                                  );
+                              final Map<String, Object> context = task.getContext();
+                              if (context != null) {
+                                for (String propName : context.keySet()) {
+                                  if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
+                                    command.add(
+                                        String.format(
+                                            "-D%s=%s",
+                                            propName.substring(CHILD_PROPERTY_PREFIX.length()),
+                                            task.getContextValue(propName)
+                                        )
+                                    );
+                                  }
                                 }
                               }
 
