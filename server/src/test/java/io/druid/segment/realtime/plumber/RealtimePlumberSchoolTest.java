@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -235,37 +236,22 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
-    plumber.add(row);
+    final Committer committer = new Committer()
+    {
+      @Override
+      public Object getMetadata()
+      {
+        return commitMetadata;
+      }
 
-    if (commitMetadata != null) {
-      plumber.persist(
-          new Committer()
-          {
-            @Override
-            public Object getMetadata()
-            {
-              return commitMetadata;
-            }
-
-            @Override
-            public void run()
-            {
-              committed.setValue(true);
-            }
-          }
-      );
-    } else {
-      plumber.persist(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              committed.setValue(true);
-            }
-          }
-      );
-    }
+      @Override
+      public void run()
+      {
+        committed.setValue(true);
+      }
+    };
+    plumber.add(row, Suppliers.ofInstance(committer));
+    plumber.persist(committer);
 
     while (!committed.booleanValue()) {
       Thread.sleep(100);
@@ -293,20 +279,26 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
-    plumber.add(row);
+    plumber.add(row, Committers.supplierOf(Committers.nil()));
     plumber.persist(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            committed.setValue(true);
-            throw new RuntimeException();
-          }
-        }
+        Committers.supplierFromRunnable(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                committed.setValue(true);
+                throw new RuntimeException();
+              }
+            }
+        ).get()
     );
-
     while (!committed.booleanValue()) {
+      Thread.sleep(100);
+    }
+
+    // Exception may need time to propagate
+    while (metrics.failedPersists() < 1) {
       Thread.sleep(100);
     }
 
