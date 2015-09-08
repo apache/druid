@@ -18,8 +18,16 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.guava.SimpleSequence;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
@@ -37,12 +45,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -65,6 +78,52 @@ public class QueryResourceTest
     }
   };
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
+  public static final AtomicLong SLEEPY_SEGMENT_WALKER_COUNTER = new AtomicLong(0L);
+  public static final QuerySegmentWalker SLEEPY_SEGMENT_WALKER = new QuerySegmentWalker()
+  {
+    @Override
+    public <T> QueryRunner<T> getQueryRunnerForIntervals(
+        Query<T> query, final Iterable<Interval> intervals
+    )
+    {
+      return new QueryRunner<T>()
+      {
+        @Override
+        public Sequence<T> run(
+            Query<T> query, Map<String, Object> responseContext
+        )
+        {
+          return Sequences.map(
+              SimpleSequence.simple(ImmutableList.of("result")),
+              new Function<String, T>()
+              {
+                @Nullable
+                @Override
+                public T apply(String input)
+                {
+                  SLEEPY_SEGMENT_WALKER_COUNTER.incrementAndGet();
+                  try {
+                    Thread.sleep(10_000);
+                  }
+                  catch (InterruptedException e) {
+                    throw Throwables.propagate(e);
+                  }
+                  return null;
+                }
+              }
+          );
+        }
+      };
+    }
+
+    @Override
+    public <T> QueryRunner<T> getQueryRunnerForSegments(
+        Query<T> query, Iterable<SegmentDescriptor> specs
+    )
+    {
+      return getQueryRunnerForIntervals(null, null);
+    }
+  };
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
   {
     @Override
@@ -134,7 +193,8 @@ public class QueryResourceTest
         testSegmentWalker,
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
-        new QueryManager()
+        new QueryManager(),
+        MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
     );
     Response respone = queryResource.doPost(
         new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
@@ -155,7 +215,8 @@ public class QueryResourceTest
         testSegmentWalker,
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
-        new QueryManager()
+        new QueryManager(),
+        MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
     );
     Response respone = queryResource.doPost(
         new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes("UTF-8")),
@@ -164,5 +225,101 @@ public class QueryResourceTest
     );
     Assert.assertNotNull(respone);
     Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), respone.getStatus());
+  }
+
+  @Test
+  public void testTimeoutInYielder() throws IOException
+  {
+    final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+    final QueryResource sleepyQueryResource = new QueryResource(
+        serverConfig,
+        jsonMapper,
+        jsonMapper,
+        SLEEPY_SEGMENT_WALKER,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new QueryManager(),
+        executorService
+    );
+    final String query = "{\n"
+                         + "    \"queryType\": \"timeseries\",\n"
+                         + "    \"dataSource\": \"mmx_metrics\",\n"
+                         + "    \"granularity\": \"hour\",\n"
+                         + "    \"intervals\": [\n"
+                         + "      \"2014-12-17/2015-12-30\"\n"
+                         + "    ],\n"
+                         + "    \"aggregations\": [\n"
+                         + "      {\n"
+                         + "        \"type\": \"count\",\n"
+                         + "        \"name\": \"rows\"\n"
+                         + "      }\n"
+                         + "    ]\n"
+                         + "    ,\"context\":{\"timeout\":10}"
+                         + "}";
+    Response response = sleepyQueryResource.doPost(
+        new ByteArrayInputStream(StringUtils.toUtf8(query)),
+        null,
+        testServletRequest
+    );
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals("{\"error\":\"Query timeout\"}", StringUtils.fromUtf8((byte[]) response.getEntity()));
+  }
+
+  @Test
+  public void testCancel() throws IOException, ExecutionException, InterruptedException
+  {
+    final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+    final QueryResource sleepyQueryResource = new QueryResource(
+        serverConfig,
+        jsonMapper,
+        jsonMapper,
+        SLEEPY_SEGMENT_WALKER,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new QueryManager(),
+        executorService
+    );
+    final String queryId = "test cancel id";
+    final String query = "{\n"
+                         + "    \"queryType\": \"timeseries\",\n"
+                         + "    \"dataSource\": \"mmx_metrics\",\n"
+                         + "    \"granularity\": \"hour\",\n"
+                         + "    \"intervals\": [\n"
+                         + "      \"2014-12-17/2015-12-30\"\n"
+                         + "    ],\n"
+                         + "    \"aggregations\": [\n"
+                         + "      {\n"
+                         + "        \"type\": \"count\",\n"
+                         + "        \"name\": \"rows\"\n"
+                         + "      }\n"
+                         + "    ]\n"
+                         + "    ,\"context\":{\"timeout\":10,\"queryId\":\"" + queryId + "\"}"
+                         + "}";
+    final long pre = SLEEPY_SEGMENT_WALKER_COUNTER.get();
+    final ListeningExecutorService canceller = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+    final ListenableFuture<Response> cancelFuture = canceller.submit(
+        new Callable<Response>()
+        {
+          @Override
+          public Response call() throws Exception
+          {
+            while (SLEEPY_SEGMENT_WALKER_COUNTER.get() == pre) {
+              ;
+            }
+            return sleepyQueryResource.cancelQuery(queryId);
+          }
+        }
+    );
+    Response response = sleepyQueryResource.doPost(
+        new ByteArrayInputStream(StringUtils.toUtf8(query)),
+        null,
+        testServletRequest
+    );
+
+    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    Assert.assertEquals("{\"error\":\"Query cancelled\"}", StringUtils.fromUtf8((byte[]) response.getEntity()));
+
+    final Response cancelResponse = cancelFuture.get();
+    Assert.assertEquals(Response.Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
   }
 }

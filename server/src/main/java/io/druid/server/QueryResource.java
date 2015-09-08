@@ -23,6 +23,8 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -31,11 +33,12 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.QueryResourceWaitingPool;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
-import io.druid.query.DruidMetrics;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
@@ -59,6 +62,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  */
@@ -76,6 +84,7 @@ public class QueryResource
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final QueryManager queryManager;
+  private final ListeningExecutorService waitingService;
 
   @Inject
   public QueryResource(
@@ -85,7 +94,9 @@ public class QueryResource
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      QueryManager queryManager
+      QueryManager queryManager,
+      @QueryResourceWaitingPool
+      ListeningExecutorService waitingService
   )
   {
     this.config = config;
@@ -95,12 +106,13 @@ public class QueryResource
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryManager = queryManager;
+    this.waitingService = waitingService;
   }
 
   @DELETE
   @Path("{id}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getServer(@PathParam("id") String queryId)
+  public Response cancelQuery(@PathParam("id") String queryId)
   {
     queryManager.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
@@ -145,6 +157,7 @@ public class QueryResource
             )
         );
       }
+      final long timeout = Long.parseLong(query.getContextValue(QueryContextKeys.TIMEOUT).toString());
 
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
@@ -159,19 +172,53 @@ public class QueryResource
         results = res;
       }
 
-      final Yielder yielder = results.toYielder(
-          null,
-          new YieldingAccumulator()
-          {
-            @Override
-            public Object accumulate(Object accumulated, Object in)
+      final Yielder yielder;
+      try {
+        ListenableFuture<Yielder> future = waitingService.submit(
+            new Callable<Yielder>()
             {
-              yield();
-              return in;
+              @Override
+              public Yielder call() throws Exception
+              {
+                return results.toYielder(
+                    null,
+                    new YieldingAccumulator()
+                    {
+                      @Override
+                      public Object accumulate(Object accumulated, Object in)
+                      {
+                        yield();
+                        return in;
+                      }
+                    }
+                );
+              }
             }
-          }
-      );
-
+        );
+        queryManager.registerQuery(query, future);
+        yielder = future.get(timeout, TimeUnit.MILLISECONDS);
+      }
+      catch (TimeoutException ex) {
+        queryManager.cancelQuery(queryId);
+        throw new QueryInterruptedException("Query timeout");
+      }
+      catch (InterruptedException ex) {
+        queryManager.cancelQuery(queryId);
+        throw new QueryInterruptedException("Query interrupted");
+      }
+      catch (CancellationException ex) {
+        queryManager.cancelQuery(queryId);
+        throw new QueryInterruptedException("Query cancelled");
+      }
+      catch (ExecutionException ex) {
+        throw new QueryInterruptedException(
+            String.format(
+                "Query error [%s] : [%s]",
+                ex.getCause(),
+                ex.getCause().getMessage()
+            )
+        );
+      }
       try {
         final Query theQuery = query;
         return Response
@@ -189,7 +236,7 @@ public class QueryResource
                     final long queryTime = System.currentTimeMillis() - start;
                     emitter.emit(
                         DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
-                                       .build("query/time", queryTime)
+                                    .build("query/time", queryTime)
                     );
 
                     requestLogger.log(
