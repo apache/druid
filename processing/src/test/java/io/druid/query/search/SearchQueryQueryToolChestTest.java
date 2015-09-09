@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
+import io.druid.query.Druids;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
@@ -55,7 +56,7 @@ public class SearchQueryQueryToolChestTest
                         )
                     )
                 ),
-                ImmutableList.of("dim1"),
+                ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("dim1")),
                 new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
                 null,
                 null

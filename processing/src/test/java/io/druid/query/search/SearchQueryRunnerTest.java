@@ -17,7 +17,6 @@
 
 package io.druid.query.search;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -27,7 +26,11 @@ import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
@@ -38,10 +41,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -234,6 +235,44 @@ public class SearchQueryRunnerTest
               )
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .query("mark")
+              .build(),
+        expectedResults
+    );
+  }
+
+
+  @Test
+  public void testSearchWithExtractionFilter1()
+  {
+    final String automotiveSnowman = "automotive☃";
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put(
+        QueryRunnerTestHelper.qualityDimension, new HashSet<String>(Arrays.asList(automotiveSnowman))
+    );
+
+
+    final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
+      new MapLookupExtractor(ImmutableMap.of("automotive", automotiveSnowman)),
+      true,
+      null,
+      true
+    );
+
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.dataSource)
+              .granularity(QueryRunnerTestHelper.allGran)
+              .filters(new ExtractionDimFilter(QueryRunnerTestHelper.qualityDimension, automotiveSnowman, lookupExtractionFn, null))
+              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .dimensions(
+                  new ExtractionDimensionSpec(
+                      QueryRunnerTestHelper.qualityDimension,
+                      null,
+                      lookupExtractionFn,
+                      null
+                  )
+              )
+              .query("☃")
               .build(),
         expectedResults
     );
