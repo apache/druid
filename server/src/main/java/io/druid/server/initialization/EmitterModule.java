@@ -68,6 +68,7 @@ public class EmitterModule implements Module
     binder.install(new NoopEmitterModule());
     binder.install(new LogEmitterModule());
     binder.install(new HttpEmitterModule());
+    binder.install(new ComposingEmitterModule());
 
     binder.bind(Emitter.class).toProvider(new EmitterProvider(emitterType)).in(LazySingleton.class);
   }

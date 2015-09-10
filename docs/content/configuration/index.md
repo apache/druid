@@ -125,7 +125,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter`|Setting this value to "noop", "logging", or "http" will instantialize one of the emitter modules.|noop|
+|`druid.emitter`|Setting this value to "noop", "logging", or "http" will instantialize one of the emitter modules. value "composing" can be used to instantialize multiple emitter modules. |noop|
 
 #### Logging Emitter Module
 
@@ -142,6 +142,12 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |`druid.emitter.http.flushMillis`|How often to internal message buffer is flushed (data is sent).|60000|
 |`druid.emitter.http.flushCount`|How many messages can the internal message buffer hold before flushing (sending).|500|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none|
+
+#### Composing Emitter Module
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.composing.emitters`|List of emitter modules to load e.g. ["logging","http"].|[]|
 
 ### Metadata Storage
 
