@@ -70,33 +70,41 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File inDir, DataSegment segment) throws IOException
   {
-    final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
+    final ClassLoader priorLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      // See https://github.com/druid-io/druid/issues/1714
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      final String storageDir = DataSegmentPusherUtil.getHdfsStorageDir(segment);
 
-    log.info(
-        "Copying segment[%s] to HDFS at location[%s/%s]",
-        segment.getIdentifier(),
-        config.getStorageDirectory(),
-        storageDir
-    );
+      log.info(
+          "Copying segment[%s] to HDFS at location[%s/%s]",
+          segment.getIdentifier(),
+          config.getStorageDirectory(),
+          storageDir
+      );
 
-    Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
-    FileSystem fs = outFile.getFileSystem(hadoopConfig);
+      Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
+      FileSystem fs = outFile.getFileSystem(hadoopConfig);
 
-    fs.mkdirs(outFile.getParent());
-    log.info("Compressing files from[%s] to [%s]", inDir, outFile);
+      fs.mkdirs(outFile.getParent());
+      log.info("Compressing files from[%s] to [%s]", inDir, outFile);
 
-    final long size;
-    try (FSDataOutputStream out = fs.create(outFile)) {
-      size = CompressionUtils.zip(inDir, out);
+      final long size;
+      try (FSDataOutputStream out = fs.create(outFile)) {
+        size = CompressionUtils.zip(inDir, out);
+      }
+
+      return createDescriptorFile(
+          segment.withLoadSpec(makeLoadSpec(outFile))
+                 .withSize(size)
+                 .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
+          outFile.getParent(),
+          fs
+      );
     }
-
-    return createDescriptorFile(
-        segment.withLoadSpec(makeLoadSpec(outFile))
-               .withSize(size)
-               .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
-        outFile.getParent(),
-        fs
-    );
+    finally {
+      Thread.currentThread().setContextClassLoader(priorLoader);
+    }
   }
 
   private DataSegment createDescriptorFile(DataSegment segment, Path outDir, final FileSystem fs) throws IOException
