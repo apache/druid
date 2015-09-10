@@ -69,3 +69,21 @@ Please note that this is a community contributed module and does not support Cas
 |`druid.azure.maxTries`||Number of tries before cancel an Azure operation.|3|
 
 Please note that this is a community contributed module. See [Azure Services](http://azure.microsoft.com/en-us/pricing/free-trial/) for more information.
+
+### Rackspace
+
+[Rackspace Cloud Files](http://www.rackspace.com/cloud/files/) is another option for deep storage. This requires some additional druid configuration.
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.storage.type`|cloudfiles||Must be set.|
+|`druid.storage.region`||Rackspace Cloud Files region.|Must be set.|
+|`druid.storage.container`||Rackspace Cloud Files container name.|Must be set.|
+|`druid.storage.basePath`||Rackspace Cloud Files base path to use in the container.|Must be set.|
+|`druid.storage.operationMaxRetries`||Number of tries before cancel a Rackspace operation.|10|
+|`druid.cloudfiles.userName`||Rackspace Cloud username|Must be set.|
+|`druid.cloudfiles.apiKey`||Rackspace Cloud api key.|Must be set.|
+|`druid.cloudfiles.provider`|rackspace-cloudfiles-us,rackspace-cloudfiles-uk|Name of the provider depending on the region.|Must be set.|
+|`druid.cloudfiles.useServiceNet`|true,false|Whether to use the internal service net.|true|
+
+Please note that this is a community contributed module.
