@@ -125,7 +125,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter`|Setting this value to "noop", "logging", or "http" will instantialize one of the emitter modules. value "composing" can be used to instantialize multiple emitter modules. |noop|
+|`druid.emitter`|Setting this value to "noop", "logging", or "http" will initialize one of the emitter modules. value "composing" can be used to initialize multiple emitter modules. |noop|
 
 #### Logging Emitter Module
 
